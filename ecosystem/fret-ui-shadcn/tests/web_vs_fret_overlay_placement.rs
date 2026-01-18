@@ -1984,6 +1984,36 @@ fn web_vs_fret_popover_demo_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "popover-demo.vp1440x240",
+        Some("dialog"),
+        |cx, open| {
+            fret_ui_shadcn::Popover::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    fret_ui_shadcn::Button::new("Open popover")
+                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    fret_ui_shadcn::PopoverContent::new(Vec::new())
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(fret_ui_kit::MetricRef::Px(Px(320.0)))
+                                .h_px(fret_ui_kit::MetricRef::Px(Px(245.33334))),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+        SemanticsRole::Button,
+        Some("Open popover"),
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "dropdown-menu-demo",
@@ -4771,7 +4801,16 @@ fn web_vs_fret_context_menu_demo_submenu_tiny_viewport_menu_content_insets_match
 
 #[test]
 fn web_vs_fret_tooltip_demo_overlay_placement_matches() {
-    let web = read_web_golden_open("tooltip-demo");
+    assert_tooltip_demo_overlay_placement_matches("tooltip-demo");
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_overlay_placement_matches_tiny_viewport() {
+    assert_tooltip_demo_overlay_placement_matches("tooltip-demo.vp1440x240");
+}
+
+fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
     let web_trigger = find_first(&web.themes["light"].root, &|n| n.tag == "button")
@@ -4781,7 +4820,7 @@ fn web_vs_fret_tooltip_demo_overlay_placement_matches() {
     let trigger_h = web_trigger.rect.h;
 
     if theme.portals.is_empty() {
-        panic!("missing web portals for tooltip-demo");
+        panic!("missing web portals for {web_name}");
     }
     let web_portal_leaf = &theme.portals[0];
     let web_portal = theme.portal_wrappers.get(0).unwrap_or(web_portal_leaf);
@@ -4901,7 +4940,7 @@ fn web_vs_fret_tooltip_demo_overlay_placement_matches() {
         .is_some_and(|v| v == "1");
     if debug {
         eprintln!(
-            "tooltip-demo web trigger={:?} web portal={:?} fret trigger={:?} fret portal={:?}",
+            "{web_name} web trigger={:?} web portal={:?} fret trigger={:?} fret portal={:?}",
             web_trigger.rect, web_portal.rect, trigger_bounds, portal_bounds
         );
     }
@@ -4922,9 +4961,14 @@ fn web_vs_fret_tooltip_demo_overlay_placement_matches() {
     let actual_gap = rect_main_gap(web_side, fret_trigger, fret_portal);
     let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_portal);
 
-    assert_close("tooltip-demo main_gap", actual_gap, expected_gap, 1.0);
     assert_close(
-        "tooltip-demo cross_delta",
+        &format!("{web_name} main_gap"),
+        actual_gap,
+        expected_gap,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} cross_delta"),
         actual_cross,
         expected_cross,
         1.5,
@@ -4933,7 +4977,16 @@ fn web_vs_fret_tooltip_demo_overlay_placement_matches() {
 
 #[test]
 fn web_vs_fret_hover_card_demo_overlay_placement_matches() {
-    let web = read_web_golden_open("hover-card-demo");
+    assert_hover_card_demo_overlay_placement_matches("hover-card-demo");
+}
+
+#[test]
+fn web_vs_fret_hover_card_demo_overlay_placement_matches_tiny_viewport() {
+    assert_hover_card_demo_overlay_placement_matches("hover-card-demo.vp1440x240");
+}
+
+fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
     let web_trigger = find_first(&web.themes["light"].root, &|n| n.tag == "button")
@@ -4943,7 +4996,7 @@ fn web_vs_fret_hover_card_demo_overlay_placement_matches() {
     let trigger_h = web_trigger.rect.h;
 
     if theme.portals.is_empty() {
-        panic!("missing web portals for hover-card-demo");
+        panic!("missing web portals for {web_name}");
     }
     let web_portal_leaf = &theme.portals[0];
     let web_portal = theme.portal_wrappers.get(0).unwrap_or(web_portal_leaf);
@@ -5085,7 +5138,7 @@ fn web_vs_fret_hover_card_demo_overlay_placement_matches() {
         .is_some_and(|v| v == "1");
     if debug {
         eprintln!(
-            "hover-card-demo web trigger={:?} web portal={:?} fret trigger={:?} fret portal={:?}",
+            "{web_name} web trigger={:?} web portal={:?} fret trigger={:?} fret portal={:?}",
             web_trigger.rect, web_portal.rect, trigger_bounds, portal_bounds
         );
     }
@@ -5106,9 +5159,14 @@ fn web_vs_fret_hover_card_demo_overlay_placement_matches() {
     let actual_gap = rect_main_gap(web_side, fret_trigger, fret_portal);
     let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_portal);
 
-    assert_close("hover-card-demo main_gap", actual_gap, expected_gap, 1.0);
     assert_close(
-        "hover-card-demo cross_delta",
+        &format!("{web_name} main_gap"),
+        actual_gap,
+        expected_gap,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} cross_delta"),
         actual_cross,
         expected_cross,
         1.5,
