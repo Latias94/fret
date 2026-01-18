@@ -676,6 +676,34 @@ Recommendation: start with (1) for MVP2, but design MVP2 APIs so MVP3 can add pr
 
 Recommendation: keep `u64` for runtime, add debug registry for readability (feature gated).
 
+### D4 — View identity granularity (v1)
+
+Options:
+
+1) Cache-root-first (recommended for MVP2): define `ViewId` at cache boundary granularity (a `ViewCache` root), and
+   make `notify()` default to "mark nearest cache root dirty".
+2) Entity-first (GPUI-like): introduce explicit long-lived view entities as the primary `ViewId`, and treat cache
+   roots as an optimization detail that a view may opt into.
+
+Recommendation: start with (1) to maximize performance impact with minimal surface-area change, and keep (2) as a
+breaking-change corridor once the substrate and acceptance harnesses are stable.
+
+ADR impact:
+
+- Dirty views + notify: `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
+- Cache roots + nested invalidation correctness: `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+
+### D5 — Redraw scheduling: immediate vs coalesced per tick
+
+Options:
+
+1) Request redraw on every `notify`/invalidation call (simple, but noisy and hard to attribute).
+2) Coalesce redraw per window per tick (recommended): schedule a single redraw at the driver boundary and aggregate
+   reasons (notify/model/layout/inspection).
+
+Recommendation: (2), because it is required for predictable "near-zero idle" behavior and for trustworthy
+diagnostics ("why did we redraw?").
+
 ### Suggested defaults (based on current repo maturity)
 
 These defaults are optimized for “ship demos fast while raising the performance/feel ceiling”:
