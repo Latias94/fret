@@ -312,11 +312,52 @@ impl TableRow {
                     ..Default::default()
                 };
 
-                let cells = row_children.clone();
+                let cells = assign_grid_column_starts(row_children.clone());
                 vec![cx.grid(grid, move |_cx| cells)]
             })]
         })
     }
+}
+
+fn assign_grid_column_starts(mut cells: Vec<AnyElement>) -> Vec<AnyElement> {
+    fn grid_span(cell: &AnyElement) -> u16 {
+        match &cell.kind {
+            fret_ui::element::ElementKind::Container(props) => {
+                props.layout.grid.column.span.unwrap_or(1).max(1)
+            }
+            fret_ui::element::ElementKind::Semantics(props) => {
+                props.layout.grid.column.span.unwrap_or(1).max(1)
+            }
+            _ => 1,
+        }
+    }
+
+    fn set_grid_start(mut cell: AnyElement, start: i16) -> AnyElement {
+        match &mut cell.kind {
+            fret_ui::element::ElementKind::Container(props) => {
+                if props.layout.grid.column.start.is_none() {
+                    props.layout.grid.column.start = Some(start);
+                }
+            }
+            fret_ui::element::ElementKind::Semantics(props) => {
+                if props.layout.grid.column.start.is_none() {
+                    props.layout.grid.column.start = Some(start);
+                }
+            }
+            _ => {}
+        }
+        cell
+    }
+
+    let mut col: i16 = 1;
+    for cell in &mut cells {
+        let span = grid_span(cell);
+        let start = col;
+        *cell = set_grid_start(cell.clone(), start);
+        col = col.saturating_add(span as i16);
+    }
+
+    cells
 }
 
 /// shadcn/ui `TableHead` (`th`).
