@@ -320,6 +320,8 @@ Incremental on-ramp (semantics-preserving, before full prepaint):
 - This is a deliberately small “interaction range reuse” step that exercises the correctness constraints we will need
   once interaction output becomes replayable per cache root.
   - Evidence: `crates/fret-ui/src/tree/hit_test.rs`, `crates/fret-ui/src/tree/dispatch.rs`.
+- Add a minimal prepaint pass that records an interaction stream and supports cache-root range reuse (v0).
+  - Evidence: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/layout.rs`.
 
 ### MVP4 — Authoring Density + Adoption (ecosystem, ongoing)
 

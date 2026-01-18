@@ -107,9 +107,14 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Evidence: `crates/fret-ui/src/tree/hit_test.rs` (`hit_test_layers_cached`, `try_hit_test_along_cached_path`),
     `crates/fret-ui/src/tree/dispatch.rs` (pointer-move-only reuse policy),
     `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_layers_cached_reuses_path_and_respects_layer_order`).
-- [ ] GPUI-MVP3-rec-002 Add a prepaint phase that records interaction ranges (per cache root) in a replayable way.
-  - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-ui/src/declarative/*`
+- [x] GPUI-MVP3-rec-002 Add a prepaint phase that records interaction ranges (per cache root) in a replayable way.
+  - Touches: `crates/fret-ui/src/tree/*`
   - Reference: `repo-ref/zed/crates/gpui/src/element.rs` (prepaint), `repo-ref/zed/crates/gpui/src/view.rs` (`reuse_prepaint`)
+  - Progress: `layout_all` triggers a prepaint pass that records an interaction stream and clears `InvalidationFlags.hit_test`.
+  - Progress: cache roots (ViewCache v1) record and replay interaction ranges across frames via generation/key checks.
+  - Evidence: `crates/fret-ui/src/tree/prepaint.rs` (`UiTree::prepaint_after_layout`),
+    `crates/fret-ui/src/tree/layout.rs` (prepaint call site),
+    `crates/fret-ui/src/tree/tests/prepaint.rs` (`prepaint_interaction_cache_replays_for_clean_view_cache_root`).
 - [ ] GPUI-MVP3-test-003 Add correctness tests: cached subtree keeps correct hit-test / outside-press behavior.
   - Touches: `crates/fret-ui/src/tree/tests/*`, `crates/fret-ui/src/declarative/tests/*`
 
