@@ -1988,10 +1988,9 @@ fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
     );
 }
 
-#[test]
-fn web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches() {
+fn assert_dropdown_menu_demo_constrained_overlay_placement_matches(web_name: &str) {
     assert_overlay_placement_matches(
-        "dropdown-menu-demo.vp1440x320",
+        web_name,
         Some("menu"),
         |cx, open| {
             use fret_ui_shadcn::{
@@ -2062,8 +2061,31 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches() {
+    assert_dropdown_menu_demo_constrained_overlay_placement_matches(
+        "dropdown-menu-demo.vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_tiny_viewport_overlay_placement_matches() {
+    assert_dropdown_menu_demo_constrained_overlay_placement_matches(
+        "dropdown-menu-demo.vp1440x240",
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
-    let web = read_web_golden_open("dropdown-menu-demo.vp1440x320");
+    assert_dropdown_menu_demo_constrained_menu_item_height_matches("dropdown-menu-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_tiny_viewport_menu_item_height_matches() {
+    assert_dropdown_menu_demo_constrained_menu_item_height_matches("dropdown-menu-demo.vp1440x240");
+}
+
+fn assert_dropdown_menu_demo_constrained_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_hs = web_portal_slot_heights(
         &theme,
@@ -2074,10 +2096,11 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
             "dropdown-menu-sub-trigger",
         ],
     );
-    let expected_h =
-        expected_hs.iter().copied().next().unwrap_or_else(|| {
-            panic!("missing web menu item rows for dropdown-menu-demo.vp1440x320")
-        });
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web menu item rows for {web_name}"));
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -2185,17 +2208,25 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual_hs = fret_menu_item_heights_in_menus(&snap);
-    assert_menu_item_row_height_matches(
-        "dropdown-menu-demo.vp1440x320",
-        expected_h.round(),
-        &actual_hs,
-        1.0,
-    );
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
 }
 
 #[test]
 fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match() {
-    let web = read_web_golden_open("dropdown-menu-demo.vp1440x320");
+    assert_dropdown_menu_demo_constrained_menu_content_insets_match(
+        "dropdown-menu-demo.vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_tiny_viewport_menu_content_insets_match() {
+    assert_dropdown_menu_demo_constrained_menu_content_insets_match(
+        "dropdown-menu-demo.vp1440x240",
+    );
+}
+
+fn assert_dropdown_menu_demo_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
     let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
@@ -2308,11 +2339,11 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match() {
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
-    assert_sorted_insets_match("dropdown-menu-demo.vp1440x320", &actual, &expected);
+    assert_sorted_insets_match(web_name, &actual, &expected);
     let actual_menu_h = fret_largest_menu_height(&snap)
-        .unwrap_or_else(|| panic!("missing fret menu for dropdown-menu-demo.vp1440x320"));
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
     assert_close(
-        "dropdown-menu-demo.vp1440x320 menu height",
+        &format!("{web_name} menu height"),
         actual_menu_h,
         expected_menu_h,
         2.0,
@@ -3805,10 +3836,9 @@ fn web_vs_fret_context_menu_demo_overlay_placement_matches() {
     );
 }
 
-#[test]
-fn web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches() {
+fn assert_context_menu_demo_constrained_overlay_placement_matches(web_name: &str) {
     assert_point_anchored_overlay_placement_matches(
-        "context-menu-demo.vp1440x320",
+        web_name,
         "menu",
         SemanticsRole::Menu,
         |cx, open| {
@@ -3986,8 +4016,17 @@ fn web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches() {
 }
 
 #[test]
-fn web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches() {
-    let web = read_web_golden_open("context-menu-demo.vp1440x320");
+fn web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches() {
+    assert_context_menu_demo_constrained_overlay_placement_matches("context-menu-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_overlay_placement_matches() {
+    assert_context_menu_demo_constrained_overlay_placement_matches("context-menu-demo.vp1440x240");
+}
+
+fn assert_context_menu_demo_constrained_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_hs = web_portal_slot_heights(
         &theme,
@@ -3998,10 +4037,11 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches() {
             "context-menu-sub-trigger",
         ],
     );
-    let expected_h =
-        expected_hs.iter().copied().next().unwrap_or_else(|| {
-            panic!("missing web menu item rows for context-menu-demo.vp1440x320")
-        });
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web menu item rows for {web_name}"));
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -4064,17 +4104,21 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches() {
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual_hs = fret_menu_item_heights_in_menus(&snap);
-    assert_menu_item_row_height_matches(
-        "context-menu-demo.vp1440x320",
-        expected_h.round(),
-        &actual_hs,
-        1.0,
-    );
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
 }
 
 #[test]
-fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
-    let web = read_web_golden_open("context-menu-demo.vp1440x320");
+fn web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches() {
+    assert_context_menu_demo_constrained_menu_item_height_matches("context-menu-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_menu_item_height_matches() {
+    assert_context_menu_demo_constrained_menu_item_height_matches("context-menu-demo.vp1440x240");
+}
+
+fn assert_context_menu_demo_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["context-menu-content"]);
     let expected_menu_h = web_portal_node_by_data_slot(&theme, "context-menu-content")
@@ -4142,15 +4186,25 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
-    assert_sorted_insets_match("context-menu-demo.vp1440x320", &actual, &expected);
+    assert_sorted_insets_match(web_name, &actual, &expected);
     let actual_menu_h = fret_largest_menu_height(&snap)
-        .unwrap_or_else(|| panic!("missing fret menu for context-menu-demo.vp1440x320"));
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
     assert_close(
-        "context-menu-demo.vp1440x320 menu height",
+        &format!("{web_name} menu height"),
         actual_menu_h,
         expected_menu_h,
         2.0,
     );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
+    assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_menu_content_insets_match() {
+    assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo.vp1440x240");
 }
 
 fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
@@ -6044,9 +6098,8 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     );
 }
 
-#[test]
-fn web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches() {
-    let web = read_web_golden_open("menubar-demo.vp1440x320");
+fn assert_menubar_demo_constrained_overlay_placement_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
     let web_trigger = web_find_by_data_slot_and_state(&theme.root, "menubar-trigger", "open")
@@ -6232,19 +6285,16 @@ fn web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches() {
             .iter()
             .filter(|n| n.role == SemanticsRole::Menu)
             .collect();
-        eprintln!(
-            "menubar-demo.vp1440x320 fret Menu candidates: {}",
-            candidates.len()
-        );
+        eprintln!("{web_name} fret Menu candidates: {}", candidates.len());
         for (idx, n) in candidates.iter().enumerate().take(8) {
             eprintln!("  [{idx}] bounds={:?} label={:?}", n.bounds, n.label);
         }
         eprintln!(
-            "menubar-demo.vp1440x320 web trigger={:?} web portal={:?}\n  fret trigger={:?}\n  selected portal={:?}",
+            "{web_name} web trigger={:?} web portal={:?}\n  fret trigger={:?}\n  selected portal={:?}",
             web_trigger.rect, web_portal.rect, fret_trigger, portal.bounds
         );
         eprintln!(
-            "menubar-demo.vp1440x320 fret trigger flags={:?} root_count={} node_count={}",
+            "{web_name} fret trigger flags={:?} root_count={} node_count={}",
             trigger.flags,
             snap.roots.len(),
             snap.nodes.len()
@@ -6262,25 +6312,25 @@ fn web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches() {
     let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_portal);
 
     assert_close(
-        "menubar-demo.vp1440x320 main_gap",
+        &format!("{web_name} main_gap"),
         actual_gap,
         expected_gap,
         1.0,
     );
     assert_close(
-        "menubar-demo.vp1440x320 cross_delta",
+        &format!("{web_name} cross_delta"),
         actual_cross,
         expected_cross,
         1.5,
     );
     assert_close(
-        "menubar-demo.vp1440x320 portal_w",
+        &format!("{web_name} portal_w"),
         fret_portal.w,
         expected_portal_w,
         2.0,
     );
     assert_close(
-        "menubar-demo.vp1440x320 portal_h",
+        &format!("{web_name} portal_h"),
         fret_portal.h,
         expected_portal_h,
         2.0,
@@ -6288,8 +6338,17 @@ fn web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches() {
 }
 
 #[test]
-fn web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches() {
-    let web = read_web_golden_open("menubar-demo.vp1440x320");
+fn web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches() {
+    assert_menubar_demo_constrained_overlay_placement_matches("menubar-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_tiny_viewport_overlay_placement_matches() {
+    assert_menubar_demo_constrained_overlay_placement_matches("menubar-demo.vp1440x240");
+}
+
+fn assert_menubar_demo_constrained_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_hs = web_portal_slot_heights(
         &theme,
@@ -6304,7 +6363,7 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches() {
         .iter()
         .copied()
         .next()
-        .unwrap_or_else(|| panic!("missing web menu item rows for menubar-demo.vp1440x320"));
+        .unwrap_or_else(|| panic!("missing web menu item rows for {web_name}"));
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -6398,17 +6457,21 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches() {
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual_hs = fret_menu_item_heights_in_menus(&snap);
-    assert_menu_item_row_height_matches(
-        "menubar-demo.vp1440x320",
-        expected_h.round(),
-        &actual_hs,
-        1.0,
-    );
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
 }
 
 #[test]
-fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
-    let web = read_web_golden_open("menubar-demo.vp1440x320");
+fn web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches() {
+    assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_tiny_viewport_menu_item_height_matches() {
+    assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo.vp1440x240");
+}
+
+fn assert_menubar_demo_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["menubar-content"]);
     let expected_menu_h = web_portal_node_by_data_slot(&theme, "menubar-content")
@@ -6507,15 +6570,25 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
-    assert_sorted_insets_match("menubar-demo.vp1440x320", &actual, &expected);
+    assert_sorted_insets_match(web_name, &actual, &expected);
     let actual_menu_h = fret_largest_menu_height(&snap)
-        .unwrap_or_else(|| panic!("missing fret menu for menubar-demo.vp1440x320"));
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
     assert_close(
-        "menubar-demo.vp1440x320 menu height",
+        &format!("{web_name} menu height"),
         actual_menu_h,
         expected_menu_h,
         2.0,
     );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
+    assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_tiny_viewport_menu_content_insets_match() {
+    assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo.vp1440x240");
 }
 
 fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {
