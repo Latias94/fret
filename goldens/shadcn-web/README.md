@@ -25,4 +25,4 @@ For `button-default`, a *healthy* web golden typically has:
 If you see browser defaults like `display: inline-block` + `borderTopWidth: 2px`, regenerate using a
 production server (`pnpm -C repo-ref/ui/apps/v4 build` + `pnpm -C repo-ref/ui/apps/v4 exec next start -p <port>`) instead of a dev server.
 
-Current new-york-v4 snapshot count: `422` JSON files.
+Current new-york-v4 snapshot count: `423` JSON files.

@@ -95,6 +95,8 @@ Extract a constrained-viewport open variant (useful for max-height/clamp/scroll 
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 select-scrollable --modes=open --update --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [role='combobox'][aria-expanded='false']"`
 
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [role='combobox'][aria-expanded='false']"`
+
 Extract ScrollArea hover/scrolled variants (useful for scrollbar + thumb geometry):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts scroll-area-demo --modes=closed --update --baseUrl=http://localhost:4020 --variants=hover --steps="wait=200;hover=[data-slot=scroll-area];waitFor=[data-slot=scroll-area-scrollbar]"`
@@ -131,7 +133,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `52` open-mode files (`*.open.json`)
+- `53` open-mode files (`*.open.json`)
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
