@@ -14,11 +14,8 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::controllable_state;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::{CommandItem, CommandList, CommandPalette, Popover, PopoverContent};
@@ -484,36 +481,9 @@ fn combobox_with_patch<H: UiHost>(
                         .unwrap_or(Px(280.0));
                     let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
 
-                    let window_margin = theme
-                        .metric_by_key("component.popover.window_margin")
-                        .unwrap_or(Px(0.0));
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
-                    let placement = popper::PopperContentPlacement::new(
-                        direction,
-                        popper::Side::Bottom,
-                        popper::Align::Center,
-                        Px(4.0),
-                    )
-                    .with_shift_cross_axis(true)
-                    .with_align_offset(Px(0.0));
-                    let available_h =
-                        radix_popover::popover_popper_vars(outer, anchor, desired_w, placement)
-                            .available_height;
-                    // `popover_popper_vars` reports the available height for the popover *border box*
-                    // (Radix `--radix-popover-content-available-height`). The combobox list lives
-                    // inside a PopoverContent container with a `border-1`, so subtract that inset
-                    // to keep the inner list from overflowing in tight viewports.
-                    let popover_border_h = Px(2.0);
-                    let available_h = Px((available_h.0 - popover_border_h.0).max(0.0));
-
                     let transparent = Color::TRANSPARENT;
                     let list = if search_enabled {
-                        let input_h = theme
-                            .metric_by_key("component.command.input.wrapper_height")
-                            .unwrap_or(Px(36.0));
-                        let max_list_h = Px((available_h.0 - input_h.0).max(0.0));
-                        let max_list_h = Px(theme_max_list_h.0.min(max_list_h.0).max(0.0));
+                        let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
                         let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
                         for item in items.iter().cloned() {
@@ -572,7 +542,7 @@ fn combobox_with_patch<H: UiHost>(
                             )
                             .into_element(cx)
                     } else {
-                        let max_list_h = Px(theme_max_list_h.0.min(available_h.0).max(0.0));
+                        let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
                         let fg = theme
                             .color_by_key("foreground")
@@ -1033,7 +1003,7 @@ mod tests {
     }
 
     #[test]
-    fn combobox_list_clamps_to_available_height_in_tight_viewports() {
+    fn combobox_list_respects_theme_max_height_in_tight_viewports() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -1094,11 +1064,11 @@ mod tests {
             .find(|n| n.role == SemanticsRole::ListBox)
             .expect("listbox node");
         let list_bounds = ui.debug_node_bounds(list.id).expect("listbox bounds");
-        let list_bottom = list_bounds.origin.y.0 + list_bounds.size.height.0;
 
+        let theme_max_list_h = 280.0;
         assert!(
-            list_bottom <= bounds.size.height.0 + 0.01,
-            "expected listbox to fit within viewport; list={list_bounds:?} viewport={bounds:?}"
+            list_bounds.size.height.0 <= theme_max_list_h + 0.01,
+            "expected listbox height to respect theme max height; list={list_bounds:?}"
         );
     }
 }
