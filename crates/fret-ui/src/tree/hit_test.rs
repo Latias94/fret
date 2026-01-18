@@ -65,7 +65,26 @@ impl<H: UiHost> UiTree<H> {
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
         let n = self.nodes.get(node)?;
         let widget = n.widget.as_ref();
-        let position = if let Some(w) = widget
+
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        let render_transform_inv = prepaint.as_ref().and_then(|p| p.render_transform_inv);
+        let children_render_transform_inv = prepaint
+            .as_ref()
+            .and_then(|p| p.children_render_transform_inv);
+        let clips_hit_test = prepaint
+            .as_ref()
+            .map(|p| p.clips_hit_test)
+            .unwrap_or_else(|| widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true));
+        let corner_radii = prepaint
+            .as_ref()
+            .and_then(|p| p.clip_hit_test_corner_radii)
+            .or_else(|| widget.and_then(|w| w.clip_hit_test_corner_radii(n.bounds)));
+
+        let position = if let Some(inv) = render_transform_inv {
+            inv.apply_point(position)
+        } else if let Some(w) = widget
             && let Some(t) = w.render_transform(n.bounds)
             && let Some(inv) = t.inverse()
         {
@@ -73,13 +92,11 @@ impl<H: UiHost> UiTree<H> {
         } else {
             position
         };
-        let clips_hit_test = widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true);
         if clips_hit_test {
             if !n.bounds.contains(position) {
                 return None;
             }
-            if let Some(w) = widget
-                && let Some(radii) = w.clip_hit_test_corner_radii(n.bounds)
+            if let Some(radii) = corner_radii
                 && !Self::point_in_rounded_rect(n.bounds, radii, position)
             {
                 return None;
@@ -92,7 +109,9 @@ impl<H: UiHost> UiTree<H> {
             .map(|w| w.hit_test_children(n.bounds, position))
             .unwrap_or(true);
         if hit_test_children {
-            let child_position = if let Some(w) = widget
+            let child_position = if let Some(inv) = children_render_transform_inv {
+                inv.apply_point(position)
+            } else if let Some(w) = widget
                 && let Some(t) = w.children_render_transform(n.bounds)
                 && let Some(inv) = t.inverse()
             {
@@ -153,7 +172,26 @@ impl<H: UiHost> UiTree<H> {
         for (idx, &node) in path.iter().enumerate() {
             let n = self.nodes.get(node)?;
             let widget = n.widget.as_ref();
-            let position_local = if let Some(w) = widget
+
+            let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+                .then_some(n.prepaint_hit_test)
+                .flatten();
+            let render_transform_inv = prepaint.as_ref().and_then(|p| p.render_transform_inv);
+            let children_render_transform_inv = prepaint
+                .as_ref()
+                .and_then(|p| p.children_render_transform_inv);
+            let clips_hit_test = prepaint
+                .as_ref()
+                .map(|p| p.clips_hit_test)
+                .unwrap_or_else(|| widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true));
+            let corner_radii = prepaint
+                .as_ref()
+                .and_then(|p| p.clip_hit_test_corner_radii)
+                .or_else(|| widget.and_then(|w| w.clip_hit_test_corner_radii(n.bounds)));
+
+            let position_local = if let Some(inv) = render_transform_inv {
+                inv.apply_point(position)
+            } else if let Some(w) = widget
                 && let Some(t) = w.render_transform(n.bounds)
                 && let Some(inv) = t.inverse()
             {
@@ -161,14 +199,11 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 position
             };
-
-            let clips_hit_test = widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true);
             if clips_hit_test {
                 if !n.bounds.contains(position_local) {
                     return None;
                 }
-                if let Some(w) = widget
-                    && let Some(radii) = w.clip_hit_test_corner_radii(n.bounds)
+                if let Some(radii) = corner_radii
                     && !Self::point_in_rounded_rect(n.bounds, radii, position_local)
                 {
                     return None;
@@ -201,7 +236,9 @@ impl<H: UiHost> UiTree<H> {
                 return None;
             }
 
-            let child_position = if let Some(w) = widget
+            let child_position = if let Some(inv) = children_render_transform_inv {
+                inv.apply_point(position_local)
+            } else if let Some(w) = widget
                 && let Some(t) = w.children_render_transform(n.bounds)
                 && let Some(inv) = t.inverse()
             {
@@ -223,7 +260,14 @@ impl<H: UiHost> UiTree<H> {
 
                 // Conservative correctness gate: if a sibling uses transforms or does not clip hit
                 // testing to its bounds, we cannot cheaply prove it won't intercept the hit.
-                if let Some(w) = sib.widget.as_ref() {
+                if let Some(p) = (!self.inspection_active && !sib.invalidation.hit_test)
+                    .then_some(sib.prepaint_hit_test)
+                    .flatten()
+                {
+                    if p.render_transform_inv.is_some() || !p.clips_hit_test {
+                        return None;
+                    }
+                } else if let Some(w) = sib.widget.as_ref() {
                     if w.render_transform(sib.bounds).is_some() || !w.clips_hit_test(sib.bounds) {
                         return None;
                     }

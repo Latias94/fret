@@ -13,8 +13,8 @@ pub(super) struct InteractionCacheEntry {
 pub(super) struct InteractionRecord {
     pub(super) node: NodeId,
     pub(super) bounds: Rect,
-    pub(super) render_transform: Option<Transform2D>,
-    pub(super) children_render_transform: Option<Transform2D>,
+    pub(super) render_transform_inv: Option<Transform2D>,
+    pub(super) children_render_transform_inv: Option<Transform2D>,
     pub(super) clips_hit_test: bool,
     pub(super) clip_hit_test_corner_radii: Option<Corners>,
 }
@@ -55,6 +55,19 @@ impl InteractionCacheState {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn apply_interaction_record(&mut self, record: &InteractionRecord) {
+        let Some(n) = self.nodes.get_mut(record.node) else {
+            return;
+        };
+        n.prepaint_hit_test = Some(super::PrepaintHitTestCache {
+            render_transform_inv: record.render_transform_inv,
+            children_render_transform_inv: record.children_render_transform_inv,
+            clips_hit_test: record.clips_hit_test,
+            clip_hit_test_corner_radii: record.clip_hit_test_corner_radii,
+        });
+        n.invalidation.hit_test = false;
+    }
+
     pub(super) fn prepaint_after_layout(&mut self, app: &mut H, scale_factor: f32) {
         if self.inspection_active {
             self.interaction_cache.invalidate_recording();
@@ -124,9 +137,12 @@ impl<H: UiHost> UiTree<H> {
             let range = prev.start as usize..prev.end as usize;
             if range.start <= range.end && range.end <= self.interaction_cache.prev_records.len() {
                 let start = self.interaction_cache.records.len();
-                self.interaction_cache
-                    .records
-                    .extend_from_slice(&self.interaction_cache.prev_records[range]);
+                let replay: Vec<InteractionRecord> =
+                    self.interaction_cache.prev_records[range].to_vec();
+                for record in &replay {
+                    self.interaction_cache.records.push(*record);
+                    self.apply_interaction_record(record);
+                }
                 let end = self.interaction_cache.records.len();
 
                 if let Some(n) = self.nodes.get_mut(node) {
@@ -155,15 +171,14 @@ impl<H: UiHost> UiTree<H> {
         let (render_transform, children_render_transform, clips_hit_test, corner_radii) =
             match self.nodes.get(node).and_then(|n| n.widget.as_ref()) {
                 Some(widget) => {
-                    let render_transform = widget
-                        .render_transform(bounds)
-                        .filter(|t| t.inverse().is_some());
-                    let children_render_transform = widget
+                    let render_transform_inv =
+                        widget.render_transform(bounds).and_then(|t| t.inverse());
+                    let children_render_transform_inv = widget
                         .children_render_transform(bounds)
-                        .filter(|t| t.inverse().is_some());
+                        .and_then(|t| t.inverse());
                     (
-                        render_transform,
-                        children_render_transform,
+                        render_transform_inv,
+                        children_render_transform_inv,
                         widget.clips_hit_test(bounds),
                         widget.clip_hit_test_corner_radii(bounds),
                     )
@@ -171,20 +186,16 @@ impl<H: UiHost> UiTree<H> {
                 None => (None, None, true, None),
             };
 
-        self.interaction_cache.records.push(InteractionRecord {
+        let record = InteractionRecord {
             node,
             bounds,
-            render_transform,
-            children_render_transform,
+            render_transform_inv: render_transform,
+            children_render_transform_inv: children_render_transform,
             clips_hit_test,
             clip_hit_test_corner_radii: corner_radii,
-        });
-
-        // Prepaint is the phase that establishes interaction geometry for hit-testing and
-        // routing; clear the hit-test invalidation flag now that we've recorded the node.
-        if let Some(n) = self.nodes.get_mut(node) {
-            n.invalidation.hit_test = false;
-        }
+        };
+        self.interaction_cache.records.push(record);
+        self.apply_interaction_record(&record);
 
         let mut children_buf = SmallNodeList::<32>::default();
         if let Some(children) = self.nodes.get(node).map(|n| n.children.as_slice()) {

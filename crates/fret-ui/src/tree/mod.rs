@@ -97,6 +97,7 @@ struct Node<H: UiHost> {
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
     interaction_cache: Option<prepaint::InteractionCacheEntry>,
+    prepaint_hit_test: Option<PrepaintHitTestCache>,
     view_cache: ViewCacheFlags,
     view_cache_needs_rerender: bool,
 }
@@ -105,6 +106,14 @@ struct Node<H: UiHost> {
 struct HitTestPathCache {
     layer_root: NodeId,
     path: Vec<NodeId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PrepaintHitTestCache {
+    render_transform_inv: Option<Transform2D>,
+    children_render_transform_inv: Option<Transform2D>,
+    clips_hit_test: bool,
+    clip_hit_test_corner_radii: Option<Corners>,
 }
 
 impl<H: UiHost> Node<H> {
@@ -123,6 +132,7 @@ impl<H: UiHost> Node<H> {
             },
             paint_cache: None,
             interaction_cache: None,
+            prepaint_hit_test: None,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
         }
