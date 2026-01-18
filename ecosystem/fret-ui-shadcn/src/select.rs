@@ -1381,7 +1381,10 @@ fn select_impl<H: UiHost>(
 
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
-                        let arrow_border = border;
+                        let overlay_border = theme_for_overlay
+                            .color_by_key("border")
+                            .unwrap_or_else(|| theme_for_overlay.color_required("border"));
+                        let arrow_border = overlay_border;
                         let initial_scroll_to_y = {
                             let mut state = trigger_state_for_overlay
                                 .lock()
@@ -1954,7 +1957,7 @@ fn select_impl<H: UiHost>(
                                                 ),
                                                 shadow: Some(shadow),
                                                 border: Edges::all(border_width),
-                                                border_color: Some(border),
+                                                border_color: Some(overlay_border),
                                                 corner_radii: Corners::all(radius),
                                             },
                                             move |_cx| vec![scroll],
