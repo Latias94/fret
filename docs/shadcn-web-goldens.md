@@ -234,6 +234,10 @@ surfaces (`dialog-content`, `sheet-content`, `popover-content`, `dropdown-menu-c
 `hover-card-content`, `tooltip-content`, `drawer-content`) across light/dark themes when
 available.
 
+For nested menus, the chrome suite also covers the constrained-viewport keyboard variants (for
+example: `*.submenu-kbd-vp1440x240.open.json`) so tight-height placement/clamping can't regress
+surface styling.
+
 ## Layout conformance (geometry-first)
 
 For layout-engine refactors, prefer geometry-first assertions (rects + spacing invariants) over

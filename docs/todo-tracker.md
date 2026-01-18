@@ -196,6 +196,9 @@ It complements (but does not replace) ADRs:
       `context-menu-content`, `context-menu-sub-content`, `menubar-content`, `menubar-sub-content`,
       `navigation-menu-content`, `select-content`, `hover-card-content`, `tooltip-content`, and
       `drawer-content` (light/dark where available).
+    - Extended overlay chrome gates to cover constrained-viewport submenu keyboard variants
+      (`*.submenu-kbd-vp1440x240.open.json`) for `dropdown-menu-sub-content`, `context-menu-sub-content`,
+      and `menubar-sub-content`.
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:
