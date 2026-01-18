@@ -141,6 +141,11 @@ It complements (but does not replace) ADRs:
   - Current: regression test added in `ecosystem/fret-ui-shadcn/src/tabs.rs` (`tabs_layout_regression_does_not_stack_overflow_in_auto_sized_column`).
   - TODO: decide and document the sizing contract for `TabsContent` (when is "fill remaining space" valid, and how do we express it safely in the declarative layout engine?).
 
+- **Typography table (`typography-table`) parity**
+  - Current: geometry gate exists (row heights + cell rects) using `goldens/shadcn-web/v4/new-york-v4/typography-table.json` via `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`.
+  - Current: shadcn theme defines a `prose` typography baseline (16px/24px) to match web `computedStyle` in typography pages.
+  - Current: paint-backed gate exists for `even:bg-muted` (web uses `lab(...)`), using CSS color parsing helpers + scene quad background matching.
+
 - **Golden-path window close behavior**
   - Symptom: clicking the window close button (X) does nothing in minimal `UiAppDriver` apps unless the app explicitly handles `Event::WindowCloseRequested`.
   - ADRs: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`

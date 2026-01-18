@@ -8,7 +8,7 @@ use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::element::{
     ColumnProps, ContainerProps, CrossAlign, FlexProps, GridProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RovingFlexProps, SizeStyle, TextProps,
+    PressableProps, RovingFlexProps, RowProps, SizeStyle, TextProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
@@ -84,8 +84,10 @@ struct WebScrollMetrics {
     #[serde(rename = "clientHeight")]
     client_height: f32,
     #[serde(rename = "offsetWidth")]
+    #[allow(dead_code)]
     offset_width: f32,
     #[serde(rename = "offsetHeight")]
+    #[allow(dead_code)]
     offset_height: f32,
     #[serde(rename = "scrollLeft")]
     scroll_left: f32,
@@ -219,6 +221,15 @@ fn web_collect_all<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
     out.push(node);
     for child in &node.children {
         web_collect_all(child, out);
+    }
+}
+
+fn web_collect_tag<'a>(node: &'a WebNode, tag: &str, out: &mut Vec<&'a WebNode>) {
+    if node.tag == tag {
+        out.push(node);
+    }
+    for child in &node.children {
+        web_collect_tag(child, tag, out);
     }
 }
 
@@ -7239,8 +7250,7 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
         .and_then(|tfoot| tfoot.children.iter().find(|n| n.tag == "tr"))
         .expect("web footer tr");
 
-    let web_caption_gap =
-        web_caption.rect.y - (web_footer_row.rect.y + web_footer_row.rect.h);
+    let web_caption_gap = web_caption.rect.y - (web_footer_row.rect.y + web_footer_row.rect.h);
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -7310,7 +7320,8 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
             fret_ui_shadcn::TableRow::new(
                 4,
                 vec![
-                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, invoice)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, invoice))
+                        .into_element(cx),
                     fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, status)).into_element(cx),
                     fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, method)).into_element(cx),
                     fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, amount)).into_element(cx),
@@ -7401,8 +7412,8 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
         2.0,
     );
 
-    let target_caption_y = footer_row.bounds.origin.y.0 + footer_row.bounds.size.height.0
-        + web_caption_gap;
+    let target_caption_y =
+        footer_row.bounds.origin.y.0 + footer_row.bounds.size.height.0 + web_caption_gap;
     let target_caption_h = web_caption.rect.h;
 
     let mut nodes = Vec::new();
@@ -7449,9 +7460,7 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
     let web_select_row = find_first(&theme.root, &|n| {
         n.tag == "button"
             && n.attrs.get("role").is_some_and(|r| r == "checkbox")
-            && n.attrs
-                .get("aria-label")
-                .is_some_and(|v| v == "Select row")
+            && n.attrs.get("aria-label").is_some_and(|v| v == "Select row")
     })
     .expect("web select row checkbox");
 
@@ -7480,9 +7489,9 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
         let open_menu = fret_ui_shadcn::Button::new("Open menu")
             .variant(fret_ui_shadcn::ButtonVariant::Ghost)
             .size(fret_ui_shadcn::ButtonSize::IconSm)
-            .children(vec![fret_ui_shadcn::Spinner::new()
-                .speed(0.0)
-                .into_element(cx)])
+            .children(vec![
+                fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx),
+            ])
             .into_element(cx);
 
         let header_row = cx.semantics(
@@ -7522,8 +7531,11 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
                             fret_ui_shadcn::TableCell::new(select_row.clone()).into_element(cx),
                             fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "success"))
                                 .into_element(cx),
-                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "ken99@example.com"))
-                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(
+                                cx,
+                                "ken99@example.com",
+                            ))
+                            .into_element(cx),
                             fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$316.00"))
                                 .into_element(cx),
                             fret_ui_shadcn::TableCell::new(open_menu.clone()).into_element(cx),
@@ -7609,8 +7621,8 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
     let theme = web_theme(&web);
 
     let web_table = find_first(&theme.root, &|n| n.tag == "table").expect("web table");
-    let web_empty_td = web_find_by_tag_and_text(&theme.root, "td", "No results")
-        .expect("web empty state td");
+    let web_empty_td =
+        web_find_by_tag_and_text(&theme.root, "td", "No results").expect("web empty state td");
 
     let expected_rel = WebRect {
         x: web_empty_td.rect.x - web_table.rect.x,
@@ -7648,30 +7660,32 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
                 ..Default::default()
             },
             move |cx| {
-                vec![fret_ui_shadcn::Table::new(vec![
-                    fret_ui_shadcn::TableHeader::new(vec![
-                        fret_ui_shadcn::TableRow::new(
-                            5,
-                            vec![
-                                fret_ui_shadcn::TableHead::new("").into_element(cx),
-                                fret_ui_shadcn::TableHead::new("Status").into_element(cx),
-                                fret_ui_shadcn::TableHead::new("Email").into_element(cx),
-                                fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
-                                fret_ui_shadcn::TableHead::new("").into_element(cx),
-                            ],
-                        )
+                vec![
+                    fret_ui_shadcn::Table::new(vec![
+                        fret_ui_shadcn::TableHeader::new(vec![
+                            fret_ui_shadcn::TableRow::new(
+                                5,
+                                vec![
+                                    fret_ui_shadcn::TableHead::new("").into_element(cx),
+                                    fret_ui_shadcn::TableHead::new("Status").into_element(cx),
+                                    fret_ui_shadcn::TableHead::new("Email").into_element(cx),
+                                    fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
+                                    fret_ui_shadcn::TableHead::new("").into_element(cx),
+                                ],
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        fret_ui_shadcn::TableBody::new(vec![
+                            fret_ui_shadcn::TableRow::new(5, vec![empty_td.clone()])
+                                .border_bottom(false)
+                                .into_element(cx),
+                        ])
                         .into_element(cx),
                     ])
+                    .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
-                    fret_ui_shadcn::TableBody::new(vec![
-                        fret_ui_shadcn::TableRow::new(5, vec![empty_td.clone()])
-                            .border_bottom(false)
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx)]
+                ]
             },
         );
 
@@ -7728,4 +7742,371 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
     let _ = td_id;
 
     assert_rect_close_px("data-table-demo.empty td", td_bounds, expected_abs, 2.0);
+}
+
+#[test]
+fn web_vs_fret_layout_typography_table_cell_geometry() {
+    let web = read_web_golden("typography-table");
+    let theme = web_theme(&web);
+
+    let web_table = find_first(&theme.root, &|n| n.tag == "table").expect("web table");
+
+    let mut web_trs = Vec::new();
+    web_collect_tag(web_table, "tr", &mut web_trs);
+    web_trs.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    assert_eq!(web_trs.len(), 4, "expected 1 header + 3 body rows");
+
+    let web_header = web_trs[0];
+    let mut web_header_cells: Vec<_> = web_header
+        .children
+        .iter()
+        .filter(|n| n.tag == "th")
+        .collect();
+    web_header_cells.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    assert_eq!(web_header_cells.len(), 2, "expected 2 header cells");
+
+    let col_w0 = web_header_cells[0].rect.w;
+    let col_w1 = web_header_cells[1].rect.w;
+
+    // `border-collapse: collapse` means the cell grid is inset by half the outer border width.
+    let inset = web_trs[0].rect.x;
+
+    let mut rows: Vec<[(String, WebRect); 2]> = Vec::new();
+    for (row_idx, tr) in web_trs.iter().enumerate() {
+        let mut cells: Vec<_> = tr
+            .children
+            .iter()
+            .filter(|n| n.tag == "th" || n.tag == "td")
+            .collect();
+        cells.sort_by(|a, b| {
+            a.rect
+                .x
+                .partial_cmp(&b.rect.x)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        assert_eq!(cells.len(), 2, "expected 2 cells in row {row_idx}");
+        rows.push([
+            (cells[0].text.clone().unwrap_or_default(), cells[0].rect),
+            (cells[1].text.clone().unwrap_or_default(), cells[1].rect),
+        ]);
+    }
+    let rows_ui = rows.clone();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let border = theme.color_required("border");
+            let muted = theme.color_required("muted");
+
+            let table = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:typography-table:table")),
+                ..Default::default()
+            },
+            move |cx| {
+                let mut table_layout = LayoutStyle::default();
+                table_layout.size.width = Length::Fill;
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: table_layout,
+                        padding: Edges::all(Px(inset)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.column(
+                            ColumnProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout
+                                },
+                                gap: Px(0.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Stretch,
+                            },
+                            move |cx| {
+                                let mut out = Vec::new();
+                                for (row_idx, row) in rows_ui.clone().into_iter().enumerate() {
+                                    let is_header = row_idx == 0;
+                                    let is_body_even = row_idx > 0 && ((row_idx - 1) % 2 == 1);
+
+                                    let row_label = Arc::<str>::from(format!(
+                                        "Golden:typography-table:row{row_idx}"
+                                    ));
+
+                                    let row_panel = cx.semantics(
+                                        fret_ui::element::SemanticsProps {
+                                            layout: LayoutStyle {
+                                                size: SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Auto,
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            role: SemanticsRole::Panel,
+                                            label: Some(row_label),
+                                            ..Default::default()
+                                        },
+                                        move |cx| {
+                                            let mut row_layout = LayoutStyle::default();
+                                            row_layout.size.width = Length::Fill;
+
+                                            let row_props = ContainerProps {
+                                                layout: row_layout,
+                                                padding: Edges::all(Px(0.0)),
+                                                background: is_body_even.then_some(muted),
+                                                shadow: None,
+                                                border: Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: Default::default(),
+                                            };
+
+                                            vec![cx.container(row_props, move |cx| {
+                                                let mut flex_layout = LayoutStyle::default();
+                                                flex_layout.size.width = Length::Fill;
+
+                                                vec![cx.row(
+                                                    RowProps {
+                                                        layout: flex_layout,
+                                                        gap: Px(0.0),
+                                                        padding: Edges::all(Px(0.0)),
+                                                        justify: MainAlign::Start,
+                                                        align: CrossAlign::Stretch,
+                                                    },
+                                                    move |cx| {
+                                                        let mut cells_out = Vec::new();
+                                                        for col_idx in 0..2 {
+                                                            let label = Arc::<str>::from(format!(
+                                                                "Golden:typography-table:r{row_idx}c{col_idx}"
+                                                            ));
+                                                            let text = row[col_idx].0.clone();
+                                                            let weight = if col_idx == 0 {
+                                                                col_w0
+                                                            } else {
+                                                                col_w1
+                                                            };
+                                                            let left_border = if col_idx == 0 {
+                                                                1.0
+                                                            } else {
+                                                                0.0
+                                                            };
+
+                                                            let cell = cx.semantics(
+                                                                fret_ui::element::SemanticsProps {
+                                                                    layout: {
+                                                                        let mut layout =
+                                                                            LayoutStyle::default();
+                                                                        layout.flex.grow = weight;
+                                                                        layout.flex.shrink = 1.0;
+                                                                        layout.flex.basis =
+                                                                            Length::Px(Px(0.0));
+                                                                        layout
+                                                                    },
+                                                                    role: SemanticsRole::Panel,
+                                                                    label: Some(label),
+                                                                    ..Default::default()
+                                                                },
+                                                                move |cx| {
+                                                                    let mut cell_layout =
+                                                                        LayoutStyle::default();
+                                                                    cell_layout.size.width =
+                                                                        Length::Fill;
+
+                                                                    let cell_props = ContainerProps {
+                                                                        layout: cell_layout,
+                                                                        padding: Edges {
+                                                                            top: Px(8.0),
+                                                                            right: Px(16.0),
+                                                                            bottom: Px(8.0),
+                                                                            left: Px(16.0),
+                                                                        },
+                                                                        background: None,
+                                                                        shadow: None,
+                                                                        border: Edges {
+                                                                            top: Px(1.0),
+                                                                            right: Px(1.0),
+                                                                            bottom: Px(0.0),
+                                                                            left: Px(left_border),
+                                                                        },
+                                                                        border_color: Some(border),
+                                                                        corner_radii: Default::default(),
+                                                                    };
+
+                                                                    vec![cx.container(
+                                                                        cell_props,
+                                                                        move |cx| {
+                                                                            if is_header {
+                                                                                vec![decl_text::text_prose_bold_nowrap(
+                                                                                    cx,
+                                                                                    text.clone(),
+                                                                                )]
+                                                                            } else {
+                                                                                vec![decl_text::text_prose_nowrap(
+                                                                                    cx,
+                                                                                    text.clone(),
+                                                                                )]
+                                                                            }
+                                                                        },
+                                                                    )]
+                                                                },
+                                                            );
+                                                            cells_out.push(cell);
+                                                        }
+                                                        cells_out
+                                                    },
+                                                )]
+                                            })]
+                                        },
+                                    );
+
+                                    out.push(row_panel);
+                                }
+                                out
+                            },
+                        )]
+                    },
+                )]
+            },
+        );
+
+            vec![table]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let table = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:typography-table:table"),
+    )
+    .expect("fret table");
+    assert_close_px(
+        "typography-table table width",
+        table.bounds.size.width,
+        web_table.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "typography-table table height",
+        table.bounds.size.height,
+        web_table.rect.h,
+        1.0,
+    );
+
+    for (row_idx, web_tr) in web_trs.iter().enumerate() {
+        let row = find_semantics(
+            &snap,
+            SemanticsRole::Panel,
+            Some(&format!("Golden:typography-table:row{row_idx}")),
+        )
+        .unwrap_or_else(|| panic!("missing fret row {row_idx}"));
+
+        assert_close_px(
+            &format!("typography-table row[{row_idx}] y"),
+            row.bounds.origin.y,
+            web_tr.rect.y,
+            1.0,
+        );
+        assert_close_px(
+            &format!("typography-table row[{row_idx}] h"),
+            row.bounds.size.height,
+            web_tr.rect.h,
+            1.0,
+        );
+
+        for col_idx in 0..2 {
+            let label = format!("Golden:typography-table:r{row_idx}c{col_idx}");
+            let cell = find_semantics(&snap, SemanticsRole::Panel, Some(&label))
+                .unwrap_or_else(|| panic!("missing fret cell {label}"));
+            let expected = &rows[row_idx][col_idx].1;
+
+            assert_close_px(&format!("{label} x"), cell.bounds.origin.x, expected.x, 1.0);
+            assert_close_px(&format!("{label} y"), cell.bounds.origin.y, expected.y, 1.0);
+            assert_close_px(
+                &format!("{label} w"),
+                cell.bounds.size.width,
+                expected.w,
+                1.0,
+            );
+            assert_close_px(
+                &format!("{label} h"),
+                cell.bounds.size.height,
+                expected.h,
+                1.0,
+            );
+        }
+    }
+
+    // Paint-backed parity: `even:bg-muted` (web uses `lab(...)`).
+    let web_even_bg = web_trs[2]
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web row[2] backgroundColor");
+    let expected_even_rect = web_trs[2].rect;
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let (_rect, bg) = find_scene_quad_background_with_rect_close(&scene, expected_even_rect, 2.0)
+        .expect("even row background quad");
+    assert_rgba_close(
+        "typography-table even row background",
+        color_to_rgba(bg),
+        web_even_bg,
+        0.02,
+    );
 }
