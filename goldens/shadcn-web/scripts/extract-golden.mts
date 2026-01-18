@@ -148,6 +148,18 @@ async function startNextServer(
   nextDir: string,
   baseUrl: string
 ): Promise<StartedServer> {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+  // Some Next.js plugins/configs (e.g. docs tooling) resolve files relative to `process.cwd()`.
+  // When we run the extractor from the repo root, those lookups can incorrectly point at the
+  // workspace root instead of the Next app directory (e.g. resolving `source.config.ts`).
+  //
+  // We temporarily `chdir` so Next (and its plugins) see the expected project root.
+  const prevCwd = process.cwd()
+  process.chdir(nextDir)
+  if (debug) {
+    console.log(`- startNextServer: chdir ${prevCwd} -> ${process.cwd()}`)
+  }
+
   const url = new URL(baseUrl)
   const hostname = url.hostname || "localhost"
   const port = url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80
@@ -167,13 +179,23 @@ async function startNextServer(
     server.once("error", reject)
     server.listen(port, hostname, () => resolve())
   })
+  if (debug) {
+    console.log(`- startNextServer: listening; cwd=${process.cwd()}`)
+  }
 
   return {
     baseUrl,
     close: async () => {
-      await new Promise<void>((resolve) => server.close(() => resolve()))
-      if (typeof app?.close === "function") {
-        await app.close()
+      try {
+        await new Promise<void>((resolve) => server.close(() => resolve()))
+        if (typeof app?.close === "function") {
+          await app.close()
+        }
+      } finally {
+        if (debug) {
+          console.log(`- startNextServer: restore cwd ${process.cwd()} -> ${prevCwd}`)
+        }
+        process.chdir(prevCwd)
       }
     },
   }
@@ -1781,7 +1803,7 @@ async function run(options: GoldenOptions): Promise<string[]> {
 
           if (ok) {
             writeIfChanged(outPath, out, options.update)
-            console.log(`- wrote ${path.relative(process.cwd(), outPath)}`)
+            console.log(`- wrote ${path.relative(repoRoot, outPath)}`)
           }
         }
       }

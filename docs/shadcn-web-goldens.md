@@ -51,6 +51,10 @@ Alternative (in-process server, single command):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 button-default tabs-demo`
 
+Note: `--startServer` runs the Next app with `process.cwd()` set to `--nextDir` for the lifetime of
+the in-process server. This avoids mis-resolving app-local config files (e.g. `apps/v4/source.config.ts`)
+when invoking the extractor from the outer repo root.
+
 Extract both closed + open overlay states (writes `*.open.json` alongside the base file):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
@@ -58,6 +62,12 @@ Extract both closed + open overlay states (writes `*.open.json` alongside the ba
 Extract open overlay states that require non-click input (the script infers the right open action per page):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo command-dialog --modes=open --update --baseUrl=http://localhost:4020`
+
+Combobox open-state examples:
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --openSelector=\"[data-fret-golden-target] button[role='combobox']\"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --viewportW=375 --viewportH=320 --openVariants=\"vp375x320=[data-fret-golden-target] button[role='combobox']\"`
 
 If a page opens via a keyboard chord, you can override the keys used for `openAction=keys`:
 
