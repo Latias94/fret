@@ -25,6 +25,7 @@ type OpenStep =
   | { action: "move"; x: number; y: number }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
+  | { action: "type"; selector: string; text: string }
   | { action: "scroll"; selector: string; dx: number; dy: number }
 
 type GoldenOptions = {
@@ -478,13 +479,31 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "type") {
+      const at = valueRaw.indexOf("@")
+      if (at === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "type=<selector>@<text>")`
+        )
+      }
+      const selector = valueRaw.slice(0, at).trim()
+      const text = valueRaw.slice(at + 1)
+      if (!selector) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "type=<selector>@<text>")`
+        )
+      }
+      out.push({ action: "type", selector, text })
+      continue
+    }
+
     if (
       actionRaw !== "click" &&
       actionRaw !== "hover" &&
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|scroll|wait|waitFor|move)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|wait|waitFor|move)`
       )
     }
 
@@ -1045,6 +1064,36 @@ async function applySteps(
       continue
     }
 
+    if (step.action === "type") {
+      if (debug) {
+        console.log(
+          `- steps: ${name} step[${idx}] type ${step.selector} (${step.text.length} chars)`
+        )
+      }
+      const expr = `(() => {
+        const sel = ${JSON.stringify(step.selector)};
+        const text = ${JSON.stringify(step.text)};
+        const el = document.querySelector(sel);
+        if (!el) return false;
+        if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return false;
+        el.focus();
+        // React-controlled inputs require using the native setter to avoid stale value tracking.
+        const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+        if (typeof setter !== "function") return false;
+        setter.call(el, text);
+        el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+        return true;
+      })()`
+      const ok = (await page.evaluate(expr)) as boolean
+      if (!ok) {
+        throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
     if (debug) {
       console.log(`- steps: ${name} step[${idx}] ${step.action} ${step.selector}`)
     }
@@ -1129,6 +1178,36 @@ async function applyOpenSteps(
         if (!el || !(el instanceof Element)) return false;
         if (typeof (el).scrollBy !== "function") return false;
         (el).scrollBy(dx, dy);
+        return true;
+      })()`
+      const ok = (await page.evaluate(expr)) as boolean
+      if (!ok) {
+        throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "type") {
+      if (debug) {
+        console.log(
+          `- openSteps: ${name} step[${idx}] type ${step.selector} (${step.text.length} chars)`
+        )
+      }
+      const expr = `(() => {
+        const sel = ${JSON.stringify(step.selector)};
+        const text = ${JSON.stringify(step.text)};
+        const el = document.querySelector(sel);
+        if (!el) return false;
+        if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return false;
+        el.focus();
+        // React-controlled inputs require using the native setter to avoid stale value tracking.
+        const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+        if (typeof setter !== "function") return false;
+        setter.call(el, text);
+        el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
         return true;
       })()`
       const ok = (await page.evaluate(expr)) as boolean

@@ -7602,3 +7602,130 @@ fn web_vs_fret_layout_data_table_demo_row_height_and_action_button_size() {
         1.0,
     );
 }
+
+#[test]
+fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
+    let web = read_web_golden("data-table-demo.empty");
+    let theme = web_theme(&web);
+
+    let web_table = find_first(&theme.root, &|n| n.tag == "table").expect("web table");
+    let web_empty_td = web_find_by_tag_and_text(&theme.root, "td", "No results")
+        .expect("web empty state td");
+
+    let expected_rel = WebRect {
+        x: web_empty_td.rect.x - web_table.rect.x,
+        y: web_empty_td.rect.y - web_table.rect.y,
+        w: web_empty_td.rect.w,
+        h: web_empty_td.rect.h,
+    };
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let empty_td = fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "No results."))
+            .col_span(5)
+            .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(web_empty_td.rect.h))))
+            .into_element(cx);
+
+        let table = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:data-table-demo.empty:table")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![fret_ui_shadcn::Table::new(vec![
+                    fret_ui_shadcn::TableHeader::new(vec![
+                        fret_ui_shadcn::TableRow::new(
+                            5,
+                            vec![
+                                fret_ui_shadcn::TableHead::new("").into_element(cx),
+                                fret_ui_shadcn::TableHead::new("Status").into_element(cx),
+                                fret_ui_shadcn::TableHead::new("Email").into_element(cx),
+                                fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
+                                fret_ui_shadcn::TableHead::new("").into_element(cx),
+                            ],
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    fret_ui_shadcn::TableBody::new(vec![
+                        fret_ui_shadcn::TableRow::new(5, vec![empty_td.clone()])
+                            .border_bottom(false)
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)]
+            },
+        );
+
+        vec![cx.container(
+            ContainerProps {
+                layout: fret_ui_kit::declarative::style::layout_style(
+                    &theme,
+                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_table.rect.w))),
+                ),
+                ..Default::default()
+            },
+            move |_cx| vec![table],
+        )]
+    });
+
+    let _ = snap;
+
+    // We render only the table subtree in Fret, so the "relative to table" rect becomes an
+    // absolute rect in our test harness.
+    let expected_abs = WebRect {
+        x: expected_rel.x,
+        y: expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+
+    let (td_id, td_bounds) = if let Some(found) =
+        find_node_with_bounds_close(&ui, root, expected_abs, 2.0)
+    {
+        found
+    } else {
+        let mut nodes = Vec::new();
+        collect_subtree_nodes(&ui, root, &mut nodes);
+
+        let mut best: Option<(NodeId, Rect, f32)> = None;
+        for id in nodes {
+            let Some(bounds) = ui.debug_node_bounds(id) else {
+                continue;
+            };
+            let score = (bounds.origin.x.0 - expected_abs.x).abs()
+                + (bounds.origin.y.0 - expected_abs.y).abs()
+                + (bounds.size.width.0 - expected_abs.w).abs()
+                + (bounds.size.height.0 - expected_abs.h).abs();
+            if best.as_ref().is_none_or(|(_, _, s)| score < *s) {
+                best = Some((id, bounds, score));
+            }
+        }
+
+        let (id, b, score) = best.expect("no debug bounds in subtree");
+        panic!(
+            "fret td bounds not found; bestCandidate id={id:?} bounds={b:?} score={score} expected={expected_abs:?}"
+        );
+    };
+    let _ = td_id;
+
+    assert_rect_close_px("data-table-demo.empty td", td_bounds, expected_abs, 2.0);
+}

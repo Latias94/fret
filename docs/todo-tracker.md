@@ -207,6 +207,7 @@ It complements (but does not replace) ADRs:
       (checkbox 16x16, action button 32x32).
     - Implemented `TableCell::col_span` for shadcn Table primitives (required for `table-demo` footer and
       the upcoming data-table empty state `colSpan={columns.length}` parity).
+    - Added `data-table-demo.empty` web golden + layout gate for empty state `td` geometry (`colSpan` + `h-24`).
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:

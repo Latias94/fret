@@ -69,6 +69,10 @@ Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --viewportW=375 --viewportH=320 --openVariants=\"vp375x320=[data-fret-golden-target] button[role='combobox']\"`
 
+DataTable empty-state variant (drives a React-controlled filter input):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 data-table-demo --variants=\"empty\" --steps=\"type=[data-fret-golden-target] input[placeholder='Filter emails...']@zzzzzz\" --update`
+
 If a page opens via a keyboard chord, you can override the keys used for `openAction=keys`:
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts command-dialog --modes=open --update --baseUrl=http://localhost:4020 --openKeys=Control+KeyJ`
@@ -250,6 +254,7 @@ Current layout gates include:
 
 - `table-demo`: header/body/footer row heights + caption gap (Table recipe conformance).
 - `data-table-demo`: row height + checkbox/action button sizing (Table + Checkbox + Button icon sizing).
+- `data-table-demo.empty`: empty-state `td` spans full table width (colSpan) + `h-24` height.
 - `scroll-area-demo` / `scroll-area-horizontal-demo`: thumb bounds + (paint-backed) thumb background/alpha in hover-visible states.
 
 ## Options
@@ -266,10 +271,11 @@ Current layout gates include:
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--openKeys=<chord>` (optional; only used when `openAction=keys`; e.g. `Control+KeyJ` or `Meta+KeyJ`; env: `OPEN_KEYS`)
-- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|wait|waitFor|move|scroll`)
-- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|wait|waitFor|move|scroll`)
+- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
+- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
   - `keys=<selector>` uses `--openKeys` / `OPEN_KEYS`.
   - `keys=<selector>@<keys>` uses an inline key spec. `<keys>` supports a chord (`Shift+F10`) or a sequence (`ArrowDown ArrowRight` or `ArrowDown,ArrowRight`).
+  - `type=<selector>@<text>` sets a controlled `<input>/<textarea>` value and dispatches `input`/`change` (React-friendly).
   - `waitFor=<selector>` waits for a selector to appear (useful for hover-gated ScrollArea scrollbars).
   - `move=<x>,<y>` moves the mouse to an absolute viewport position (useful to force pointerenter/leave).
   - `scroll=<selector>@<dx>,<dy>` scrolls an element via `scrollBy(dx, dy)`.
