@@ -488,8 +488,12 @@ mod tests {
         let active_node =
             fret_ui::elements::node_for_element(&mut app, window, active_element).expect("active");
 
-        let scroll_bounds = ui.debug_node_bounds(scroll_node).expect("scroll bounds");
-        let active_bounds = ui.debug_node_bounds(active_node).expect("active bounds");
+        let scroll_bounds = ui
+            .debug_node_visual_bounds(scroll_node)
+            .expect("scroll visual bounds");
+        let active_bounds = ui
+            .debug_node_visual_bounds(active_node)
+            .expect("active visual bounds");
         assert!(
             rects_intersect(scroll_bounds, active_bounds),
             "expected active option to intersect the scroll viewport after scroll-into-view"
