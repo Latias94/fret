@@ -2925,6 +2925,82 @@ fn web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_select_scrollable_tiny_viewport_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "select-scrollable.vp1440x240",
+        Some("listbox"),
+        |cx, open| {
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+            let entries: Vec<SelectEntry> = vec![
+                SelectGroup::new(vec![
+                    SelectLabel::new("North America").into(),
+                    SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+                    SelectItem::new("cst", "Central Standard Time (CST)").into(),
+                    SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+                    SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+                    SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+                    SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("Europe & Africa").into(),
+                    SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+                    SelectItem::new("cet", "Central European Time (CET)").into(),
+                    SelectItem::new("eet", "Eastern European Time (EET)").into(),
+                    SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+                    SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+                    SelectItem::new("eat", "East Africa Time (EAT)").into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("Asia").into(),
+                    SelectItem::new("msk", "Moscow Time (MSK)").into(),
+                    SelectItem::new("ist", "India Standard Time (IST)").into(),
+                    SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+                    SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+                    SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+                    SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)")
+                        .into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("Australia & Pacific").into(),
+                    SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+                    SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+                    SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+                    SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+                    SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+                ])
+                .into(),
+                SelectGroup::new(vec![
+                    SelectLabel::new("South America").into(),
+                    SelectItem::new("art", "Argentina Time (ART)").into(),
+                    SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+                    SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+                    SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+                ])
+                .into(),
+            ];
+
+            fret_ui_shadcn::Select::new(value, open.clone())
+                .a11y_label("Select")
+                .placeholder("Select a timezone")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
+                )
+                .entries(entries)
+                .into_element(cx)
+        },
+        SemanticsRole::ComboBox,
+        Some("Select"),
+        SemanticsRole::ListBox,
+    );
+}
+
 fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
     let debug = std::env::var("FRET_DEBUG_SELECT_SCROLLABLE")
         .ok()
@@ -3121,6 +3197,11 @@ fn web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match() {
     assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp1440x450");
 }
 
+#[test]
+fn web_vs_fret_select_scrollable_tiny_viewport_listbox_option_insets_match() {
+    assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp1440x240");
+}
+
 fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -3273,6 +3354,11 @@ fn web_vs_fret_select_scrollable_listbox_width_matches() {
 #[test]
 fn web_vs_fret_select_scrollable_small_viewport_listbox_width_matches() {
     assert_select_scrollable_listbox_width_matches("select-scrollable.vp1440x450");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_tiny_viewport_listbox_width_matches() {
+    assert_select_scrollable_listbox_width_matches("select-scrollable.vp1440x240");
 }
 
 fn web_portal_first_node_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> &'a WebNode {
