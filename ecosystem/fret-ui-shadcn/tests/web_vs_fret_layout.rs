@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
 use serde::Deserialize;
@@ -606,6 +607,44 @@ fn run_fret_root_with_ui(
     ui.set_root(root);
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    (ui, snap, root)
+}
+
+fn run_fret_root_with_ui_and_services(
+    bounds: Rect,
+    services: &mut dyn fret_core::UiServices,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (UiTree<App>, fret_core::SemanticsSnapshot, NodeId) {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        f,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, services, bounds, 1.0);
 
     let snap = ui
         .semantics_snapshot()
@@ -7178,6 +7217,222 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
         "field-choice-card radiogroup-to-root gap",
         Px(radio_group.bounds.origin.y.0 - root.bounds.origin.y.0),
         web_radio_group.rect.y - web_root.rect.y,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
+    let web = read_web_golden("table-demo");
+    let theme = web_theme(&web);
+
+    let web_caption = web_find_by_tag_and_text(&theme.root, "caption", "recent invoices")
+        .or_else(|| find_first(&theme.root, &|n| n.tag == "caption"))
+        .expect("web caption");
+    let web_header_row = find_first(&theme.root, &|n| n.tag == "thead")
+        .and_then(|thead| thead.children.iter().find(|n| n.tag == "tr"))
+        .expect("web header tr");
+    let web_body_row = find_first(&theme.root, &|n| n.tag == "tbody")
+        .and_then(|tbody| tbody.children.iter().find(|n| n.tag == "tr"))
+        .expect("web body tr");
+    let web_footer_row = find_first(&theme.root, &|n| n.tag == "tfoot")
+        .and_then(|tfoot| tfoot.children.iter().find(|n| n.tag == "tr"))
+        .expect("web footer tr");
+
+    let web_caption_gap =
+        web_caption.rect.y - (web_footer_row.rect.y + web_footer_row.rect.h);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        let head_row = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:table-demo:header-row")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::TableRow::new(
+                        4,
+                        vec![
+                            fret_ui_shadcn::TableHead::new("Invoice").into_element(cx),
+                            fret_ui_shadcn::TableHead::new("Status").into_element(cx),
+                            fret_ui_shadcn::TableHead::new("Method").into_element(cx),
+                            fret_ui_shadcn::TableHead::new("Amount").into_element(cx),
+                        ],
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        let first_body_row = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:table-demo:body-row-0")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::TableRow::new(
+                        4,
+                        vec![
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "INV001"))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "Paid"))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "Credit Card"))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$250.00"))
+                                .into_element(cx),
+                        ],
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        let other_rows = [
+            ("INV002", "Pending", "PayPal", "$150.00"),
+            ("INV003", "Unpaid", "Bank Transfer", "$350.00"),
+            ("INV004", "Paid", "Credit Card", "$450.00"),
+            ("INV005", "Paid", "PayPal", "$550.00"),
+            ("INV006", "Pending", "Bank Transfer", "$200.00"),
+            ("INV007", "Unpaid", "Credit Card", "$300.00"),
+        ]
+        .into_iter()
+        .map(|(invoice, status, method, amount)| {
+            fret_ui_shadcn::TableRow::new(
+                4,
+                vec![
+                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, invoice)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, status)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, method)).into_element(cx),
+                    fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, amount)).into_element(cx),
+                ],
+            )
+            .into_element(cx)
+        })
+        .collect::<Vec<_>>();
+
+        let footer_row = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:table-demo:footer-row")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::TableRow::new(
+                        4,
+                        vec![
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "Total"))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, ""))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, ""))
+                                .into_element(cx),
+                            fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "$2,500.00"))
+                                .into_element(cx),
+                        ],
+                    )
+                    .into_element(cx),
+                ]
+            },
+        );
+
+        let caption =
+            fret_ui_shadcn::TableCaption::new("A list of your recent invoices.").into_element(cx);
+
+        vec![
+            fret_ui_shadcn::Table::new(vec![
+                fret_ui_shadcn::TableHeader::new(vec![head_row]).into_element(cx),
+                fret_ui_shadcn::TableBody::new({
+                    let mut rows = Vec::new();
+                    rows.push(first_body_row);
+                    rows.extend(other_rows);
+                    rows
+                })
+                .into_element(cx),
+                fret_ui_shadcn::TableFooter::new(vec![footer_row]).into_element(cx),
+                caption,
+            ])
+            .into_element(cx),
+        ]
+    });
+
+    let header_row = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:table-demo:header-row"),
+    )
+    .expect("fret header row");
+    let body_row = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:table-demo:body-row-0"),
+    )
+    .expect("fret first body row");
+    let footer_row = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:table-demo:footer-row"),
+    )
+    .expect("fret footer row");
+
+    assert_close_px(
+        "table-demo header row height",
+        header_row.bounds.size.height,
+        web_header_row.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "table-demo first body row height",
+        body_row.bounds.size.height,
+        web_body_row.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "table-demo footer row height",
+        footer_row.bounds.size.height,
+        web_footer_row.rect.h,
+        2.0,
+    );
+
+    let target_caption_y = footer_row.bounds.origin.y.0 + footer_row.bounds.size.height.0
+        + web_caption_gap;
+    let target_caption_h = web_caption.rect.h;
+
+    let mut nodes = Vec::new();
+    collect_subtree_nodes(&ui, root, &mut nodes);
+
+    let mut best: Option<Rect> = None;
+    let mut best_score = f32::INFINITY;
+    for id in nodes {
+        let Some(bounds) = ui.debug_node_bounds(id) else {
+            continue;
+        };
+        let score = (bounds.origin.y.0 - target_caption_y).abs()
+            + (bounds.size.height.0 - target_caption_h).abs()
+            + bounds.origin.x.0.abs();
+        if score < best_score {
+            best_score = score;
+            best = Some(bounds);
+        }
+    }
+
+    let caption_bounds = best.expect("fret caption bounds");
+    let fret_caption_gap = caption_bounds.origin.y.0
+        - (footer_row.bounds.origin.y.0 + footer_row.bounds.size.height.0);
+    assert_close_px(
+        "table-demo caption gap",
+        Px(fret_caption_gap),
+        web_caption_gap,
         1.0,
     );
 }

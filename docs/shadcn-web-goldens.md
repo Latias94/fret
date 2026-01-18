@@ -246,6 +246,11 @@ pixel diffs. See: `docs/audits/shadcn-web-layout-conformance.md`.
 This suite also includes a few paint-backed checks where upstream styling is effectively part of the
 geometry contract (for example: ScrollArea thumb background/alpha in hover-visible states).
 
+Current layout gates include:
+
+- `table-demo`: header/body/footer row heights + caption gap (Table recipe conformance).
+- `scroll-area-demo` / `scroll-area-horizontal-demo`: thumb bounds + (paint-backed) thumb background/alpha in hover-visible states.
+
 ## Options
 
 - `--style=new-york-v4`

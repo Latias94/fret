@@ -201,6 +201,8 @@ It complements (but does not replace) ADRs:
       and `menubar-sub-content`.
     - Extended ScrollArea conformance to gate thumb background/alpha against web `computedStyle`
       in hover-visible states (light/dark), and aligned the shadcn ScrollArea default thumb alpha to 1.0.
+    - Added `table-demo` layout conformance gates (header/body/footer row heights + caption gap) and aligned
+      shadcn `TableRow` height behavior by removing the unconditional `min_h=40` default.
   - Goldens to expand:
     - `goldens/shadcn-web/v4/new-york-v4/*.open.json`: add open snapshots for pages that require non-click input and/or submenu open states.
   - Fret gates to add:

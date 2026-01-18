@@ -286,9 +286,7 @@ impl TableRow {
                 chrome = chrome.bg(ColorRef::Color(hover_bg));
             }
 
-            let layout = LayoutRefinement::default()
-                .w_full()
-                .min_h(row_min_h(&theme));
+            let layout = LayoutRefinement::default().w_full();
             let mut props = decl_style::container_props(&theme, chrome, layout);
             props.layout.overflow = Overflow::Visible;
             props.border = if border_bottom {
@@ -414,11 +412,11 @@ impl TableCell {
         let py = Space::N2;
 
         let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
-        let props = decl_style::container_props(&theme, chrome, self.layout.h_full().w_full());
+        let layout = LayoutRefinement::default().w_full().merge(self.layout);
+        let props = decl_style::container_props(&theme, chrome, layout);
         let child = self.child;
         cx.container(props, move |cx| {
-            let layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_full());
+            let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
             vec![cx.flex(
                 FlexProps {
                     layout,
