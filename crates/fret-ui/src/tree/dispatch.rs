@@ -1945,8 +1945,17 @@ impl<H: UiHost> UiTree<H> {
 
         let mut out: Vec<(NodeId, Event)> = Vec::with_capacity(chain.len());
         for &node in &nodes_root_to_leaf {
-            if let Some(t) = self.node_render_transform(node)
-                && let Some(inv) = t.inverse()
+            let prepaint = self
+                .nodes
+                .get(node)
+                .and_then(|n| {
+                    (!self.inspection_active && !n.invalidation.hit_test)
+                        .then_some(n.prepaint_hit_test)
+                })
+                .flatten();
+            if let Some(inv) = prepaint
+                .and_then(|p| p.render_transform_inv)
+                .or_else(|| self.node_render_transform(node).and_then(|t| t.inverse()))
             {
                 mapped_pos = inv.apply_point(mapped_pos);
                 if let Some(d) = mapped_delta {
@@ -1959,8 +1968,20 @@ impl<H: UiHost> UiTree<H> {
             ));
 
             // Map into the child's coordinate space for the next node in the chain.
-            if let Some(t) = self.node_children_render_transform(node)
-                && let Some(inv) = t.inverse()
+            let prepaint = self
+                .nodes
+                .get(node)
+                .and_then(|n| {
+                    (!self.inspection_active && !n.invalidation.hit_test)
+                        .then_some(n.prepaint_hit_test)
+                })
+                .flatten();
+            if let Some(inv) = prepaint
+                .and_then(|p| p.children_render_transform_inv)
+                .or_else(|| {
+                    self.node_children_render_transform(node)
+                        .and_then(|t| t.inverse())
+                })
             {
                 mapped_pos = inv.apply_point(mapped_pos);
                 if let Some(d) = mapped_delta {
