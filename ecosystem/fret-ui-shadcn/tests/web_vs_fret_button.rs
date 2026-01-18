@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+mod css_color;
+use css_color::{Rgba, color_to_rgba, parse_css_color};
+
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
     themes: BTreeMap<String, WebGoldenTheme>,
@@ -33,14 +36,6 @@ struct WebNode {
     computed_style: BTreeMap<String, String>,
     #[serde(default)]
     children: Vec<WebNode>,
-}
-
-#[derive(Debug, Clone, Copy, Serialize)]
-struct Rgba {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -128,147 +123,8 @@ fn parse_px(s: &str) -> Option<f32> {
     v.parse::<f32>().ok()
 }
 
-fn parse_rgb(s: &str) -> Option<Rgba> {
-    let s = s.trim();
-    let inner = if let Some(v) = s.strip_prefix("rgba(").and_then(|v| v.strip_suffix(')')) {
-        (v, true)
-    } else if let Some(v) = s.strip_prefix("rgb(").and_then(|v| v.strip_suffix(')')) {
-        (v, false)
-    } else {
-        return None;
-    };
-
-    let parts: Vec<&str> = inner.0.split(',').map(|p| p.trim()).collect();
-    if parts.len() < 3 {
-        return None;
-    }
-
-    let r_srgb: f32 = parts[0].parse::<f32>().ok()? / 255.0;
-    let g_srgb: f32 = parts[1].parse::<f32>().ok()? / 255.0;
-    let b_srgb: f32 = parts[2].parse::<f32>().ok()? / 255.0;
-    let a: f32 = if inner.1 {
-        parts
-            .get(3)
-            .and_then(|v| v.parse::<f32>().ok())
-            .unwrap_or(1.0)
-    } else {
-        1.0
-    };
-
-    Some(Rgba {
-        r: srgb_f32_to_linear(r_srgb.clamp(0.0, 1.0)),
-        g: srgb_f32_to_linear(g_srgb.clamp(0.0, 1.0)),
-        b: srgb_f32_to_linear(b_srgb.clamp(0.0, 1.0)),
-        a,
-    })
-}
-
-fn srgb_f32_to_linear(c_srgb: f32) -> f32 {
-    if c_srgb <= 0.04045 {
-        c_srgb / 12.92
-    } else {
-        ((c_srgb + 0.055) / 1.055).powf(2.4)
-    }
-}
-
 fn round3(v: f32) -> f32 {
     (v * 1000.0).round() / 1000.0
-}
-
-fn color_to_rgba(c: fret_core::Color) -> Rgba {
-    Rgba {
-        r: c.r,
-        g: c.g,
-        b: c.b,
-        a: c.a,
-    }
-}
-
-fn parse_lab(s: &str) -> Option<Rgba> {
-    let s = s.trim();
-    let inner = s.strip_prefix("lab(")?.strip_suffix(')')?.trim();
-
-    let (main, alpha_part) = if let Some((l, r)) = inner.split_once('/') {
-        (l.trim(), Some(r.trim()))
-    } else {
-        (inner, None)
-    };
-
-    let parts: Vec<&str> = main
-        .split(|c: char| c.is_whitespace() || c == ',')
-        .filter(|p| !p.is_empty())
-        .collect();
-    if parts.len() != 3 {
-        return None;
-    }
-
-    let l_star: f32 = parts[0].trim_end_matches('%').parse().ok()?;
-    let a_star: f32 = parts[1].parse().ok()?;
-    let b_star: f32 = parts[2].parse().ok()?;
-
-    let alpha = if let Some(a) = alpha_part {
-        if let Some(pct) = a.trim_end_matches('%').parse::<f32>().ok()
-            && a.trim_end().ends_with('%')
-        {
-            (pct / 100.0).clamp(0.0, 1.0)
-        } else {
-            a.parse::<f32>().ok()?.clamp(0.0, 1.0)
-        }
-    } else {
-        1.0
-    };
-
-    let fy = (l_star + 16.0) / 116.0;
-    let fx = fy + a_star / 500.0;
-    let fz = fy - b_star / 200.0;
-
-    fn finv(t: f32) -> f32 {
-        const DELTA: f32 = 6.0 / 29.0;
-        const KAPPA: f32 = 24389.0 / 27.0;
-        if t > DELTA {
-            t * t * t
-        } else {
-            (116.0 * t - 16.0) / KAPPA
-        }
-    }
-
-    let xr = finv(fx);
-    let yr = finv(fy);
-    let zr = finv(fz);
-
-    // CSS `lab()` is defined in terms of CIE L*a*b* with a D50 whitepoint.
-    // Convert Lab(D50) -> XYZ(D50) -> XYZ(D65) (Bradford adaptation) -> linear sRGB.
-    // Reference: https://www.w3.org/TR/css-color-4/#lab-to-lch
-
-    // D50 reference white.
-    let x_d50 = xr * 0.96422;
-    let y_d50 = yr * 1.0;
-    let z_d50 = zr * 0.82521;
-
-    // Bradford adaptation matrix (D50 -> D65).
-    let x = 0.955_576_6 * x_d50 + -0.023_039_3 * y_d50 + 0.063_163_6 * z_d50;
-    let y = -0.028_289_5 * x_d50 + 1.009_941_6 * y_d50 + 0.021_007_7 * z_d50;
-    let z = 0.012_298_2 * x_d50 + -0.020_483_0 * y_d50 + 1.329_909_8 * z_d50;
-
-    // XYZ(D65) -> linear sRGB.
-    let r = (3.240_454_2 * x + -1.537_138_5 * y + -0.498_531_4 * z).clamp(0.0, 1.0);
-    let g = (-0.969_266_0 * x + 1.876_010_8 * y + 0.041_556_0 * z).clamp(0.0, 1.0);
-    let b = (0.055_643_4 * x + -0.204_025_9 * y + 1.057_225_2 * z).clamp(0.0, 1.0);
-
-    Some(Rgba { r, g, b, a: alpha })
-}
-
-fn parse_css_color(s: &str) -> Option<Rgba> {
-    let s = s.trim();
-    if s.eq_ignore_ascii_case("transparent") {
-        return Some(Rgba {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.0,
-        });
-    }
-    parse_rgb(s).or_else(|| parse_lab(s))
 }
 
 fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {

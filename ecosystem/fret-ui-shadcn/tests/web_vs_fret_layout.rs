@@ -19,6 +19,9 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+mod css_color;
+use css_color::{Rgba, color_to_rgba, parse_css_color};
+
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
     themes: BTreeMap<String, WebGoldenTheme>,
@@ -283,6 +286,25 @@ fn assert_close_px(label: &str, actual: Px, expected: f32, tol: f32) {
     );
 }
 
+fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {
+    let dr = (actual.r - expected.r).abs();
+    let dg = (actual.g - expected.g).abs();
+    let db = (actual.b - expected.b).abs();
+    let da = (actual.a - expected.a).abs();
+    assert!(
+        dr <= tol && dg <= tol && db <= tol && da <= tol,
+        "{label}: expected≈({:.3},{:.3},{:.3},{:.3}) got=({:.3},{:.3},{:.3},{:.3}) tol={tol}",
+        expected.r,
+        expected.g,
+        expected.b,
+        expected.a,
+        actual.r,
+        actual.g,
+        actual.b,
+        actual.a
+    );
+}
+
 fn collect_subtree_nodes(ui: &UiTree<App>, root: NodeId, out: &mut Vec<NodeId>) {
     out.push(root);
     for child in ui.children(root) {
@@ -337,6 +359,26 @@ fn find_scene_quad_with_rect_close(scene: &Scene, expected: WebRect, tol: f32) -
             _ => None,
         })
         .find(|rect| rect_close_px(*rect, expected, tol))
+}
+
+fn find_scene_quad_background_with_rect_close(
+    scene: &Scene,
+    expected: WebRect,
+    tol: f32,
+) -> Option<(Rect, fret_core::Color)> {
+    scene.ops().iter().find_map(|op| {
+        let SceneOp::Quad {
+            rect, background, ..
+        } = *op
+        else {
+            return None;
+        };
+        if rect_close_px(rect, expected, tol) {
+            Some((rect, background))
+        } else {
+            None
+        }
+    })
 }
 
 #[derive(Default)]
@@ -2732,6 +2774,414 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
 }
 
 #[test]
+fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light() {
+    let web = read_web_golden("scroll-area-demo.hover");
+    let theme = web
+        .themes
+        .get("light")
+        .expect("missing light theme in scroll-area-demo.hover");
+
+    let web_root = web_find_by_class_tokens(
+        &theme.root,
+        &["relative", "h-72", "w-48", "rounded-md", "border"],
+    )
+    .expect("web scroll area root");
+
+    let web_viewport =
+        web_find_by_data_slot(&theme.root, "scroll-area-viewport").expect("web scroll viewport");
+    let web_scrollbar = web_find_scroll_area_scrollbar(&theme.root, "vertical")
+        .expect("web scroll-area-scrollbar (vertical)");
+    let web_thumb =
+        web_find_scroll_area_thumb_in_scrollbar(web_scrollbar).expect("web scroll-area-thumb");
+
+    assert!(
+        web_scrollbar
+            .attrs
+            .get("data-state")
+            .is_some_and(|v| v == "visible"),
+        "expected web scrollbar to be visible in hover golden"
+    );
+
+    let expected_bg = web_thumb
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web thumb backgroundColor");
+
+    let expected_rel = WebRect {
+        x: web_thumb.rect.x - web_root.rect.x,
+        y: web_thumb.rect.y - web_root.rect.y,
+        w: web_thumb.rect.w,
+        h: web_thumb.rect.h,
+    };
+
+    let inset = web_viewport.rect.x - web_root.rect.x;
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.h > web_viewport.rect.h + 1.0,
+        &|n| -n.rect.h,
+    )
+    .expect("web scroll content (taller than viewport)");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let handle = ScrollHandle::default();
+
+    let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let content = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Px(Px(web_content.rect.h));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| vec![],
+        );
+
+        let scroll_area =
+            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
+                content,
+            ]))
+            .scroll_handle(handle.clone())
+            .scrollbar(
+                fret_ui_shadcn::ScrollAreaScrollbar::new()
+                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
+            )
+            .refine_layout(LayoutRefinement::default().size_full())
+            .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:scroll-area-demo:hover-thumb-bg-light")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(web_root.rect.w));
+                            layout.size.height = Length::Px(Px(web_root.rect.h));
+                            layout
+                        },
+                        padding: Edges::all(Px(inset)),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![scroll_area],
+                )]
+            },
+        )]
+    };
+
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap1 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (pre-hover)");
+    let panel1 = find_semantics(
+        &snap1,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-thumb-bg-light"),
+    )
+    .expect("fret scroll-area panel (pre-hover)");
+
+    let hover_pos = Point::new(
+        Px(panel1.bounds.origin.x.0 + (web_viewport.rect.x + web_viewport.rect.w * 0.5)),
+        Px(panel1.bounds.origin.y.0 + (web_viewport.rect.y + web_viewport.rect.h * 0.5)),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: hover_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap2 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (post-hover)");
+    let panel2 = find_semantics(
+        &snap2,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-thumb-bg-light"),
+    )
+    .expect("fret scroll-area panel (post-hover)");
+
+    let expected_abs = WebRect {
+        x: panel2.bounds.origin.x.0 + expected_rel.x,
+        y: panel2.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let (_rect, bg) =
+        find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
+    assert_rgba_close(
+        "scroll-area-demo.hover thumb background",
+        color_to_rgba(bg),
+        expected_bg,
+        0.02,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark() {
+    let web = read_web_golden("scroll-area-demo.hover");
+    let theme = web
+        .themes
+        .get("dark")
+        .expect("missing dark theme in scroll-area-demo.hover");
+
+    let web_root = web_find_by_class_tokens(
+        &theme.root,
+        &["relative", "h-72", "w-48", "rounded-md", "border"],
+    )
+    .expect("web scroll area root");
+
+    let web_viewport =
+        web_find_by_data_slot(&theme.root, "scroll-area-viewport").expect("web scroll viewport");
+    let web_scrollbar = web_find_scroll_area_scrollbar(&theme.root, "vertical")
+        .expect("web scroll-area-scrollbar (vertical)");
+    let web_thumb =
+        web_find_scroll_area_thumb_in_scrollbar(web_scrollbar).expect("web scroll-area-thumb");
+
+    assert!(
+        web_scrollbar
+            .attrs
+            .get("data-state")
+            .is_some_and(|v| v == "visible"),
+        "expected web scrollbar to be visible in hover golden"
+    );
+
+    let expected_bg = web_thumb
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web thumb backgroundColor");
+
+    let expected_rel = WebRect {
+        x: web_thumb.rect.x - web_root.rect.x,
+        y: web_thumb.rect.y - web_root.rect.y,
+        w: web_thumb.rect.w,
+        h: web_thumb.rect.h,
+    };
+
+    let inset = web_viewport.rect.x - web_root.rect.x;
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.h > web_viewport.rect.h + 1.0,
+        &|n| -n.rect.h,
+    )
+    .expect("web scroll content (taller than viewport)");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let handle = ScrollHandle::default();
+
+    let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let content = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Px(Px(web_content.rect.h));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| vec![],
+        );
+
+        let scroll_area =
+            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
+                content,
+            ]))
+            .scroll_handle(handle.clone())
+            .scrollbar(
+                fret_ui_shadcn::ScrollAreaScrollbar::new()
+                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
+            )
+            .refine_layout(LayoutRefinement::default().size_full())
+            .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:scroll-area-demo:hover-thumb-bg-dark")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(web_root.rect.w));
+                            layout.size.height = Length::Px(Px(web_root.rect.h));
+                            layout
+                        },
+                        padding: Edges::all(Px(inset)),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![scroll_area],
+                )]
+            },
+        )]
+    };
+
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap1 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (pre-hover)");
+    let panel1 = find_semantics(
+        &snap1,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-thumb-bg-dark"),
+    )
+    .expect("fret scroll-area panel (pre-hover)");
+
+    let hover_pos = Point::new(
+        Px(panel1.bounds.origin.x.0 + (web_viewport.rect.x + web_viewport.rect.w * 0.5)),
+        Px(panel1.bounds.origin.y.0 + (web_viewport.rect.y + web_viewport.rect.h * 0.5)),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: hover_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap2 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (post-hover)");
+    let panel2 = find_semantics(
+        &snap2,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-demo:hover-thumb-bg-dark"),
+    )
+    .expect("fret scroll-area panel (post-hover)");
+
+    let expected_abs = WebRect {
+        x: panel2.bounds.origin.x.0 + expected_rel.x,
+        y: panel2.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let (_rect, bg) =
+        find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
+    assert_rgba_close(
+        "scroll-area-demo.hover dark thumb background",
+        color_to_rgba(bg),
+        expected_bg,
+        0.02,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
     let web_early = read_web_golden("scroll-area-demo.hover-out-550ms");
     let theme_early = web_theme(&web_early);
@@ -3442,6 +3892,424 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
         scrollbar_bounds,
         expected_abs,
         2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_light() {
+    let web = read_web_golden("scroll-area-horizontal-demo.hover");
+    let theme = web
+        .themes
+        .get("light")
+        .expect("missing light theme in scroll-area-horizontal-demo.hover");
+
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["relative", "w-96", "rounded-md", "border"])
+            .expect("web scroll area root");
+
+    let web_viewport =
+        web_find_by_data_slot(&theme.root, "scroll-area-viewport").expect("web scroll viewport");
+    let web_scrollbar = web_find_scroll_area_scrollbar(&theme.root, "horizontal")
+        .expect("web scroll-area-scrollbar (horizontal)");
+    let web_thumb = web_find_scroll_area_thumb_in_scrollbar(web_scrollbar)
+        .expect("web scroll-area-thumb (horizontal)");
+
+    assert!(
+        web_scrollbar
+            .attrs
+            .get("data-state")
+            .is_some_and(|v| v == "visible"),
+        "expected web scrollbar to be visible in hover golden"
+    );
+
+    let expected_bg = web_thumb
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web thumb backgroundColor");
+
+    let expected_rel = WebRect {
+        x: web_thumb.rect.x - web_root.rect.x,
+        y: web_thumb.rect.y - web_root.rect.y,
+        w: web_thumb.rect.w,
+        h: web_thumb.rect.h,
+    };
+
+    let inset = web_viewport.rect.x - web_root.rect.x;
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.w > web_viewport.rect.w + 1.0,
+        &|n| -n.rect.w,
+    )
+    .expect("web scroll content (wider than viewport)");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let handle = ScrollHandle::default();
+
+    let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let content = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(web_content.rect.w));
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| vec![],
+        );
+
+        let scroll_area =
+            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
+                content,
+            ]))
+            .scroll_handle(handle.clone())
+            .scrollbar(
+                fret_ui_shadcn::ScrollAreaScrollbar::new()
+                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
+            )
+            .scrollbar(
+                fret_ui_shadcn::ScrollAreaScrollbar::new()
+                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal),
+            )
+            .corner(true)
+            .refine_layout(LayoutRefinement::default().size_full())
+            .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(
+                    "Golden:scroll-area-horizontal-demo:hover-thumb-bg-light",
+                )),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(web_root.rect.w));
+                            layout.size.height = Length::Px(Px(web_root.rect.h));
+                            layout
+                        },
+                        padding: Edges::all(Px(inset)),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![scroll_area],
+                )]
+            },
+        )]
+    };
+
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap1 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (pre-hover)");
+    let panel1 = find_semantics(
+        &snap1,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-thumb-bg-light"),
+    )
+    .expect("fret scroll-area panel (pre-hover)");
+
+    let hover_pos = Point::new(
+        Px(panel1.bounds.origin.x.0 + (web_viewport.rect.x + web_viewport.rect.w * 0.5)),
+        Px(panel1.bounds.origin.y.0 + (web_viewport.rect.y + web_viewport.rect.h * 0.5)),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: hover_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap2 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (post-hover)");
+    let panel2 = find_semantics(
+        &snap2,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-thumb-bg-light"),
+    )
+    .expect("fret scroll-area panel (post-hover)");
+
+    let expected_abs = WebRect {
+        x: panel2.bounds.origin.x.0 + expected_rel.x,
+        y: panel2.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let (_rect, bg) =
+        find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
+    assert_rgba_close(
+        "scroll-area-horizontal-demo.hover thumb background",
+        color_to_rgba(bg),
+        expected_bg,
+        0.02,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_dark() {
+    let web = read_web_golden("scroll-area-horizontal-demo.hover");
+    let theme = web
+        .themes
+        .get("dark")
+        .expect("missing dark theme in scroll-area-horizontal-demo.hover");
+
+    let web_root =
+        web_find_by_class_tokens(&theme.root, &["relative", "w-96", "rounded-md", "border"])
+            .expect("web scroll area root");
+
+    let web_viewport =
+        web_find_by_data_slot(&theme.root, "scroll-area-viewport").expect("web scroll viewport");
+    let web_scrollbar = web_find_scroll_area_scrollbar(&theme.root, "horizontal")
+        .expect("web scroll-area-scrollbar (horizontal)");
+    let web_thumb = web_find_scroll_area_thumb_in_scrollbar(web_scrollbar)
+        .expect("web scroll-area-thumb (horizontal)");
+
+    assert!(
+        web_scrollbar
+            .attrs
+            .get("data-state")
+            .is_some_and(|v| v == "visible"),
+        "expected web scrollbar to be visible in hover golden"
+    );
+
+    let expected_bg = web_thumb
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web thumb backgroundColor");
+
+    let expected_rel = WebRect {
+        x: web_thumb.rect.x - web_root.rect.x,
+        y: web_thumb.rect.y - web_root.rect.y,
+        w: web_thumb.rect.w,
+        h: web_thumb.rect.h,
+    };
+
+    let inset = web_viewport.rect.x - web_root.rect.x;
+
+    let web_content = web_find_best_by(
+        web_viewport,
+        &|n| n.tag == "div" && n.rect.w > web_viewport.rect.w + 1.0,
+        &|n| -n.rect.w,
+    )
+    .expect("web scroll content (wider than viewport)");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let handle = ScrollHandle::default();
+
+    let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let content = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(web_content.rect.w));
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| vec![],
+        );
+
+        let scroll_area =
+            fret_ui_shadcn::ScrollAreaRoot::new(fret_ui_shadcn::ScrollAreaViewport::new(vec![
+                content,
+            ]))
+            .scroll_handle(handle.clone())
+            .scrollbar(
+                fret_ui_shadcn::ScrollAreaScrollbar::new()
+                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Vertical),
+            )
+            .scrollbar(
+                fret_ui_shadcn::ScrollAreaScrollbar::new()
+                    .orientation(fret_ui_shadcn::ScrollAreaScrollbarOrientation::Horizontal),
+            )
+            .corner(true)
+            .refine_layout(LayoutRefinement::default().size_full())
+            .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(
+                    "Golden:scroll-area-horizontal-demo:hover-thumb-bg-dark",
+                )),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(web_root.rect.w));
+                            layout.size.height = Length::Px(Px(web_root.rect.h));
+                            layout
+                        },
+                        padding: Edges::all(Px(inset)),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![scroll_area],
+                )]
+            },
+        )]
+    };
+
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap1 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (pre-hover)");
+    let panel1 = find_semantics(
+        &snap1,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-thumb-bg-dark"),
+    )
+    .expect("fret scroll-area panel (pre-hover)");
+
+    let hover_pos = Point::new(
+        Px(panel1.bounds.origin.x.0 + (web_viewport.rect.x + web_viewport.rect.w * 0.5)),
+        Px(panel1.bounds.origin.y.0 + (web_viewport.rect.y + web_viewport.rect.h * 0.5)),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: hover_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        render,
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap2 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (post-hover)");
+    let panel2 = find_semantics(
+        &snap2,
+        SemanticsRole::Panel,
+        Some("Golden:scroll-area-horizontal-demo:hover-thumb-bg-dark"),
+    )
+    .expect("fret scroll-area panel (post-hover)");
+
+    let expected_abs = WebRect {
+        x: panel2.bounds.origin.x.0 + expected_rel.x,
+        y: panel2.bounds.origin.y.0 + expected_rel.y,
+        w: expected_rel.w,
+        h: expected_rel.h,
+    };
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let (_rect, bg) =
+        find_scene_quad_background_with_rect_close(&scene, expected_abs, 2.0).expect("thumb quad");
+    assert_rgba_close(
+        "scroll-area-horizontal-demo.hover dark thumb background",
+        color_to_rgba(bg),
+        expected_bg,
+        0.02,
     );
 }
 
