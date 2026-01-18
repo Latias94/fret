@@ -38,6 +38,9 @@ pub fn request_dismissible_popover_for_window<H: UiHost>(
 ) {
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let w = overlays.windows.entry(window).or_default();
+        overlays
+            .cached_popover_requests
+            .insert((window, request.id), request.clone());
         w.popovers.push(request);
     });
 }
@@ -54,6 +57,9 @@ pub fn request_modal_for_window<H: UiHost>(
 ) {
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let w = overlays.windows.entry(window).or_default();
+        overlays
+            .cached_modal_requests
+            .insert((window, request.id), request.clone());
         w.modals.push(request);
     });
 }
@@ -105,6 +111,9 @@ pub fn request_toast_layer_for_window<H: UiHost>(
 ) {
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let w = overlays.windows.entry(window).or_default();
+        overlays
+            .cached_toast_layer_requests
+            .insert((window, request.id), request.clone());
         w.toasts.push(request);
     });
 }

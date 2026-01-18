@@ -194,7 +194,11 @@ impl Sheet {
     ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let is_open = cx
+                .watch_model(&self.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
 
             let trigger = trigger(cx);
             let id = trigger.id;
@@ -714,7 +718,11 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let sheet = Sheet::new_controllable(cx, None, true);
-            let open = cx.watch_model(&sheet.open).copied().unwrap_or(false);
+            let open = cx
+                .watch_model(&sheet.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
             assert!(open);
         });
     }

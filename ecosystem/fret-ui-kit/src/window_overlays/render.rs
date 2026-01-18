@@ -18,7 +18,10 @@ use super::state::{
     WindowOverlays,
 };
 use super::toast::{ToastEntry, ToastTimerOutcome};
-use super::{ToastPosition, ToastVariant, dismiss_toast_action};
+use super::{
+    DismissiblePopoverRequest, ModalRequest, ToastLayerRequest, ToastPosition, ToastVariant,
+    dismiss_toast_action,
+};
 
 #[derive(Default)]
 struct ToastHoverPauseState {
@@ -83,11 +86,11 @@ pub fn render<H: UiHost>(
     });
 
     let (
-        modal_requests,
-        popover_requests,
+        mut modal_requests,
+        mut popover_requests,
         hover_overlay_requests,
         tooltip_requests,
-        toast_requests,
+        mut toast_requests,
     ) = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         overlays
             .windows
@@ -103,6 +106,68 @@ pub fn render<H: UiHost>(
             })
             .unwrap_or_default()
     });
+
+    // When view caching skips rerendering the subtree that emits overlay requests, the per-frame
+    // request lists will be empty (or missing specific overlays). Keep a cached "declaration"
+    // and synthesize requests for overlays that are currently open so overlay behavior remains
+    // correct under view caching.
+    //
+    // Notes:
+    // - This intentionally treats close transitions as "instant" when the request producer is
+    //   not rerendering: if `open` flips false, the overlay disappears as soon as we stop
+    //   synthesizing a request.
+    // - Without this, scripts that rely on Radix-style overlay semantics can fail when view
+    //   caching is enabled (the overlay request vanishes for a frame and the overlay unmounts).
+    let modal_request_ids: HashSet<GlobalElementId> = modal_requests.iter().map(|r| r.id).collect();
+    let popover_request_ids: HashSet<GlobalElementId> =
+        popover_requests.iter().map(|r| r.id).collect();
+    let toast_request_ids: HashSet<GlobalElementId> = toast_requests.iter().map(|r| r.id).collect();
+
+    let (extra_modals, extra_popovers, extra_toasts) =
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
+            let mut modals: Vec<ModalRequest> = Vec::new();
+            let mut popovers: Vec<DismissiblePopoverRequest> = Vec::new();
+            let mut toasts: Vec<ToastLayerRequest> = Vec::new();
+
+            for ((w, id), req) in overlays.cached_modal_requests.iter() {
+                if *w != window || modal_request_ids.contains(id) {
+                    continue;
+                }
+                let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+                if !open_now {
+                    continue;
+                }
+                let mut req = req.clone();
+                req.present = true;
+                modals.push(req);
+            }
+
+            for ((w, id), req) in overlays.cached_popover_requests.iter() {
+                if *w != window || popover_request_ids.contains(id) {
+                    continue;
+                }
+                let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+                if !open_now {
+                    continue;
+                }
+                let mut req = req.clone();
+                req.present = true;
+                popovers.push(req);
+            }
+
+            for ((w, id), req) in overlays.cached_toast_layer_requests.iter() {
+                if *w != window || toast_request_ids.contains(id) {
+                    continue;
+                }
+                toasts.push(req.clone());
+            }
+
+            (modals, popovers, toasts)
+        });
+
+    modal_requests.extend(extra_modals);
+    popover_requests.extend(extra_popovers);
+    toast_requests.extend(extra_toasts);
 
     let mut seen_modals: HashSet<GlobalElementId> = HashSet::new();
     let mut seen_popovers: HashSet<GlobalElementId> = HashSet::new();

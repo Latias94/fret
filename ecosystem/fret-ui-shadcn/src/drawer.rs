@@ -519,7 +519,7 @@ impl Drawer {
                 return content;
             }
 
-            let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+            let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
             let (runtime, offset_model, was_open) = drawer_drag_models(cx);
             let window_height = cx.bounds.size.height;
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
