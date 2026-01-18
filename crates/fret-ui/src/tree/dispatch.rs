@@ -277,6 +277,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
+        needs_redraw: &mut bool,
         invalidation_visited: &mut HashMap<NodeId, u8>,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
@@ -336,6 +337,14 @@ impl<H: UiHost> UiTree<H> {
                     )
                 });
 
+                if !invalidations.is_empty()
+                    || requested_focus.is_some()
+                    || requested_capture.is_some()
+                    || notify_requested
+                {
+                    *needs_redraw = true;
+                }
+
                 for (id, inv) in invalidations {
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
@@ -354,6 +363,7 @@ impl<H: UiHost> UiTree<H> {
                         UiDebugInvalidationSource::Notify,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
                     );
+                    *needs_redraw = true;
                 }
 
                 if let Some(focus) = requested_focus
@@ -458,6 +468,14 @@ impl<H: UiHost> UiTree<H> {
                 )
             });
 
+            if !invalidations.is_empty()
+                || requested_focus.is_some()
+                || requested_capture.is_some()
+                || notify_requested
+            {
+                *needs_redraw = true;
+            }
+
             for (id, inv) in invalidations {
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
@@ -476,6 +494,7 @@ impl<H: UiHost> UiTree<H> {
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
                 );
+                *needs_redraw = true;
             }
 
             if let Some(focus) = requested_focus
@@ -583,6 +602,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
+        let mut needs_redraw = false;
 
         // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
         // text/IME path first, and only fall back to shortcut matching if the widget doesn't
@@ -622,7 +642,7 @@ impl<H: UiHost> UiTree<H> {
                         UiDebugInvalidationDetail::FocusVisiblePolicy,
                     );
                 }
-                app.request_redraw(window);
+                self.request_redraw_coalesced(app);
             }
 
             let changed = crate::input_modality::update_for_event(app, window, event);
@@ -644,7 +664,7 @@ impl<H: UiHost> UiTree<H> {
                         UiDebugInvalidationDetail::InputModalityPolicy,
                     );
                 }
-                app.request_redraw(window);
+                self.request_redraw_coalesced(app);
             }
         }
 
@@ -685,9 +705,13 @@ impl<H: UiHost> UiTree<H> {
                     &input_ctx,
                     node,
                     event,
+                    &mut needs_redraw,
                     &mut invalidation_visited,
                 );
                 if stopped {
+                    if needs_redraw {
+                        self.request_redraw_coalesced(app);
+                    }
                     return;
                 }
             }
@@ -706,9 +730,13 @@ impl<H: UiHost> UiTree<H> {
                     &input_ctx,
                     layer.root,
                     event,
+                    &mut needs_redraw,
                     &mut invalidation_visited,
                 );
                 if stopped {
+                    if needs_redraw {
+                        self.request_redraw_coalesced(app);
+                    }
                     return;
                 }
             }
@@ -741,7 +769,6 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let mut needs_redraw = false;
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
@@ -757,9 +784,7 @@ impl<H: UiHost> UiTree<H> {
             && let Some(window) = self.window
             && self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
         {
-            if let Some(window) = self.window {
-                app.request_redraw(window);
-            }
+            self.request_redraw_coalesced(app);
             return;
         }
 
@@ -1162,8 +1187,8 @@ impl<H: UiHost> UiTree<H> {
         if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
             && pointer_down_outside.suppress_hit_test_dispatch
         {
-            if needs_redraw && let Some(window) = self.window {
-                app.request_redraw(window);
+            if needs_redraw {
+                self.request_redraw_coalesced(app);
             }
             return;
         }
@@ -1549,8 +1574,8 @@ impl<H: UiHost> UiTree<H> {
                     },
                 )
             {
-                if needs_redraw && let Some(window) = self.window {
-                    app.request_redraw(window);
+                if needs_redraw {
+                    self.request_redraw_coalesced(app);
                 }
                 return;
             }
@@ -1584,8 +1609,8 @@ impl<H: UiHost> UiTree<H> {
             app.push_effect(Effect::CursorSetIcon { window, icon });
         }
 
-        if needs_redraw && let Some(window) = self.window {
-            app.request_redraw(window);
+        if needs_redraw {
+            self.request_redraw_coalesced(app);
         }
         if let Event::Pointer(PointerEvent::Move { .. }) = event {
             let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
@@ -1616,6 +1641,7 @@ impl<H: UiHost> UiTree<H> {
                     &input_ctx,
                     layer_root,
                     event,
+                    &mut needs_redraw,
                     &mut invalidation_visited,
                 );
                 if barrier_root == Some(layer_root) {

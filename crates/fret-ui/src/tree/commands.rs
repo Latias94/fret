@@ -122,8 +122,8 @@ impl<H: UiHost> UiTree<H> {
             needs_redraw = true;
         }
 
-        if needs_redraw && let Some(window) = self.window {
-            app.request_redraw(window);
+        if needs_redraw {
+            self.request_redraw_coalesced(app);
         }
 
         handled
@@ -214,9 +214,7 @@ impl<H: UiHost> UiTree<H> {
             self.mark_invalidation(next, Invalidation::Paint);
             self.scroll_node_into_view(app, next);
         }
-        if let Some(window) = self.window {
-            app.request_redraw(window);
-        }
+        self.request_redraw_coalesced(app);
         true
     }
 
@@ -254,9 +252,7 @@ impl<H: UiHost> UiTree<H> {
             if let crate::widget::ScrollIntoViewResult::Handled { did_scroll } = result {
                 if did_scroll {
                     self.mark_invalidation(id, Invalidation::HitTest);
-                    if let Some(window) = self.window {
-                        app.request_redraw(window);
-                    }
+                    self.request_redraw_coalesced(app);
                 }
                 return did_scroll;
             }

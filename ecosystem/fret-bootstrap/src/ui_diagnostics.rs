@@ -2191,6 +2191,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub invalidation_walks: Vec<UiInvalidationWalkV1>,
     #[serde(default)]
+    pub dirty_views: Vec<UiDirtyViewV1>,
+    #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
     pub model_change_unobserved: Vec<UiModelChangeUnobservedV1>,
@@ -2222,6 +2224,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_invalidation_walks()
                 .iter()
                 .map(UiInvalidationWalkV1::from_walk)
+                .collect(),
+            dirty_views: ui
+                .debug_dirty_views()
+                .iter()
+                .map(UiDirtyViewV1::from_dirty_view)
                 .collect(),
             model_change_hotspots: ui
                 .debug_model_change_hotspots()
@@ -2261,6 +2268,37 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDirtyViewV1 {
+    pub root_node: u64,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub detail: Option<String>,
+}
+
+impl UiDirtyViewV1 {
+    fn from_dirty_view(dirty: &fret_ui::tree::UiDebugDirtyView) -> Self {
+        let source = match dirty.source {
+            fret_ui::tree::UiDebugInvalidationSource::ModelChange => "model_change",
+            fret_ui::tree::UiDebugInvalidationSource::GlobalChange => "global_change",
+            fret_ui::tree::UiDebugInvalidationSource::Notify => "notify",
+            fret_ui::tree::UiDebugInvalidationSource::Hover => "hover",
+            fret_ui::tree::UiDebugInvalidationSource::Focus => "focus",
+            fret_ui::tree::UiDebugInvalidationSource::Other => "other",
+        };
+
+        Self {
+            root_node: key_to_u64(dirty.root),
+            root_element: dirty.element.map(|e| e.0),
+            source: Some(source.to_string()),
+            detail: dirty.detail.as_str().map(|s| s.to_string()),
         }
     }
 }

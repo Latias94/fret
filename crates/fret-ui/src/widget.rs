@@ -110,7 +110,6 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     /// and prevents paint replay of stale recorded ranges.
     pub fn notify(&mut self) {
         self.notify_requested = true;
-        self.request_redraw();
     }
 
     pub fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {

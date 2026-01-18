@@ -79,9 +79,13 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Progress: `EventCx::notify()` exists and marks the nearest cache root as `view_cache_needs_rerender` via a dedicated invalidation source.
   - Evidence: `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationSource::Notify`),
     `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_notify_marks_cache_root_needs_rerender`).
-- [ ] GPUI-MVP2-rt-002 Track per-window dirty view set and coalesce redraw scheduling.
+- [x] GPUI-MVP2-rt-002 Track per-window dirty view set and coalesce redraw scheduling.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, runner glue in `crates/fret-launch/` if needed
   - Done when: repeated `notify` calls are coalesced; diagnostics can list dirty views (debug-only).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`dirty_cache_roots`, `request_redraw_coalesced`, `debug_dirty_views`),
+    `crates/fret-ui/src/tree/dispatch.rs` (notify-driven redraw scheduling), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+    (`UiTreeDebugSnapshotV1.dirty_views`), `crates/fret-ui/src/tree/tests/view_cache.rs`
+    (`view_cache_notify_propagates_to_ancestor_cache_roots`).
 - [~] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`
   - Done when: a notified view never reuses cached ranges; a clean view reliably reuses them.
