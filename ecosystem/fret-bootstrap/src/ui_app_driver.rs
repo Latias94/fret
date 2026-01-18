@@ -1005,6 +1005,9 @@ fn ui_app_render<S>(
                     let out = (driver.view)(cx, &mut state.state);
 
                     #[cfg(feature = "ui-app-command-palette")]
+                    let mut out = out;
+
+                    #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled
                         && let Some(models) = cx
                             .app
