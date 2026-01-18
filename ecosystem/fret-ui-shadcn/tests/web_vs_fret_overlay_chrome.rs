@@ -35,6 +35,14 @@ struct WebGoldenTheme {
     root: WebNode,
     #[serde(default)]
     portals: Vec<WebNode>,
+    #[serde(default)]
+    viewport: Option<WebViewport>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+struct WebViewport {
+    w: f32,
+    h: f32,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -59,6 +67,13 @@ struct WebNode {
     #[allow(dead_code)]
     #[serde(default)]
     children: Vec<WebNode>,
+}
+
+fn web_theme_named<'a>(golden: &'a WebGolden, name: &str) -> &'a WebGoldenTheme {
+    golden
+        .themes
+        .get(name)
+        .unwrap_or_else(|| panic!("missing {name} theme in web golden"))
 }
 
 fn repo_root() -> PathBuf {
@@ -108,6 +123,13 @@ fn find_portal_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> Option<&'a 
         .portals
         .iter()
         .find(|n| n.attrs.get("role").is_some_and(|v| v == role))
+}
+
+fn find_portal_by_slot<'a>(theme: &'a WebGoldenTheme, slot: &str) -> Option<&'a WebNode> {
+    theme
+        .portals
+        .iter()
+        .find(|n| n.attrs.get("data-slot").is_some_and(|v| v == slot))
 }
 
 fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Option<&'a WebNode> {
@@ -579,6 +601,17 @@ fn setup_app_with_shadcn_theme(app: &mut App) {
     );
 }
 
+fn setup_app_with_shadcn_theme_scheme(
+    app: &mut App,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        scheme,
+    );
+}
+
 fn render_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -618,6 +651,13 @@ fn paint_frame(
     let mut scene = Scene::default();
     ui.paint_all(app, services, bounds, &mut scene, 1.0);
     (snap, scene)
+}
+
+fn bounds_for_viewport(viewport: WebViewport) -> Rect {
+    Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(viewport.w), Px(viewport.h)),
+    )
 }
 
 fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
@@ -1296,6 +1336,304 @@ fn assert_overlay_chrome_matches_by_portal_slot(
     }
 }
 
+fn assert_overlay_chrome_matches_by_portal_slot_theme(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    settle_frames: u64,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_radius = web_corner_radii_effective_px(web_portal).expect("web radius px");
+    let web_background = web_portal
+        .computed_style
+        .get("backgroundColor")
+        .and_then(|v| parse_css_color(v));
+    let web_border_color = web_portal
+        .computed_style
+        .get("borderTopColor")
+        .and_then(|v| parse_css_color(v));
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(web_w.max(640.0)), Px(web_h.max(480.0))),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![build_frame1(cx, &open)],
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for tick in 0..settle_frames.max(1) {
+        let request_semantics = tick + 1 == settle_frames.max(1);
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &open)],
+        );
+    }
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+
+    let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
+        .expect("painted quad for overlay panel");
+
+    if let Some(web_background) = web_background
+        && web_background.a > 0.01
+    {
+        let fret_bg = color_to_rgba(quad.background);
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.r"),
+            fret_bg.r,
+            web_background.r,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.g"),
+            fret_bg.g,
+            web_background.g,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.b"),
+            fret_bg.b,
+            web_background.b,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.a"),
+            fret_bg.a,
+            web_background.a,
+            0.02,
+        );
+    }
+
+    if has_border(&web_border)
+        && let Some(web_border_color) = web_border_color
+        && web_border_color.a > 0.01
+    {
+        let fret_border = color_to_rgba(quad.border_color);
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.r"),
+            fret_border.r,
+            web_border_color.r,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.g"),
+            fret_border.g,
+            web_border_color.g,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.b"),
+            fret_border.b,
+            web_border_color.b,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.a"),
+            fret_border.a,
+            web_border_color.a,
+            0.03,
+        );
+    }
+
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(
+            &format!("{web_name} border[{idx}]"),
+            *edge,
+            web_border[idx],
+            0.6,
+        );
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(
+            &format!("{web_name} radius[{idx}]"),
+            *corner,
+            web_radius[idx],
+            1.0,
+        );
+    }
+}
+
+fn assert_overlay_surface_colors_match(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_role: SemanticsRole,
+    settle_frames: u64,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+
+    let web_background = web_portal
+        .computed_style
+        .get("backgroundColor")
+        .and_then(|v| parse_css_color(v));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_border_color = web_portal
+        .computed_style
+        .get("borderTopColor")
+        .and_then(|v| parse_css_color(v));
+
+    let bounds = web
+        .themes
+        .get(web_theme_name)
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(640.0), Px(480.0)),
+            )
+        });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![build_frame1(cx, &open)],
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for tick in 0..settle_frames.max(1) {
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            tick + 1 == settle_frames.max(1),
+            |cx| vec![build_frame(cx, &open)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+
+    let overlay = largest_semantics_node(&snap, fret_role)
+        .unwrap_or_else(|| panic!("missing fret semantics node: {fret_role:?}"));
+    let quad = find_best_chrome_quad(&scene, overlay.bounds)
+        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    if let Some(web_background) = web_background
+        && web_background.a > 0.01
+    {
+        let fret_bg = color_to_rgba(quad.background);
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.r"),
+            fret_bg.r,
+            web_background.r,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.g"),
+            fret_bg.g,
+            web_background.g,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.b"),
+            fret_bg.b,
+            web_background.b,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} background.a"),
+            fret_bg.a,
+            web_background.a,
+            0.02,
+        );
+    }
+
+    if has_border(&web_border)
+        && let Some(web_border_color) = web_border_color
+        && web_border_color.a > 0.01
+    {
+        let fret_border = color_to_rgba(quad.border_color);
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.r"),
+            fret_border.r,
+            web_border_color.r,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.g"),
+            fret_border.g,
+            web_border_color.g,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.b"),
+            fret_border.b,
+            web_border_color.b,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} border_color.a"),
+            fret_border.a,
+            web_border_color.a,
+            0.03,
+        );
+    }
+}
+
 fn largest_semantics_node<'a>(
     snap: &'a fret_core::SemanticsSnapshot,
     role: SemanticsRole,
@@ -1510,6 +1848,37 @@ fn web_vs_fret_dialog_demo_surface_colors_match_web() {
 }
 
 #[test]
+fn web_vs_fret_dialog_demo_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+
+    assert_overlay_chrome_matches_by_portal_slot_theme(
+        "dialog-demo",
+        "dialog-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    DialogContent::new(vec![cx.text("Edit profile")])
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_command_dialog_panel_chrome_matches() {
     use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
 
@@ -1601,6 +1970,198 @@ fn web_vs_fret_sheet_demo_surface_colors_match_web() {
             |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
         )
     });
+}
+
+#[test]
+fn web_vs_fret_sheet_demo_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+
+    assert_overlay_surface_colors_match(
+        "sheet-demo",
+        "sheet-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_500 + 2,
+        |cx, open| {
+            Sheet::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_popover_demo_surface_colors_match_web() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
+
+    assert_overlay_surface_colors_match(
+        "popover-demo",
+        "popover-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            Popover::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open popover")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    PopoverContent::new(Vec::new())
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(fret_ui_kit::MetricRef::Px(Px(320.0)))
+                                .h_px(fret_ui_kit::MetricRef::Px(Px(245.33334))),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_popover_demo_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
+
+    assert_overlay_surface_colors_match(
+        "popover-demo",
+        "popover-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            Popover::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open popover")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    PopoverContent::new(Vec::new())
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(fret_ui_kit::MetricRef::Px(Px(320.0)))
+                                .h_px(fret_ui_kit::MetricRef::Px(Px(245.33334))),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+        DropdownMenuLabel, DropdownMenuShortcut,
+    };
+
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-demo",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Profile")
+                                    .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
+                            ),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+        DropdownMenuLabel, DropdownMenuShortcut,
+    };
+
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-demo",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Profile")
+                                    .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
+                            ),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_drawer_demo_surface_colors_match_web_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+
+    assert_overlay_surface_colors_match(
+        "drawer-demo.vp1440x240",
+        "drawer-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_500 + 2,
+        |cx, open| {
+            Drawer::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Drawer")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
+            )
+        },
+    );
 }
 
 #[test]
