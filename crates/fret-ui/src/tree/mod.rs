@@ -1293,7 +1293,9 @@ impl<H: UiHost> UiTree<H> {
         let mut before = Transform2D::IDENTITY;
         let mut transform = Transform2D::IDENTITY;
         for (idx, id) in path.iter().copied().enumerate() {
-            let node_transform = self.node_render_transform(id).unwrap_or(Transform2D::IDENTITY);
+            let node_transform = self
+                .node_render_transform(id)
+                .unwrap_or(Transform2D::IDENTITY);
             let at_node = before.compose(node_transform);
             if id == node {
                 transform = at_node;
@@ -2713,11 +2715,7 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 // Allow widgets to override semantics metadata.
-                if let Some(widget) = self
-                    .nodes
-                    .get_mut(id)
-                    .and_then(|node| node.widget.as_mut())
-                {
+                if let Some(widget) = self.nodes.get_mut(id).and_then(|node| node.widget.as_mut()) {
                     let mut cx = SemanticsCx {
                         app,
                         node: id,

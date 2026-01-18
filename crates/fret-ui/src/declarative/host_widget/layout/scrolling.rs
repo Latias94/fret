@@ -370,7 +370,10 @@ impl ElementHostWidget {
             self.element,
             crate::element::ScrollState::default,
             |state| {
-                let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle).clone();
+                let handle = external_handle
+                    .as_ref()
+                    .unwrap_or(&state.scroll_handle)
+                    .clone();
                 if !is_probe_layout {
                     handle.set_viewport_size(desired);
                     handle.set_content_size(Size::new(content_w, content_h));
@@ -389,11 +392,8 @@ impl ElementHostWidget {
         let content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
         if !is_probe_layout {
-            let roots: Vec<(NodeId, Rect)> = cx
-                .children
-                .iter()
-                .map(|&c| (c, content_bounds))
-                .collect();
+            let roots: Vec<(NodeId, Rect)> =
+                cx.children.iter().map(|&c| (c, content_bounds)).collect();
             cx.solve_barrier_child_roots_if_needed(&roots);
         }
 
