@@ -133,7 +133,7 @@ If you also extract open overlay states (`--modes=open` or `--open`), you will g
 `*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
 
 - `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `60` open-mode files (`*.open.json`)
+- `64` open-mode files (`*.open.json`)
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
@@ -180,6 +180,10 @@ Other constrained overlay variants (useful for tight-height flip/shift behavior)
 Note: `command-dialog` uses a different trigger selector:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 command-dialog --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="vp1440x240=[data-fret-golden-target] [data-state='closed'][aria-haspopup]"`
+
+Extract constrained-viewport `sheet-side` variants:
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 sheet-side --modes=open --update --viewportW=1440 --viewportH=240 --openVariants="top-vp1440x240=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(1);right-vp1440x240=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(2);bottom-vp1440x240=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(3);left-vp1440x240=[data-fret-golden-target] button[data-slot='sheet-trigger']:nth-of-type(4)"`
 
 
 Output directory (default):
