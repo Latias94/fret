@@ -15,6 +15,15 @@ This document tracks executable TODOs for the GPUI parity refactor workstream. I
 - Cache roots (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
 - Paint-stream replay caching baseline: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 
+## Defaults (v1; performance-first)
+
+These defaults are intentionally “cache-root-first” to maximize performance impact with minimal surface-area change:
+
+- `ViewId` is defined at cache boundary granularity (a `ViewCache` root).
+- `notify()` (no explicit target) marks the current/nearest cache root dirty; if no cache root is active, it falls back
+  to the window root.
+- Dirty cache roots propagate to ancestor cache roots (nested boundaries must not replay stale ranges).
+
 ## Tracking Format
 
 Each TODO is labeled:
