@@ -219,11 +219,10 @@ pub fn render_root<H: UiHost>(
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        // Node GC is keyed off "was this element mounted recently", which conflicts with view-cache
-        // reuse (cached subtrees can be present and interactive without re-mounting).
-        //
-        // Until view-cache liveness is represented explicitly in the runtime (GPUI parity work),
-        // skip stale-node sweeping when view-cache is enabled to avoid deleting live UI subtrees.
+        // Node GC is keyed off `last_seen_frame`, but view-cache reuse can legitimately skip
+        // re-mounting cached subtrees. Until cache-hit frame liveness is represented explicitly
+        // end-to-end (GPUI parity work), keep stale-node sweeping disabled under view-cache to
+        // avoid deleting live UI subtrees.
         if !ui.view_cache_enabled() {
             let mut stale_nodes: Vec<NodeId> = Vec::new();
             window_state.retain_nodes(|id, entry| {
@@ -234,6 +233,9 @@ pub fn render_root<H: UiHost>(
                     return true;
                 }
                 if entry.last_seen_frame.0 >= cutoff {
+                    return true;
+                }
+                if ui.node_layer(entry.node).is_some() {
                     return true;
                 }
                 stale_nodes.push(entry.node);
@@ -400,6 +402,9 @@ fn render_dismissible_root_impl<
                     return true;
                 }
                 if entry.last_seen_frame.0 >= cutoff {
+                    return true;
+                }
+                if ui.node_layer(entry.node).is_some() {
                     return true;
                 }
                 stale_nodes.push(entry.node);
