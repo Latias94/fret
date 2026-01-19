@@ -5121,6 +5121,11 @@ fn web_vs_fret_context_menu_demo_tiny_viewport_menu_item_height_matches() {
     assert_context_menu_demo_constrained_menu_item_height_matches("context-menu-demo.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_context_menu_demo_menu_item_height_matches() {
+    assert_context_menu_demo_constrained_menu_item_height_matches("context-menu-demo");
+}
+
 fn assert_context_menu_demo_constrained_menu_content_insets_match(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -5209,6 +5214,11 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
 #[test]
 fn web_vs_fret_context_menu_demo_tiny_viewport_menu_content_insets_match() {
     assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_menu_content_insets_match() {
+    assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo");
 }
 
 fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
@@ -5445,6 +5455,20 @@ fn web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matche
 fn web_vs_fret_context_menu_demo_submenu_tiny_viewport_overlay_placement_matches() {
     assert_context_menu_demo_submenu_overlay_placement_matches(
         "context-menu-demo.submenu-kbd-vp1440x240",
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_menu_content_insets_match() {
+    assert_context_menu_demo_submenu_constrained_menu_content_insets_match(
+        "context-menu-demo.submenu-kbd",
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_hover_menu_content_insets_match() {
+    assert_context_menu_demo_submenu_constrained_menu_content_insets_match(
+        "context-menu-demo.submenu",
     );
 }
 
