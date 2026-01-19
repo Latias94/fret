@@ -140,9 +140,18 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Current state: keep stale sweeping disabled for the main window root when `UiTree::view_cache_enabled()` is on.
     - Rationale: enabling sweeping for the main root still causes `ui-gallery-overlay-torture.json` to get stuck at step 10
       (`ui-gallery-dialog-trigger` disappears from the captured semantics snapshot; bundle label `script-step-0010-click-no-semantics-match`).
+    - Symptom details: when the overlay page subtree is wrapped in `cached_subtree_with(...contained_layout(true))` (nested view-cache root),
+      the semantics snapshot drops 10 overlay demo test IDs once the outer content cache root becomes a cache hit:
+      `ui-gallery-overlay-reset`, `ui-gallery-dialog-trigger`, `ui-gallery-popover-trigger`, `ui-gallery-tooltip-trigger`,
+      `ui-gallery-dropdown-trigger`, `ui-gallery-context-trigger`, `ui-gallery-hovercard-trigger`,
+      plus transient overlay IDs like `ui-gallery-overlay-underlay`, `ui-gallery-popover-close`, `ui-gallery-overlay-last-action`.
+      This leaves the script stuck retrying the click until timeout (auto-dump captured at the first missing selector).
     - We still sweep detached nodes for dismissible overlay roots via `render_dismissible_root_impl`.
   - Evidence:
     - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+    - Failure bundles (when main-root sweeping is enabled):
+      - `target/fret-diag/1768831095473-script-step-0010-click-no-semantics-match/bundle.json`
+      - `target/fret-diag/1768828347887-script-step-0010-click-no-semantics-match/bundle.json`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
