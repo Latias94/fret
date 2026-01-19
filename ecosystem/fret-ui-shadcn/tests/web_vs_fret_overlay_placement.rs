@@ -2088,6 +2088,332 @@ fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_breadcrumb_demo_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "breadcrumb-demo",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::{
+                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+            bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label = Some(Arc::from("Toggle menu"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        vec![
+                                            bc::BreadcrumbEllipsis::new()
+                                                .size(Px(16.0))
+                                                .into_element(cx),
+                                        ]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new(
+                                            "Documentation",
+                                        )),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Components").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                        }),
+                    ]
+                })]
+            })
+        },
+        SemanticsRole::Button,
+        Some("Toggle menu"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_small_viewport_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "breadcrumb-demo.vp1440x320",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::{
+                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+            bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label = Some(Arc::from("Toggle menu"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        vec![
+                                            bc::BreadcrumbEllipsis::new()
+                                                .size(Px(16.0))
+                                                .into_element(cx),
+                                        ]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new(
+                                            "Documentation",
+                                        )),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Components").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                        }),
+                    ]
+                })]
+            })
+        },
+        SemanticsRole::Button,
+        Some("Toggle menu"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "breadcrumb-dropdown",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::{
+                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+            bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let theme = fret_ui::Theme::global(&*cx.app).clone();
+                                    let muted = theme.color_required("muted-foreground");
+
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label = Some(Arc::from("Components"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        vec![cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: Default::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(4.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            move |cx| {
+                                                let text = cx.text_props(TextProps {
+                                                    layout: Default::default(),
+                                                    text: Arc::from("Components"),
+                                                    style: Some(shadcn_text_style(
+                                                        theme.metric_required("font.size"),
+                                                        theme.metric_required("font.line_height"),
+                                                        FontWeight::NORMAL,
+                                                    )),
+                                                    color: Some(muted),
+                                                    wrap: TextWrap::Word,
+                                                    overflow: TextOverflow::Clip,
+                                                });
+
+                                                let icon =
+                                                    fret_ui_kit::declarative::icon::icon_with(
+                                                        cx,
+                                                        fret_icons::ids::ui::CHEVRON_DOWN,
+                                                        Some(Px(14.0)),
+                                                        Some(fret_ui_kit::ColorRef::Color(muted)),
+                                                    );
+
+                                                vec![text, icon]
+                                            },
+                                        )]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new(
+                                            "Documentation",
+                                        )),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                        }),
+                    ]
+                })]
+            })
+        },
+        SemanticsRole::Button,
+        Some("Components"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "breadcrumb-dropdown.vp1440x320",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::{
+                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+            bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let theme = fret_ui::Theme::global(&*cx.app).clone();
+                                    let muted = theme.color_required("muted-foreground");
+
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label = Some(Arc::from("Components"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        vec![cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: Default::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(4.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            move |cx| {
+                                                let text = cx.text_props(TextProps {
+                                                    layout: Default::default(),
+                                                    text: Arc::from("Components"),
+                                                    style: Some(shadcn_text_style(
+                                                        theme.metric_required("font.size"),
+                                                        theme.metric_required("font.line_height"),
+                                                        FontWeight::NORMAL,
+                                                    )),
+                                                    color: Some(muted),
+                                                    wrap: TextWrap::Word,
+                                                    overflow: TextOverflow::Clip,
+                                                });
+
+                                                let icon =
+                                                    fret_ui_kit::declarative::icon::icon_with(
+                                                        cx,
+                                                        fret_icons::ids::ui::CHEVRON_DOWN,
+                                                        Some(Px(14.0)),
+                                                        Some(fret_ui_kit::ColorRef::Color(muted)),
+                                                    );
+
+                                                vec![text, icon]
+                                            },
+                                        )]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new(
+                                            "Documentation",
+                                        )),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                        }),
+                    ]
+                })]
+            })
+        },
+        SemanticsRole::Button,
+        Some("Components"),
+        SemanticsRole::Menu,
+    );
+}
+
 fn assert_dropdown_menu_demo_constrained_overlay_placement_matches(web_name: &str) {
     assert_overlay_placement_matches(
         web_name,
