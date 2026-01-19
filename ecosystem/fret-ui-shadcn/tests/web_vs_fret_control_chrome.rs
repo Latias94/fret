@@ -769,6 +769,237 @@ fn web_vs_fret_button_demo_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_button_icon_control_chrome_matches() {
+    let web = read_web_golden("button-icon");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| n.tag == "button").expect("web button node");
+
+    let web_border = web_border_width_px(web_button).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_button).expect("web radius px");
+    let web_w = web_button.rect.w;
+    let web_h = web_button.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Icon")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .into_element(cx),
+        ]
+    });
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button)
+        .expect("fret button semantics node");
+
+    let quad = find_best_quad(&scene, button.bounds).expect("painted quad for button");
+
+    assert_close("button-icon width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("button-icon height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(
+            &format!("button-icon border[{idx}]"),
+            *edge,
+            web_border,
+            0.6,
+        );
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(
+            &format!("button-icon radius[{idx}]"),
+            *corner,
+            web_radius,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_button_loading_control_chrome_matches() {
+    let web = read_web_golden("button-loading");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| n.tag == "button").expect("web button node");
+
+    let web_border = web_border_width_px(web_button).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_button).expect("web radius px");
+    let web_w = web_button.rect.w;
+    let web_h = web_button.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Submit")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .disabled(true)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button)
+        .expect("fret button semantics node");
+
+    let quad = find_best_quad(&scene, button.bounds).expect("painted quad for button");
+
+    assert_close("button-loading width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("button-loading height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(
+            &format!("button-loading border[{idx}]"),
+            *edge,
+            web_border,
+            0.6,
+        );
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(
+            &format!("button-loading radius[{idx}]"),
+            *corner,
+            web_radius,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_button_rounded_control_chrome_matches() {
+    let web = read_web_golden("button-rounded");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| n.tag == "button").expect("web button node");
+
+    let web_border = web_border_width_px(web_button).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_button).expect("web radius px");
+    let web_w = web_button.rect.w;
+    let web_h = web_button.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Up")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .refine_style(
+                    fret_ui_kit::ChromeRefinement::default().rounded(fret_ui_kit::Radius::Full),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button)
+        .expect("fret button semantics node");
+
+    let quad = find_best_quad(&scene, button.bounds).expect("painted quad for button");
+
+    assert_close("button-rounded width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("button-rounded height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(
+            &format!("button-rounded border[{idx}]"),
+            *edge,
+            web_border,
+            0.6,
+        );
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(
+            &format!("button-rounded radius[{idx}]"),
+            *corner,
+            web_radius,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_button_with_icon_control_chrome_matches() {
+    let web = read_web_golden("button-with-icon");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| n.tag == "button").expect("web button node");
+
+    let web_border = web_border_width_px(web_button).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_button).expect("web radius px");
+    let web_w = web_button.rect.w;
+    let web_h = web_button.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Button::new("New Branch")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button)
+        .expect("fret button semantics node");
+
+    let quad = find_best_quad(&scene, button.bounds).expect("painted quad for button");
+
+    assert_close("button-with-icon width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close(
+        "button-with-icon height",
+        quad.rect.size.height.0,
+        web_h,
+        1.0,
+    );
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(
+            &format!("button-with-icon border[{idx}]"),
+            *edge,
+            web_border,
+            0.6,
+        );
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(
+            &format!("button-with-icon radius[{idx}]"),
+            *corner,
+            web_radius,
+            1.0,
+        );
+    }
+}
+
+#[test]
 fn web_vs_fret_textarea_demo_control_chrome_matches() {
     let web = read_web_golden("textarea-demo");
     let theme = web
