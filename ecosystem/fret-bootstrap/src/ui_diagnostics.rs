@@ -2746,14 +2746,26 @@ impl UiSemanticsNodeV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiFrameStatsV1 {
     pub layout_time_us: u64,
+    #[serde(default)]
+    pub prepaint_time_us: u64,
     pub paint_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
+    #[serde(default)]
+    pub prepaint_nodes_visited: u32,
     pub paint_nodes: u32,
     pub paint_nodes_performed: u32,
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    #[serde(default)]
+    pub interaction_cache_hits: u32,
+    #[serde(default)]
+    pub interaction_cache_misses: u32,
+    #[serde(default)]
+    pub interaction_cache_replayed_records: u32,
+    #[serde(default)]
+    pub interaction_records: u32,
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
@@ -2811,14 +2823,20 @@ impl UiFrameStatsV1 {
     fn from_stats(stats: UiDebugFrameStats) -> Self {
         Self {
             layout_time_us: stats.layout_time.as_micros() as u64,
+            prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
+            prepaint_nodes_visited: stats.prepaint_nodes_visited,
             paint_nodes: stats.paint_nodes,
             paint_nodes_performed: stats.paint_nodes_performed,
             paint_cache_hits: stats.paint_cache_hits,
             paint_cache_misses: stats.paint_cache_misses,
             paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            interaction_cache_hits: stats.interaction_cache_hits,
+            interaction_cache_misses: stats.interaction_cache_misses,
+            interaction_cache_replayed_records: stats.interaction_cache_replayed_records,
+            interaction_records: stats.interaction_records,
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,

@@ -92,6 +92,7 @@ Examples:
   fretboard diag suite ui-gallery          # runs `tools/diag-scripts/ui-gallery-*.json` sequentially (app must be running)
   fretboard diag stats ./target/fret-diag/1234  # summarizes invalidation + other frame stats from a `bundle.json`
   fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release
+  fretboard diag perf ui-gallery --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx
   fretboard dev web --demo plot_demo
