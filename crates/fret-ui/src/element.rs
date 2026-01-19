@@ -55,6 +55,7 @@ pub enum ElementKind {
     ViewCache(ViewCacheProps),
     VisualTransform(VisualTransformProps),
     RenderTransform(RenderTransformProps),
+    FractionalRenderTransform(FractionalRenderTransformProps),
     Anchored(AnchoredProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
@@ -498,6 +499,21 @@ pub struct VisualTransformProps {
 pub struct RenderTransformProps {
     pub layout: LayoutStyle,
     pub transform: fret_core::Transform2D,
+}
+
+/// Render transform wrapper for declarative element subtrees.
+///
+/// This is a convenience wrapper for cases where the desired translation is best expressed as a
+/// fraction of the element's own laid-out bounds, similar to CSS percentage translate operations.
+///
+/// This is computed during layout so the first painted frame can use the correct pixel offset.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct FractionalRenderTransformProps {
+    pub layout: LayoutStyle,
+    /// Translation in units of the element's own width (e.g. `-1.0` shifts left by one full width).
+    pub translate_x_fraction: f32,
+    /// Translation in units of the element's own height.
+    pub translate_y_fraction: f32,
 }
 
 /// Layout-driven anchored placement wrapper for declarative element subtrees (ADR 0104).

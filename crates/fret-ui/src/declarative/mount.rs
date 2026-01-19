@@ -535,6 +535,7 @@ fn mount_element<H: UiHost>(
         ElementKind::ViewCache(p) => ElementInstance::ViewCache(p),
         ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
         ElementKind::RenderTransform(p) => ElementInstance::RenderTransform(p),
+        ElementKind::FractionalRenderTransform(p) => ElementInstance::FractionalRenderTransform(p),
         ElementKind::Anchored(p) => ElementInstance::Anchored(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
@@ -733,6 +734,19 @@ fn declarative_instance_change_mask(
             // Render transforms affect paint and hit-testing. We treat them as a layout refresh so
             // the retained tree updates its per-node transform stack for hit-test/debug queries.
             if a.transform != b.transform {
+                layout_changed = true;
+                paint_changed = true;
+            }
+        }
+        (
+            ElementInstance::FractionalRenderTransform(a),
+            ElementInstance::FractionalRenderTransform(b),
+        ) => {
+            // Fractional transforms are resolved during layout (dependent on bounds), but any input
+            // change requires a layout refresh so we can recompute the pixel transform.
+            if a.translate_x_fraction != b.translate_x_fraction
+                || a.translate_y_fraction != b.translate_y_fraction
+            {
                 layout_changed = true;
                 paint_changed = true;
             }

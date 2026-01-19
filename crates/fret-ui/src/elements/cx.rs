@@ -709,6 +709,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn fractional_render_transform(
+        &mut self,
+        translate_x_fraction: f32,
+        translate_y_fraction: f32,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.fractional_render_transform_props(
+            crate::element::FractionalRenderTransformProps {
+                layout: LayoutStyle::default(),
+                translate_x_fraction,
+                translate_y_fraction,
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
     pub fn visual_transform_props(
         &mut self,
         props: VisualTransformProps,
@@ -731,6 +748,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::RenderTransform(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn fractional_render_transform_props(
+        &mut self,
+        props: crate::element::FractionalRenderTransformProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::FractionalRenderTransform(props), children)
         })
     }
 

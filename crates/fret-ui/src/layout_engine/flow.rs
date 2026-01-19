@@ -289,6 +289,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::Opacity(_)
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
+            | ElementInstance::FractionalRenderTransform(_)
             | ElementInstance::Semantics(_)
             | ElementInstance::ViewCache(_)
             | ElementInstance::FocusScope(_)
@@ -512,6 +513,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::Opacity(_)
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
+            | ElementInstance::FractionalRenderTransform(_)
             | ElementInstance::Semantics(_)
             | ElementInstance::ViewCache(_)
             | ElementInstance::FocusScope(_)
@@ -853,6 +855,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         | ElementInstance::Opacity(_)
         | ElementInstance::VisualTransform(_)
         | ElementInstance::RenderTransform(_)
+        | ElementInstance::FractionalRenderTransform(_)
         | ElementInstance::Semantics(_)
         | ElementInstance::ViewCache(_)
         | ElementInstance::FocusScope(_) => {

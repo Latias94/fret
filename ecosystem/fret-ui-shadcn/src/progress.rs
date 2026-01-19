@@ -1,6 +1,6 @@
 use fret_core::{Edges, Px};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, LayoutStyle, Length};
+use fret_ui::element::{AnyElement, FractionalRenderTransformProps, LayoutStyle, Length};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -83,7 +83,9 @@ impl Progress {
                 .unwrap_or_else(|| MetricRef::radius(Radius::Full).resolve(&theme));
             let radius = Px(radius.0.min(height.0 * 0.5));
 
-            let track_bg = theme.color_required("secondary");
+            // shadcn v4 Progress uses `bg-primary/20` for the track.
+            let mut track_bg = theme.color_required("primary");
+            track_bg.a *= 0.2;
             let fill = theme.color_required("primary");
 
             let v = self.value(cx);
@@ -110,29 +112,40 @@ impl Progress {
             track_props.corner_radii = fret_core::Corners::all(radius);
 
             cx.container(track_props, move |cx| {
-                let track_id = cx.root_id();
-                let track_w = cx
-                    .last_bounds_for_element(track_id)
-                    .map(|r| r.size.width)
-                    .unwrap_or(Px(0.0));
+                // Match the upstream DOM structure:
+                // - the indicator is full-width (`w-full`)
+                // - it is shifted with a translate so the left edge is clipped by the track's
+                //   `overflow-hidden`, keeping the right edge rounded.
+                let translate_x_fraction = t - 1.0;
 
-                let fill_w = Px((track_w.0 * t).max(0.0));
+                let mut transform_layout = LayoutStyle::default();
+                transform_layout.size.width = Length::Fill;
+                transform_layout.size.height = Length::Fill;
 
-                let mut fill_layout = LayoutStyle::default();
-                fill_layout.size.width = Length::Px(fill_w);
-                fill_layout.size.height = Length::Fill;
-
-                vec![cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: fill_layout,
-                        padding: Edges::all(Px(0.0)),
-                        background: Some(fill),
-                        shadow: None,
-                        border: Edges::all(Px(0.0)),
-                        border_color: None,
-                        corner_radii: fret_core::Corners::all(radius),
+                vec![cx.fractional_render_transform_props(
+                    FractionalRenderTransformProps {
+                        layout: transform_layout,
+                        translate_x_fraction,
+                        translate_y_fraction: 0.0,
                     },
-                    |_cx| Vec::new(),
+                    move |cx| {
+                        let mut fill_layout = LayoutStyle::default();
+                        fill_layout.size.width = Length::Fill;
+                        fill_layout.size.height = Length::Fill;
+
+                        vec![cx.container(
+                            fret_ui::element::ContainerProps {
+                                layout: fill_layout,
+                                padding: Edges::all(Px(0.0)),
+                                background: Some(fill),
+                                shadow: None,
+                                border: Edges::all(Px(0.0)),
+                                border_color: None,
+                                corner_radii: fret_core::Corners::all(radius),
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    },
                 )]
             })
         })

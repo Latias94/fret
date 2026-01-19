@@ -99,6 +99,7 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::InteractivityGate(props) => Some(props.layout.flex.grow),
         ElementKind::VisualTransform(props) => Some(props.layout.flex.grow),
         ElementKind::RenderTransform(props) => Some(props.layout.flex.grow),
+        ElementKind::FractionalRenderTransform(props) => Some(props.layout.flex.grow),
         ElementKind::Anchored(props) => Some(props.layout.flex.grow),
         ElementKind::Column(props) => Some(props.layout.flex.grow),
         ElementKind::Row(props) => Some(props.layout.flex.grow),

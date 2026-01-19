@@ -172,6 +172,13 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::FractionalRenderTransform(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::Anchored(props) => {
                 paint_children_clipped_if(
                     cx,

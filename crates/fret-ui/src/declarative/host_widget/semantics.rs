@@ -211,6 +211,7 @@ impl ElementHostWidget {
             | ElementInstance::EffectLayer(_)
             | ElementInstance::VisualTransform(_)
             | ElementInstance::RenderTransform(_)
+            | ElementInstance::FractionalRenderTransform(_)
             | ElementInstance::Anchored(_)
             | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
