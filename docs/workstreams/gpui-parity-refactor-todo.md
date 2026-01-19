@@ -174,6 +174,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Evidence:
     - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_gates_reuse_on_explicit_cache_key`)
     - `cargo nextest run -p fret-ui`
+  - Diagnostics: cache-root stats now distinguish key misses via `reuse_reason=cache_key_mismatch`.
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 
