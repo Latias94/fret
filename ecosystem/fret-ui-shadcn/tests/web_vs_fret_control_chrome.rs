@@ -1000,6 +1000,148 @@ fn web_vs_fret_button_with_icon_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_button_size_demo_heights_match() {
+    let web = read_web_golden("button-size");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let mut web_buttons: Vec<&WebNode> = Vec::new();
+    fn collect_buttons<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if node.tag == "button" {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect_buttons(child, out);
+        }
+    }
+    collect_buttons(&theme.root, &mut web_buttons);
+    assert_eq!(
+        web_buttons.len(),
+        6,
+        "expected 6 buttons in button-size golden"
+    );
+
+    let expected_h: Vec<f32> = web_buttons.iter().map(|b| b.rect.h).collect();
+    let expected_w: Vec<f32> = web_buttons.iter().map(|b| b.rect.w).collect();
+
+    let (snap, _scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Small")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .test_id("button-size.small")
+                .into_element(cx),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconSm)
+                .test_id("button-size.icon-sm")
+                .into_element(cx),
+            fret_ui_shadcn::Button::new("Default")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Default)
+                .test_id("button-size.default")
+                .into_element(cx),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .test_id("button-size.icon")
+                .into_element(cx),
+            fret_ui_shadcn::Button::new("Large")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Lg)
+                .test_id("button-size.large")
+                .into_element(cx),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconLg)
+                .test_id("button-size.icon-lg")
+                .into_element(cx),
+        ]
+    });
+
+    let actual_h = |test_id: &str| {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("missing semantics node {test_id}"))
+            .bounds
+            .size
+            .height
+            .0
+    };
+
+    assert_close(
+        "button-size small height",
+        actual_h("button-size.small"),
+        expected_h[0],
+        1.0,
+    );
+    assert_close(
+        "button-size icon-sm height",
+        actual_h("button-size.icon-sm"),
+        expected_h[1],
+        1.0,
+    );
+    assert_close(
+        "button-size default height",
+        actual_h("button-size.default"),
+        expected_h[2],
+        1.0,
+    );
+    assert_close(
+        "button-size icon height",
+        actual_h("button-size.icon"),
+        expected_h[3],
+        1.0,
+    );
+    assert_close(
+        "button-size large height",
+        actual_h("button-size.large"),
+        expected_h[4],
+        1.0,
+    );
+    assert_close(
+        "button-size icon-lg height",
+        actual_h("button-size.icon-lg"),
+        expected_h[5],
+        1.0,
+    );
+
+    let actual_w = |test_id: &str| {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("missing semantics node {test_id}"))
+            .bounds
+            .size
+            .width
+            .0
+    };
+
+    assert_close(
+        "button-size icon-sm width",
+        actual_w("button-size.icon-sm"),
+        expected_w[1],
+        1.0,
+    );
+    assert_close(
+        "button-size icon width",
+        actual_w("button-size.icon"),
+        expected_w[3],
+        1.0,
+    );
+    assert_close(
+        "button-size icon-lg width",
+        actual_w("button-size.icon-lg"),
+        expected_w[5],
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_textarea_demo_control_chrome_matches() {
     let web = read_web_golden("textarea-demo");
     let theme = web
