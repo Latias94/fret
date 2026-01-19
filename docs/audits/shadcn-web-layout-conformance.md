@@ -104,6 +104,8 @@ patterns:
 - `progress-demo` (track + indicator geometry + paint-backed colors; indicator translateX matches web percent-based transform)
 - `popover-demo` (overlay placement + transform origin)
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
+- `breadcrumb-demo` (dropdown overlay placement + panel size; `vp1440x320` gates menu panel height)
+- `breadcrumb-dropdown` (dropdown overlay placement + panel size; `vp1440x320` gates menu panel height)
 - `context-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `menubar-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)

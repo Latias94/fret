@@ -170,10 +170,16 @@ Recent fixes:
 - Gaps to check:
   - Separator icon sizing (`ChevronRight` at `size-3.5`).
   - Ellipsis footprint (`size-9`) and icon centering (`MoreHorizontal` at `size-4`).
+  - Dropdown composition: ensure `breadcrumb-demo` / `breadcrumb-dropdown` match trigger sizing and
+    menu placement (portal panel size + clamping behavior).
   - Responsive gap (`gap-1.5` vs `sm:gap-2.5`): Fret currently aligns to the desktop (`sm`) outcome.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
-    (`web_vs_fret_layout_breadcrumb_separator_geometry`, `web_vs_fret_layout_breadcrumb_ellipsis_geometry`).
+    (`web_vs_fret_layout_breadcrumb_separator_geometry`, `web_vs_fret_layout_breadcrumb_ellipsis_geometry`,
+    `web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry`, `web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry`).
+  - Overlay placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_breadcrumb_demo_overlay_placement_matches`, `web_vs_fret_breadcrumb_demo_small_viewport_overlay_placement_matches`,
+    `web_vs_fret_breadcrumb_dropdown_overlay_placement_matches`, `web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches`).
 
 ### `Button`
 

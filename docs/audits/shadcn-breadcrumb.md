@@ -32,3 +32,9 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   - `web_vs_fret_layout_breadcrumb_ellipsis_geometry`
   - `web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry`
   - `web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry`
+
+- Web overlay placement gates (menu panel size + clamping): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  - `web_vs_fret_breadcrumb_demo_overlay_placement_matches`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_overlay_placement_matches`
+  - `web_vs_fret_breadcrumb_dropdown_overlay_placement_matches`
+  - `web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches`
