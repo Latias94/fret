@@ -1,13 +1,19 @@
-use fret_app::{App, CommandId, CommandMeta, Effect, Model, WindowRequest};
+use fret_app::{
+    App, CommandId, CommandMeta, Effect, LayeredConfigPaths, Menu, MenuBarIntegrationModeV1,
+    MenuItem, Model, Platform, SettingsFileV1, WindowRequest, load_layered_settings,
+};
 use fret_core::{
     AlphaMode, AppWindowId, Event, ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole,
     UiServices,
 };
+use fret_kit::prelude::{MenubarFromRuntimeOptions, menubar_from_runtime};
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{
+    PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
+};
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
 use fret_ui::element::SemanticsProps;
@@ -15,6 +21,7 @@ use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
@@ -88,6 +95,16 @@ struct UiGalleryWindowState {
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+
+    settings_open: Model<bool>,
+    settings_menu_bar_os: Model<Option<Arc<str>>>,
+    settings_menu_bar_os_open: Model<bool>,
+    settings_menu_bar_in_window: Model<Option<Arc<str>>>,
+    settings_menu_bar_in_window_open: Model<bool>,
+    settings_edit_can_undo: Model<bool>,
+    settings_edit_can_redo: Model<bool>,
+    undo_doc: DocumentId,
+
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
     combobox_value: Model<Option<Arc<str>>>,
@@ -118,12 +135,39 @@ struct UiGalleryWindowState {
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
+    last_config_files_status_seq: u64,
 }
 
 #[derive(Default)]
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    fn sync_undo_availability(app: &mut App, window: AppWindowId, doc: &DocumentId) {
+        let mut edit_can_undo = false;
+        let mut edit_can_redo = false;
+
+        let _ = app.with_global_mut(
+            || UndoService::<ValueTx<f32>>::with_limit(256),
+            |undo_svc, _app| {
+                undo_svc.set_active_document(window, doc.clone());
+                if let Some(history) = undo_svc.history_mut_active(window) {
+                    edit_can_undo = history.can_undo();
+                    edit_can_redo = history.can_redo();
+                }
+            },
+        );
+
+        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+            svc.set_snapshot(
+                window,
+                WindowCommandAvailability {
+                    edit_can_undo,
+                    edit_can_redo,
+                },
+            );
+        });
+    }
+
     fn generate_avatar_demo_image_rgba8(width: u32, height: u32) -> Vec<u8> {
         let mut out = vec![0u8; (width as usize) * (height as usize) * 4];
         let w = (width.saturating_sub(1)).max(1) as f32;
@@ -277,6 +321,20 @@ impl UiGalleryDriver {
         let dialog_open = app.models_mut().insert(false);
         let alert_dialog_open = app.models_mut().insert(false);
         let sheet_open = app.models_mut().insert(false);
+
+        let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let settings_open = app.models_mut().insert(false);
+        let settings_menu_bar_os = app
+            .models_mut()
+            .insert(Some(Self::menu_bar_mode_key(settings.menu_bar.os)));
+        let settings_menu_bar_os_open = app.models_mut().insert(false);
+        let settings_menu_bar_in_window = app
+            .models_mut()
+            .insert(Some(Self::menu_bar_mode_key(settings.menu_bar.in_window)));
+        let settings_menu_bar_in_window_open = app.models_mut().insert(false);
+        let settings_edit_can_undo = app.models_mut().insert(true);
+        let settings_edit_can_redo = app.models_mut().insert(true);
+        let undo_doc: DocumentId = "ui_gallery.window".into();
         let select_value = app
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
@@ -359,6 +417,8 @@ impl UiGalleryDriver {
                 || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
         );
 
+        Self::sync_undo_availability(app, window, &undo_doc);
+
         UiGalleryWindowState {
             ui,
             root: None,
@@ -383,6 +443,14 @@ impl UiGalleryDriver {
             dialog_open,
             alert_dialog_open,
             sheet_open,
+            settings_open,
+            settings_menu_bar_os,
+            settings_menu_bar_os_open,
+            settings_menu_bar_in_window,
+            settings_menu_bar_in_window_open,
+            settings_edit_can_undo,
+            settings_edit_can_redo,
+            undo_doc,
             select_value,
             select_open,
             combobox_value,
@@ -413,6 +481,7 @@ impl UiGalleryDriver {
             virtual_list_torture_edit_row,
             virtual_list_torture_edit_text,
             virtual_list_torture_scroll,
+            last_config_files_status_seq: 0,
         }
     }
 
@@ -538,21 +607,61 @@ impl UiGalleryDriver {
     fn handle_gallery_command(
         app: &mut App,
         state: &UiGalleryWindowState,
+        window: AppWindowId,
         command: &CommandId,
     ) -> bool {
         match command.as_str() {
             CMD_PROGRESS_INC => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.progress, |v| *v = (*v + 10.0).min(100.0));
+                let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
+                let after = (before + 10.0).min(100.0);
+                let _ = app.models_mut().update(&state.progress, |v| *v = after);
+                let _ = app.with_global_mut(
+                    || UndoService::<ValueTx<f32>>::with_limit(256),
+                    |undo_svc, _app| {
+                        undo_svc.set_active_document(window, state.undo_doc.clone());
+                        undo_svc.record_or_coalesce_active(
+                            window,
+                            UndoRecord::new(ValueTx::new(before, after))
+                                .label("Progress")
+                                .coalesce_key(CoalesceKey::from("ui_gallery.progress")),
+                        );
+                    },
+                );
+                Self::sync_undo_availability(app, window, &state.undo_doc);
             }
             CMD_PROGRESS_DEC => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.progress, |v| *v = (*v - 10.0).max(0.0));
+                let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
+                let after = (before - 10.0).max(0.0);
+                let _ = app.models_mut().update(&state.progress, |v| *v = after);
+                let _ = app.with_global_mut(
+                    || UndoService::<ValueTx<f32>>::with_limit(256),
+                    |undo_svc, _app| {
+                        undo_svc.set_active_document(window, state.undo_doc.clone());
+                        undo_svc.record_or_coalesce_active(
+                            window,
+                            UndoRecord::new(ValueTx::new(before, after))
+                                .label("Progress")
+                                .coalesce_key(CoalesceKey::from("ui_gallery.progress")),
+                        );
+                    },
+                );
+                Self::sync_undo_availability(app, window, &state.undo_doc);
             }
             CMD_PROGRESS_RESET => {
-                let _ = app.models_mut().update(&state.progress, |v| *v = 35.0);
+                let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
+                let after = 35.0;
+                let _ = app.models_mut().update(&state.progress, |v| *v = after);
+                let _ = app.with_global_mut(
+                    || UndoService::<ValueTx<f32>>::with_limit(256),
+                    |undo_svc, _app| {
+                        undo_svc.set_active_document(window, state.undo_doc.clone());
+                        undo_svc.record_active(
+                            window,
+                            UndoRecord::new(ValueTx::new(before, after)).label("Reset progress"),
+                        );
+                    },
+                );
+                Self::sync_undo_availability(app, window, &state.undo_doc);
             }
             CMD_VIEW_CACHE_BUMP => {
                 let _ = app
@@ -567,6 +676,59 @@ impl UiGalleryDriver {
             _ => return false,
         }
         true
+    }
+
+    fn menu_bar_mode_key(mode: MenuBarIntegrationModeV1) -> Arc<str> {
+        match mode {
+            MenuBarIntegrationModeV1::Auto => Arc::from("auto"),
+            MenuBarIntegrationModeV1::On => Arc::from("on"),
+            MenuBarIntegrationModeV1::Off => Arc::from("off"),
+        }
+    }
+
+    fn menu_bar_mode_from_key(key: Option<&str>) -> MenuBarIntegrationModeV1 {
+        match key.unwrap_or("auto") {
+            "on" => MenuBarIntegrationModeV1::On,
+            "off" => MenuBarIntegrationModeV1::Off,
+            _ => MenuBarIntegrationModeV1::Auto,
+        }
+    }
+
+    fn apply_menu_bar_settings(
+        app: &mut App,
+        window: AppWindowId,
+        os: MenuBarIntegrationModeV1,
+        in_window: MenuBarIntegrationModeV1,
+    ) {
+        app.with_global_mut(SettingsFileV1::default, |settings, app| {
+            settings.menu_bar.os = os;
+            settings.menu_bar.in_window = in_window;
+            fret_app::sync_os_menu_bar(app);
+        });
+        app.request_redraw(window);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn write_project_settings_menu_bar(
+        os: MenuBarIntegrationModeV1,
+        in_window: MenuBarIntegrationModeV1,
+    ) -> Result<(), std::io::Error> {
+        let project_dir = std::path::Path::new(fret_app::PROJECT_CONFIG_DIR);
+        std::fs::create_dir_all(project_dir)?;
+        let path = project_dir.join(fret_app::SETTINGS_JSON);
+
+        let payload = serde_json::json!({
+            "settings_version": 1,
+            "menu_bar": {
+                "os": Self::menu_bar_mode_key(os).as_ref(),
+                "in_window": Self::menu_bar_mode_key(in_window).as_ref(),
+            }
+        });
+
+        let json = serde_json::to_string_pretty(&payload)
+            .unwrap_or_else(|_| "{\"settings_version\":1}".to_string());
+        std::fs::write(path, format!("{json}\n"))?;
+        Ok(())
     }
 
     fn sync_shadcn_theme(app: &mut App, state: &mut UiGalleryWindowState) {
@@ -612,6 +774,18 @@ impl UiGalleryDriver {
         OverlayController::begin_frame(app, window);
         let bisect = ui_gallery_bisect_flags();
 
+        let availability = app
+            .global::<WindowCommandAvailabilityService>()
+            .and_then(|svc| svc.snapshot(window))
+            .copied()
+            .unwrap_or_default();
+        let _ = app.models_mut().update(&state.settings_edit_can_undo, |v| {
+            *v = availability.edit_can_undo
+        });
+        let _ = app.models_mut().update(&state.settings_edit_can_redo, |v| {
+            *v = availability.edit_can_redo
+        });
+
         let cache_enabled = app
             .models()
             .get_copied(&state.view_cache_enabled)
@@ -645,6 +819,13 @@ impl UiGalleryDriver {
         let dialog_open = state.dialog_open.clone();
         let alert_dialog_open = state.alert_dialog_open.clone();
         let sheet_open = state.sheet_open.clone();
+        let settings_open = state.settings_open.clone();
+        let settings_menu_bar_os = state.settings_menu_bar_os.clone();
+        let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
+        let settings_menu_bar_in_window = state.settings_menu_bar_in_window.clone();
+        let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
+        let settings_edit_can_undo = state.settings_edit_can_undo.clone();
+        let settings_edit_can_redo = state.settings_edit_can_redo.clone();
         let select_value = state.select_value.clone();
         let select_open = state.select_open.clone();
         let combobox_value = state.combobox_value.clone();
@@ -1113,41 +1294,6 @@ impl UiGalleryDriver {
                         })
                     };
 
-                    let menubar = shadcn::Menubar::new(vec![
-                        shadcn::MenubarMenu::new("File")
-                            .test_id("ui-gallery-menubar-file")
-                            .entries(vec![shadcn::MenubarEntry::Group(
-                                shadcn::MenubarGroup::new(vec![
-                                    shadcn::MenubarEntry::Item(
-                                        shadcn::MenubarItem::new("Open")
-                                            .test_id("ui-gallery-menubar-open")
-                                            .on_select(CMD_APP_OPEN),
-                                    ),
-                                    shadcn::MenubarEntry::Item(
-                                        shadcn::MenubarItem::new("Save").on_select(CMD_APP_SAVE),
-                                    ),
-                                    shadcn::MenubarEntry::Item(
-                                        shadcn::MenubarItem::new("Settings")
-                                            .on_select(CMD_APP_SETTINGS),
-                                    ),
-                                ]),
-                            )]),
-                        shadcn::MenubarMenu::new("View").entries(vec![
-                            shadcn::MenubarEntry::Group(shadcn::MenubarGroup::new(vec![
-                                shadcn::MenubarEntry::Item(
-                                    shadcn::MenubarItem::new("Command Palette")
-                                        .on_select(fret_app::core_commands::COMMAND_PALETTE),
-                                ),
-                                shadcn::MenubarEntry::Separator,
-                                shadcn::MenubarEntry::Item(
-                                    shadcn::MenubarItem::new("Toast: Default")
-                                        .on_select(CMD_TOAST_DEFAULT),
-                                ),
-                            ])),
-                        ]),
-                    ])
-                    .into_element(cx);
-
                     let tab_strip = cx.keyed("ui_gallery.tab_strip", |cx| {
                         if (bisect & BISECT_DISABLE_TAB_STRIP) != 0 {
                             return cx.text("Tabs (disabled)");
@@ -1189,8 +1335,21 @@ impl UiGalleryDriver {
                             .into_element(cx)
                     });
 
+                    let menu_bar = fret_app::effective_menu_bar(cx.app);
+                    let show_in_window_menu_bar = fret_app::should_render_in_window_menu_bar(
+                        cx.app,
+                        fret_app::Platform::current(),
+                    );
+                    let in_window_menu_bar = if show_in_window_menu_bar {
+                        menu_bar.as_ref().map(|menu_bar| {
+                            menubar_from_runtime(cx, menu_bar, MenubarFromRuntimeOptions::default())
+                        })
+                    } else {
+                        None
+                    };
+
                     let top_bar = WorkspaceTopBar::new()
-                        .left(vec![menubar])
+                        .left(in_window_menu_bar.into_iter().collect::<Vec<_>>())
                         .center(vec![tab_strip])
                         .right(vec![
                             shadcn::Button::new("Command palette")
@@ -1273,6 +1432,155 @@ impl UiGalleryDriver {
                             shadcn::Toaster::new().into_element(cx)
                         },
                     ];
+
+                    content.push(cx.keyed("ui_gallery.settings_sheet", |cx| {
+                        shadcn::Sheet::new(settings_open.clone())
+                            .side(shadcn::SheetSide::Right)
+                            .size(Px(420.0))
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.size.width = fret_ui::element::Length::Px(Px(0.0));
+                                    layout.size.height = fret_ui::element::Length::Px(Px(0.0));
+                                    cx.container(
+                                        fret_ui::element::ContainerProps {
+                                            layout,
+                                            ..Default::default()
+                                        },
+                                        |_cx| Vec::new(),
+                                    )
+                                },
+                                |cx| {
+                                    let os_select = shadcn::Select::new(
+                                        settings_menu_bar_os.clone(),
+                                        settings_menu_bar_os_open.clone(),
+                                    )
+                                    .placeholder("OS menubar")
+                                    .items([
+                                        shadcn::SelectItem::new(
+                                            "auto",
+                                            "Auto (Windows/macOS on; Linux/Web off)",
+                                        ),
+                                        shadcn::SelectItem::new("on", "On"),
+                                        shadcn::SelectItem::new("off", "Off"),
+                                    ])
+                                    .refine_layout(LayoutRefinement::default().w_full())
+                                    .into_element(cx);
+
+                                    let in_window_select = shadcn::Select::new(
+                                        settings_menu_bar_in_window.clone(),
+                                        settings_menu_bar_in_window_open.clone(),
+                                    )
+                                    .placeholder("In-window menubar")
+                                    .items([
+                                        shadcn::SelectItem::new(
+                                            "auto",
+                                            "Auto (Linux/Web on; Windows/macOS off)",
+                                        ),
+                                        shadcn::SelectItem::new("on", "On"),
+                                        shadcn::SelectItem::new("off", "Off"),
+                                    ])
+                                    .refine_layout(LayoutRefinement::default().w_full())
+                                    .into_element(cx);
+
+                                    let body = stack::vstack(
+                                        cx,
+                                        stack::VStackProps::default()
+                                            .layout(LayoutRefinement::default().w_full())
+                                            .gap(Space::N4),
+                                        |cx| {
+                                            vec![
+                                                stack::vstack(
+                                                    cx,
+                                                    stack::VStackProps::default()
+                                                        .layout(LayoutRefinement::default().w_full())
+                                                        .gap(Space::N2),
+                                                    |cx| {
+                                                        vec![
+                                                            shadcn::SheetHeader::new(vec![
+                                                                shadcn::SheetTitle::new("Settings")
+                                                                    .into_element(cx),
+                                                                shadcn::SheetDescription::new(
+                                                                    "Menu bar presentation (OS vs in-window).",
+                                                                )
+                                                                .into_element(cx),
+                                                            ])
+                                                            .into_element(cx),
+                                                            shadcn::Separator::new().into_element(cx),
+                                                            cx.text("Menu bar surfaces"),
+                                                            os_select,
+                                                            in_window_select,
+                                                            cx.text("Command availability (debug)"),
+                                                            stack::hstack(
+                                                                cx,
+                                                                stack::HStackProps::default()
+                                                                    .gap(Space::N2)
+                                                                    .items_center(),
+                                                                |cx| {
+                                                                    vec![
+                                                                        shadcn::Switch::new(
+                                                                            settings_edit_can_undo
+                                                                                .clone(),
+                                                                        )
+                                                                        .a11y_label("Can Undo")
+                                                                        .disabled(true)
+                                                                        .into_element(cx),
+                                                                        cx.text(
+                                                                            "edit.can_undo (enables OS/in-window Undo)",
+                                                                        ),
+                                                                    ]
+                                                                },
+                                                            ),
+                                                            stack::hstack(
+                                                                cx,
+                                                                stack::HStackProps::default()
+                                                                    .gap(Space::N2)
+                                                                    .items_center(),
+                                                                |cx| {
+                                                                    vec![
+                                                                        shadcn::Switch::new(
+                                                                            settings_edit_can_redo
+                                                                                .clone(),
+                                                                        )
+                                                                        .a11y_label("Can Redo")
+                                                                        .disabled(true)
+                                                                        .into_element(cx),
+                                                                        cx.text(
+                                                                            "edit.can_redo (enables OS/in-window Redo)",
+                                                                        ),
+                                                                    ]
+                                                                },
+                                                            ),
+                                                        ]
+                                                    },
+                                                ),
+                                                shadcn::SheetFooter::new(vec![
+                                                    shadcn::Button::new("Apply (in memory)")
+                                                        .variant(shadcn::ButtonVariant::Secondary)
+                                                        .on_click(CMD_APP_SETTINGS_APPLY)
+                                                        .into_element(cx),
+                                                    shadcn::Button::new(
+                                                        "Write project .fret/settings.json",
+                                                    )
+                                                    .variant(shadcn::ButtonVariant::Outline)
+                                                    .on_click(CMD_APP_SETTINGS_WRITE_PROJECT)
+                                                    .into_element(cx),
+                                                    shadcn::Button::new("Close")
+                                                        .variant(shadcn::ButtonVariant::Ghost)
+                                                        .toggle_model(settings_open.clone())
+                                                        .into_element(cx),
+                                                ])
+                                                .into_element(cx),
+                                            ]
+                                        },
+                                    );
+
+                                    shadcn::SheetContent::new(vec![body]).into_element(cx)
+                                },
+                            )
+                    }));
+
                     if show_debug_hud {
                         let debug_hud_lines = debug_hud_lines.clone();
                         content.push(cx.keyed("ui_gallery.debug_hud", |cx| {
@@ -1403,7 +1711,14 @@ pub fn build_app() -> App {
         shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
 
+    let config_paths = LayeredConfigPaths::for_project_root(".");
+    if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
+        app.set_global(settings.clone());
+        app.set_global(settings.docking_interaction_settings());
+    }
+
     // Minimal command surface for `CommandDialog::new_with_host_commands`.
+    fret_app::core_commands::register_core_commands(app.commands_mut());
     app.commands_mut().register(
         CommandId::new(CMD_APP_OPEN),
         CommandMeta::new("Open")
@@ -1421,6 +1736,18 @@ pub fn build_app() -> App {
         CommandMeta::new("Settings")
             .with_category("View")
             .with_keywords(["settings", "preferences"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_APP_SETTINGS_APPLY),
+        CommandMeta::new("Apply Settings")
+            .with_category("Settings")
+            .with_keywords(["settings", "menu", "menubar", "apply"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_APP_SETTINGS_WRITE_PROJECT),
+        CommandMeta::new("Write Project Settings")
+            .with_category("Settings")
+            .with_keywords(["settings", "menu", "menubar", "write", "project"]),
     );
 
     for group in PAGE_GROUPS {
@@ -1461,6 +1788,58 @@ pub fn build_app() -> App {
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(&mut app);
 
+    let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
+    cmds.open = Some(CommandId::new(CMD_APP_OPEN));
+    cmds.save = Some(CommandId::new(CMD_APP_SAVE));
+    cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
+    cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
+    cmds.cut = Some(CommandId::new(fret_app::core_commands::TEXT_CUT));
+    cmds.copy = Some(CommandId::new(fret_app::core_commands::TEXT_COPY));
+    cmds.paste = Some(CommandId::new(fret_app::core_commands::TEXT_PASTE));
+    cmds.select_all = Some(CommandId::new(fret_app::core_commands::TEXT_SELECT_ALL));
+    cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
+
+    if Platform::current() == Platform::Macos {
+        cmds.app_menu_title = Some(Arc::from("Fret"));
+        cmds.include_services_menu = true;
+        cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
+        cmds.preferences = Some(CommandId::new(fret_app::core_commands::APP_PREFERENCES));
+        cmds.hide = Some(CommandId::new(fret_app::core_commands::APP_HIDE));
+        cmds.hide_others = Some(CommandId::new(fret_app::core_commands::APP_HIDE_OTHERS));
+        cmds.show_all = Some(CommandId::new(fret_app::core_commands::APP_SHOW_ALL));
+        cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
+    }
+
+    let mut menu_bar = fret_workspace::menu::workspace_default_menu_bar(cmds);
+
+    menu_bar.menus.push(Menu {
+        title: Arc::from("Gallery"),
+        role: None,
+        items: vec![
+            MenuItem::Command {
+                command: CommandId::new(CMD_APP_SETTINGS),
+                when: None,
+            },
+            MenuItem::Separator,
+            MenuItem::Command {
+                command: CommandId::new(CMD_CLIPBOARD_COPY_LINK),
+                when: None,
+            },
+            MenuItem::Command {
+                command: CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
+                when: None,
+            },
+            MenuItem::Command {
+                command: CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
+                when: None,
+            },
+        ],
+    });
+    app.push_effect(Effect::SetMenuBar {
+        window: None,
+        menu_bar,
+    });
+
     app
 }
 
@@ -1490,6 +1869,7 @@ pub fn run() -> anyhow::Result<()> {
         })
         .with_default_diagnostics()
         .with_default_config_files()?
+        .with_config_files_watcher(Duration::from_millis(500))
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
@@ -1538,6 +1918,74 @@ impl WinitAppDriver for UiGalleryDriver {
             .state
             .ui
             .propagate_global_changes(context.app, changed);
+
+        if changed.contains(&std::any::TypeId::of::<fret_app::ConfigFilesWatcherStatus>())
+            && let Some((seq, tick)) = context
+                .app
+                .global::<fret_app::ConfigFilesWatcherStatus>()
+                .map(|svc| (svc.seq(), svc.last_tick().cloned()))
+        {
+            if seq != 0 && context.state.last_config_files_status_seq != seq {
+                context.state.last_config_files_status_seq = seq;
+
+                if let Some(tick) = tick {
+                    let has_error = tick.settings_error.is_some()
+                        || tick.keymap_error.is_some()
+                        || tick.menu_bar_error.is_some()
+                        || tick.actionable_keymap_conflicts > 0;
+
+                    let title = if has_error {
+                        "Config reload failed"
+                    } else {
+                        "Config reloaded"
+                    };
+
+                    let mut details: Vec<String> = Vec::new();
+                    if tick.reloaded_settings {
+                        details.push("settings.json".to_string());
+                    }
+                    if tick.reloaded_keymap {
+                        details.push("keymap.json".to_string());
+                    }
+                    if tick.reloaded_menu_bar {
+                        details.push("menubar.json".to_string());
+                    }
+                    if let Some(err) = tick.settings_error.as_deref() {
+                        details.push(format!("settings: {err}"));
+                    }
+                    if let Some(err) = tick.keymap_error.as_deref() {
+                        details.push(format!("keymap: {err}"));
+                    }
+                    if let Some(err) = tick.menu_bar_error.as_deref() {
+                        details.push(format!("menubar: {err}"));
+                    }
+                    if tick.actionable_keymap_conflicts > 0 {
+                        details.push(format!(
+                            "keymap conflicts: {}",
+                            tick.actionable_keymap_conflicts
+                        ));
+                    }
+
+                    let description = if details.is_empty() {
+                        None
+                    } else {
+                        Some(details.join(" | "))
+                    };
+
+                    let sonner = shadcn::Sonner::global(context.app);
+                    let mut host = UiActionHostAdapter { app: context.app };
+                    let opts = shadcn::ToastMessageOptions::new()
+                        .description(description.unwrap_or_else(|| "OK".to_string()))
+                        .duration(Duration::from_secs(6));
+
+                    if has_error {
+                        sonner.toast_error_message(&mut host, context.window, title, opts);
+                    } else {
+                        sonner.toast_success_message(&mut host, context.window, title, opts);
+                    }
+                }
+            }
+        }
     }
 
     fn handle_command(
@@ -1567,13 +2015,65 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        if command.as_str() == fret_app::core_commands::EDIT_UNDO {
+            let mut did_apply = false;
+            let _ = app.with_global_mut(
+                || UndoService::<ValueTx<f32>>::with_limit(256),
+                |undo_svc, app| {
+                    undo_svc.set_active_document(window, state.undo_doc.clone());
+                    did_apply = undo_svc
+                        .undo_active_invertible(window, |rec| {
+                            let _ = app
+                                .models_mut()
+                                .update(&state.progress, |v| *v = rec.tx.after);
+                            Ok::<(), ()>(())
+                        })
+                        .unwrap_or(false);
+                },
+            );
+            if did_apply {
+                Self::sync_undo_availability(app, window, &state.undo_doc);
+            }
+            let _ = app
+                .models_mut()
+                .update(&state.last_action, |v| *v = Arc::from("edit.undo"));
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == fret_app::core_commands::EDIT_REDO {
+            let mut did_apply = false;
+            let _ = app.with_global_mut(
+                || UndoService::<ValueTx<f32>>::with_limit(256),
+                |undo_svc, app| {
+                    undo_svc.set_active_document(window, state.undo_doc.clone());
+                    did_apply = undo_svc
+                        .redo_active_invertible(window, |rec| {
+                            let _ = app
+                                .models_mut()
+                                .update(&state.progress, |v| *v = rec.tx.after);
+                            Ok::<(), ()>(())
+                        })
+                        .unwrap_or(false);
+                },
+            );
+            if did_apply {
+                Self::sync_undo_availability(app, window, &state.undo_doc);
+            }
+            let _ = app
+                .models_mut()
+                .update(&state.last_action, |v| *v = Arc::from("edit.redo"));
+            app.request_redraw(window);
+            return;
+        }
+
         if Self::handle_workspace_tab_command(app, state, &command) {
             app.request_redraw(window);
             return;
         }
 
         let did_nav = Self::handle_nav_command(app, state, &command);
-        let did_gallery = Self::handle_gallery_command(app, state, &command);
+        let did_gallery = Self::handle_gallery_command(app, state, window, &command);
         if did_nav || did_gallery {
             app.request_redraw(window);
         }
@@ -1697,8 +2197,163 @@ impl WinitAppDriver for UiGalleryDriver {
                 });
             }
             CMD_APP_SETTINGS => {
+                let open_now = app
+                    .models()
+                    .get_copied(&state.settings_open)
+                    .unwrap_or(false);
+                if !open_now {
+                    let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+                    let _ = app.models_mut().update(&state.settings_menu_bar_os, |v| {
+                        *v = Some(Self::menu_bar_mode_key(settings.menu_bar.os));
+                    });
+                    let _ = app
+                        .models_mut()
+                        .update(&state.settings_menu_bar_in_window, |v| {
+                            *v = Some(Self::menu_bar_mode_key(settings.menu_bar.in_window));
+                        });
+                }
+                let _ = app
+                    .models_mut()
+                    .update(&state.settings_open, |v| *v = !open_now);
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.settings");
+                });
+                app.request_redraw(window);
+            }
+            CMD_APP_SETTINGS_APPLY => {
+                let os = app
+                    .models()
+                    .get_cloned(&state.settings_menu_bar_os)
+                    .flatten()
+                    .as_deref()
+                    .map(str::to_string);
+                let in_window = app
+                    .models()
+                    .get_cloned(&state.settings_menu_bar_in_window)
+                    .flatten()
+                    .as_deref()
+                    .map(str::to_string);
+
+                let os = Self::menu_bar_mode_from_key(os.as_deref());
+                let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
+                Self::apply_menu_bar_settings(app, window, os, in_window);
+
+                let _ = app
+                    .models_mut()
+                    .update(&state.settings_open, |v| *v = false);
+
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_success_message(
+                    &mut host,
+                    window,
+                    "Settings applied",
+                    shadcn::ToastMessageOptions::new().description("Menu bar settings updated."),
+                );
+
+                let _ = host.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("settings.apply");
+                });
+            }
+            CMD_APP_SETTINGS_WRITE_PROJECT => {
+                let os = app
+                    .models()
+                    .get_cloned(&state.settings_menu_bar_os)
+                    .flatten()
+                    .as_deref()
+                    .map(str::to_string);
+                let in_window = app
+                    .models()
+                    .get_cloned(&state.settings_menu_bar_in_window)
+                    .flatten()
+                    .as_deref()
+                    .map(str::to_string);
+
+                let os = Self::menu_bar_mode_from_key(os.as_deref());
+                let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let result =
+                        Self::write_project_settings_menu_bar(os, in_window).and_then(|_| {
+                            let paths = LayeredConfigPaths::for_project_root(".");
+                            let (settings, _report) = load_layered_settings(&paths)
+                                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+                            app.set_global(settings.clone());
+                            app.set_global(settings.docking_interaction_settings());
+                            fret_app::sync_os_menu_bar(app);
+                            Ok(())
+                        });
+
+                    let sonner = shadcn::Sonner::global(app);
+                    let mut host = UiActionHostAdapter { app };
+                    match result {
+                        Ok(()) => {
+                            sonner.toast_success_message(
+                                &mut host,
+                                window,
+                                "Wrote settings.json",
+                                shadcn::ToastMessageOptions::new()
+                                    .description(".fret/settings.json updated."),
+                            );
+                        }
+                        Err(e) => {
+                            sonner.toast_error_message(
+                                &mut host,
+                                window,
+                                "Write failed",
+                                shadcn::ToastMessageOptions::new().description(format!("{e}")),
+                            );
+                        }
+                    }
+
+                    let _ = host
+                        .models_mut()
+                        .update(&state.settings_open, |v| *v = false);
+                    let _ = host.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("settings.write_project");
+                    });
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let sonner = shadcn::Sonner::global(app);
+                    let mut host = UiActionHostAdapter { app };
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Write failed",
+                        shadcn::ToastMessageOptions::new()
+                            .description("Writing settings.json is not supported on wasm."),
+                    );
+                }
+            }
+            fret_app::core_commands::APP_ABOUT => {
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_message(
+                    &mut host,
+                    window,
+                    "About",
+                    shadcn::ToastMessageOptions::new().description("Fret UI Gallery"),
+                );
+                let _ = host.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmd.about");
+                });
+            }
+            fret_app::core_commands::APP_PREFERENCES => {
+                app.push_effect(Effect::Command {
+                    window: Some(window),
+                    command: CommandId::new(CMD_APP_SETTINGS),
+                });
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmd.preferences");
+                });
+            }
+            fret_app::core_commands::APP_QUIT => {
+                app.push_effect(Effect::QuitApp);
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmd.quit");
                 });
             }
             CMD_TOAST_DEFAULT => {

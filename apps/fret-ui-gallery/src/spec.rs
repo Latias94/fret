@@ -181,6 +181,8 @@ pub(crate) const CMD_TOAST_CANCEL: &str = "ui_gallery.toast.cancel";
 pub(crate) const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 pub(crate) const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 pub(crate) const CMD_APP_SETTINGS: &str = "ui_gallery.app.settings";
+pub(crate) const CMD_APP_SETTINGS_APPLY: &str = "ui_gallery.app.settings.apply";
+pub(crate) const CMD_APP_SETTINGS_WRITE_PROJECT: &str = "ui_gallery.app.settings.write_project";
 
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
