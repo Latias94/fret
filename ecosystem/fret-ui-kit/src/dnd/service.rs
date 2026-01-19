@@ -20,7 +20,7 @@ struct DndServiceModelGlobal {
 }
 
 pub fn dnd_service_model_global<H: UiHost>(app: &mut H) -> DndServiceModel {
-    app.with_global_mut(DndServiceModelGlobal::default, |st, app| {
+    app.with_global_mut_untracked(DndServiceModelGlobal::default, |st, app| {
         if let Some(model) = st.model.clone() {
             return model;
         }
