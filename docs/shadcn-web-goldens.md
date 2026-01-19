@@ -69,6 +69,18 @@ Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --viewportW=375 --viewportH=320 --openVariants=\"vp375x320=[data-fret-golden-target] button[role='combobox']\"`
 
+Breadcrumb responsive variants (`breadcrumb-responsive`):
+
+Desktop open (dropdown menu trigger uses `aria-label="Toggle menu"`):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 breadcrumb-responsive --modes=open --update --openSelector=\"[data-fret-golden-target] button[aria-label='Toggle menu']\"`
+
+Mobile closed + open (drawer trigger uses `aria-label="Toggle Menu"`):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 breadcrumb-responsive --update --viewportW=375 --viewportH=812 --variants=\"vp375x812\"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 breadcrumb-responsive --modes=open --update --viewportW=375 --viewportH=812 --openVariants=\"vp375x812=[data-fret-golden-target] button[aria-label='Toggle Menu']\"`
+
 DataTable empty-state variant (drives a React-controlled filter input):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 data-table-demo --variants=\"empty\" --steps=\"type=[data-fret-golden-target] input[placeholder='Filter emails...']@zzzzzz\" --update`

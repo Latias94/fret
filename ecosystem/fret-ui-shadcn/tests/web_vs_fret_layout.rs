@@ -2157,6 +2157,137 @@ fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
 }
 
 #[test]
+fn web_vs_fret_layout_breadcrumb_responsive_mobile_truncation_geometry() {
+    let web = read_web_golden("breadcrumb-responsive.vp375x812");
+    let theme = web_theme(&web);
+
+    let web_link = find_first(&theme.root, &|n| {
+        n.tag == "a"
+            && class_has_token(n, "max-w-20")
+            && class_has_token(n, "truncate")
+            && contains_text(n, "Data Fetching")
+    })
+    .expect("web breadcrumb-responsive (mobile) Data Fetching link");
+
+    let web_page = find_first(&theme.root, &|n| {
+        n.tag == "span"
+            && class_has_token(n, "max-w-20")
+            && class_has_token(n, "truncate")
+            && contains_text(n, "Caching and Revalidating")
+    })
+    .expect("web breadcrumb-responsive (mobile) Caching and Revalidating page");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (_ui, snap, _root) = {
+        let mut services = StyleAwareServices::default();
+        run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+
+            let trunc_layout = LayoutRefinement::default().max_w(MetricRef::Px(Px(80.0)));
+
+            vec![bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            let mut props = PressableProps::default();
+                            props.a11y.role = Some(SemanticsRole::Button);
+                            props.a11y.label = Some(Arc::from("Toggle Menu"));
+                            vec![cx.pressable(props, move |cx, _st| {
+                                vec![
+                                    bc::BreadcrumbEllipsis::new()
+                                        .size(Px(16.0))
+                                        .into_element(cx),
+                                ]
+                            })]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            let link = bc::BreadcrumbLink::new("Data Fetching")
+                                .truncate(true)
+                                .refine_layout(trunc_layout.clone())
+                                .into_element(cx);
+                            vec![cx.semantics(
+                                fret_ui::element::SemanticsProps {
+                                    role: SemanticsRole::Panel,
+                                    label: Some(Arc::from(
+                                        "Golden:breadcrumb-responsive:mobile:data-fetching",
+                                    )),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![link],
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            let page = bc::BreadcrumbPage::new("Caching and Revalidating")
+                                .truncate(true)
+                                .refine_layout(trunc_layout.clone())
+                                .into_element(cx);
+                            vec![cx.semantics(
+                                fret_ui::element::SemanticsProps {
+                                    role: SemanticsRole::Panel,
+                                    label: Some(Arc::from(
+                                        "Golden:breadcrumb-responsive:mobile:caching",
+                                    )),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![page],
+                            )]
+                        }),
+                    ]
+                })]
+            })]
+        })
+    };
+
+    let fret_link = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-responsive:mobile:data-fetching"),
+    )
+    .expect("fret breadcrumb-responsive Data Fetching link");
+    assert_close_px(
+        "breadcrumb-responsive (mobile) Data Fetching link w",
+        fret_link.bounds.size.width,
+        web_link.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-responsive (mobile) Data Fetching link h",
+        fret_link.bounds.size.height,
+        web_link.rect.h,
+        1.0,
+    );
+
+    let fret_page = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-responsive:mobile:caching"),
+    )
+    .expect("fret breadcrumb-responsive Caching and Revalidating page");
+    assert_close_px(
+        "breadcrumb-responsive (mobile) Caching page w",
+        fret_page.bounds.size.width,
+        web_page.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-responsive (mobile) Caching page h",
+        fret_page.bounds.size.height,
+        web_page.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_badge_demo_heights() {
     let web = read_web_golden("badge-demo");
     let theme = web_theme(&web);

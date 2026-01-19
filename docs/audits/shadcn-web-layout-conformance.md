@@ -106,6 +106,7 @@ patterns:
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `breadcrumb-demo` (dropdown overlay placement + panel size; `vp1440x320` gates menu panel height)
 - `breadcrumb-dropdown` (dropdown overlay placement + panel size; `vp1440x320` gates menu panel height)
+- `breadcrumb-responsive` (desktop dropdown placement + panel width; mobile truncation + drawer insets via `vp375x812` gates)
 - `context-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `menubar-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)

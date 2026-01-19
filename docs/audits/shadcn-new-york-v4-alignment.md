@@ -70,6 +70,7 @@ Conformance gates:
 - Fret: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 - Gaps to check:
   - Content: `p-1`, `rounded-md`, `border`, `shadow-md`, max-height behavior.
+  - Content: width is `min-w-[8rem]` but can grow to fit longer labels (e.g. `breadcrumb-responsive`).
   - Item row: `px-2 py-1.5`, `gap-2`, `rounded-sm`, destructive focus background tint.
   - Checkbox/radio indicators: absolute left slot (`left-2`, `size-3.5`) + reserve `pl-8`.
   - SubTrigger: right chevron `ml-auto size-4`, `data-[state=open]` accent background.
@@ -78,6 +79,7 @@ Conformance gates:
 Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
+- Menu panel width now grows beyond the `8rem` floor when labels are longer (using a longest-label estimate for popper sizing).
 
 Conformance gates:
 
@@ -172,14 +174,20 @@ Recent fixes:
   - Ellipsis footprint (`size-9`) and icon centering (`MoreHorizontal` at `size-4`).
   - Dropdown composition: ensure `breadcrumb-demo` / `breadcrumb-dropdown` match trigger sizing and
     menu placement (portal panel size + clamping behavior).
+  - Responsive composition: `breadcrumb-responsive` uses `DropdownMenu` on desktop and `Drawer` on
+    mobile, and gates both overlay outcomes (`menu` width + `dialog` insets).
+  - Mobile truncation: `max-w-20 truncate md:max-w-none` on the trailing link/page should clamp to
+    `80px` at small viewports without wrapping.
   - Responsive gap (`gap-1.5` vs `sm:gap-2.5`): Fret currently aligns to the desktop (`sm`) outcome.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_breadcrumb_separator_geometry`, `web_vs_fret_layout_breadcrumb_ellipsis_geometry`,
-    `web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry`, `web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry`).
+    `web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry`, `web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry`,
+    `web_vs_fret_layout_breadcrumb_responsive_mobile_truncation_geometry`).
   - Overlay placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
     (`web_vs_fret_breadcrumb_demo_overlay_placement_matches`, `web_vs_fret_breadcrumb_demo_small_viewport_overlay_placement_matches`,
-    `web_vs_fret_breadcrumb_dropdown_overlay_placement_matches`, `web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches`).
+    `web_vs_fret_breadcrumb_dropdown_overlay_placement_matches`, `web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches`,
+    `web_vs_fret_breadcrumb_responsive_overlay_placement_matches`, `web_vs_fret_breadcrumb_responsive_mobile_drawer_overlay_insets_match`).
 
 ### `Button`
 
