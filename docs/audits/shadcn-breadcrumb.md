@@ -11,6 +11,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
+- Upstream-shaped primitives surface: `fret_ui_shadcn::breadcrumb::primitives::*`
 
 ## Audit checklist
 
@@ -29,3 +30,4 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Web layout gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   - `web_vs_fret_layout_breadcrumb_separator_geometry`
   - `web_vs_fret_layout_breadcrumb_ellipsis_geometry`
+  - `web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry`
