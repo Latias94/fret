@@ -59,6 +59,9 @@ Keep this list short and evidence-backed:
 - [x] GPUI-MVP0-perf-006 Avoid false global-change churn from stable “service globals”.
   - Touches: `ecosystem/fret-ui-kit/src/dnd/service.rs`
   - Notes: use `with_global_mut_untracked` for lazy init + stable read paths (prevents global-change tracking from firing on every frame).
+- [x] GPUI-MVP0-perf-007 Avoid false global-change churn from frame-local overlay registries.
+  - Touches: `ecosystem/fret-ui-shadcn/src/a11y_modal.rs`
+  - Notes: `ModalA11yRegistry` is a frame-local registry used during modal overlay construction; it should not participate in host global-change tracking.
 
 ## MVP1 — Pseudoclasses + Structural Stability (Paint-only by Default)
 
