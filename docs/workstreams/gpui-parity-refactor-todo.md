@@ -123,6 +123,11 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
   - Follow-up: reintroduce GC with GPUI-aligned "cache root liveness" (dirty views + notify) so cached subtrees can be skipped without leaking detached nodes.
 
+- [ ] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
+  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), plus the runtime surface that owns cache-root lifetime.
+  - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
+  - Notes: model liveness as "reachable from any active cache root + overlay roots", then sweep only unreachable nodes (rather than "mounted this frame").
+
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 
 Goal: make caching a closed loop across paint + interaction (+ semantics later), not “paint-only” (ADR 0182).
