@@ -507,6 +507,7 @@ pub mod primitives {
     pub struct BreadcrumbLink {
         label: Arc<str>,
         command: Option<CommandId>,
+        truncate: bool,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
     }
@@ -516,6 +517,7 @@ pub mod primitives {
             Self {
                 label: label.into(),
                 command: None,
+                truncate: false,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
             }
@@ -523,6 +525,12 @@ pub mod primitives {
 
         pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
             self.command = Some(command.into());
+            self
+        }
+
+        /// Enables shadcn-aligned `truncate` behavior (single-line + ellipsis overflow).
+        pub fn truncate(mut self, truncate: bool) -> Self {
+            self.truncate = truncate;
             self
         }
 
@@ -541,6 +549,11 @@ pub mod primitives {
             let style = text_style(&theme);
             let (fg, muted) = colors(&theme);
             let label = self.label.clone();
+            let (wrap, overflow) = if self.truncate {
+                (TextWrap::None, TextOverflow::Ellipsis)
+            } else {
+                (TextWrap::Word, TextOverflow::Clip)
+            };
 
             if let Some(command) = self.command {
                 cx.pressable(PressableProps::default(), move |cx, st| {
@@ -558,8 +571,8 @@ pub mod primitives {
                                 text: label.clone(),
                                 style: Some(style.clone()),
                                 color: Some(color),
-                                wrap: TextWrap::Word,
-                                overflow: TextOverflow::Clip,
+                                wrap,
+                                overflow,
                             })]
                         },
                     )]
@@ -573,8 +586,8 @@ pub mod primitives {
                             text: label,
                             style: Some(style),
                             color: Some(muted),
-                            wrap: TextWrap::Word,
-                            overflow: TextOverflow::Clip,
+                            wrap,
+                            overflow,
                         })]
                     },
                 )
@@ -585,6 +598,7 @@ pub mod primitives {
     #[derive(Debug, Clone)]
     pub struct BreadcrumbPage {
         label: Arc<str>,
+        truncate: bool,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
     }
@@ -593,9 +607,16 @@ pub mod primitives {
         pub fn new(label: impl Into<Arc<str>>) -> Self {
             Self {
                 label: label.into(),
+                truncate: false,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
             }
+        }
+
+        /// Enables shadcn-aligned `truncate` behavior (single-line + ellipsis overflow).
+        pub fn truncate(mut self, truncate: bool) -> Self {
+            self.truncate = truncate;
+            self
         }
 
         pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
@@ -613,6 +634,11 @@ pub mod primitives {
             let style = text_style(&theme);
             let (fg, _muted) = colors(&theme);
             let label = self.label;
+            let (wrap, overflow) = if self.truncate {
+                (TextWrap::None, TextOverflow::Ellipsis)
+            } else {
+                (TextWrap::Word, TextOverflow::Clip)
+            };
             cx.container(
                 decl_style::container_props(&theme, self.chrome, self.layout),
                 move |cx| {
@@ -621,8 +647,8 @@ pub mod primitives {
                         text: label,
                         style: Some(style),
                         color: Some(fg),
-                        wrap: TextWrap::Word,
-                        overflow: TextOverflow::Clip,
+                        wrap,
+                        overflow,
                     })]
                 },
             )

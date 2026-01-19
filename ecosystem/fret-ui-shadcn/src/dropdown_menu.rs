@@ -654,6 +654,114 @@ fn estimated_menu_panel_height_for_entries(
     Px(height.min(max_height.0.max(0.0)))
 }
 
+fn estimated_menu_text_width(text: &str, font_size: Px) -> Px {
+    // We can't measure text here (ElementContext doesn't expose services), so approximate.
+    //
+    // This is intentionally tuned for shadcn/new-york-v4 defaults (Geist at `text-sm`), and is
+    // only used for popper desired sizing (so the menu panel isn't artificially clamped to the
+    // `min-w-[8rem]` floor when labels are longer).
+    let mut ems: f32 = 0.0;
+    for ch in text.chars() {
+        ems += if ch == ' ' { 0.33_f32 } else { 0.464_f32 };
+    }
+    Px(font_size.0 * ems.max(0.0))
+}
+
+fn estimated_menu_panel_width_for_entries(
+    entries: &[DropdownMenuEntry],
+    font_size: Px,
+    pad_x: Px,
+    pad_x_inset: Px,
+    reserve_leading_slot: bool,
+) -> Px {
+    // new-york-v4: panels use `p-1` and `border`.
+    let panel_padding_x = Px(8.0);
+    let panel_border_x = Px(2.0);
+
+    let leading_slot_w = if reserve_leading_slot {
+        // new-york-v4 items reserve a 16px icon slot with an 8px gap (`size-4` + `gap-2`).
+        Px(24.0)
+    } else {
+        Px(0.0)
+    };
+
+    fn add_entries(
+        out_max: &mut f32,
+        entries: &[DropdownMenuEntry],
+        font_size: Px,
+        pad_x: Px,
+        pad_x_inset: Px,
+        leading_slot_w: Px,
+    ) {
+        for entry in entries {
+            let row_w = match entry {
+                DropdownMenuEntry::Separator => None,
+                DropdownMenuEntry::Label(label) => {
+                    Some(estimated_menu_text_width(&label.text, font_size).0 + pad_x.0 * 2.0)
+                }
+                DropdownMenuEntry::Item(item) => {
+                    let left_pad = if item.inset { pad_x_inset } else { pad_x };
+                    Some(
+                        estimated_menu_text_width(&item.label, font_size).0
+                            + left_pad.0
+                            + pad_x.0
+                            + leading_slot_w.0,
+                    )
+                }
+                DropdownMenuEntry::CheckboxItem(item) => Some(
+                    estimated_menu_text_width(&item.label, font_size).0
+                        + pad_x.0
+                        + pad_x.0
+                        + Px(24.0).0,
+                ),
+                DropdownMenuEntry::RadioItem(item) => Some(
+                    estimated_menu_text_width(&item.label, font_size).0
+                        + pad_x.0
+                        + pad_x.0
+                        + Px(24.0).0,
+                ),
+                DropdownMenuEntry::Group(group) => {
+                    add_entries(
+                        out_max,
+                        &group.entries,
+                        font_size,
+                        pad_x,
+                        pad_x_inset,
+                        leading_slot_w,
+                    );
+                    None
+                }
+                DropdownMenuEntry::RadioGroup(group) => {
+                    for item in &group.items {
+                        let w = estimated_menu_text_width(&item.label, font_size).0
+                            + pad_x.0
+                            + pad_x.0
+                            + Px(24.0).0;
+                        *out_max = out_max.max(w);
+                    }
+                    None
+                }
+            };
+
+            if let Some(w) = row_w {
+                *out_max = out_max.max(w.max(0.0));
+            }
+        }
+    }
+
+    let mut max_row_w = 0.0;
+    add_entries(
+        &mut max_row_w,
+        entries,
+        font_size,
+        pad_x,
+        pad_x_inset,
+        leading_slot_w,
+    );
+
+    Px((max_row_w + panel_padding_x.0 + panel_border_x.0).max(0.0))
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CheckableIndicatorKind {
     Check,
@@ -1153,8 +1261,22 @@ impl DropdownMenu {
                     // values from the popper substrate.
                     let popper_vars =
                         menu::dropdown_menu_popper_vars(outer, anchor, min_width, popper_placement);
-                    let desired_w =
-                        menu::dropdown_menu_popper_desired_width(outer, anchor, min_width);
+                    let font_size = theme.metric_required("font.size");
+                    let pad_x = MetricRef::space(Space::N2).resolve(theme);
+                    let pad_x_inset = MetricRef::space(Space::N8).resolve(theme);
+                    let estimated_w = estimated_menu_panel_width_for_entries(
+                        &entries,
+                        font_size,
+                        pad_x,
+                        pad_x_inset,
+                        reserve_leading_slot_enabled,
+                    );
+                    let desired_w = Px(
+                        estimated_w
+                            .0
+                            .max(min_width.0)
+                            .min(popper_vars.available_width.0),
+                    );
                     let max_h = theme
                         .metric_by_key("component.dropdown_menu.max_height")
                         .map(|h| Px(h.0.min(popper_vars.available_height.0)))
