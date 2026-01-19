@@ -2,7 +2,7 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, Edges, Event, FrameId, ImageId, Modifiers, MouseButtons, NodeId, Point,
     PointerEvent, PointerId, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole,
-    Size as CoreSize, TextOverflow, TextWrap,
+    Size as CoreSize, TextOverflow, TextWrap, Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::Theme;
@@ -201,6 +201,10 @@ fn web_find_scroll_area_thumb_in_scrollbar<'a>(scrollbar: &'a WebNode) -> Option
     web_find_scroll_area_thumb(scrollbar)
 }
 
+fn web_find_by_class_token<'a>(root: &'a WebNode, token: &str) -> Option<&'a WebNode> {
+    find_first(root, &|n| class_has_token(n, token))
+}
+
 fn class_has_token(node: &WebNode, token: &str) -> bool {
     node.class_name
         .as_deref()
@@ -391,6 +395,175 @@ fn find_scene_quad_background_with_rect_close(
             None
         }
     })
+}
+
+fn rect_aabb_after_transform(transform: Transform2D, rect: Rect) -> Rect {
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = x0 + rect.size.width.0;
+    let y1 = y0 + rect.size.height.0;
+
+    let p0 = transform.apply_point(Point::new(Px(x0), Px(y0)));
+    let p1 = transform.apply_point(Point::new(Px(x1), Px(y0)));
+    let p2 = transform.apply_point(Point::new(Px(x0), Px(y1)));
+    let p3 = transform.apply_point(Point::new(Px(x1), Px(y1)));
+
+    let min_x = p0.x.0.min(p1.x.0).min(p2.x.0).min(p3.x.0);
+    let min_y = p0.y.0.min(p1.y.0).min(p2.y.0).min(p3.y.0);
+    let max_x = p0.x.0.max(p1.x.0).max(p2.x.0).max(p3.x.0);
+    let max_y = p0.y.0.max(p1.y.0).max(p2.y.0).max(p3.y.0);
+
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        CoreSize::new(Px(max_x - min_x), Px(max_y - min_y)),
+    )
+}
+
+fn find_scene_quad_background_with_world_rect_close(
+    scene: &Scene,
+    expected: WebRect,
+    tol: f32,
+) -> Option<(Rect, fret_core::Color)> {
+    let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
+
+    for op in scene.ops() {
+        match *op {
+            SceneOp::PushTransform { transform } => {
+                let current = *transform_stack.last().expect("transform stack not empty");
+                transform_stack.push(current * transform);
+            }
+            SceneOp::PopTransform => {
+                transform_stack.pop();
+                debug_assert!(!transform_stack.is_empty(), "unbalanced PopTransform");
+                if transform_stack.is_empty() {
+                    transform_stack.push(Transform2D::IDENTITY);
+                }
+            }
+            SceneOp::Quad {
+                rect, background, ..
+            } => {
+                let current = *transform_stack.last().expect("transform stack not empty");
+                let world_rect = rect_aabb_after_transform(current, rect);
+                if rect_close_px(world_rect, expected, tol) {
+                    return Some((world_rect, background));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+fn rect_diff_metric(actual: Rect, expected: WebRect) -> f32 {
+    (actual.origin.x.0 - expected.x).abs()
+        + (actual.origin.y.0 - expected.y).abs()
+        + (actual.size.width.0 - expected.w).abs()
+        + (actual.size.height.0 - expected.h).abs()
+}
+
+fn rgba_diff_metric(actual: Rgba, expected: Rgba) -> f32 {
+    (actual.r - expected.r).abs()
+        + (actual.g - expected.g).abs()
+        + (actual.b - expected.b).abs()
+        + (actual.a - expected.a).abs()
+}
+
+fn debug_dump_scene_quads_near_expected(
+    scene: &Scene,
+    expected: WebRect,
+    expected_bg: Option<Rgba>,
+) {
+    let mut transform_stack: Vec<Transform2D> = vec![Transform2D::IDENTITY];
+    let mut quads: Vec<(f32, Rect, fret_core::Color, Transform2D)> = Vec::new();
+
+    for op in scene.ops() {
+        match *op {
+            SceneOp::PushTransform { transform } => {
+                let current = *transform_stack.last().expect("transform stack not empty");
+                transform_stack.push(current * transform);
+            }
+            SceneOp::PopTransform => {
+                transform_stack.pop();
+                if transform_stack.is_empty() {
+                    transform_stack.push(Transform2D::IDENTITY);
+                }
+            }
+            SceneOp::Quad {
+                rect, background, ..
+            } => {
+                let current = *transform_stack.last().expect("transform stack not empty");
+                let world_rect = rect_aabb_after_transform(current, rect);
+                let d = rect_diff_metric(world_rect, expected);
+                quads.push((d, world_rect, background, current));
+            }
+            _ => {}
+        }
+    }
+
+    quads.sort_by(|a, b| a.0.total_cmp(&b.0));
+
+    eprintln!("--- debug_dump_scene_quads_near_expected ---");
+    eprintln!(
+        "expected rect: x={:.2} y={:.2} w={:.2} h={:.2}",
+        expected.x, expected.y, expected.w, expected.h
+    );
+    if let Some(bg) = expected_bg {
+        eprintln!(
+            "expected bg (linear rgba): r={:.4} g={:.4} b={:.4} a={:.4}",
+            bg.r, bg.g, bg.b, bg.a
+        );
+    }
+
+    for (idx, (d, rect, bg, transform)) in quads.iter().take(12).enumerate() {
+        let rgba = color_to_rgba(*bg);
+        eprintln!(
+            "#{idx:02} rectΔ={d:.2} rect=({:.2},{:.2},{:.2},{:.2}) bg=({:.4},{:.4},{:.4},{:.4}) transform(tx={:.2},ty={:.2},a={:.3},b={:.3},c={:.3},d={:.3})",
+            rect.origin.x.0,
+            rect.origin.y.0,
+            rect.size.width.0,
+            rect.size.height.0,
+            rgba.r,
+            rgba.g,
+            rgba.b,
+            rgba.a,
+            transform.tx,
+            transform.ty,
+            transform.a,
+            transform.b,
+            transform.c,
+            transform.d
+        );
+    }
+
+    if let Some(expected_bg) = expected_bg {
+        let mut by_color: Vec<(f32, Rect, fret_core::Color)> = quads
+            .iter()
+            .map(|(_d, rect, bg, _)| {
+                (
+                    rgba_diff_metric(color_to_rgba(*bg), expected_bg),
+                    *rect,
+                    *bg,
+                )
+            })
+            .collect();
+        by_color.sort_by(|a, b| a.0.total_cmp(&b.0));
+        eprintln!("top 8 by bg color diff:");
+        for (idx, (d, rect, bg)) in by_color.iter().take(8).enumerate() {
+            let rgba = color_to_rgba(*bg);
+            eprintln!(
+                "#{idx:02} bgΔ={d:.4} rect=({:.2},{:.2},{:.2},{:.2}) bg=({:.4},{:.4},{:.4},{:.4})",
+                rect.origin.x.0,
+                rect.origin.y.0,
+                rect.size.width.0,
+                rect.size.height.0,
+                rgba.r,
+                rgba.g,
+                rgba.b,
+                rgba.a
+            );
+        }
+    }
 }
 
 #[derive(Default)]
@@ -8475,6 +8648,254 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
         "typography-table even row background",
         color_to_rgba(bg),
         web_even_bg,
+        0.02,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
+    let web = read_web_golden("progress-demo");
+    let theme = web.themes.get("light").expect("missing light theme");
+
+    let web_track = web_find_by_class_tokens(
+        &theme.root,
+        &[
+            "bg-primary/20",
+            "relative",
+            "h-2",
+            "overflow-hidden",
+            "rounded-full",
+            "w-[60%]",
+        ],
+    )
+    .expect("web progress track");
+    let web_indicator = web_find_by_class_tokens(
+        web_track,
+        &["bg-primary", "h-full", "w-full", "flex-1", "transition-all"],
+    )
+    .or_else(|| web_find_by_class_token(web_track, "bg-primary"))
+    .expect("web progress indicator");
+
+    let expected_track_bg = web_track
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web track backgroundColor");
+    let expected_indicator_bg = web_indicator
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web indicator backgroundColor");
+
+    let t = (web_indicator.rect.x + web_indicator.rect.w - web_track.rect.x) / web_track.rect.w;
+    let v = (t * 100.0).clamp(0.0, 100.0);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        |cx| {
+            let width = Px(web_track.rect.w);
+            let model: Model<f32> = cx.app.models_mut().insert(v);
+
+            let progress = cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Panel,
+                    label: Some(Arc::from("Golden:progress-demo")),
+                    ..Default::default()
+                },
+                move |cx| vec![fret_ui_shadcn::Progress::new(model).into_element(cx)],
+            );
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &Theme::global(&*cx.app),
+                        LayoutRefinement::default().w_px(MetricRef::Px(width)),
+                    ),
+                    ..Default::default()
+                },
+                move |_cx| vec![progress],
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let (_track_rect, track_bg) =
+        find_scene_quad_background_with_rect_close(&scene, web_track.rect, 1.0)
+            .expect("track quad");
+    assert_rgba_close(
+        "progress-demo track background",
+        color_to_rgba(track_bg),
+        expected_track_bg,
+        0.02,
+    );
+
+    let ind = find_scene_quad_background_with_world_rect_close(&scene, web_indicator.rect, 1.0);
+    if ind.is_none() {
+        debug_dump_scene_quads_near_expected(
+            &scene,
+            web_indicator.rect,
+            Some(expected_indicator_bg),
+        );
+    }
+    let (_ind_rect, ind_bg) = ind.expect("indicator quad");
+    assert_rgba_close(
+        "progress-demo indicator background",
+        color_to_rgba(ind_bg),
+        expected_indicator_bg,
+        0.02,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
+    let web = read_web_golden("progress-demo");
+    let theme = web.themes.get("dark").expect("missing dark theme");
+
+    let web_track = web_find_by_class_tokens(
+        &theme.root,
+        &[
+            "bg-primary/20",
+            "relative",
+            "h-2",
+            "overflow-hidden",
+            "rounded-full",
+            "w-[60%]",
+        ],
+    )
+    .expect("web progress track");
+    let web_indicator = web_find_by_class_tokens(
+        web_track,
+        &["bg-primary", "h-full", "w-full", "flex-1", "transition-all"],
+    )
+    .or_else(|| web_find_by_class_token(web_track, "bg-primary"))
+    .expect("web progress indicator");
+
+    let expected_track_bg = web_track
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web track backgroundColor");
+    let expected_indicator_bg = web_indicator
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web indicator backgroundColor");
+
+    let t = (web_indicator.rect.x + web_indicator.rect.w - web_track.rect.x) / web_track.rect.w;
+    let v = (t * 100.0).clamp(0.0, 100.0);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        |cx| {
+            let width = Px(web_track.rect.w);
+            let model: Model<f32> = cx.app.models_mut().insert(v);
+
+            let progress = cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Panel,
+                    label: Some(Arc::from("Golden:progress-demo")),
+                    ..Default::default()
+                },
+                move |cx| vec![fret_ui_shadcn::Progress::new(model).into_element(cx)],
+            );
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &Theme::global(&*cx.app),
+                        LayoutRefinement::default().w_px(MetricRef::Px(width)),
+                    ),
+                    ..Default::default()
+                },
+                move |_cx| vec![progress],
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let (_track_rect, track_bg) =
+        find_scene_quad_background_with_rect_close(&scene, web_track.rect, 1.0)
+            .expect("track quad");
+    assert_rgba_close(
+        "progress-demo track background",
+        color_to_rgba(track_bg),
+        expected_track_bg,
+        0.02,
+    );
+
+    let ind = find_scene_quad_background_with_world_rect_close(&scene, web_indicator.rect, 1.0);
+    if ind.is_none() {
+        debug_dump_scene_quads_near_expected(
+            &scene,
+            web_indicator.rect,
+            Some(expected_indicator_bg),
+        );
+    }
+    let (_ind_rect, ind_bg) = ind.expect("indicator quad");
+    assert_rgba_close(
+        "progress-demo indicator background",
+        color_to_rgba(ind_bg),
+        expected_indicator_bg,
         0.02,
     );
 }

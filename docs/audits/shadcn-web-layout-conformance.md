@@ -96,6 +96,7 @@ patterns:
 - `data-table-demo` (row heights + key control sizing)
 - `data-table-demo.empty` (colSpan + empty-state height)
 - `typography-table` (row heights + cell rects + paint-backed `even:bg-muted` background)
+- `progress-demo` (track + indicator geometry + paint-backed colors; indicator translateX matches web percent-based transform)
 - `popover-demo` (overlay placement + transform origin)
 - `dropdown-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `context-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)

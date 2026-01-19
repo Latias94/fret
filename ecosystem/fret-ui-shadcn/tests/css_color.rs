@@ -29,6 +29,7 @@ pub(crate) fn parse_css_color(s: &str) -> Option<Rgba> {
     }
     parse_rgb(s)
         .or_else(|| parse_lab(s))
+        .or_else(|| parse_oklab(s))
         .or_else(|| parse_oklch(s))
 }
 
@@ -119,6 +120,66 @@ fn parse_oklch(s: &str) -> Option<Rgba> {
     let h_rad = h.to_radians();
     let a_ = c * h_rad.cos();
     let b_ = c * h_rad.sin();
+
+    // OKLab -> linear sRGB (Björn Ottosson).
+    let l_ = l + 0.396_337_78 * a_ + 0.215_803_76 * b_;
+    let m_ = l - 0.105_561_346 * a_ - 0.063_854_17 * b_;
+    let s_ = l - 0.089_484_18 * a_ - 1.291_485_5 * b_;
+
+    let l3 = l_ * l_ * l_;
+    let m3 = m_ * m_ * m_;
+    let s3 = s_ * s_ * s_;
+
+    let r = 4.076_741_7 * l3 - 3.307_711_6 * m3 + 0.230_969_94 * s3;
+    let g = -1.268_438 * l3 + 2.609_757_4 * m3 - 0.341_319_4 * s3;
+    let b = -0.004_196_086_3 * l3 - 0.703_418_6 * m3 + 1.707_614_7 * s3;
+
+    Some(Rgba {
+        r: r.clamp(0.0, 1.0),
+        g: g.clamp(0.0, 1.0),
+        b: b.clamp(0.0, 1.0),
+        a: alpha,
+    })
+}
+
+fn parse_oklab(s: &str) -> Option<Rgba> {
+    let s = s.trim();
+    let inner = s.strip_prefix("oklab(")?.strip_suffix(')')?.trim();
+
+    let (main, alpha_part) = if let Some((l, r)) = inner.split_once('/') {
+        (l.trim(), Some(r.trim()))
+    } else {
+        (inner, None)
+    };
+
+    let parts: Vec<&str> = main
+        .split(|c: char| c.is_whitespace() || c == ',')
+        .filter(|p| !p.is_empty())
+        .collect();
+    if parts.len() != 3 {
+        return None;
+    }
+
+    let l_raw = parts[0].trim();
+    let l: f32 = if l_raw.ends_with('%') {
+        l_raw.trim_end_matches('%').parse::<f32>().ok()? / 100.0
+    } else {
+        l_raw.parse().ok()?
+    };
+    let a_: f32 = parts[1].parse().ok()?;
+    let b_: f32 = parts[2].parse().ok()?;
+
+    let alpha = if let Some(a) = alpha_part {
+        if let Some(pct) = a.trim_end_matches('%').parse::<f32>().ok()
+            && a.trim_end().ends_with('%')
+        {
+            (pct / 100.0).clamp(0.0, 1.0)
+        } else {
+            a.parse::<f32>().ok()?.clamp(0.0, 1.0)
+        }
+    } else {
+        1.0
+    };
 
     // OKLab -> linear sRGB (Björn Ottosson).
     let l_ = l + 0.396_337_78 * a_ + 0.215_803_76 * b_;

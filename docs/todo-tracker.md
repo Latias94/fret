@@ -146,6 +146,10 @@ It complements (but does not replace) ADRs:
   - Current: shadcn theme defines a `prose` typography baseline (16px/24px) to match web `computedStyle` in typography pages.
   - Current: paint-backed gate exists for `even:bg-muted` (web uses `lab(...)`), using CSS color parsing helpers + scene quad background matching.
 
+- **Progress (`progress-demo`) parity**
+  - Current: geometry + paint-backed gates exist for the track (`bg-primary/20`) and indicator (`bg-primary`) using `goldens/shadcn-web/v4/new-york-v4/progress-demo.json` via `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (light+dark).
+  - Current: indicator translateX matches upstream percent-based transform (the DOM `w-full` indicator with `translateX(-${100 - value}%)`), validated against the web `getBoundingClientRect` geometry.
+
 - **Golden-path window close behavior**
   - Symptom: clicking the window close button (X) does nothing in minimal `UiAppDriver` apps unless the app explicitly handles `Event::WindowCloseRequested`.
   - ADRs: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
