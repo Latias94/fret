@@ -67,8 +67,8 @@ impl GraphProfile for DataflowProfile {
     }
 
     fn validate_graph(&mut self, graph: &Graph) -> Vec<Diagnostic> {
-        let report = crate::core::validate_graph(graph);
-        report
+        let report = crate::core::validate_graph_structural(graph);
+        let mut diags: Vec<Diagnostic> = report
             .errors
             .into_iter()
             .map(|err| Diagnostic {
@@ -78,7 +78,30 @@ impl GraphProfile for DataflowProfile {
                 message: err.to_string(),
                 fixes: Vec::new(),
             })
-            .collect()
+            .collect();
+
+        for (edge_id, edge) in &graph.edges {
+            let Some(from) = graph.ports.get(&edge.from) else {
+                continue;
+            };
+            let Some(to) = graph.ports.get(&edge.to) else {
+                continue;
+            };
+            if from.dir != PortDirection::Out || to.dir != PortDirection::In {
+                diags.push(Diagnostic {
+                    key: "graph.invalid_edge_direction".to_string(),
+                    severity: DiagnosticSeverity::Error,
+                    target: crate::rules::DiagnosticTarget::Graph,
+                    message: format!(
+                        "edge port directions are invalid: edge={edge_id:?} from_dir={:?} to_dir={:?}",
+                        from.dir, to.dir
+                    ),
+                    fixes: Vec::new(),
+                });
+            }
+        }
+
+        diags
     }
 
     fn allow_cycles(&self, _edge_kind: EdgeKind) -> bool {
@@ -287,7 +310,10 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{CanvasPoint, Edge, EdgeId, Node, NodeKindKey};
+    use crate::core::{
+        CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
+        PortDirection, PortId, PortKey, PortKind,
+    };
 
     fn make_node(kind: &str) -> Node {
         Node {
@@ -306,6 +332,76 @@ mod tests {
             ports: Vec::new(),
             data: serde_json::Value::Null,
         }
+    }
+
+    fn make_port(
+        node: NodeId,
+        key: &str,
+        dir: PortDirection,
+        kind: PortKind,
+        capacity: PortCapacity,
+    ) -> Port {
+        Port {
+            node,
+            key: PortKey::new(key),
+            dir,
+            kind,
+            capacity,
+            connectable: None,
+            connectable_start: None,
+            connectable_end: None,
+            ty: None,
+            data: serde_json::Value::Null,
+        }
+    }
+
+    #[test]
+    fn validate_graph_rejects_out_to_out_edges() {
+        let mut graph = Graph::default();
+        let a = NodeId::new();
+        let b = NodeId::new();
+        graph.nodes.insert(a, make_node("core.a"));
+        graph.nodes.insert(b, make_node("core.b"));
+
+        let out_a = PortId::new();
+        let out_b = PortId::new();
+        graph.ports.insert(
+            out_a,
+            make_port(
+                a,
+                "out",
+                PortDirection::Out,
+                PortKind::Data,
+                PortCapacity::Multi,
+            ),
+        );
+        graph.ports.insert(
+            out_b,
+            make_port(
+                b,
+                "out",
+                PortDirection::Out,
+                PortKind::Data,
+                PortCapacity::Multi,
+            ),
+        );
+
+        let edge_id = EdgeId::new();
+        graph.edges.insert(
+            edge_id,
+            Edge {
+                kind: EdgeKind::Data,
+                from: out_a,
+                to: out_b,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+
+        let mut profile = DataflowProfile::new();
+        let diags = profile.validate_graph(&graph);
+        assert!(!diags.is_empty());
     }
 
     #[test]
