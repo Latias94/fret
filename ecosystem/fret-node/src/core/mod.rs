@@ -12,7 +12,9 @@ pub use model::{
     EdgeReconnectableEndpoint, Graph, Group, Node, NodeExtent, Port, PortCapacity, PortDirection,
     PortKind, StickyNote, Symbol,
 };
-pub use validate::{GraphValidationError, GraphValidationReport, validate_graph};
+pub use validate::{
+    GraphValidationError, GraphValidationReport, validate_graph, validate_graph_structural,
+};
 
 #[cfg(test)]
 mod tests;
