@@ -153,6 +153,33 @@ The refactor should always move these metrics in the right direction, as reporte
 - Invalidation: count of layout invalidations attributed to pseudoclass edges (MVP1), and dirty view reasons (MVP2).
   - Evidence surface: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`, `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
 
+### 2.5 Harness recipes (repeatable)
+
+These commands exist to make A/B perf and correctness regressions easy to reproduce locally.
+
+Run a script without view cache (baseline):
+
+```sh
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Run with view-cache enabled (no shell reuse):
+
+```sh
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Run with view-cache enabled (shell reuse):
+
+```sh
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Notes:
+
+- The UI Gallery supports `FRET_UI_GALLERY_VIEW_CACHE{,_SHELL,_INNER,_CONTINUOUS}` (bool parsing) to keep harnesses deterministic.
+- If overlay torture flakes under shell reuse, use `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json` as a stable A/B baseline while debugging.
+
 ---
 
 ### 2.3 Definition of Done (workstream-level)

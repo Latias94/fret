@@ -56,6 +56,13 @@ Keep this list short and evidence-backed:
 - [x] GPUI-MVP0-diag-005 Export prepaint timing + add warmup filtering for perf runs.
   - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `apps/fretboard/src/cli.rs`
   - Notes: `--warmup-frames <n>` skips early `frame_id` snapshots when ranking; short scripts auto-fallback to unfiltered stats when warmup would skip everything.
+- [x] GPUI-MVP0-diag-008 Allow env injection for launched diag targets.
+  - Touches: `apps/fretboard/src/diag.rs`, `apps/fretboard/src/cli.rs`
+  - Notes: supports repeating `--env KEY=VALUE` and passes them only to the launched target process (not the diag runner).
+  - Notes: reserved variables are protected (e.g. `FRET_DIAG`, `FRET_DIAG_DIR`, `FRET_DIAG_READY_PATH`).
+- [x] GPUI-MVP0-diag-009 Add env-driven UI Gallery toggles for perf harnesses.
+  - Touches: `apps/fret-ui-gallery/src/driver.rs`
+  - Notes: `FRET_UI_GALLERY_VIEW_CACHE{,_SHELL,_INNER,_CONTINUOUS}` are parsed as bools (with sensible defaults) to keep scripts deterministic.
 - [x] GPUI-MVP0-perf-006 Avoid false global-change churn from stable “service globals”.
   - Touches: `ecosystem/fret-ui-kit/src/dnd/service.rs`
   - Notes: use `with_global_mut_untracked` for lazy init + stable read paths (prevents global-change tracking from firing on every frame).
@@ -96,12 +103,18 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     (`UiTreeDebugSnapshotV1.dirty_views`), `crates/fret-ui/src/tree/tests/view_cache.rs`
     (`view_cache_notify_propagates_to_ancestor_cache_roots`).
 - [~] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
-  - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`
+  - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`, `crates/fret-ui/src/elements/runtime.rs`
   - Done when: a notified view never reuses cached ranges; a clean view reliably reuses them.
   - Progress: `notify` marks the nearest cache root as `view_cache_needs_rerender`, which disables view-cache reuse for that root.
   - Progress: model/global observation invalidation also marks cache roots dirty (`view_cache_needs_rerender`) so reuse is disabled on data changes.
-  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`),
+  - Progress: cache-hit frames still uplift element-recorded observations to cache roots (prevents stale cache-hit when an input event changes model state but the subtree is reused).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/elements/runtime.rs`,
     `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots`).
+
+- [~] GPUI-MVP2-cache-004 Stabilize overlay interactions under `ViewCache` shell reuse.
+  - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`, `apps/fret-ui-gallery/src/driver.rs`
+  - Goal: `ui-gallery-overlay-torture.json` completes reliably with `FRET_UI_GALLERY_VIEW_CACHE=1` and `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+  - Notes: suspected failure mode is cache-hit + missing cache-root dirty mark causing overlay/dialog semantics nodes to never appear.
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 
