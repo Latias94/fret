@@ -124,9 +124,10 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Follow-up: reintroduce GC with GPUI-aligned "cache root liveness" (dirty views + notify) so cached subtrees can be skipped without leaking detached nodes.
 
 - [ ] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
-  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), plus the runtime surface that owns cache-root lifetime.
+  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), plus cache-hit frame liveness bookkeeping.
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
-  - Notes: model liveness as "reachable from any active cache root + overlay roots", then sweep only unreachable nodes (rather than "mounted this frame").
+  - Notes: a naive "detached + stale" sweep is not sufficient on its own; cache-hit frames can still cause overlay/demo semantics to disappear if layer/overlay presence
+    depends on rerendered outputs. We likely need a GPUI-style "effect output replay" (or equivalent) for cache-hit frames (layers/overlays/semantics roots).
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 
