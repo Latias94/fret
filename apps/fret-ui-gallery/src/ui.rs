@@ -1722,12 +1722,14 @@ fn preview_combobox(
         .ok()
         .flatten()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
-    let query = cx.app.models().get_cloned(&query).unwrap_or_default();
+    let query_text = cx
+        .get_model_cloned(&query, Invalidation::Layout)
+        .unwrap_or_default();
 
     vec![
         combo,
         cx.text(format!("Selected: {selected}")),
-        cx.text(format!("Query: {query}")),
+        cx.text(format!("Query: {query_text}")),
     ]
 }
 
@@ -2627,7 +2629,9 @@ fn preview_overlay(
         });
 
     let dialog_open_flag = {
-        let open = cx.app.models().get_copied(&dialog_open).unwrap_or(false);
+        let open = cx
+            .get_model_copied(&dialog_open, Invalidation::Layout)
+            .unwrap_or(false);
         if open {
             Some(cx.semantics(
                 fret_ui::element::SemanticsProps {
@@ -2643,9 +2647,7 @@ fn preview_overlay(
 
     let popover_dismissed_flag = {
         let last = cx
-            .app
-            .models()
-            .get_cloned(&last_action)
+            .get_model_cloned(&last_action, Invalidation::Layout)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         if last.as_ref() == "popover:dismissed" {
             Some(cx.semantics(
