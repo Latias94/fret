@@ -22,6 +22,8 @@ These defaults are intentionally “cache-root-first” to maximize performance 
 - `ViewId` is defined at cache boundary granularity (a `ViewCache` root).
 - `notify()` (no explicit target) marks the current/nearest cache root dirty; if no cache root is active, it falls back
   to the window root.
+- `request_animation_frame()` requested from within a view implies `notify()` for the nearest cache root on the next
+  tick (GPUI-aligned), so view-cache reuse cannot replay stale output indefinitely during animations.
 - Dirty cache roots propagate to ancestor cache roots (nested boundaries must not replay stale ranges).
 
 ## Tracking Format
@@ -170,11 +172,19 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Goal: prevent reusing a view-cache root when key inputs like theme/bounds/text style/content mask changed.
   - v1 key: `hash(theme_revision, scale_factor, window_bounds, ViewCacheProps.cache_key)`.
     - Notes: this is a coarse proxy for GPUI's `bounds/content_mask/text_style` key and will be refined as more inputs become explicit.
+    - Helpers: `fret_ui::cache_key::{text_style_key, rect_key, corners_key}`; `fret_ui_kit::declarative::CachedSubtreeProps::{cache_key_text_style, cache_key_clip_rect, cache_key_clip_rrect}`.
   - Reference: `repo-ref/zed/crates/gpui/src/view.rs` (`ViewCacheKey`: bounds/content_mask/text_style).
   - Evidence:
     - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_gates_reuse_on_explicit_cache_key`)
     - `cargo nextest run -p fret-ui`
   - Diagnostics: cache-root stats now distinguish key misses via `reuse_reason=cache_key_mismatch`.
+
+- [x] GPUI-MVP2-diag-007 Keep debug identity stable on cache-hit frames (`--features diagnostics`).
+  - Goal: inspector / debug paths remain resolvable even when a view-cache root is a cache hit and its render closure
+    is skipped.
+  - Touches: `crates/fret-ui/src/elements/runtime.rs` (`touch_view_cache_subtree_elements_if_recorded`).
+  - Evidence: `crates/fret-ui/src/declarative/tests/view_cache.rs`
+    (`view_cache_skips_child_render_when_clean_and_preserves_element_state`).
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 

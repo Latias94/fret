@@ -415,16 +415,19 @@ impl WindowElementState {
         frame_id: FrameId,
         root_id: GlobalElementId,
     ) -> bool {
-        let Some(elements) = self.view_cache_subtree_elements.get(&root) else {
+        let Some(elements) = self.view_cache_subtree_elements.get(&root).cloned() else {
             return false;
         };
 
-        for &element in elements {
+        for element in elements {
             let Some(entry) = self.nodes.get_mut(&element) else {
                 continue;
             };
             entry.last_seen_frame = frame_id;
             entry.root = root_id;
+
+            #[cfg(feature = "diagnostics")]
+            self.touch_debug_identity_for_element(frame_id, element);
         }
 
         true

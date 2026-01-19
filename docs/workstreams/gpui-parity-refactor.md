@@ -530,6 +530,7 @@ Behavior:
 3) Cache key includes:
    - v1: `hash(theme_revision, scale_factor, window_bounds, explicit_cache_key)` (implemented as `ViewCacheProps.cache_key`)
    - v2+: extend toward GPUI’s `bounds/content_mask/text_style` key as those inputs become explicit at the cache boundary.
+   - Helpers: `fret_ui::cache_key::{CacheKeyBuilder, text_style_key, rect_key, corners_key}` (ecosystem sugar: `CachedSubtreeProps::{cache_key_text_style, cache_key_clip_rect, cache_key_clip_rrect}`).
 4) Dependency sets:
    - track observed models/globals for that subtree (unify with §5.3)
 5) Inspection/picking disables caching:

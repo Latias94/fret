@@ -87,6 +87,16 @@ When the UI runtime is in an inspection/probe mode (picking, semantics inspectio
 interaction diagnostics), view caching MUST be disabled, consistent with ADR 0055 and GPUI's
 approach ("cache is an optimization; introspection correctness comes first").
 
+### 7) Cache root reuse is gated by an explicit cache key
+
+Cache reuse MUST be gated on an explicit cache key in addition to dirtiness/observations.
+
+- The authoring surface provides a deterministic key input (v1: `ViewCacheProps.cache_key`).
+- The runtime MAY mix additional implicit inputs into the final reuse gate (e.g. scale factor, theme revision, root
+  bounds), as long as the rule remains: **a key mismatch forces re-execution of the cache root**.
+
+This is the v1 bridge toward GPUI's `ViewCacheKey` checks (`bounds/content_mask/text_style`) in `AnyView::cached`.
+
 ## Consequences
 
 ### Benefits
@@ -117,6 +127,7 @@ approach ("cache is an optimization; introspection correctness comes first").
      categories that affect recording reuse.
 4) Replay gate:
    - Only attempt paint replay on cache root nodes (and only when caching is enabled and inspection is inactive).
+   - Additionally gate replay on the cache root key: a mismatch forces re-render.
 5) Tests:
    - Nested cache roots: inner model change must invalidate outer cache root (no stale replay).
    - Observation uplift: model change invalidates cache root even if only leaf observed.
@@ -128,4 +139,3 @@ approach ("cache is an optimization; introspection correctness comes first").
 2) Implement observation uplift + cache-root invalidation chaining for paint stream.
 3) Promote `ViewCache` authoring usage in ecosystem demos (panel-level boundaries).
 4) Extend recording to additional streams as they are introduced (ADR 0055 follow-up).
-

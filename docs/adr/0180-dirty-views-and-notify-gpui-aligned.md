@@ -61,6 +61,14 @@ Semantics:
 - `notify` MUST schedule a redraw of the owning window at the next safe driver boundary (end of tick / event loop
   iteration), consistent with ADR 0034 scheduling rules.
 
+Frame-driven updates (animation frames):
+
+- `request_animation_frame()` requested from within a view context MUST behave as if `notify()` was called for that
+  view on the next tick.
+- Rationale: view-cache reuse is allowed only for clean views. If an animation can advance without explicit model
+  changes (or without always triggering node-level invalidation), a paint-only frame request would allow stale cached
+  output to be replayed indefinitely.
+
 ### 2) Dirty views are the primary cache key for view caching
 
 When a view is used behind a caching boundary (ADR 1152), cache reuse is allowed only if:
