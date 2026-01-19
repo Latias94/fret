@@ -568,6 +568,8 @@ fn mount_element<H: UiHost>(
                 crate::tree::UiDebugCacheRootReuseReason::NodeRecreated
             } else if reuse_view_cache {
                 crate::tree::UiDebugCacheRootReuseReason::MarkedReuseRoot
+            } else if window_state.view_cache_key_mismatch(id) {
+                crate::tree::UiDebugCacheRootReuseReason::CacheKeyMismatch
             } else {
                 crate::tree::UiDebugCacheRootReuseReason::NotMarkedReuseRoot
             };

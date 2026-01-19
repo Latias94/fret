@@ -593,7 +593,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 props.cache_key,
             ));
 
-            let reuse = should_reuse && cx.window_state.view_cache_key_matches_and_touch(id, key);
+            let key_matches = if should_reuse {
+                let matches = cx.window_state.view_cache_key_matches_and_touch(id, key);
+                if !matches {
+                    cx.window_state.record_view_cache_key_mismatch(id);
+                }
+                matches
+            } else {
+                false
+            };
+
+            let reuse = should_reuse && key_matches;
 
             let children = if reuse {
                 cx.window_state.mark_view_cache_reuse_root(id);

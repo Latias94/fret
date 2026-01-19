@@ -415,6 +415,7 @@ pub enum UiDebugCacheRootReuseReason {
     NodeRecreated,
     MarkedReuseRoot,
     NotMarkedReuseRoot,
+    CacheKeyMismatch,
 }
 
 impl UiDebugCacheRootReuseReason {
@@ -424,6 +425,7 @@ impl UiDebugCacheRootReuseReason {
             Self::NodeRecreated => "node_recreated",
             Self::MarkedReuseRoot => "marked_reuse_root",
             Self::NotMarkedReuseRoot => "not_marked_reuse_root",
+            Self::CacheKeyMismatch => "cache_key_mismatch",
         }
     }
 }
