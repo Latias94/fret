@@ -3685,6 +3685,250 @@ fn web_vs_fret_select_demo_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_select_demo_open_option_metrics_match() {
+    fn collect_nodes_with_role<'a>(node: &'a WebNode, role: &str, out: &mut Vec<&'a WebNode>) {
+        if node.attrs.get("role").is_some_and(|v| v.as_str() == role) {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect_nodes_with_role(child, role, out);
+        }
+    }
+
+    let web = read_web_golden_open("select-demo");
+    let theme = web_theme(&web);
+    let web_listbox = theme
+        .portals
+        .iter()
+        .find(|n| n.attrs.get("role").is_some_and(|v| v.as_str() == "listbox"))
+        .expect("web listbox portal");
+
+    let mut web_option_nodes = Vec::new();
+    collect_nodes_with_role(web_listbox, "option", &mut web_option_nodes);
+    let mut web_options: Vec<WebRect> = web_option_nodes
+        .into_iter()
+        .filter(|n| {
+            n.attrs
+                .get("data-slot")
+                .is_some_and(|v| v.as_str() == "select-item")
+        })
+        .map(|n| n.rect)
+        .collect();
+    web_options.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
+
+    if web_options.is_empty() {
+        panic!("missing web options");
+    }
+
+    let expected_left_inset = web_options[0].x - web_listbox.rect.x;
+    let expected_right_inset =
+        (web_listbox.rect.x + web_listbox.rect.w) - (web_options[0].x + web_options[0].w);
+    let expected_row_h = web_options[0].h;
+    let expected_top_to_first = web_options[0].y - web_listbox.rect.y;
+    let expected_bottom_from_last = (web_listbox.rect.y + web_listbox.rect.h)
+        - (web_options[web_options.len() - 1].y + web_options[web_options.len() - 1].h);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+            let entries: Vec<SelectEntry> = vec![
+                SelectGroup::new(vec![
+                    SelectLabel::new("Fruits").into(),
+                    SelectItem::new("apple", "Apple").into(),
+                    SelectItem::new("banana", "Banana").into(),
+                    SelectItem::new("blueberry", "Blueberry").into(),
+                    SelectItem::new("grapes", "Grapes").into(),
+                    SelectItem::new("pineapple", "Pineapple").into(),
+                ])
+                .into(),
+            ];
+
+            let content = fret_ui_shadcn::Select::new(value, open.clone())
+                .a11y_label("Select")
+                .placeholder("Select a fruit")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
+                )
+                .entries(entries)
+                .into_element(cx);
+            vec![pad_root(cx, Px(0.0), content)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..=settle_frames {
+        let frame = 2 + tick;
+        let request_semantics = tick == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+                use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+                let entries: Vec<SelectEntry> = vec![
+                    SelectGroup::new(vec![
+                        SelectLabel::new("Fruits").into(),
+                        SelectItem::new("apple", "Apple").into(),
+                        SelectItem::new("banana", "Banana").into(),
+                        SelectItem::new("blueberry", "Blueberry").into(),
+                        SelectItem::new("grapes", "Grapes").into(),
+                        SelectItem::new("pineapple", "Pineapple").into(),
+                    ])
+                    .into(),
+                ];
+
+                let content = fret_ui_shadcn::Select::new(value, open.clone())
+                    .a11y_label("Select")
+                    .placeholder("Select a fruit")
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
+                    )
+                    .entries(entries)
+                    .into_element(cx);
+                vec![pad_root(cx, Px(0.0), content)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let expected_portal_w = web_listbox.rect.w;
+    let expected_portal_h = web_listbox.rect.h;
+    let fret_listbox = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBox)
+        .min_by(|a, b| {
+            let aw = a.bounds.size.width.0;
+            let ah = a.bounds.size.height.0;
+            let bw = b.bounds.size.width.0;
+            let bh = b.bounds.size.height.0;
+            let score_a = (aw - expected_portal_w).abs() + (ah - expected_portal_h).abs();
+            let score_b = (bw - expected_portal_w).abs() + (bh - expected_portal_h).abs();
+            score_a
+                .partial_cmp(&score_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .expect("fret listbox portal");
+
+    let listbox_bounds = fret_listbox.bounds;
+    let mut fret_options: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBoxOption)
+        .filter(|n| {
+            let b = n.bounds;
+            b.origin.x.0 >= listbox_bounds.origin.x.0
+                && b.origin.y.0 >= listbox_bounds.origin.y.0
+                && b.origin.x.0 + b.size.width.0
+                    <= listbox_bounds.origin.x.0 + listbox_bounds.size.width.0
+                && b.origin.y.0 + b.size.height.0
+                    <= listbox_bounds.origin.y.0 + listbox_bounds.size.height.0
+        })
+        .collect();
+    fret_options.sort_by(|a, b| {
+        a.bounds
+            .origin
+            .y
+            .0
+            .partial_cmp(&b.bounds.origin.y.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    if fret_options.len() != web_options.len() {
+        panic!(
+            "option count mismatch: web={} fret={}",
+            web_options.len(),
+            fret_options.len()
+        );
+    }
+
+    let tol = 1.0;
+    for (idx, option) in fret_options.iter().enumerate() {
+        let b = option.bounds;
+        let got_row_h = b.size.height.0;
+        if (got_row_h - expected_row_h).abs() > tol {
+            panic!(
+                "row height mismatch idx={idx}: got={} expected={}",
+                got_row_h, expected_row_h
+            );
+        }
+
+        let got_left_inset = b.origin.x.0 - listbox_bounds.origin.x.0;
+        if (got_left_inset - expected_left_inset).abs() > tol {
+            panic!(
+                "left inset mismatch idx={idx}: got={} expected={}",
+                got_left_inset, expected_left_inset
+            );
+        }
+        let got_right_inset = (listbox_bounds.origin.x.0 + listbox_bounds.size.width.0)
+            - (b.origin.x.0 + b.size.width.0);
+        if (got_right_inset - expected_right_inset).abs() > tol {
+            panic!(
+                "right inset mismatch idx={idx}: got={} expected={}",
+                got_right_inset, expected_right_inset
+            );
+        }
+
+        let expected_y = web_options[idx].y - web_listbox.rect.y;
+        let got_y = b.origin.y.0 - listbox_bounds.origin.y.0;
+        if (got_y - expected_y).abs() > 2.0 {
+            panic!(
+                "option y mismatch idx={idx}: got={} expected={}",
+                got_y, expected_y
+            );
+        }
+    }
+
+    let first = fret_options[0].bounds;
+    let last = fret_options[fret_options.len() - 1].bounds;
+    let got_top_to_first = first.origin.y.0 - listbox_bounds.origin.y.0;
+    let got_bottom_from_last = (listbox_bounds.origin.y.0 + listbox_bounds.size.height.0)
+        - (last.origin.y.0 + last.size.height.0);
+
+    if (got_top_to_first - expected_top_to_first).abs() > 2.0 {
+        panic!(
+            "top-to-first mismatch: got={} expected={}",
+            got_top_to_first, expected_top_to_first
+        );
+    }
+    if (got_bottom_from_last - expected_bottom_from_last).abs() > 2.0 {
+        panic!(
+            "bottom-from-last mismatch: got={} expected={}",
+            got_bottom_from_last, expected_bottom_from_last
+        );
+    }
+}
+
+#[test]
 fn web_vs_fret_select_scrollable_tiny_viewport_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "select-scrollable.vp1440x240",
@@ -3913,6 +4157,18 @@ fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
                 "  opt[{idx}] y={} h={} label={:?}",
                 opt.bounds.origin.y.0,
                 opt.bounds.size.height.0,
+                opt.label.as_deref()
+            );
+        }
+        let total = options.len();
+        for (i, opt) in options.iter().rev().take(8).enumerate() {
+            let idx = total.saturating_sub(1 + i);
+            let bottom = opt.bounds.origin.y.0 + opt.bounds.size.height.0;
+            eprintln!(
+                "  opt[{idx}] y={} h={} bottom={} label={:?}",
+                opt.bounds.origin.y.0,
+                opt.bounds.size.height.0,
+                bottom,
                 opt.label.as_deref()
             );
         }

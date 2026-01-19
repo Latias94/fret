@@ -32,6 +32,7 @@ use fret_ui_kit::primitives::select as radix_select;
 use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space,
 };
@@ -69,6 +70,9 @@ fn select_scroll_with_buttons<H: UiHost>(
     active_element_id_out: &Cell<Option<GlobalElementId>>,
     should_align_active_to_top: impl Fn() -> bool + Clone + 'static,
     on_aligned_active_to_top: impl Fn() + Clone + 'static,
+    set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
+    should_focus_selected_item: impl Fn() -> bool + Clone + 'static,
+    on_focused_selected_item: impl Fn() + Clone + 'static,
     content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.flex(
@@ -107,6 +111,18 @@ fn select_scroll_with_buttons<H: UiHost>(
             let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
             // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
             let show_down = has_scroll && offset.y.0.ceil() < max.y.0;
+
+            if std::env::var("FRET_DEBUG_SELECT_SCROLLABLE")
+                .ok()
+                .is_some_and(|v| v == "1")
+            {
+                eprintln!(
+                    "select scroll offset_y={} max_y={} show_up={} show_down={} did_initial_scroll={}",
+                    offset.y.0, max.y.0, show_up, show_down, did_initial_scroll
+                );
+            }
+
+            set_scroll_up_visible(show_up);
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
@@ -276,6 +292,34 @@ fn select_scroll_with_buttons<H: UiHost>(
                                 }
                             }
 
+                        } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
+                            // Match Radix `focusSelectedItem`'s `scrollIntoView({ block: 'nearest' })`
+                            // behavior using scroll-content coordinates (stable even when we don't
+                            // have paint-space bounds for scrolled children).
+                            if let (Some(viewport), Some(child)) = (
+                                cx.last_bounds_for_element(scroll.id),
+                                cx.last_bounds_for_element(active_element),
+                            ) {
+                                let child_top =
+                                    Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
+                                let child_h = Px(child.size.height.0.max(0.0));
+                                let child_bottom = Px(child_top.0 + child_h.0);
+                                let viewport_h = Px(viewport.size.height.0.max(0.0));
+
+                                let prev = handle_for_stack.offset();
+                                let view_top = prev.y;
+                                let view_bottom = Px(prev.y.0 + viewport_h.0);
+
+                                let target_y = if child_top.0 < view_top.0 {
+                                    child_top
+                                } else if child_bottom.0 > view_bottom.0 {
+                                    Px(child_bottom.0 - viewport_h.0)
+                                } else {
+                                    view_top
+                                };
+                                handle_for_stack.set_offset(Point::new(prev.x, target_y));
+                            }
+                            on_focused_selected_item();
                         } else {
                             let _ = active_desc::scroll_active_element_into_view_y(
                                 cx,
@@ -819,7 +863,10 @@ fn select_impl<H: UiHost>(
             alignment_item_has_leading_non_item: bool,
             width_probe: Option<GlobalElementId>,
             pending_item_aligned_scroll_to_y: Option<Px>,
-            did_item_aligned_scroll: bool,
+            did_item_aligned_scroll_initial: bool,
+            did_item_aligned_scroll_reposition: bool,
+            did_item_aligned_focus_scroll: bool,
+            item_aligned_scroll_up_visible: bool,
             pending_active_align_top_scroll: bool,
         }
 
@@ -840,7 +887,10 @@ fn select_impl<H: UiHost>(
                     alignment_item_has_leading_non_item: false,
                     width_probe: None,
                     pending_item_aligned_scroll_to_y: None,
-                    did_item_aligned_scroll: false,
+                    did_item_aligned_scroll_initial: false,
+                    did_item_aligned_scroll_reposition: false,
+                    did_item_aligned_focus_scroll: false,
+                    item_aligned_scroll_up_visible: false,
                     pending_active_align_top_scroll: false,
                 }
             }
@@ -1072,7 +1122,12 @@ fn select_impl<H: UiHost>(
                     let border_width = resolved.border_width;
                     let direction = direction_prim::use_direction_in_scope(cx, None);
 
-                    let item_aligned = if position == SelectPosition::ItemAligned {
+                    let (
+                        item_aligned_inputs,
+                        did_item_aligned_scroll_initial,
+                        did_item_aligned_scroll_reposition,
+                        item_aligned_scroll_up_visible,
+                    ) = if position == SelectPosition::ItemAligned {
                         let (
                             value_node,
                             viewport,
@@ -1083,7 +1138,9 @@ fn select_impl<H: UiHost>(
                             selected_item_text,
                             alignment_item_pos,
                             alignment_item_has_leading_non_item,
-                            did_scroll,
+                            did_item_aligned_scroll_initial,
+                            did_item_aligned_scroll_reposition,
+                            item_aligned_scroll_up_visible,
                         ) = {
                             let state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
                             (
@@ -1096,11 +1153,13 @@ fn select_impl<H: UiHost>(
                                 state.selected_item_text,
                                 state.alignment_item_pos,
                                 state.alignment_item_has_leading_non_item,
-                                state.did_item_aligned_scroll,
+                                state.did_item_aligned_scroll_initial,
+                                state.did_item_aligned_scroll_reposition,
+                                state.item_aligned_scroll_up_visible,
                             )
                         };
 
-                        if let (
+                        let item_aligned_inputs = if let (
                             Some(value_node),
                             Some(viewport),
                             Some(listbox),
@@ -1115,6 +1174,18 @@ fn select_impl<H: UiHost>(
                             selected_item,
                             selected_item_text,
                         ) {
+                            if debug_item_aligned
+                                && std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
+                                    .ok()
+                                    .is_some_and(|v| v == "1")
+                            {
+                                eprintln!(
+                                    "select item-aligned state: did_initial_scroll={} did_reposition_scroll={} scroll_up_visible={}",
+                                    did_item_aligned_scroll_initial,
+                                    did_item_aligned_scroll_reposition,
+                                    item_aligned_scroll_up_visible
+                                );
+                            }
                             let (selected_item_is_first, selected_item_is_last) = alignment_item_pos
                                 .and_then(|pos| (item_len > 0).then_some(pos))
                                 .map(|pos| {
@@ -1124,9 +1195,10 @@ fn select_impl<H: UiHost>(
                                 })
                                 .unwrap_or((false, false));
                             if debug_item_aligned {
+                                eprintln!("select item-aligned theme min_width={}", min_width.0);
                                 eprintln!(
-                                    "select item-aligned theme min_width={}",
-                                    min_width.0
+                                    "select item-aligned window bounds={:?} trigger={:?}",
+                                    cx.bounds, anchor
                                 );
                                 let dbg = |label: &str, id: GlobalElementId| {
                                     let b = overlay::anchor_bounds_for_element(cx, id);
@@ -1142,35 +1214,38 @@ fn select_impl<H: UiHost>(
                                 dbg("selected_item", selected_item);
                                 dbg("selected_item_text", selected_item_text);
                             }
-                            Some((
-                                radix_select::SelectItemAlignedElementInputs {
-                                    direction,
-                                    window: cx.bounds,
-                                    trigger: anchor,
-                                    content_min_width: min_width,
-                                    content_border_top: border_width,
-                                    content_padding_top: Px(0.0),
-                                    content_border_bottom: border_width,
-                                    content_padding_bottom: Px(0.0),
-                                    viewport_padding_top: Px(4.0),
-                                    viewport_padding_bottom: Px(4.0),
-                                    selected_item_is_first,
-                                    selected_item_is_last,
-                                    value_node,
-                                    viewport,
-                                    listbox,
-                                    content_panel,
-                                    content_width_probe: width_probe,
-                                    selected_item,
-                                    selected_item_text,
-                                },
-                                did_scroll,
-                            ))
+                            Some(radix_select::SelectItemAlignedElementInputs {
+                                direction,
+                                window: cx.bounds,
+                                trigger: anchor,
+                                content_min_width: min_width,
+                                content_border_top: border_width,
+                                content_padding_top: Px(0.0),
+                                content_border_bottom: border_width,
+                                content_padding_bottom: Px(0.0),
+                                viewport_padding_top: Px(4.0),
+                                viewport_padding_bottom: Px(4.0),
+                                selected_item_is_first,
+                                selected_item_is_last,
+                                value_node,
+                                viewport,
+                                listbox,
+                                content_panel,
+                                content_width_probe: width_probe,
+                                selected_item,
+                                selected_item_text,
+                            })
                         } else {
                             None
-                        }
+                        };
+                        (
+                            item_aligned_inputs,
+                            did_item_aligned_scroll_initial,
+                            did_item_aligned_scroll_reposition,
+                            item_aligned_scroll_up_visible,
+                        )
                     } else {
-                        None
+                        (None, false, false, false)
                     };
 
                     let side_offset = side_offset_override.unwrap_or_else(|| {
@@ -1249,10 +1324,6 @@ fn select_impl<H: UiHost>(
                         select_list_desired_height(item_h, item_len, max_h, outer.size.height);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
-                    let (item_aligned_inputs, did_scroll) = match item_aligned {
-                        Some((inputs, did_scroll)) => (Some(inputs), did_scroll),
-                        None => (None, false),
-                    };
                     let resolved = radix_select::select_resolve_content_placement_from_elements(
                         cx,
                         anchor,
@@ -1262,16 +1333,35 @@ fn select_impl<H: UiHost>(
                         arrow.then_some(arrow_size),
                         item_aligned_inputs,
                     );
-                    let has_selected_value = cx.watch_model(&model).cloned().unwrap_or_default().is_some();
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
-                        && !did_scroll
-                        && has_selected_value
                     {
-                        let mut state =
-                            trigger_state.lock().unwrap_or_else(|e| e.into_inner());
-                        state.pending_item_aligned_scroll_to_y = Some(scroll_to);
-                        state.did_item_aligned_scroll = true;
+                        // Radix repositions once after the scroll-up button mounts (it shifts the
+                        // viewport down in the normal flow). Model this as an initial scroll plus
+                        // a single follow-up scroll if the viewport became scrollable at the top.
+                        let should_scroll_initial = !did_item_aligned_scroll_initial;
+                        let should_scroll_reposition = did_item_aligned_scroll_initial
+                            && !did_item_aligned_scroll_reposition
+                            && item_aligned_scroll_up_visible;
+                        if should_scroll_initial || should_scroll_reposition {
+                            if std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
+                                .ok()
+                                .is_some_and(|v| v == "1")
+                            {
+                                eprintln!(
+                                    "select item-aligned requested scroll_to_y={} initial={} reposition={}",
+                                    scroll_to.0, should_scroll_initial, should_scroll_reposition
+                                );
+                            }
+                            let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                            state.pending_item_aligned_scroll_to_y = Some(scroll_to);
+                            if should_scroll_initial {
+                                state.did_item_aligned_scroll_initial = true;
+                            }
+                            if should_scroll_reposition {
+                                state.did_item_aligned_scroll_reposition = true;
+                            }
+                        }
                     }
                     let placement = resolved.placement;
                     let wrapper_insets = placement.wrapper_insets;
@@ -1535,6 +1625,12 @@ fn select_impl<H: UiHost>(
                                             trigger_state_for_overlay_in_content.clone();
                                         let state_for_align_done =
                                             trigger_state_for_overlay_in_content.clone();
+                                        let state_for_scroll_up_visible =
+                                            trigger_state_for_overlay_in_content.clone();
+                                        let state_for_should_focus_selected_item =
+                                            trigger_state_for_overlay_in_content.clone();
+                                        let state_for_focused_selected_item =
+                                            trigger_state_for_overlay_in_content.clone();
 
                                         let scroll = select_scroll_with_buttons(
                                             cx,
@@ -1548,6 +1644,8 @@ fn select_impl<H: UiHost>(
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
                                                 state.pending_active_align_top_scroll
+                                                    && !state.did_item_aligned_scroll_initial
+                                                    && !state.did_item_aligned_scroll_reposition
                                             },
                                             move || {
                                                 let mut state = state_for_align_done
@@ -1555,9 +1653,39 @@ fn select_impl<H: UiHost>(
                                                     .unwrap_or_else(|e| e.into_inner());
                                                 state.pending_active_align_top_scroll = false;
                                             },
+                                            move |visible| {
+                                                let mut state = state_for_scroll_up_visible
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                state.item_aligned_scroll_up_visible = visible;
+                                            },
+                                            move || {
+                                                let state = state_for_should_focus_selected_item
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                let positioned = state.did_item_aligned_scroll_initial
+                                                    && (!state.item_aligned_scroll_up_visible
+                                                        || state.did_item_aligned_scroll_reposition);
+                                                positioned && !state.did_item_aligned_focus_scroll
+                                            },
+                                            move || {
+                                                let mut state = state_for_focused_selected_item
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                state.did_item_aligned_focus_scroll = true;
+                                            },
                                             move |cx, active_element| {
                                                                 let mut out = Vec::with_capacity(rows.len());
                                                                 let mut item_ordinal: usize = 0;
+                                                                let alignment_selected_value = selected.as_ref().and_then(|value| {
+                                                                    rows.iter()
+                                                                        .any(|row| match row {
+                                                                            SelectRow::Item(item) => item.value.as_ref() == value.as_ref(),
+                                                                            SelectRow::Label(_) | SelectRow::Separator => false,
+                                                                        })
+                                                                        .then(|| value.clone())
+                                                                });
+                                                                let mut first_valid_alignment_item_found = false;
 
                                                                 for (row_idx, row) in rows.iter().cloned().enumerate() {
                                                                     match row {
@@ -1568,12 +1696,18 @@ fn select_impl<H: UiHost>(
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
                                                                                 .unwrap_or_else(|| theme.color_required("muted.foreground"));
 
-                                                                            let font_size = theme.metric_required("font.size");
-                                                                            let font_line_height = theme.metric_required("font.line_height");
+                                                                            let base_size = theme.metric_required(
+                                                                                theme_tokens::metric::COMPONENT_TEXT_SM_PX,
+                                                                            );
+                                                                            let base_line_height = theme.metric_required(
+                                                                                theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT,
+                                                                            );
                                                                             let label_text_px =
-                                                                                Px((font_size.0 - 2.0).max(10.0));
-                                                                            let label_line_height =
-                                                                                Px((font_line_height.0 - 4.0).max(12.0));
+                                                                                Px((base_size.0 - 2.0).max(10.0));
+                                                                            let label_line_height = Px(
+                                                                                (base_line_height.0 - 4.0)
+                                                                                    .max(label_text_px.0),
+                                                                            );
 
                                                                             out.push(cx.container(
                                                                                 ContainerProps {
@@ -1654,11 +1788,17 @@ fn select_impl<H: UiHost>(
                                                                                 disabled.get(row_idx).copied().unwrap_or(true);
                                                                             let is_active =
                                                                                 active_row.is_some_and(|a| a == row_idx);
-                                                                            let is_selected = selected
+                                                                            let is_selected = alignment_selected_value
                                                                                 .as_ref()
                                                                                 .is_some_and(|v| v.as_ref() == item.value.as_ref());
-                                                                            let is_alignment_item = is_selected
-                                                                                || (selected.is_none() && is_active);
+                                                                            let is_first_valid_item = alignment_selected_value.is_none()
+                                                                                && !first_valid_alignment_item_found
+                                                                                && !item_disabled;
+                                                                            if is_first_valid_item {
+                                                                                first_valid_alignment_item_found = true;
+                                                                            }
+                                                                            let is_alignment_item =
+                                                                                is_selected || is_first_valid_item;
 
                                                                             let model = model.clone();
                                                                             let open = open_for_content.clone();
@@ -1701,7 +1841,7 @@ fn select_impl<H: UiHost>(
                                                                                         selected_item_id_out.set(Some(id));
                                                                                         alignment_item_pos_out.set(Some(pos));
                                                                                         alignment_item_has_leading_non_item_out
-                                                                                            .set(Some(row_idx > 0));
+                                                                                            .set(Some(row_idx_for_hover > 0));
                                                                                     }
                                                                                     if is_active {
                                                                                         active_element.set(Some(id));
@@ -2034,11 +2174,15 @@ fn select_impl<H: UiHost>(
                             state.selected_item = selected_item_id_out.get();
                             state.selected_item_text = selected_item_text_id_out.get();
                             state.alignment_item_pos = alignment_item_pos_out.get();
-                            state.alignment_item_has_leading_non_item = alignment_item_has_leading_non_item_out
-                                .get()
-                                .unwrap_or(false);
+                            state.alignment_item_has_leading_non_item =
+                                alignment_item_has_leading_non_item_out
+                                    .get()
+                                    .unwrap_or(false);
                             if !is_open {
-                                state.did_item_aligned_scroll = false;
+                                state.did_item_aligned_scroll_initial = false;
+                                state.did_item_aligned_scroll_reposition = false;
+                                state.did_item_aligned_focus_scroll = false;
+                                state.item_aligned_scroll_up_visible = false;
                             }
                         }
 
