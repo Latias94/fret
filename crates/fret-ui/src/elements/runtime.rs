@@ -27,6 +27,8 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
+    pub view_cache_reuse_roots: Vec<GlobalElementId>,
+    pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
 }
 
 #[derive(Default)]
@@ -104,6 +106,8 @@ pub struct WindowElementState {
     pub(super) view_cache_state_keys_rendered:
         HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
     pub(super) view_cache_state_keys_next: HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
+    pub(super) view_cache_elements_rendered: HashMap<GlobalElementId, Vec<GlobalElementId>>,
+    pub(super) view_cache_elements_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     prepared_frame: FrameId,
@@ -157,6 +161,13 @@ impl WindowElementState {
             &mut self.view_cache_state_keys_next,
         );
         self.view_cache_state_keys_next.clear();
+
+        std::mem::swap(
+            &mut self.view_cache_elements_rendered,
+            &mut self.view_cache_elements_next,
+        );
+        self.view_cache_elements_next.clear();
+
         self.view_cache_reuse_roots.clear();
         self.view_cache_stack.clear();
 
@@ -252,18 +263,38 @@ impl WindowElementState {
     }
 
     pub(super) fn record_state_key_access(&mut self, key: (GlobalElementId, TypeId)) {
-        let Some(root) = self.view_cache_stack.last().copied() else {
+        if self.view_cache_stack.is_empty() {
             return;
         };
-        self.view_cache_state_keys_next
-            .entry(root)
-            .or_default()
-            .push(key);
+        // Nested view-cache correctness: when entering a child view-cache scope, parent cache
+        // roots still need to keep the child's state alive if the parent reuses without
+        // re-rendering that subtree.
+        for &root in &self.view_cache_stack {
+            self.view_cache_state_keys_next
+                .entry(root)
+                .or_default()
+                .push(key);
+        }
+    }
+
+    pub(super) fn record_view_cache_element_access(&mut self, element: GlobalElementId) {
+        if self.view_cache_stack.is_empty() {
+            return;
+        };
+        // Like `record_state_key_access`, record elements in all active cache roots so outer cache
+        // roots can keep nested subtree nodes alive when reusing.
+        for &root in &self.view_cache_stack {
+            self.view_cache_elements_next
+                .entry(root)
+                .or_default()
+                .push(element);
+        }
     }
 
     pub(super) fn begin_view_cache_scope(&mut self, root: GlobalElementId) {
         self.view_cache_stack.push(root);
         self.view_cache_state_keys_next.remove(&root);
+        self.view_cache_elements_next.remove(&root);
     }
 
     pub(super) fn end_view_cache_scope(&mut self, root: GlobalElementId) {
@@ -272,6 +303,10 @@ impl WindowElementState {
         if let Some(keys) = self.view_cache_state_keys_next.get_mut(&root) {
             let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
             keys.retain(|&key| seen.insert(key));
+        }
+        if let Some(elements) = self.view_cache_elements_next.get_mut(&root) {
+            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(elements.len());
+            elements.retain(|&id| seen.insert(id));
         }
     }
 
@@ -309,6 +344,10 @@ impl WindowElementState {
         self.view_cache_reuse_roots.contains(&root)
     }
 
+    pub(crate) fn view_cache_reuse_roots(&self) -> impl Iterator<Item = GlobalElementId> + '_ {
+        self.view_cache_reuse_roots.iter().copied()
+    }
+
     pub(crate) fn current_view_cache_root(&self) -> Option<GlobalElementId> {
         self.view_cache_stack.last().copied()
     }
@@ -328,6 +367,25 @@ impl WindowElementState {
             self.touch_state_key(key);
         }
         self.view_cache_state_keys_next.insert(root, keys);
+    }
+
+    pub(crate) fn touch_view_cache_elements_if_recorded(&mut self, root: GlobalElementId) {
+        if self.view_cache_elements_next.contains_key(&root) {
+            return;
+        }
+        let Some(elements) = self.view_cache_elements_rendered.get(&root) else {
+            return;
+        };
+        self.view_cache_elements_next.insert(root, elements.clone());
+    }
+
+    pub(crate) fn view_cache_elements_for_root(
+        &self,
+        root: GlobalElementId,
+    ) -> Option<&[GlobalElementId]> {
+        self.view_cache_elements_rendered
+            .get(&root)
+            .map(|v| v.as_slice())
     }
 
     pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
@@ -406,6 +464,23 @@ impl WindowElementState {
 
     #[cfg(feature = "diagnostics")]
     fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        let mut view_cache_reuse_roots: Vec<GlobalElementId> =
+            self.view_cache_reuse_roots.iter().copied().collect();
+        view_cache_reuse_roots.sort_by_key(|id| id.0);
+
+        let view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)> =
+            view_cache_reuse_roots
+                .iter()
+                .map(|root| {
+                    let count = self
+                        .view_cache_elements_rendered
+                        .get(root)
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+                    (*root, count.min(u32::MAX as usize) as u32)
+                })
+                .collect();
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
             active_text_selection: self
@@ -439,6 +514,8 @@ impl WindowElementState {
                     )
                 })
                 .collect(),
+            view_cache_reuse_roots,
+            view_cache_reuse_root_element_counts,
         }
     }
 

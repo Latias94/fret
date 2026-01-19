@@ -4,7 +4,7 @@ use super::frame::{
 };
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
@@ -218,6 +218,31 @@ pub fn render_root<H: UiHost>(
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
+            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+
+            while let Some(root) = stack.pop() {
+                if !visited_roots.insert(root) {
+                    continue;
+                }
+                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                    continue;
+                };
+                for &element in elements {
+                    keep_alive.insert(element);
+                    if !visited_roots.contains(&element)
+                        && window_state.view_cache_elements_for_root(element).is_some()
+                    {
+                        stack.push(element);
+                    }
+                }
+            }
+
+            keep_alive
+        };
+
         // Sweep nodes that are not seen for `gc_lag_frames`.
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         window_state.retain_nodes(|id, entry| {
@@ -227,6 +252,14 @@ pub fn render_root<H: UiHost>(
             if entry.root != root_id {
                 return true;
             }
+
+            if !keep_alive_view_cache_elements.is_empty()
+                && keep_alive_view_cache_elements.contains(id)
+            {
+                entry.last_seen_frame = frame_id;
+                return true;
+            }
+
             if entry.last_seen_frame.0 >= cutoff {
                 return true;
             }
@@ -382,6 +415,31 @@ fn render_dismissible_root_impl<
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
+            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+
+            while let Some(root) = stack.pop() {
+                if !visited_roots.insert(root) {
+                    continue;
+                }
+                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                    continue;
+                };
+                for &element in elements {
+                    keep_alive.insert(element);
+                    if !visited_roots.contains(&element)
+                        && window_state.view_cache_elements_for_root(element).is_some()
+                    {
+                        stack.push(element);
+                    }
+                }
+            }
+
+            keep_alive
+        };
+
         // Sweep nodes that are not seen for `gc_lag_frames`.
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         window_state.retain_nodes(|id, entry| {
@@ -391,6 +449,14 @@ fn render_dismissible_root_impl<
             if entry.root != root_id {
                 return true;
             }
+
+            if !keep_alive_view_cache_elements.is_empty()
+                && keep_alive_view_cache_elements.contains(id)
+            {
+                entry.last_seen_frame = frame_id;
+                return true;
+            }
+
             if entry.last_seen_frame.0 >= cutoff {
                 return true;
             }
@@ -487,7 +553,7 @@ fn mount_element<H: UiHost>(
     );
 
     if reuse_view_cache
-        && view_cache_root_needs_layout_for_deferred_scroll_requests(window_frame, node)
+        && view_cache_root_needs_layout_for_deferred_scroll_requests(ui, window_frame, node)
     {
         reuse_view_cache = false;
         ui.invalidate(node, Invalidation::Layout);
@@ -629,8 +695,13 @@ fn mount_element<H: UiHost>(
         window_frame.children.insert(node, children);
 
         mark_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, node);
-        inherit_observations_for_existing_subtree(window_state, window_frame, node);
-        collect_scroll_handle_bindings_for_existing_subtree(window_frame, scroll_bindings, node);
+        inherit_observations_for_existing_subtree(ui, window_state, window_frame, node);
+        collect_scroll_handle_bindings_for_existing_subtree(
+            ui,
+            window_frame,
+            scroll_bindings,
+            node,
+        );
         return node;
     }
 
@@ -833,7 +904,8 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
     }
 }
 
-fn collect_scroll_handle_bindings_for_existing_subtree(
+fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
+    ui: &UiTree<H>,
     window_frame: &WindowFrame,
     out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     root: NodeId,
@@ -844,15 +916,14 @@ fn collect_scroll_handle_bindings_for_existing_subtree(
             collect_scroll_handle_bindings(record.element, &record.instance, out);
         }
 
-        if let Some(children) = window_frame.children.get(&node) {
-            for &child in children {
-                stack.push(child);
-            }
+        for child in ui.children(node) {
+            stack.push(child);
         }
     }
 }
 
-fn view_cache_root_needs_layout_for_deferred_scroll_requests(
+fn view_cache_root_needs_layout_for_deferred_scroll_requests<H: UiHost>(
+    ui: &UiTree<H>,
     window_frame: &WindowFrame,
     root: NodeId,
 ) -> bool {
@@ -865,16 +936,15 @@ fn view_cache_root_needs_layout_for_deferred_scroll_requests(
             return true;
         }
 
-        if let Some(children) = window_frame.children.get(&node) {
-            for &child in children {
-                stack.push(child);
-            }
+        for child in ui.children(node) {
+            stack.push(child);
         }
     }
     false
 }
 
-fn inherit_observations_for_existing_subtree(
+fn inherit_observations_for_existing_subtree<H: UiHost>(
+    ui: &UiTree<H>,
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &WindowFrame,
     root: NodeId,
@@ -887,10 +957,8 @@ fn inherit_observations_for_existing_subtree(
             window_state.touch_observed_globals_for_element_if_recorded(element);
         }
 
-        if let Some(children) = window_frame.children.get(&node) {
-            for &child in children {
-                stack.push(child);
-            }
+        for child in ui.children(node) {
+            stack.push(child);
         }
     }
 }
