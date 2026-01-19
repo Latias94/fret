@@ -108,6 +108,13 @@ pub struct WindowElementState {
     pub(super) view_cache_state_keys_rendered:
         HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
     pub(super) view_cache_state_keys_next: HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
+    /// Last known element IDs contained by a view-cache root.
+    ///
+    /// When a cache root is reused, its child render closure can be skipped, which means none of
+    /// the descendant element IDs are re-created in the current frame. We keep this list so we can
+    /// explicitly mark the retained subtree as "seen" for declarative GC, without requiring a full
+    /// subtree walk on cache-hit frames.
+    pub(super) view_cache_subtree_elements: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     prepared_frame: FrameId,
@@ -332,6 +339,39 @@ impl WindowElementState {
             self.touch_state_key(key);
         }
         self.view_cache_state_keys_next.insert(root, keys);
+    }
+
+    pub(crate) fn record_view_cache_subtree_elements(
+        &mut self,
+        root: GlobalElementId,
+        elements: Vec<GlobalElementId>,
+    ) {
+        self.view_cache_subtree_elements.insert(root, elements);
+    }
+
+    pub(crate) fn forget_view_cache_subtree_elements(&mut self, root: GlobalElementId) {
+        self.view_cache_subtree_elements.remove(&root);
+    }
+
+    pub(crate) fn touch_view_cache_subtree_elements_if_recorded(
+        &mut self,
+        root: GlobalElementId,
+        frame_id: FrameId,
+        root_id: GlobalElementId,
+    ) -> bool {
+        let Some(elements) = self.view_cache_subtree_elements.get(&root) else {
+            return false;
+        };
+
+        for &element in elements {
+            let Some(entry) = self.nodes.get_mut(&element) else {
+                continue;
+            };
+            entry.last_seen_frame = frame_id;
+            entry.root = root_id;
+        }
+
+        true
     }
 
     pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
