@@ -335,6 +335,14 @@ We implement a “cached subtree” primitive that:
 - reuses recorded ranges (ADR 0055) and reuses observation sets on hit,
 - is automatically disabled in inspection/picking modes.
 
+Implementation note (current state):
+
+- The declarative element GC in `render_root`/`render_dismissible_root_impl` is keyed off “was this element mounted
+  recently” (`last_seen_frame`), which conflicts with view-cache reuse (cached subtrees can remain present and
+  interactive while skipping re-mounting for many frames).
+- Until we have GPUI-style “view liveness” represented explicitly (dirty views + notify), stale-node sweeping is
+  disabled when `UiTree::view_cache_enabled()` is on to avoid deleting live cached subtrees.
+
 Proposed ecosystem-facing API surface (runtime internal may differ):
 
 - `cx.cached(cache_key, |cx| -> Vec<AnyElement>) -> Vec<AnyElement>`

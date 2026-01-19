@@ -114,10 +114,14 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/elements/runtime.rs`,
     `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots`).
 
-- [~] GPUI-MVP2-cache-004 Stabilize overlay interactions under `ViewCache` shell reuse.
-  - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`, `apps/fret-ui-gallery/src/driver.rs`
-  - Goal: `ui-gallery-overlay-torture.json` completes reliably with `FRET_UI_GALLERY_VIEW_CACHE=1` and `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
-  - Notes: suspected failure mode is cache-hit + missing cache-root dirty mark causing overlay/dialog semantics nodes to never appear.
+- [x] GPUI-MVP2-cache-004 Stabilize overlay interactions under `ViewCache` shell reuse.
+  - Touches: `crates/fret-ui/src/declarative/mount.rs`
+  - Goal: `tools/diag-scripts/ui-gallery-overlay-torture.json` completes with `FRET_UI_GALLERY_VIEW_CACHE=1` and `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+  - Root cause: the declarative element GC ("stale nodes after gc lag frames") is keyed off `last_seen_frame`, but view-cache reuse intentionally skips re-mounting cached subtrees.
+    This caused live overlay subtree nodes (e.g. `ui-gallery-overlay-reset`, `ui-gallery-dialog-trigger`) to be swept as soon as shell caching started reusing roots.
+  - Fix (temporary liveness rule): skip stale-node sweeping when `UiTree::view_cache_enabled()` is on, to prevent deleting live cached subtrees.
+  - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+  - Follow-up: reintroduce GC with GPUI-aligned "cache root liveness" (dirty views + notify) so cached subtrees can be skipped without leaking detached nodes.
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 
