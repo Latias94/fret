@@ -507,6 +507,7 @@ impl UiDiagnosticsService {
 
     pub fn drive_script_for_window(
         &mut self,
+        app: &App,
         window: AppWindowId,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
@@ -531,6 +532,7 @@ impl UiDiagnosticsService {
                     next_step: 0,
                     wait_frames_remaining: 0,
                     wait_until: None,
+                    last_reported_step: Some(0),
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -554,6 +556,23 @@ impl UiDiagnosticsService {
 
         if active.next_step >= active.script.steps.len() {
             return UiScriptFrameOutput::default();
+        }
+
+        if active.last_reported_step != Some(active.next_step) {
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Running,
+                step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                reason: None,
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+            });
+            active.last_reported_step = Some(active.next_step);
         }
 
         if active.wait_frames_remaining > 0 {
@@ -762,6 +781,12 @@ impl UiDiagnosticsService {
             }
         }
 
+        if !output.events.is_empty() {
+            for event in &output.events {
+                self.record_script_event(app, window, event);
+            }
+        }
+
         if let Some(label) = force_dump_label {
             self.request_force_dump(label);
         }
@@ -797,6 +822,15 @@ impl UiDiagnosticsService {
             self.active_scripts.insert(window, active);
         }
         output
+    }
+
+    fn record_script_event(&mut self, app: &App, window: AppWindowId, event: &Event) {
+        let ring = self.per_window.entry(window).or_default();
+        ring.update_pointer_position(event);
+
+        let mut recorded = RecordedUiEventV1::from_event(app, window, event, self.cfg.redact_text);
+        truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
+        ring.push_event(&self.cfg, recorded);
     }
 
     fn ensure_ready_file(&mut self) {
@@ -2214,6 +2248,7 @@ struct ActiveScript {
     next_step: usize,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
+    last_reported_step: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
