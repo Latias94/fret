@@ -175,6 +175,14 @@ Run with view-cache enabled (shell reuse):
 cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
+Scroll regression harness (detect stale paint after scroll):
+
+```sh
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+bundle_dir=$(cat target/fret-diag-sidebar-scroll/latest.txt)
+cargo run -p fretboard -- diag stats target/fret-diag-sidebar-scroll/$bundle_dir/bundle.json --check-stale-paint ui-gallery-nav-intro
+```
+
 Notes:
 
 - The UI Gallery supports `FRET_UI_GALLERY_VIEW_CACHE{,_SHELL,_INNER,_CONTINUOUS}` (bool parsing) to keep harnesses deterministic.

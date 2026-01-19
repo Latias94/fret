@@ -63,6 +63,9 @@ Keep this list short and evidence-backed:
 - [x] GPUI-MVP0-diag-009 Add env-driven UI Gallery toggles for perf harnesses.
   - Touches: `apps/fret-ui-gallery/src/driver.rs`
   - Notes: `FRET_UI_GALLERY_VIEW_CACHE{,_SHELL,_INNER,_CONTINUOUS}` are parsed as bools (with sensible defaults) to keep scripts deterministic.
+- [x] GPUI-MVP0-diag-010 Add scroll + stale-paint regression hooks.
+  - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json`
+  - Notes: scripts support `wheel` steps; bundles export `scene_fingerprint`; `fretboard diag stats --check-stale-paint <test_id>` flags “bounds moved but scene fingerprint did not change”.
 - [x] GPUI-MVP0-perf-006 Avoid false global-change churn from stable “service globals”.
   - Touches: `ecosystem/fret-ui-kit/src/dnd/service.rs`
   - Notes: use `with_global_mut_untracked` for lazy init + stable read paths (prevents global-change tracking from firing on every frame).
