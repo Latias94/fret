@@ -168,7 +168,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Touches: `crates/fret-ui/src/element.rs` (`ViewCacheProps.cache_key`), `crates/fret-ui/src/elements/cx.rs` (reuse gating),
     `crates/fret-ui/src/elements/runtime.rs` (per-root key storage), `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`.
   - Goal: prevent reusing a view-cache root when key inputs like theme/bounds/text style/content mask changed.
-  - v1 key: `hash(theme_revision, window_bounds, ViewCacheProps.cache_key)`.
+  - v1 key: `hash(theme_revision, scale_factor, window_bounds, ViewCacheProps.cache_key)`.
     - Notes: this is a coarse proxy for GPUI's `bounds/content_mask/text_style` key and will be refined as more inputs become explicit.
   - Reference: `repo-ref/zed/crates/gpui/src/view.rs` (`ViewCacheKey`: bounds/content_mask/text_style).
   - Evidence:
