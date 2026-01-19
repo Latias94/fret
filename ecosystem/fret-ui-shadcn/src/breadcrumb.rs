@@ -310,3 +310,455 @@ fn breadcrumb_ellipsis<H: UiHost>(cx: &mut ElementContext<'_, H>, muted: Color) 
         )]
     })
 }
+
+/// Upstream-shaped Breadcrumb primitives (`Breadcrumb`/`BreadcrumbList`/`BreadcrumbItem`/...).
+///
+/// We keep these in a nested module for now to avoid a breaking rename of the existing
+/// `fret_ui_shadcn::Breadcrumb` builder surface.
+pub mod primitives {
+    use super::*;
+
+    use fret_ui::element::{ContainerProps, LayoutStyle, SizeStyle};
+
+    fn text_style(theme: &Theme) -> TextStyle {
+        let text_px = theme
+            .metric_by_key("component.breadcrumb.text_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_required("font.size"));
+        let line_height = theme
+            .metric_by_key("component.breadcrumb.line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
+        TextStyle {
+            font: FontId::default(),
+            size: text_px,
+            weight: FontWeight::NORMAL,
+            slant: Default::default(),
+            line_height: Some(line_height),
+            letter_spacing_em: None,
+        }
+    }
+
+    fn colors(theme: &Theme) -> (Color, Color) {
+        let fg = theme.color_required("foreground");
+        let muted = theme.color_required("muted-foreground");
+        (fg, muted)
+    }
+
+    #[derive(Debug, Clone, Default)]
+    pub struct Breadcrumb {
+        chrome: ChromeRefinement,
+        layout: LayoutRefinement,
+    }
+
+    impl Breadcrumb {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.chrome = self.chrome.merge(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.layout = self.layout.merge(layout);
+            self
+        }
+
+        pub fn into_element<H: UiHost>(
+            self,
+            cx: &mut ElementContext<'_, H>,
+            children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+        ) -> AnyElement {
+            let theme = Theme::global(&*cx.app).clone();
+            cx.container(
+                decl_style::container_props(&theme, self.chrome, self.layout),
+                move |cx| children(cx),
+            )
+        }
+    }
+
+    #[derive(Debug, Clone, Default)]
+    pub struct BreadcrumbList {
+        chrome: ChromeRefinement,
+        layout: LayoutRefinement,
+    }
+
+    impl BreadcrumbList {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.chrome = self.chrome.merge(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.layout = self.layout.merge(layout);
+            self
+        }
+
+        pub fn into_element<H: UiHost>(
+            self,
+            cx: &mut ElementContext<'_, H>,
+            children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+        ) -> AnyElement {
+            let theme = Theme::global(&*cx.app).clone();
+            let (_fg, muted) = colors(&theme);
+            let style = text_style(&theme);
+
+            let gap = theme
+                .metric_by_key("component.breadcrumb.gap")
+                // Upstream uses `gap-1.5` with `sm:gap-2.5`. Our web goldens run at a desktop viewport,
+                // so we default to the `sm` outcome (`gap-2.5`) for 1:1 geometry alignment.
+                .unwrap_or_else(|| MetricRef::space(Space::N2p5).resolve(&theme));
+
+            cx.container(
+                decl_style::container_props(&theme, self.chrome, self.layout),
+                move |cx| {
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: Default::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap,
+                            padding: fret_core::Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: true,
+                        },
+                        move |cx| {
+                            // Apply the list-level muted foreground by default; individual children
+                            // (BreadcrumbLink/Page) can override it.
+                            let mut out = children(cx);
+                            for el in &mut out {
+                                // Best-effort: only text nodes support local color overrides.
+                                if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
+                                    if props.color.is_none() {
+                                        props.color = Some(muted);
+                                    }
+                                    if props.style.is_none() {
+                                        props.style = Some(style.clone());
+                                    }
+                                }
+                            }
+                            out
+                        },
+                    )]
+                },
+            )
+        }
+    }
+
+    #[derive(Debug, Clone, Default)]
+    pub struct BreadcrumbItem {
+        chrome: ChromeRefinement,
+        layout: LayoutRefinement,
+    }
+
+    impl BreadcrumbItem {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.chrome = self.chrome.merge(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.layout = self.layout.merge(layout);
+            self
+        }
+
+        pub fn into_element<H: UiHost>(
+            self,
+            cx: &mut ElementContext<'_, H>,
+            children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+        ) -> AnyElement {
+            let theme = Theme::global(&*cx.app).clone();
+            let item_gap = theme
+                .metric_by_key("component.breadcrumb.item_gap")
+                .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(&theme));
+
+            cx.container(
+                decl_style::container_props(&theme, self.chrome, self.layout),
+                move |cx| {
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: Default::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: item_gap,
+                            padding: fret_core::Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| children(cx),
+                    )]
+                },
+            )
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct BreadcrumbLink {
+        label: Arc<str>,
+        command: Option<CommandId>,
+        chrome: ChromeRefinement,
+        layout: LayoutRefinement,
+    }
+
+    impl BreadcrumbLink {
+        pub fn new(label: impl Into<Arc<str>>) -> Self {
+            Self {
+                label: label.into(),
+                command: None,
+                chrome: ChromeRefinement::default(),
+                layout: LayoutRefinement::default(),
+            }
+        }
+
+        pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+            self.command = Some(command.into());
+            self
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.chrome = self.chrome.merge(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.layout = self.layout.merge(layout);
+            self
+        }
+
+        pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+            let theme = Theme::global(&*cx.app).clone();
+            let style = text_style(&theme);
+            let (fg, muted) = colors(&theme);
+            let label = self.label.clone();
+
+            if let Some(command) = self.command {
+                cx.pressable(PressableProps::default(), move |cx, st| {
+                    cx.pressable_dispatch_command(command.clone());
+                    let color = if st.hovered { fg } else { muted };
+                    vec![cx.container(
+                        decl_style::container_props(
+                            &theme,
+                            self.chrome.clone(),
+                            self.layout.clone(),
+                        ),
+                        move |cx| {
+                            vec![cx.text_props(TextProps {
+                                layout: Default::default(),
+                                text: label.clone(),
+                                style: Some(style.clone()),
+                                color: Some(color),
+                                wrap: TextWrap::Word,
+                                overflow: TextOverflow::Clip,
+                            })]
+                        },
+                    )]
+                })
+            } else {
+                cx.container(
+                    decl_style::container_props(&theme, self.chrome, self.layout),
+                    move |cx| {
+                        vec![cx.text_props(TextProps {
+                            layout: Default::default(),
+                            text: label,
+                            style: Some(style),
+                            color: Some(muted),
+                            wrap: TextWrap::Word,
+                            overflow: TextOverflow::Clip,
+                        })]
+                    },
+                )
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct BreadcrumbPage {
+        label: Arc<str>,
+        chrome: ChromeRefinement,
+        layout: LayoutRefinement,
+    }
+
+    impl BreadcrumbPage {
+        pub fn new(label: impl Into<Arc<str>>) -> Self {
+            Self {
+                label: label.into(),
+                chrome: ChromeRefinement::default(),
+                layout: LayoutRefinement::default(),
+            }
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.chrome = self.chrome.merge(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.layout = self.layout.merge(layout);
+            self
+        }
+
+        pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+            let theme = Theme::global(&*cx.app).clone();
+            let style = text_style(&theme);
+            let (fg, _muted) = colors(&theme);
+            let label = self.label;
+            cx.container(
+                decl_style::container_props(&theme, self.chrome, self.layout),
+                move |cx| {
+                    vec![cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: label,
+                        style: Some(style),
+                        color: Some(fg),
+                        wrap: TextWrap::Word,
+                        overflow: TextOverflow::Clip,
+                    })]
+                },
+            )
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+    pub enum BreadcrumbSeparatorKind {
+        #[default]
+        ChevronRight,
+        Slash,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct BreadcrumbSeparator {
+        kind: BreadcrumbSeparatorKind,
+        chrome: ChromeRefinement,
+        layout: LayoutRefinement,
+    }
+
+    impl Default for BreadcrumbSeparator {
+        fn default() -> Self {
+            Self {
+                kind: BreadcrumbSeparatorKind::default(),
+                chrome: ChromeRefinement::default(),
+                layout: LayoutRefinement::default(),
+            }
+        }
+    }
+
+    impl BreadcrumbSeparator {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub fn kind(mut self, kind: BreadcrumbSeparatorKind) -> Self {
+            self.kind = kind;
+            self
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.chrome = self.chrome.merge(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.layout = self.layout.merge(layout);
+            self
+        }
+
+        pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+            let theme = Theme::global(&*cx.app).clone();
+            let (_fg, muted) = colors(&theme);
+
+            let icon = match self.kind {
+                BreadcrumbSeparatorKind::ChevronRight => ids::ui::CHEVRON_RIGHT,
+                BreadcrumbSeparatorKind::Slash => ids::ui::SLASH,
+            };
+
+            // Upstream applies `[&>svg]:size-3.5` (14px).
+            let icon_el = decl_icon::icon_with(
+                cx,
+                icon,
+                Some(Px(14.0)),
+                Some(fret_ui_kit::ColorRef::Color(muted)),
+            );
+
+            // Ensure the separator is a "leaf-sized" node in layouts that scan by size.
+            cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: fret_ui::element::Length::Px(Px(14.0)),
+                            height: fret_ui::element::Length::Px(Px(14.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..decl_style::container_props(&theme, self.chrome, self.layout)
+                },
+                move |_cx| vec![icon_el],
+            )
+        }
+    }
+
+    #[derive(Debug, Clone, Default)]
+    pub struct BreadcrumbEllipsis {
+        chrome: ChromeRefinement,
+        layout: LayoutRefinement,
+    }
+
+    impl BreadcrumbEllipsis {
+        pub fn new() -> Self {
+            Self::default()
+        }
+
+        pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+            self.chrome = self.chrome.merge(chrome);
+            self
+        }
+
+        pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+            self.layout = self.layout.merge(layout);
+            self
+        }
+
+        pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+            let theme = Theme::global(&*cx.app).clone();
+            let (_fg, muted) = colors(&theme);
+            let size = theme
+                .metric_by_key("component.breadcrumb.ellipsis_size")
+                .unwrap_or(Px(36.0));
+
+            let mut props = FlexProps {
+                layout: Default::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: fret_core::Edges::all(Px(0.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            };
+            props.layout.size.width = fret_ui::element::Length::Px(size);
+            props.layout.size.height = fret_ui::element::Length::Px(size);
+
+            let icon = decl_icon::icon_with(
+                cx,
+                ids::ui::MORE_HORIZONTAL,
+                Some(Px(16.0)),
+                Some(fret_ui_kit::ColorRef::Color(muted)),
+            );
+
+            cx.container(
+                decl_style::container_props(&theme, self.chrome, self.layout),
+                move |cx| vec![cx.flex(props, move |_cx| vec![icon])],
+            )
+        }
+    }
+}
