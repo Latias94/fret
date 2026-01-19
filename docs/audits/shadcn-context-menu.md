@@ -83,8 +83,18 @@ _None tracked at this time._
 - Interaction test: `context_menu_opens_on_shift_f10`
 - Interaction test: `context_menu_submenu_opens_on_arrow_right_without_pointer_move`
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
+- Web placement gate (root): `web_vs_fret_context_menu_demo_overlay_placement_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
+- Web menu row height gate (root): `web_vs_fret_context_menu_demo_menu_item_height_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
+- Web menu content inset gate (root): `web_vs_fret_context_menu_demo_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
 - Web placement gate (submenu): `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd.open.json`).
+- Web menu content inset gate (submenu): `web_vs_fret_context_menu_demo_submenu_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd.open.json`).
+- Web menu content inset gate (submenu, hover): `web_vs_fret_context_menu_demo_submenu_hover_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu.open.json`).
 - Web placement gate (submenu, constrained viewport): `web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd-vp1440x320.open.json`).
 - Web placement gate (root, constrained viewport): `web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches`
