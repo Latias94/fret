@@ -176,6 +176,15 @@ pub fn render_root<H: UiHost>(
             },
         );
 
+        // Declarative GC uses `UiTree::node_layer` to detect whether nodes are detached from any UI
+        // layer. The base layer is typically registered by the app after `render_root` returns
+        // (e.g. `ui.set_root(root_node)`), which is too late for the GC pass below.
+        //
+        // Register the base root early so node-layer queries are meaningful inside this function.
+        if ui.node_layer(root_node).is_none() {
+            ui.set_root(root_node);
+        }
+
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
