@@ -21,6 +21,7 @@ pub(super) struct RenderData {
 #[derive(Debug, Clone)]
 pub(super) struct EdgeRender {
     pub(super) id: EdgeId,
+    pub(super) rank: u32,
     pub(super) from: Point,
     pub(super) to: Point,
     pub(super) color: Color,
@@ -252,10 +253,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     if let Some(override_color) = hint.color {
                         color = override_color;
                     }
+
+                    // Keep edge ordering stable and aligned with node z-order.
+                    // This mirrors XyFlow's "basic" z-index behavior where edge z depends on the
+                    // highest z of its endpoints (selection/hover boosts are applied later by
+                    // drawing those edges last).
+                    let edge_rank = geom
+                        .ports
+                        .get(&edge.from)
+                        .and_then(|p| geom.node_rank.get(&p.node).copied())
+                        .unwrap_or(0)
+                        .max(
+                            geom.ports
+                                .get(&edge.to)
+                                .and_then(|p| geom.node_rank.get(&p.node).copied())
+                                .unwrap_or(0),
+                        );
                     let selected = selected_edges.contains(&edge_id);
                     let hovered = hovered_edge == Some(edge_id);
                     out.edges.push(EdgeRender {
                         id: edge_id,
+                        rank: edge_rank,
                         from,
                         to,
                         color,
@@ -264,6 +282,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         hovered,
                     });
                 }
+
+                out.edges
+                    .sort_unstable_by(|a, b| a.rank.cmp(&b.rank).then_with(|| a.id.cmp(&b.id)));
 
                 out
             })
