@@ -50,6 +50,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
+    let mut check_stale_paint_test_id: Option<String> = None;
+    let mut check_stale_paint_eps: f32 = 0.5;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
 
@@ -228,6 +230,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 warmup_frames = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --warmup-frames".to_string())?;
+                i += 1;
+            }
+            "--check-stale-paint" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-stale-paint".to_string());
+                };
+                check_stale_paint_test_id = Some(v);
+                i += 1;
+            }
+            "--check-stale-paint-eps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-stale-paint-eps".to_string());
+                };
+                check_stale_paint_eps = v
+                    .parse::<f32>()
+                    .map_err(|_| "invalid value for --check-stale-paint-eps".to_string())?;
                 i += 1;
             }
             "--json" => {
@@ -889,6 +909,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
             } else {
                 report.print_human(&bundle_path);
+            }
+            if let Some(test_id) = check_stale_paint_test_id.as_deref() {
+                check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
             }
             Ok(())
         }
@@ -2381,6 +2404,122 @@ fn bundle_stats_from_path(
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     bundle_stats_from_json_with_options(&bundle, top, sort, opts)
+}
+
+fn check_bundle_for_stale_paint(bundle_path: &Path, test_id: &str, eps: f32) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_stale_paint_json(&bundle, bundle_path, test_id, eps)
+}
+
+fn check_bundle_for_stale_paint_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    eps: f32,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut suspicious: Vec<String> = Vec::new();
+    let mut missing_scene_fingerprint = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut prev_y: Option<f64> = None;
+        let mut prev_fp: Option<u64> = None;
+        for s in snaps {
+            let y = semantics_node_y_for_test_id(s, test_id);
+            let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
+            if fp.is_none() {
+                missing_scene_fingerprint = true;
+            }
+            let (Some(y), Some(fp)) = (y, fp) else {
+                prev_y = y;
+                prev_fp = fp;
+                continue;
+            };
+
+            if let (Some(prev_y), Some(prev_fp)) = (prev_y, prev_fp) {
+                if (y - prev_y).abs() >= eps as f64 && fp == prev_fp {
+                    let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let paint_nodes_performed = s
+                        .get("debug")
+                        .and_then(|v| v.get("stats"))
+                        .and_then(|v| v.get("paint_nodes_performed"))
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let paint_replayed_ops = s
+                        .get("debug")
+                        .and_then(|v| v.get("stats"))
+                        .and_then(|v| v.get("paint_cache_replayed_ops"))
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    suspicious.push(format!(
+                        "window={window_id} tick={tick_id} frame={frame_id} test_id={test_id} delta_y={:.2} scene_fingerprint=0x{:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_replayed_ops}",
+                        y - prev_y,
+                        fp
+                    ));
+                    if suspicious.len() >= 8 {
+                        break;
+                    }
+                }
+            }
+
+            prev_y = Some(y);
+            prev_fp = Some(fp);
+        }
+    }
+
+    if missing_scene_fingerprint {
+        return Err(format!(
+            "stale paint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if suspicious.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str(
+        "stale paint suspected (semantics bounds moved but scene fingerprint did not change)\n",
+    );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in suspicious {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> Option<f64> {
+    let nodes = snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array())?;
+    let node = nodes.iter().find(|n| {
+        n.get("test_id")
+            .and_then(|v| v.as_str())
+            .is_some_and(|id| id == test_id)
+    })?;
+    node.get("bounds")
+        .and_then(|v| v.get("y"))
+        .and_then(|v| v.as_f64())
 }
 
 fn bundle_stats_from_json_with_options(

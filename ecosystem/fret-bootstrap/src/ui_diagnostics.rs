@@ -733,6 +733,33 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-move_pointer"));
                 }
             }
+            UiActionStepV1::Wheel {
+                target,
+                delta_x,
+                delta_y,
+            } => {
+                let Some(snapshot) = semantics_snapshot else {
+                    self.active_scripts.insert(window, active);
+                    output.request_redraw = true;
+                    return output;
+                };
+                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
+                else {
+                    self.active_scripts.insert(window, active);
+                    output.request_redraw = true;
+                    return output;
+                };
+
+                let pos = center_of_rect(node.bounds);
+                output.events.push(wheel_event(pos, delta_x, delta_y));
+
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if self.cfg.script_auto_dump {
+                    force_dump_label = Some(format!("script-step-{step_index:04}-wheel"));
+                }
+            }
         }
 
         if let Some(label) = force_dump_label {
@@ -1237,6 +1264,7 @@ impl UiDiagnosticsService {
             scale_factor,
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
+            scene_fingerprint: scene.fingerprint(),
             debug: UiTreeDebugSnapshotV1::from_tree(app, ui, hit_test, element_diag, semantics),
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
@@ -1726,6 +1754,8 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub scale_factor: f32,
     pub window_bounds: RectV1,
     pub scene_ops: u64,
+    #[serde(default)]
+    pub scene_fingerprint: u64,
 
     pub changed_models: Vec<u64>,
     pub changed_globals: Vec<String>,
@@ -1992,6 +2022,13 @@ pub enum UiActionStepV1 {
     },
     MovePointer {
         target: UiSelectorV1,
+    },
+    Wheel {
+        target: UiSelectorV1,
+        #[serde(default)]
+        delta_x: f32,
+        #[serde(default)]
+        delta_y: f32,
     },
     PressKey {
         key: String,
@@ -3670,6 +3707,20 @@ fn move_pointer_event(position: Point) -> Event {
         pointer_id,
         position,
         buttons: MouseButtons::default(),
+        modifiers,
+        pointer_type,
+    })
+}
+
+fn wheel_event(position: Point, delta_x: f32, delta_y: f32) -> Event {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    Event::Pointer(PointerEvent::Wheel {
+        pointer_id,
+        position,
+        delta: Point::new(fret_core::Px(delta_x), fret_core::Px(delta_y)),
         modifiers,
         pointer_type,
     })
