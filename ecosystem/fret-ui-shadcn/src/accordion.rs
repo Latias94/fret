@@ -587,7 +587,12 @@ pub mod composable {
                 let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
                 let disabled_arc: Arc<[bool]> =
                     Arc::from(disabled_flags.clone().into_boxed_slice());
-                let list = root.clone().list(values_arc, disabled_arc.clone());
+                let mut list_layout = LayoutStyle::default();
+                list_layout.size.width = fret_ui::element::Length::Fill;
+                let list = root
+                    .clone()
+                    .list(values_arc, disabled_arc.clone())
+                    .layout(list_layout);
                 let tab_stop = list.tab_stop_index(cx).or_else(|| {
                     fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
                 });
@@ -611,21 +616,19 @@ pub mod composable {
                     decl_style::container_props(&theme, ChromeRefinement::default(), layout);
 
                 cx.container(wrapper, move |cx| {
-                    vec![list.into_element(
-                        cx,
-                        RovingFlexProps {
-                            flex: fret_ui::element::FlexProps {
-                                direction: fret_core::Axis::Vertical,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Stretch,
-                                wrap: false,
-                                ..Default::default()
-                            },
-                            roving,
-                        },
-                        move |cx| {
+                    let mut flex = fret_ui::element::FlexProps {
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                        wrap: false,
+                        ..Default::default()
+                    };
+                    flex.layout.size.width = fret_ui::element::Length::Fill;
+
+                    vec![
+                        list.into_element(cx, RovingFlexProps { flex, roving }, move |cx| {
                             let mut out = Vec::with_capacity(items.len());
                             let item_len = items.len();
 
@@ -672,15 +675,18 @@ pub mod composable {
                                 out.push(cx.container(props, move |cx| {
                                     let mut children = Vec::new();
 
-                                    let motion = radix_collapsible::measured_height_motion_for_root(
-                                        cx,
-                                        is_open,
-                                        false,
-                                        true,
-                                        8,
-                                        8,
-                                        overlay_motion::shadcn_ease,
-                                    );
+                                    let motion =
+                                        cx.keyed(("accordion-motion", value.clone()), |cx| {
+                                            radix_collapsible::measured_height_motion_for_root(
+                                                cx,
+                                                is_open,
+                                                false,
+                                                true,
+                                                8,
+                                                8,
+                                                overlay_motion::shadcn_ease,
+                                            )
+                                        });
 
                                     let motion_for_wrapper = motion.clone();
                                     let motion_for_update = motion.clone();
@@ -688,40 +694,36 @@ pub mod composable {
 
                                     let (content_id, wrapper_el) =
                                         cx.keyed(("accordion-content", value.clone()), move |cx| {
-                                            cx.scope(|cx| {
-                                                let content_id = cx.root_id();
-                                                if !motion_for_wrapper.should_render {
-                                                    return (content_id, None);
-                                                }
+                                            let content_id = cx.root_id();
+                                            if !motion_for_wrapper.should_render {
+                                                return (content_id, None);
+                                            }
 
-                                                let wrapper_refinement =
-                                                    motion_for_wrapper.wrapper_refinement.clone();
-                                                let wrapper_layout = decl_style::layout_style(
-                                                    &theme_for_wrapper,
-                                                    wrapper_refinement,
-                                                );
+                                            let wrapper_refinement =
+                                                motion_for_wrapper.wrapper_refinement.clone();
+                                            let wrapper_layout = decl_style::layout_style(
+                                                &theme_for_wrapper,
+                                                wrapper_refinement,
+                                            );
 
-                                                let children = vec![cx.opacity_props(
-                                                    OpacityProps {
-                                                        layout: LayoutStyle::default(),
-                                                        opacity: motion_for_wrapper.wrapper_opacity,
-                                                    },
-                                                    move |cx| {
-                                                        vec![content.clone().into_element(cx)]
-                                                    },
-                                                )];
+                                            let children = vec![cx.opacity_props(
+                                                OpacityProps {
+                                                    layout: LayoutStyle::default(),
+                                                    opacity: motion_for_wrapper.wrapper_opacity,
+                                                },
+                                                move |cx| vec![content.clone().into_element(cx)],
+                                            )];
 
-                                                let wrapper_el = AnyElement::new(
-                                                    content_id,
-                                                    ElementKind::Container(ContainerProps {
-                                                        layout: wrapper_layout,
-                                                        ..Default::default()
-                                                    }),
-                                                    children,
-                                                );
+                                            let wrapper_el = AnyElement::new(
+                                                content_id,
+                                                ElementKind::Container(ContainerProps {
+                                                    layout: wrapper_layout,
+                                                    ..Default::default()
+                                                }),
+                                                children,
+                                            );
 
-                                                (content_id, Some(wrapper_el))
-                                            })
+                                            (content_id, Some(wrapper_el))
                                         });
 
                                     let trigger = radix_accordion::apply_accordion_trigger_controls(
@@ -743,8 +745,8 @@ pub mod composable {
                             }
 
                             out
-                        },
-                    )]
+                        }),
+                    ]
                 })
             })
         }
@@ -1014,7 +1016,7 @@ impl AccordionContent {
             vec![cx.column(
                 ColumnProps {
                     layout: LayoutStyle::default(),
-                    gap: Px(0.0),
+                    gap: MetricRef::space(Space::N4).resolve(&theme),
                     padding: Edges::all(Px(0.0)),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
@@ -1267,7 +1269,12 @@ impl Accordion {
 
             let values_arc: Arc<[Arc<str>]> = Arc::from(values.clone().into_boxed_slice());
             let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.clone().into_boxed_slice());
-            let list = root.clone().list(values_arc, disabled_arc.clone());
+            let mut list_layout = LayoutStyle::default();
+            list_layout.size.width = fret_ui::element::Length::Fill;
+            let list = root
+                .clone()
+                .list(values_arc, disabled_arc.clone())
+                .layout(list_layout);
             let tab_stop = list.tab_stop_index(cx).or_else(|| {
                 fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
             });
@@ -1345,15 +1352,17 @@ impl Accordion {
                             out.push(cx.container(props, move |cx| {
                                 let mut children = Vec::new();
 
-                                let motion = radix_collapsible::measured_height_motion_for_root(
-                                    cx,
-                                    is_open,
-                                    false,
-                                    true,
-                                    8,
-                                    8,
-                                    overlay_motion::shadcn_ease,
-                                );
+                                let motion = cx.keyed(("accordion-motion", value.clone()), |cx| {
+                                    radix_collapsible::measured_height_motion_for_root(
+                                        cx,
+                                        is_open,
+                                        false,
+                                        true,
+                                        8,
+                                        8,
+                                        overlay_motion::shadcn_ease,
+                                    )
+                                });
 
                                 let motion_for_wrapper = motion.clone();
                                 let motion_for_update = motion.clone();
@@ -1362,38 +1371,36 @@ impl Accordion {
 
                                 let (content_id, wrapper_el) =
                                     cx.keyed(("accordion-content", value.clone()), move |cx| {
-                                        cx.scope(|cx| {
-                                            let content_id = cx.root_id();
-                                            if !motion_for_wrapper.should_render {
-                                                return (content_id, None);
-                                            }
+                                        let content_id = cx.root_id();
+                                        if !motion_for_wrapper.should_render {
+                                            return (content_id, None);
+                                        }
 
-                                            let wrapper_refinement =
-                                                motion_for_wrapper.wrapper_refinement.clone();
-                                            let wrapper_layout = decl_style::layout_style(
-                                                &theme_for_wrapper,
-                                                wrapper_refinement,
-                                            );
+                                        let wrapper_refinement =
+                                            motion_for_wrapper.wrapper_refinement.clone();
+                                        let wrapper_layout = decl_style::layout_style(
+                                            &theme_for_wrapper,
+                                            wrapper_refinement,
+                                        );
 
-                                            let children = vec![cx.opacity_props(
-                                                OpacityProps {
-                                                    layout: LayoutStyle::default(),
-                                                    opacity: motion_for_wrapper.wrapper_opacity,
-                                                },
-                                                move |cx| vec![content.clone().into_element(cx)],
-                                            )];
+                                        let children = vec![cx.opacity_props(
+                                            OpacityProps {
+                                                layout: LayoutStyle::default(),
+                                                opacity: motion_for_wrapper.wrapper_opacity,
+                                            },
+                                            move |cx| vec![content.clone().into_element(cx)],
+                                        )];
 
-                                            let wrapper_el = AnyElement::new(
-                                                content_id,
-                                                ElementKind::Container(ContainerProps {
-                                                    layout: wrapper_layout,
-                                                    ..Default::default()
-                                                }),
-                                                children,
-                                            );
+                                        let wrapper_el = AnyElement::new(
+                                            content_id,
+                                            ElementKind::Container(ContainerProps {
+                                                layout: wrapper_layout,
+                                                ..Default::default()
+                                            }),
+                                            children,
+                                        );
 
-                                            (content_id, Some(wrapper_el))
-                                        })
+                                        (content_id, Some(wrapper_el))
                                     });
 
                                 let trigger = radix_accordion::apply_accordion_trigger_controls(
@@ -1409,7 +1416,17 @@ impl Accordion {
                                     );
                                     children.push(wrapper_el);
                                 }
-                                children
+
+                                vec![cx.column(
+                                    ColumnProps {
+                                        layout: LayoutStyle::default(),
+                                        gap: Px(0.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Stretch,
+                                    },
+                                    move |_cx| children,
+                                )]
                             }));
                         }
 
