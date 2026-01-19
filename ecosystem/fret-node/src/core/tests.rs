@@ -45,33 +45,33 @@ fn make_port(
 }
 
 #[test]
-fn validate_rejects_edge_with_wrong_direction() {
+fn validate_allows_edges_regardless_of_port_direction() {
     let mut graph = Graph::default();
     let a = NodeId::new();
     let b = NodeId::new();
     graph.nodes.insert(a, make_node("core.a"));
     graph.nodes.insert(b, make_node("core.b"));
 
-    let in_a = PortId::new();
-    let in_b = PortId::new();
+    let out_a = PortId::new();
+    let out_b = PortId::new();
     graph.ports.insert(
-        in_a,
+        out_a,
         make_port(
             a,
-            "in",
-            PortDirection::In,
+            "out",
+            PortDirection::Out,
             PortKind::Data,
-            PortCapacity::Single,
+            PortCapacity::Multi,
         ),
     );
     graph.ports.insert(
-        in_b,
+        out_b,
         make_port(
             b,
-            "in",
-            PortDirection::In,
+            "out",
+            PortDirection::Out,
             PortKind::Data,
-            PortCapacity::Single,
+            PortCapacity::Multi,
         ),
     );
 
@@ -80,8 +80,8 @@ fn validate_rejects_edge_with_wrong_direction() {
         edge_id,
         Edge {
             kind: EdgeKind::Data,
-            from: in_a,
-            to: in_b,
+            from: out_a,
+            to: out_b,
             selectable: None,
             deletable: None,
             reconnectable: None,
@@ -89,7 +89,7 @@ fn validate_rejects_edge_with_wrong_direction() {
     );
 
     let report = validate_graph(&graph);
-    assert!(!report.is_ok());
+    assert!(report.is_ok());
 }
 
 #[test]
@@ -123,4 +123,52 @@ fn validate_rejects_node_with_invalid_size() {
         e,
         GraphValidationError::NodeInvalidSize { node, .. } if *node == n
     )));
+}
+
+#[test]
+fn validate_rejects_edge_kind_that_does_not_match_port_kind() {
+    let mut graph = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+
+    let out_a = PortId::new();
+    let in_b = PortId::new();
+    graph.ports.insert(
+        out_a,
+        make_port(
+            a,
+            "out",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        in_b,
+        make_port(
+            b,
+            "in",
+            PortDirection::In,
+            PortKind::Data,
+            PortCapacity::Single,
+        ),
+    );
+
+    let edge_id = EdgeId::new();
+    graph.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Exec,
+            from: out_a,
+            to: in_b,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let report = validate_graph(&graph);
+    assert!(!report.is_ok());
 }

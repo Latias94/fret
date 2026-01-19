@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::core::{EdgeId, Graph, GroupId, NodeId, PortCapacity, PortDirection, PortId, PortKind};
+use crate::core::{EdgeId, EdgeKind, Graph, GroupId, NodeId, PortCapacity, PortId, PortKind};
 
 #[derive(Debug, thiserror::Error)]
 pub enum GraphValidationError {
@@ -38,18 +38,6 @@ pub enum GraphValidationError {
     #[error("edge references missing port: edge={edge:?} port={port:?}")]
     EdgeMissingPort { edge: EdgeId, port: PortId },
 
-    #[error("edge connects ports on the same node: edge={edge:?} node={node:?}")]
-    EdgeSameNode { edge: EdgeId, node: NodeId },
-
-    #[error(
-        "edge port directions are invalid: edge={edge:?} from_dir={from_dir:?} to_dir={to_dir:?}"
-    )]
-    EdgeInvalidDirection {
-        edge: EdgeId,
-        from_dir: PortDirection,
-        to_dir: PortDirection,
-    },
-
     #[error(
         "edge port kinds are incompatible: edge={edge:?} from_kind={from_kind:?} to_kind={to_kind:?}"
     )]
@@ -57,6 +45,15 @@ pub enum GraphValidationError {
         edge: EdgeId,
         from_kind: PortKind,
         to_kind: PortKind,
+    },
+
+    #[error(
+        "edge kind does not match port kind: edge={edge:?} edge_kind={edge_kind:?} port_kind={port_kind:?}"
+    )]
+    EdgeKindPortKindMismatch {
+        edge: EdgeId,
+        edge_kind: EdgeKind,
+        port_kind: PortKind,
     },
 
     #[error("edge duplicates an existing connection: edge={edge:?}")]
@@ -82,6 +79,14 @@ impl GraphValidationReport {
 }
 
 pub fn validate_graph(graph: &Graph) -> GraphValidationReport {
+    validate_graph_structural(graph)
+}
+
+/// Validates a graph for structural consistency (contract-level invariants).
+///
+/// This intentionally does **not** enforce editor policies such as connection direction.
+/// Direction, cycle policy, and domain-specific semantics belong in profiles/rules.
+pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
     let mut report = GraphValidationReport::default();
 
     if graph.graph_version != crate::core::model::GRAPH_VERSION {
@@ -180,29 +185,26 @@ pub fn validate_graph(graph: &Graph) -> GraphValidationReport {
             continue;
         };
 
-        if from.node == to.node {
-            report.errors.push(GraphValidationError::EdgeSameNode {
-                edge: *edge_id,
-                node: from.node,
-            });
-        }
-
-        if from.dir != PortDirection::Out || to.dir != PortDirection::In {
-            report
-                .errors
-                .push(GraphValidationError::EdgeInvalidDirection {
-                    edge: *edge_id,
-                    from_dir: from.dir,
-                    to_dir: to.dir,
-                });
-        }
-
         if from.kind != to.kind {
             report.errors.push(GraphValidationError::EdgeKindMismatch {
                 edge: *edge_id,
                 from_kind: from.kind,
                 to_kind: to.kind,
             });
+        } else {
+            let expected = match from.kind {
+                PortKind::Data => EdgeKind::Data,
+                PortKind::Exec => EdgeKind::Exec,
+            };
+            if edge.kind != expected {
+                report
+                    .errors
+                    .push(GraphValidationError::EdgeKindPortKindMismatch {
+                        edge: *edge_id,
+                        edge_kind: edge.kind,
+                        port_kind: from.kind,
+                    });
+            }
         }
 
         if !edge_pairs.insert((from.kind, edge.from, edge.to)) {
