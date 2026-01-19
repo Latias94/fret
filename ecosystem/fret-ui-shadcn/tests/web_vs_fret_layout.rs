@@ -1997,6 +1997,166 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
 }
 
 #[test]
+fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
+    let web = read_web_golden("breadcrumb-demo");
+    let theme = web_theme(&web);
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && class_has_token(n, "gap-1")
+            && n.attrs
+                .get("data-state")
+                .is_some_and(|state| state == "closed")
+            && find_first(n, &|child| {
+                child.tag == "svg" && class_has_token(child, "lucide-ellipsis")
+            })
+            .is_some()
+            && contains_text(n, "Toggle menu")
+    })
+    .expect("web breadcrumb-demo toggle trigger");
+
+    let web_box = find_first(web_trigger, &|n| {
+        n.tag == "span"
+            && class_has_all_tokens(n, &["flex", "size-4", "items-center", "justify-center"])
+    })
+    .expect("web breadcrumb-demo ellipsis box (size-4)");
+
+    let web_icon = find_first(web_trigger, &|n| {
+        n.tag == "svg" && class_has_token(n, "lucide-ellipsis")
+    })
+    .expect("web breadcrumb-demo ellipsis icon");
+
+    let expected_box_offset_y = web_box.rect.y - web_trigger.rect.y;
+    let expected_icon_offset_y = web_icon.rect.y - web_trigger.rect.y;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (_ui, snap, _root) = {
+        let mut services = StyleAwareServices::default();
+        run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+
+            let open: Model<bool> = cx.app.models_mut().insert(false);
+            let dropdown = fret_ui_shadcn::DropdownMenu::new(open)
+                .modal(false)
+                .align(fret_ui_shadcn::DropdownMenuAlign::Start);
+
+            vec![bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let mut props = PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label =
+                                        Some(Arc::from("Golden:breadcrumb-demo:toggle-trigger"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        let ellipsis = bc::BreadcrumbEllipsis::new()
+                                            .size(Px(16.0))
+                                            .into_element(cx);
+                                        let ellipsis = cx.semantics(
+                                            fret_ui::element::SemanticsProps {
+                                                role: SemanticsRole::Panel,
+                                                label: Some(Arc::from(
+                                                    "Golden:breadcrumb-demo:ellipsis-box",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                            move |_cx| vec![ellipsis],
+                                        );
+                                        vec![ellipsis]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Documentation"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Themes"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                        ),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Components").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new().into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                        }),
+                    ]
+                })]
+            })]
+        })
+    };
+
+    let trigger = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Golden:breadcrumb-demo:toggle-trigger"),
+    )
+    .expect("fret breadcrumb-demo toggle trigger");
+    assert_close_px(
+        "breadcrumb-demo toggle trigger height",
+        trigger.bounds.size.height,
+        web_trigger.rect.h,
+        1.0,
+    );
+
+    let ellipsis_box = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-demo:ellipsis-box"),
+    )
+    .expect("fret breadcrumb-demo ellipsis box");
+    assert_close_px(
+        "breadcrumb-demo ellipsis box w",
+        ellipsis_box.bounds.size.width,
+        web_box.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-demo ellipsis box h",
+        ellipsis_box.bounds.size.height,
+        web_box.rect.h,
+        1.0,
+    );
+
+    let actual_box_offset_y = ellipsis_box.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+    assert_close_px(
+        "breadcrumb-demo ellipsis box offset y",
+        Px(actual_box_offset_y),
+        expected_box_offset_y,
+        1.0,
+    );
+
+    // We don't separately stamp the inner SVG yet, but the web golden's icon rect is expected to
+    // align with the box in the `size-4` variant. Assert the same offset for the box as a proxy.
+    assert_close_px(
+        "breadcrumb-demo ellipsis icon offset y (proxy)",
+        Px(actual_box_offset_y),
+        expected_icon_offset_y,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_badge_demo_heights() {
     let web = read_web_golden("badge-demo");
     let theme = web_theme(&web);
