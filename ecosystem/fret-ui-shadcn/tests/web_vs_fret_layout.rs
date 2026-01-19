@@ -1631,19 +1631,23 @@ fn web_vs_fret_layout_breadcrumb_separator_geometry() {
 
     let mut services = StyleAwareServices::default();
     let (ui, _snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        vec![
-            fret_ui_shadcn::Breadcrumb::new()
-                .separator(fret_ui_shadcn::BreadcrumbSeparator::Icon {
-                    icon: fret_icons::ids::ui::SLASH,
-                    size: Px(14.0),
-                })
-                .items([
-                    fret_ui_shadcn::BreadcrumbItem::new("Home"),
-                    fret_ui_shadcn::BreadcrumbItem::new("Components"),
-                    fret_ui_shadcn::BreadcrumbItem::new("Breadcrumb"),
-                ])
-                .into_element(cx),
-        ]
+        use fret_ui_shadcn::breadcrumb::primitives as bc;
+
+        vec![bc::Breadcrumb::new().into_element(cx, |cx| {
+            vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                vec![
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                    }),
+                    bc::BreadcrumbSeparator::new()
+                        .kind(bc::BreadcrumbSeparatorKind::Slash)
+                        .into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbLink::new("Components").into_element(cx)]
+                    }),
+                ]
+            })]
+        })]
     });
 
     let mut stack = vec![root];
@@ -1713,16 +1717,29 @@ fn web_vs_fret_layout_breadcrumb_ellipsis_geometry() {
 
     let mut services = StyleAwareServices::default();
     let (ui, _snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        vec![
-            fret_ui_shadcn::Breadcrumb::new()
-                .items([
-                    fret_ui_shadcn::BreadcrumbItem::new("Home"),
-                    fret_ui_shadcn::BreadcrumbItem::ellipsis(),
-                    fret_ui_shadcn::BreadcrumbItem::new("Components"),
-                    fret_ui_shadcn::BreadcrumbItem::new("Breadcrumb"),
-                ])
-                .into_element(cx),
-        ]
+        use fret_ui_shadcn::breadcrumb::primitives as bc;
+
+        vec![bc::Breadcrumb::new().into_element(cx, |cx| {
+            vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                vec![
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                    }),
+                    bc::BreadcrumbSeparator::new().into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbEllipsis::new().into_element(cx)]
+                    }),
+                    bc::BreadcrumbSeparator::new().into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbLink::new("Components").into_element(cx)]
+                    }),
+                    bc::BreadcrumbSeparator::new().into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                    }),
+                ]
+            })]
+        })]
     });
 
     let mut stack = vec![root];
@@ -1791,6 +1808,192 @@ fn web_vs_fret_layout_breadcrumb_ellipsis_geometry() {
         web_ellipsis_icon.rect.h,
         1.0,
     );
+}
+
+#[test]
+fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
+    let web = read_web_golden("breadcrumb-dropdown");
+    let theme = web_theme(&web);
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && class_has_token(n, "gap-1")
+            && n.attrs
+                .get("data-state")
+                .is_some_and(|state| state == "closed")
+            && find_first(n, &|child| {
+                child.tag == "svg" && class_has_token(child, "lucide-chevron-down")
+            })
+            .is_some()
+    })
+    .expect("web breadcrumb dropdown trigger");
+    let web_icon = find_first(web_trigger, &|n| {
+        n.tag == "svg" && class_has_token(n, "lucide-chevron-down")
+    })
+    .expect("web breadcrumb dropdown chevron-down icon");
+
+    let expected_icon_offset_y = web_icon.rect.y - web_trigger.rect.y;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, snap, _root) = {
+        let mut services = StyleAwareServices::default();
+        run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+
+            let open: Model<bool> = cx.app.models_mut().insert(false);
+            let dropdown = fret_ui_shadcn::DropdownMenu::new(open)
+                .modal(false)
+                .align(fret_ui_shadcn::DropdownMenuAlign::Start);
+
+            vec![bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let theme = Theme::global(&*cx.app).clone();
+                                    let text_px = theme.metric_required("font.size");
+                                    let line_height = theme.metric_required("font.line_height");
+                                    let muted = theme.color_required("muted-foreground");
+                                    let style = fret_core::TextStyle {
+                                        font: fret_core::FontId::default(),
+                                        size: text_px,
+                                        weight: fret_core::FontWeight::NORMAL,
+                                        slant: Default::default(),
+                                        line_height: Some(line_height),
+                                        letter_spacing_em: None,
+                                    };
+
+                                    let mut props = PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label =
+                                        Some(Arc::from("Golden:breadcrumb-dropdown:trigger"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        vec![cx.flex(
+                                            FlexProps {
+                                                layout: Default::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(4.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            move |cx| {
+                                                let text = cx.text_props(TextProps {
+                                                    layout: Default::default(),
+                                                    text: Arc::from("Components"),
+                                                    style: Some(style.clone()),
+                                                    color: Some(muted),
+                                                    wrap: TextWrap::Word,
+                                                    overflow: TextOverflow::Clip,
+                                                });
+
+                                                let icon = fret_ui_kit::declarative::icon::icon_with(
+                                                    cx,
+                                                    fret_icons::ids::ui::CHEVRON_DOWN,
+                                                    Some(Px(14.0)),
+                                                    Some(fret_ui_kit::ColorRef::Color(muted)),
+                                                );
+
+                                                let icon = cx.semantics(
+                                                    fret_ui::element::SemanticsProps {
+                                                        role: SemanticsRole::Panel,
+                                                        label: Some(Arc::from(
+                                                            "Golden:breadcrumb-dropdown:chevron-down",
+                                                        )),
+                                                        ..Default::default()
+                                                    },
+                                                    move |_cx| vec![icon],
+                                                );
+
+                                                vec![text, icon]
+                                            },
+                                        )]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Documentation"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Themes"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                        ),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new()
+                            .into_element(cx, |cx| vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]),
+                    ]
+                })]
+            })]
+        })
+    };
+
+    let trigger = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Golden:breadcrumb-dropdown:trigger"),
+    )
+    .expect("fret breadcrumb dropdown trigger");
+
+    assert_close_px(
+        "breadcrumb-dropdown trigger height",
+        trigger.bounds.size.height,
+        web_trigger.rect.h,
+        1.0,
+    );
+
+    let icon = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-dropdown:chevron-down"),
+    )
+    .expect("fret breadcrumb dropdown chevron-down icon");
+
+    assert_close_px(
+        "breadcrumb-dropdown chevron-down w",
+        icon.bounds.size.width,
+        web_icon.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-dropdown chevron-down h",
+        icon.bounds.size.height,
+        web_icon.rect.h,
+        1.0,
+    );
+
+    let actual_icon_offset_y = icon.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+    assert_close_px(
+        "breadcrumb-dropdown chevron-down offset y",
+        Px(actual_icon_offset_y),
+        expected_icon_offset_y,
+        1.0,
+    );
+
+    // Keep `ui` alive until after `debug_node_bounds` queries (matches other tests' patterns).
+    drop(ui);
 }
 
 #[test]
