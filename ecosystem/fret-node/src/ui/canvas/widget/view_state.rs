@@ -216,4 +216,145 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
     }
+
+    pub(super) fn frame_nodes_in_view<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        bounds: Rect,
+        node_ids: &[GraphNodeId],
+    ) -> bool {
+        if node_ids.is_empty() {
+            self.show_toast(
+                host,
+                window,
+                DiagnosticSeverity::Info,
+                "no selection to frame",
+            );
+            return false;
+        }
+
+        #[derive(Debug, Clone, Copy)]
+        struct NodeInfo {
+            pos: CanvasPoint,
+            w: f32,
+            h: f32,
+        }
+
+        let infos: Vec<NodeInfo> = self
+            .graph
+            .read_ref(host, |graph| {
+                let mut out: Vec<NodeInfo> = Vec::new();
+                for id in node_ids {
+                    let Some(node) = graph.nodes.get(id) else {
+                        continue;
+                    };
+                    let (inputs, outputs) = node_ports(graph, *id);
+                    let (w, h) = self.node_default_size_for_ports(inputs.len(), outputs.len());
+                    out.push(NodeInfo {
+                        pos: node.pos,
+                        w,
+                        h,
+                    });
+                }
+                out
+            })
+            .ok()
+            .unwrap_or_default();
+
+        if infos.is_empty() {
+            self.show_toast(
+                host,
+                window,
+                DiagnosticSeverity::Info,
+                "no selection to frame",
+            );
+            return false;
+        }
+
+        let viewport_w = bounds.size.width.0;
+        let viewport_h = bounds.size.height.0;
+        if !viewport_w.is_finite()
+            || !viewport_h.is_finite()
+            || viewport_w <= 1.0
+            || viewport_h <= 1.0
+        {
+            return false;
+        }
+
+        let mut min_x = f32::INFINITY;
+        let mut min_y = f32::INFINITY;
+        let mut max_x = f32::NEG_INFINITY;
+        let mut max_y = f32::NEG_INFINITY;
+        let mut max_w = 0.0f32;
+        let mut max_h = 0.0f32;
+        for n in &infos {
+            min_x = min_x.min(n.pos.x);
+            min_y = min_y.min(n.pos.y);
+            max_x = max_x.max(n.pos.x);
+            max_y = max_y.max(n.pos.y);
+            max_w = max_w.max(n.w);
+            max_h = max_h.max(n.h);
+        }
+
+        let spread_x = (max_x - min_x).max(0.0);
+        let spread_y = (max_y - min_y).max(0.0);
+
+        let margin = 48.0f32;
+        let mut zoom_x = self.style.max_zoom;
+        let mut zoom_y = self.style.max_zoom;
+        if spread_x > 1.0e-3 {
+            zoom_x = (viewport_w - max_w - 2.0 * margin) / spread_x;
+        }
+        if spread_y > 1.0e-3 {
+            zoom_y = (viewport_h - max_h - 2.0 * margin) / spread_y;
+        }
+
+        let mut zoom = zoom_x.min(zoom_y);
+        if !zoom.is_finite() {
+            zoom = 1.0;
+        }
+        zoom = zoom.clamp(self.style.min_zoom, self.style.max_zoom);
+
+        let mut rect_min_x = f32::INFINITY;
+        let mut rect_min_y = f32::INFINITY;
+        let mut rect_max_x = f32::NEG_INFINITY;
+        let mut rect_max_y = f32::NEG_INFINITY;
+        for n in &infos {
+            let w = n.w / zoom;
+            let h = n.h / zoom;
+            rect_min_x = rect_min_x.min(n.pos.x);
+            rect_min_y = rect_min_y.min(n.pos.y);
+            rect_max_x = rect_max_x.max(n.pos.x + w);
+            rect_max_y = rect_max_y.max(n.pos.y + h);
+        }
+
+        if !rect_min_x.is_finite()
+            || !rect_min_y.is_finite()
+            || !rect_max_x.is_finite()
+            || !rect_max_y.is_finite()
+        {
+            return false;
+        }
+
+        let center_x = 0.5 * (rect_min_x + rect_max_x);
+        let center_y = 0.5 * (rect_min_y + rect_max_y);
+
+        let viewport_w_canvas = viewport_w / zoom;
+        let viewport_h_canvas = viewport_h / zoom;
+        let target_center_x = 0.5 * viewport_w_canvas;
+        let target_center_y = 0.5 * viewport_h_canvas;
+
+        let new_pan = CanvasPoint {
+            x: target_center_x - center_x,
+            y: target_center_y - center_y,
+        };
+
+        self.update_view_state(host, |s| {
+            s.zoom = zoom;
+            s.pan = new_pan;
+        });
+
+        true
+    }
 }
