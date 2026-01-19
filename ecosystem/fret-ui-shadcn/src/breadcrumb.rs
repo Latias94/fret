@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_icons::{IconId, ids};
 use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
 
@@ -15,6 +17,24 @@ enum BreadcrumbItemKind {
     Ellipsis,
 }
 
+/// Separator renderer for a `Breadcrumb` list.
+///
+/// Upstream `BreadcrumbSeparator` accepts `children` (so the separator can be customized). We keep a
+/// small typed surface that covers the upstream examples without forcing a `Fn` callback in the
+/// common case.
+#[derive(Debug, Clone)]
+pub enum BreadcrumbSeparator {
+    ChevronRight,
+    Icon { icon: IconId, size: Px },
+    Text(Arc<str>),
+}
+
+impl Default for BreadcrumbSeparator {
+    fn default() -> Self {
+        Self::ChevronRight
+    }
+}
+
 /// A shadcn/ui v4-aligned breadcrumb builder.
 ///
 /// Upstream composes `Breadcrumb` + `BreadcrumbList` + `BreadcrumbItem` + `BreadcrumbLink/Page`
@@ -23,6 +43,7 @@ enum BreadcrumbItemKind {
 #[derive(Debug, Clone, Default)]
 pub struct Breadcrumb {
     items: Vec<BreadcrumbItem>,
+    separator: BreadcrumbSeparator,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -31,6 +52,7 @@ impl Breadcrumb {
     pub fn new() -> Self {
         Self {
             items: Vec::new(),
+            separator: BreadcrumbSeparator::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -46,6 +68,11 @@ impl Breadcrumb {
         self
     }
 
+    pub fn separator(mut self, separator: BreadcrumbSeparator) -> Self {
+        self.separator = separator;
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -57,13 +84,14 @@ impl Breadcrumb {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        breadcrumb_with_patch(cx, self.items, self.chrome, self.layout)
+        breadcrumb_with_patch(cx, self.items, self.separator, self.chrome, self.layout)
     }
 }
 
 fn breadcrumb_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: Vec<BreadcrumbItem>,
+    separator: BreadcrumbSeparator,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 ) -> AnyElement {
@@ -71,7 +99,9 @@ fn breadcrumb_with_patch<H: UiHost>(
 
     let gap = theme
         .metric_by_key("component.breadcrumb.gap")
-        .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(&theme));
+        // Upstream uses `gap-1.5` with `sm:gap-2.5`. Our web goldens run at a desktop viewport,
+        // so we default to the `sm` outcome (`gap-2.5`) for 1:1 geometry alignment.
+        .unwrap_or_else(|| MetricRef::space(Space::N2p5).resolve(&theme));
 
     let text_px = theme
         .metric_by_key("component.breadcrumb.text_px")
@@ -106,7 +136,7 @@ fn breadcrumb_with_patch<H: UiHost>(
 
         children.push(item.render(cx, &style, muted, fg));
         if !is_last {
-            children.push(breadcrumb_separator(cx, &style, muted));
+            children.push(breadcrumb_separator(cx, &style, muted, &separator));
         }
     }
 
@@ -174,7 +204,7 @@ impl BreadcrumbItem {
         fg: Color,
     ) -> AnyElement {
         match self.kind {
-            BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, base_style, muted),
+            BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted),
             BreadcrumbItemKind::Page => breadcrumb_text(cx, self.label, base_style, fg),
             BreadcrumbItemKind::Link => {
                 if self.disabled {
@@ -229,18 +259,31 @@ fn breadcrumb_separator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     base_style: &TextStyle,
     muted: Color,
+    separator: &BreadcrumbSeparator,
 ) -> AnyElement {
-    // shadcn uses lucide `ChevronRight` at size-3.5; this is a text fallback.
-    breadcrumb_text(cx, Arc::from("›"), base_style, muted)
+    match separator {
+        BreadcrumbSeparator::ChevronRight => {
+            // shadcn uses lucide `ChevronRight` at `size-3.5` (~14px).
+            decl_icon::icon_with(
+                cx,
+                ids::ui::CHEVRON_RIGHT,
+                Some(Px(14.0)),
+                Some(fret_ui_kit::ColorRef::Color(muted)),
+            )
+        }
+        BreadcrumbSeparator::Icon { icon, size } => decl_icon::icon_with(
+            cx,
+            icon.clone(),
+            Some(*size),
+            Some(fret_ui_kit::ColorRef::Color(muted)),
+        ),
+        BreadcrumbSeparator::Text(text) => breadcrumb_text(cx, text.clone(), base_style, muted),
+    }
 }
 
-fn breadcrumb_ellipsis<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    base_style: &TextStyle,
-    muted: Color,
-) -> AnyElement {
+fn breadcrumb_ellipsis<H: UiHost>(cx: &mut ElementContext<'_, H>, muted: Color) -> AnyElement {
     // shadcn uses a 36x36 box with a `MoreHorizontal` icon.
-    // We keep the same footprint with a centered ellipsis glyph.
+    // We keep the same footprint with a centered icon.
     let theme = Theme::global(&*cx.app).clone();
     let size = theme
         .metric_by_key("component.breadcrumb.ellipsis_size")
@@ -259,6 +302,11 @@ fn breadcrumb_ellipsis<H: UiHost>(
     props.layout.size.height = fret_ui::element::Length::Px(size);
 
     cx.flex(props, move |cx| {
-        vec![breadcrumb_text(cx, Arc::from("…"), base_style, muted)]
+        vec![decl_icon::icon_with(
+            cx,
+            ids::ui::MORE_HORIZONTAL,
+            Some(Px(16.0)),
+            Some(fret_ui_kit::ColorRef::Color(muted)),
+        )]
     })
 }

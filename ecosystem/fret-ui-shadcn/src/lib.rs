@@ -93,7 +93,7 @@ pub use alert_dialog::{
 pub use aspect_ratio::AspectRatio;
 pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
-pub use breadcrumb::{Breadcrumb, BreadcrumbItem};
+pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
