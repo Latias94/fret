@@ -1,3 +1,4 @@
+use super::paint_render_data::RenderData;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -9,7 +10,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let view_interacting = self.view_interacting();
 
         self.paint_cache.begin_frame();
-        self.grid_scene_cache.begin_frame();
         if let Some(window) = cx.window {
             let (entries, stats) = self.paint_cache.diagnostics_path_cache_snapshot();
             let frame_id = cx.app.frame_id().0;
@@ -67,179 +67,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             corner_radii: Corners::all(Px(0.0)),
         });
 
-        let spacing = self.style.grid_spacing;
-        if spacing.is_finite() && spacing > 1.0e-3 {
-            let major_every = self.style.grid_major_every.max(1) as i64;
-            let thickness = Px((1.0 / zoom).max(0.25 / zoom));
-            let tile_size_canvas = (Self::GRID_TILE_SIZE_SCREEN_PX / zoom.max(1.0e-6)).max(1.0);
-            let grid_rect = render_cull_rect.unwrap_or(viewport_rect);
-
-            let grid_tiles = TileGrid2D::new(tile_size_canvas);
-            grid_tiles.tiles_in_rect(grid_rect, &mut self.grid_tiles_scratch);
-            grid_tiles.sort_tiles_center_first(viewport_rect, &mut self.grid_tiles_scratch);
-
-            let major_color = self.style.grid_major_color;
-            let minor_color = self.style.grid_minor_color;
-            let spacing_bits = spacing.to_bits();
-            let thickness_bits = thickness.0.to_bits();
-
-            let tile_ops_for_key = |tile: TileCoord| -> Vec<SceneOp> {
-                let tile_origin = tile.origin(tile_size_canvas);
-                let tile_min_x = tile_origin.x.0;
-                let tile_min_y = tile_origin.y.0;
-                let tile_max_x = tile_min_x + tile_size_canvas;
-                let tile_max_y = tile_min_y + tile_size_canvas;
-
-                let x0 = (tile_min_x / spacing).floor() as i64;
-                let x1 = (tile_max_x / spacing).ceil() as i64;
-                let y0 = (tile_min_y / spacing).floor() as i64;
-                let y1 = (tile_max_y / spacing).ceil() as i64;
-
-                let approx_v = (x1 - x0 + 1).max(0) as usize;
-                let approx_h = (y1 - y0 + 1).max(0) as usize;
-                let mut ops: Vec<SceneOp> = Vec::with_capacity(approx_v + approx_h);
-
-                for ix in x0..=x1 {
-                    let x = ix as f32 * spacing;
-                    let color = if ix.rem_euclid(major_every) == 0 {
-                        major_color
-                    } else {
-                        minor_color
-                    };
-                    ops.push(SceneOp::Quad {
-                        order: DrawOrder(1),
-                        rect: Rect::new(
-                            Point::new(Px(x - tile_origin.x.0 - 0.5 * thickness.0), Px(0.0)),
-                            Size::new(thickness, Px(tile_size_canvas)),
-                        ),
-                        background: color,
-                        border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-                }
-
-                for iy in y0..=y1 {
-                    let y = iy as f32 * spacing;
-                    let color = if iy.rem_euclid(major_every) == 0 {
-                        major_color
-                    } else {
-                        minor_color
-                    };
-                    ops.push(SceneOp::Quad {
-                        order: DrawOrder(1),
-                        rect: Rect::new(
-                            Point::new(Px(0.0), Px(y - tile_origin.y.0 - 0.5 * thickness.0)),
-                            Size::new(Px(tile_size_canvas), thickness),
-                        ),
-                        background: color,
-                        border: Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
-                        corner_radii: Corners::all(Px(0.0)),
-                    });
-                }
-
-                ops
-            };
-
-            let tile_budget_limit =
-                Self::GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
-            let mut tile_budget = WorkBudget::new(tile_budget_limit);
-            let base_key = {
-                let mut b = TileCacheKeyBuilder::new("fret-node.grid.tile.v1");
-                b.add_f32_bits(zoom);
-                b.add_f32_bits(tile_size_canvas);
-                b.add_u32(spacing_bits);
-                b.add_u32(thickness_bits);
-                b.add_i64(major_every);
-                b.add_u32(major_color.r.to_bits());
-                b.add_u32(major_color.g.to_bits());
-                b.add_u32(major_color.b.to_bits());
-                b.add_u32(major_color.a.to_bits());
-                b.add_u32(minor_color.r.to_bits());
-                b.add_u32(minor_color.g.to_bits());
-                b.add_u32(minor_color.b.to_bits());
-                b.add_u32(minor_color.a.to_bits());
-                b.finish()
-            };
-            let warmup = warm_scene_op_tiles_u64(
-                &mut self.grid_scene_cache,
-                cx.scene,
-                &self.grid_tiles_scratch,
-                base_key,
-                1,
-                &mut tile_budget,
-                |tile| tile.origin(tile_size_canvas),
-                tile_ops_for_key,
-            );
-            let skipped_tiles = warmup.skipped_tiles;
-
-            if skipped_tiles > 0 {
-                // Continue warming tiles incrementally to avoid a single frame spike.
-                cx.request_redraw();
-            }
-
-            if let Some(window) = cx.window {
-                let frame_id = cx.app.frame_id().0;
-                let tile_entries = self.grid_scene_cache.entries_len();
-                let tile_stats = self.grid_scene_cache.stats();
-                let requested_tiles = self.grid_tiles_scratch.len();
-                let tile_key = CanvasCacheKey {
-                    window: window.data().as_ffi(),
-                    node: cx.node.data().as_ffi(),
-                    name: "fret-node.canvas.grid_tiles",
-                };
-                cx.app
-                    .with_global_mut(CanvasCacheStatsRegistry::default, |registry, _app| {
-                        registry.record_scene_op_tile_cache_with_budget(
-                            tile_key,
-                            frame_id,
-                            tile_entries,
-                            requested_tiles,
-                            tile_budget_limit,
-                            tile_budget.used(),
-                            skipped_tiles,
-                            tile_stats,
-                        );
-                    });
-            }
-        }
-
-        #[derive(Debug, Default)]
-        struct RenderData {
-            groups: Vec<(Rect, Arc<str>, bool)>,
-            edges: Vec<EdgeRender>,
-            nodes: Vec<(
-                GraphNodeId,
-                Rect,
-                bool,
-                Arc<str>,
-                Option<Arc<str>>,
-                usize,
-                NodeResizeHandleSet,
-            )>,
-            pins: Vec<(PortId, Rect, Color)>,
-            port_labels: HashMap<PortId, PortLabelRender>,
-            port_centers: HashMap<PortId, Point>,
-        }
-
-        #[derive(Debug, Clone)]
-        struct EdgeRender {
-            id: EdgeId,
-            from: Point,
-            to: Point,
-            color: Color,
-            hint: EdgeRenderHint,
-            selected: bool,
-            hovered: bool,
-        }
-
-        #[derive(Debug, Clone)]
-        struct PortLabelRender {
-            label: Arc<str>,
-            dir: PortDirection,
-            max_width: Px,
-        }
+        self.paint_grid(cx, viewport_rect, render_cull_rect, zoom, view_interacting);
 
         let edge_insert_target = self
             .interaction
@@ -287,229 +115,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
         self.update_measured_output_store(snapshot.zoom, &geom);
         self.update_internals_store(&*cx.app, &snapshot, cx.bounds, &geom);
-        let render = {
-            let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
-            let selected_edges: HashSet<EdgeId> = snapshot.selected_edges.iter().copied().collect();
-            let selected_groups: HashSet<crate::core::GroupId> =
-                snapshot.selected_groups.iter().copied().collect();
-            let this = &*self;
-            let geom = geom.clone();
-            let index = index.clone();
-            let presenter: &dyn NodeGraphPresenter = &*this.presenter;
-            let cull = render_cull_rect;
-            this.graph
-                .read_ref(cx.app, |graph| {
-                    let mut out = RenderData::default();
-
-                    let geom = geom.as_ref();
-                    let index = index.as_ref();
-                    let node_pad = this.style.node_padding;
-                    let pin_gap = 8.0;
-                    let pin_r = this.style.pin_radius;
-                    let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
-
-                    let order = group_order(graph, &snapshot.group_draw_order);
-                    for group_id in order {
-                        let Some(group) = graph.groups.get(&group_id) else {
-                            continue;
-                        };
-                        let rect0 = this.group_rect_with_preview(group_id, group.rect);
-                        let rect = Rect::new(
-                            Point::new(Px(rect0.origin.x), Px(rect0.origin.y)),
-                            Size::new(Px(rect0.size.width), Px(rect0.size.height)),
-                        );
-                        if cull.is_some_and(|c| !rects_intersect(rect, c)) {
-                            continue;
-                        }
-                        out.groups.push((
-                            rect,
-                            Arc::<str>::from(group.title.clone()),
-                            selected_groups.contains(&group_id),
-                        ));
-                    }
-
-                    if let Some(c) = cull {
-                        let mut candidates: Vec<GraphNodeId> = Vec::new();
-                        index.query_nodes_in_rect(c, &mut candidates);
-
-                        let mut visible: Vec<GraphNodeId> = Vec::with_capacity(candidates.len());
-                        for node in candidates {
-                            let Some(node_geom) = geom.nodes.get(&node) else {
-                                continue;
-                            };
-                            if rects_intersect(node_geom.rect, c) {
-                                visible.push(node);
-                            }
-                        }
-
-                        visible.sort_unstable_by_key(|node| {
-                            geom.node_rank.get(node).copied().unwrap_or(u32::MAX)
-                        });
-
-                        for node in visible {
-                            let Some(node_geom) = geom.nodes.get(&node) else {
-                                continue;
-                            };
-                            let is_selected = selected.contains(&node);
-                            let title = presenter.node_title(graph, node);
-                            let (inputs, outputs) = node_ports(graph, node);
-                            let pin_rows = inputs.len().max(outputs.len());
-                            let body = presenter.node_body_label(graph, node);
-                            let resize_handles =
-                                presenter.node_resize_handles(graph, node, &this.style);
-                            out.nodes.push((
-                                node,
-                                node_geom.rect,
-                                is_selected,
-                                title,
-                                body,
-                                pin_rows,
-                                resize_handles,
-                            ));
-
-                            // Only build port labels/pins for visible nodes (but keep edge endpoints
-                            // available via `CanvasGeometry` lookups).
-                            let screen_w = node_geom.rect.size.width.0 * zoom;
-                            let screen_max = (screen_w - label_overhead).max(0.0);
-                            let max_w = Px(screen_max / zoom);
-
-                            for port_id in inputs.iter().chain(outputs.iter()).copied() {
-                                let Some(handle) = geom.ports.get(&port_id) else {
-                                    continue;
-                                };
-                                out.port_centers.insert(port_id, handle.center);
-                                out.port_labels.insert(
-                                    port_id,
-                                    PortLabelRender {
-                                        label: presenter.port_label(graph, port_id),
-                                        dir: handle.dir,
-                                        max_width: max_w,
-                                    },
-                                );
-                                let color = presenter.port_color(graph, port_id, &this.style);
-                                out.pins.push((port_id, handle.bounds, color));
-                            }
-                        }
-                    } else {
-                        for node in geom.order.iter().copied() {
-                            let Some(node_geom) = geom.nodes.get(&node) else {
-                                continue;
-                            };
-                            let is_selected = selected.contains(&node);
-                            let title = presenter.node_title(graph, node);
-                            let (inputs, outputs) = node_ports(graph, node);
-                            let pin_rows = inputs.len().max(outputs.len());
-                            let body = presenter.node_body_label(graph, node);
-                            let resize_handles =
-                                presenter.node_resize_handles(graph, node, &this.style);
-                            out.nodes.push((
-                                node,
-                                node_geom.rect,
-                                is_selected,
-                                title,
-                                body,
-                                pin_rows,
-                                resize_handles,
-                            ));
-
-                            // Only build port labels/pins for visible nodes (but keep edge endpoints
-                            // available via `CanvasGeometry` lookups).
-                            let screen_w = node_geom.rect.size.width.0 * zoom;
-                            let screen_max = (screen_w - label_overhead).max(0.0);
-                            let max_w = Px(screen_max / zoom);
-
-                            for port_id in inputs.iter().chain(outputs.iter()).copied() {
-                                let Some(handle) = geom.ports.get(&port_id) else {
-                                    continue;
-                                };
-                                out.port_centers.insert(port_id, handle.center);
-                                out.port_labels.insert(
-                                    port_id,
-                                    PortLabelRender {
-                                        label: presenter.port_label(graph, port_id),
-                                        dir: handle.dir,
-                                        max_width: max_w,
-                                    },
-                                );
-                                let color = presenter.port_color(graph, port_id, &this.style);
-                                out.pins.push((port_id, handle.bounds, color));
-                            }
-                        }
-                    }
-
-                    let mut edge_ids: Vec<EdgeId> = Vec::new();
-                    if let Some(c) = cull {
-                        index.query_edges_in_rect(c, &mut edge_ids);
-                    } else {
-                        edge_ids.extend(graph.edges.keys().copied());
-                    }
-
-                    for edge_id in edge_ids {
-                        let Some(edge) = graph.edges.get(&edge_id) else {
-                            continue;
-                        };
-                        if this
-                            .interaction
-                            .wire_drag
-                            .as_ref()
-                            .is_some_and(|w| Self::wire_drag_suppresses_edge(&w.kind, edge_id))
-                        {
-                            continue;
-                        }
-                        use std::collections::hash_map::Entry;
-
-                        let from = match out.port_centers.entry(edge.from) {
-                            Entry::Occupied(v) => *v.get(),
-                            Entry::Vacant(v) => {
-                                let Some(center) = geom.port_center(edge.from) else {
-                                    continue;
-                                };
-                                *v.insert(center)
-                            }
-                        };
-                        let to = match out.port_centers.entry(edge.to) {
-                            Entry::Occupied(v) => *v.get(),
-                            Entry::Vacant(v) => {
-                                let Some(center) = geom.port_center(edge.to) else {
-                                    continue;
-                                };
-                                *v.insert(center)
-                            }
-                        };
-                        let hint = this.edge_render_hint(graph, edge_id).normalized();
-                        if let Some(c) = cull {
-                            let pad = (snapshot
-                                .interaction
-                                .edge_interaction_width
-                                .max(this.style.wire_width * this.style.wire_width_selected_mul)
-                                .max(this.style.wire_width * this.style.wire_width_hover_mul))
-                                / zoom;
-                            let bounds = edge_bounds_rect(hint.route, from, to, zoom, pad);
-                            if !rects_intersect(bounds, c) {
-                                continue;
-                            }
-                        }
-                        let mut color = presenter.edge_color(graph, edge_id, &this.style);
-                        if let Some(override_color) = hint.color {
-                            color = override_color;
-                        }
-                        let selected = selected_edges.contains(&edge_id);
-                        let hovered = hovered_edge == Some(edge_id);
-                        out.edges.push(EdgeRender {
-                            id: edge_id,
-                            from,
-                            to,
-                            color,
-                            hint,
-                            selected,
-                            hovered,
-                        });
-                    }
-
-                    out
-                })
-                .unwrap_or_default()
-        };
+        let render: RenderData = self.collect_render_data(
+            &*cx.app,
+            &snapshot,
+            geom.clone(),
+            index.clone(),
+            render_cull_rect,
+            zoom,
+            hovered_edge,
+        );
 
         let edge_anchor_target_id = self
             .interaction
@@ -1551,5 +1165,130 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         cx.scene.push(SceneOp::PopClip);
+    }
+
+    pub(super) fn paint_searcher<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        searcher: &SearcherState,
+        zoom: f32,
+    ) {
+        let visible_rows = searcher_visible_rows(searcher);
+        let rect = searcher_rect_at(&self.style, searcher.origin, visible_rows, zoom);
+        let border_w = Px(1.0 / zoom);
+        let radius = Px(self.style.context_menu_corner_radius / zoom);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(55),
+            rect,
+            background: self.style.context_menu_background,
+            border: Edges::all(border_w),
+            border_color: self.style.context_menu_border,
+            corner_radii: Corners::all(radius),
+        });
+
+        let pad = self.style.context_menu_padding / zoom;
+        let item_h = self.style.context_menu_item_height / zoom;
+        let inner_x = rect.origin.x.0 + pad;
+        let inner_y = rect.origin.y.0 + pad;
+        let inner_w = (rect.size.width.0 - 2.0 * pad).max(0.0);
+
+        let mut text_style = self.style.context_menu_text_style.clone();
+        text_style.size = Px(text_style.size.0 / zoom);
+        if let Some(lh) = text_style.line_height.as_mut() {
+            lh.0 /= zoom;
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(inner_w)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: effective_scale_factor(cx.scale_factor, zoom),
+        };
+
+        let query_rect = Rect::new(
+            Point::new(Px(inner_x), Px(inner_y)),
+            Size::new(Px(inner_w), Px(item_h)),
+        );
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(56),
+            rect: query_rect,
+            background: self.style.context_menu_hover_background,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(4.0 / zoom)),
+        });
+
+        let query_text = if searcher.query.is_empty() {
+            Arc::<str>::from("Search...")
+        } else {
+            Arc::<str>::from(format!("Search: {}", searcher.query))
+        };
+        let (blob, metrics) =
+            self.paint_cache
+                .text_blob(cx.services, query_text, &text_style, constraints);
+        let text_x = query_rect.origin.x;
+        let text_y = Px(query_rect.origin.y.0
+            + (query_rect.size.height.0 - metrics.size.height.0) * 0.5
+            + metrics.baseline.0);
+        let query_color = if searcher.query.is_empty() {
+            self.style.context_menu_text_disabled
+        } else {
+            self.style.context_menu_text
+        };
+        cx.scene.push(SceneOp::Text {
+            order: DrawOrder(57),
+            origin: Point::new(text_x, text_y),
+            text: blob,
+            color: query_color,
+        });
+
+        let list_y0 = inner_y + item_h + pad;
+        let start = searcher.scroll.min(searcher.rows.len());
+        let end = (start + visible_rows).min(searcher.rows.len());
+        for (slot, row_ix) in (start..end).enumerate() {
+            let row = &searcher.rows[row_ix];
+            let item_rect = Rect::new(
+                Point::new(Px(inner_x), Px(list_y0 + slot as f32 * item_h)),
+                Size::new(Px(inner_w), Px(item_h)),
+            );
+
+            let is_active = searcher.active_row == row_ix;
+            let is_hovered = searcher.hovered_row == Some(row_ix);
+            if (is_hovered || is_active) && Self::searcher_is_selectable_row(row) {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(56),
+                    rect: item_rect,
+                    background: self.style.context_menu_hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(4.0 / zoom)),
+                });
+            }
+
+            let (blob, metrics) = self.paint_cache.text_blob(
+                cx.services,
+                row.label.clone(),
+                &text_style,
+                constraints,
+            );
+
+            let text_x = item_rect.origin.x;
+            let text_y = Px(item_rect.origin.y.0
+                + (item_rect.size.height.0 - metrics.size.height.0) * 0.5
+                + metrics.baseline.0);
+            let color = if row.enabled {
+                self.style.context_menu_text
+            } else {
+                self.style.context_menu_text_disabled
+            };
+
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(57),
+                origin: Point::new(text_x, text_y),
+                text: blob,
+                color,
+            });
+        }
     }
 }
