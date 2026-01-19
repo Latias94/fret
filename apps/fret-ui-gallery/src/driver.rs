@@ -333,13 +333,27 @@ impl UiGalleryDriver {
         let virtual_list_torture_edit_text = app.models_mut().insert(String::new());
         let virtual_list_torture_scroll = VirtualListScrollHandle::new();
 
+        let env_bool = |name: &str, default: bool| {
+            let Some(v) = std::env::var_os(name).filter(|v| !v.is_empty()) else {
+                return default;
+            };
+            let v = v.to_string_lossy().trim().to_ascii_lowercase();
+            !(v == "0" || v == "false" || v == "no" || v == "off")
+        };
+
         let view_cache_enabled = app
             .models_mut()
-            .insert(std::env::var_os("FRET_UI_GALLERY_VIEW_CACHE").is_some_and(|v| !v.is_empty()));
-        let view_cache_cache_shell = app.models_mut().insert(false);
-        let view_cache_inner_enabled = app.models_mut().insert(true);
+            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE", false));
+        let view_cache_cache_shell = app
+            .models_mut()
+            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_SHELL", false));
+        let view_cache_inner_enabled = app
+            .models_mut()
+            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_INNER", true));
         let view_cache_popover_open = app.models_mut().insert(false);
-        let view_cache_continuous = app.models_mut().insert(false);
+        let view_cache_continuous = app
+            .models_mut()
+            .insert(env_bool("FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS", false));
         let view_cache_counter = app.models_mut().insert(0u64);
 
         let inspector_enabled = app.models_mut().insert(
@@ -351,9 +365,7 @@ impl UiGalleryDriver {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
-        ui.set_view_cache_enabled(
-            std::env::var_os("FRET_UI_GALLERY_VIEW_CACHE").is_some_and(|v| !v.is_empty()),
-        );
+        ui.set_view_cache_enabled(env_bool("FRET_UI_GALLERY_VIEW_CACHE", false));
         ui.set_debug_enabled(
             std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
                 || std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()),
