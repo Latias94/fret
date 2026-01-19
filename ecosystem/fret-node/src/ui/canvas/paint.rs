@@ -14,8 +14,8 @@ use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::PathCache;
 use fret_core::{
-    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, StrokeStyle, TextBlobId,
-    TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
+    FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, SceneOp, StrokeStyle,
+    TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
 };
 
 use crate::ui::presenter::{EdgeMarker, EdgeMarkerKind, EdgeRouteKind};
@@ -141,6 +141,7 @@ pub(crate) struct CanvasPaintCache {
     frame: u64,
     paths: PathCache,
     text_blobs: HashMap<TextBlobKey, TextBlobEntry>,
+    text_blob_by_id: HashMap<TextBlobId, TextBlobKey>,
     text_metrics: HashMap<TextMetricsKey, TextMetricsEntry>,
 }
 
@@ -149,6 +150,31 @@ impl CanvasPaintCache {
         self.frame = self.frame.wrapping_add(1);
         self.paths.begin_frame();
         self.frame
+    }
+
+    pub(crate) fn touch_text_blobs_in_scene_ops(&mut self, ops: &[SceneOp]) {
+        let now = self.frame;
+        for op in ops {
+            let SceneOp::Text { text, .. } = *op else {
+                continue;
+            };
+            let Some(key) = self.text_blob_by_id.get(&text).cloned() else {
+                continue;
+            };
+            let Some(entry) = self.text_blobs.get_mut(&key) else {
+                continue;
+            };
+            entry.last_used_frame = now;
+        }
+    }
+
+    pub(crate) fn touch_paths_in_scene_ops(&mut self, ops: &[SceneOp]) {
+        for op in ops {
+            let SceneOp::Path { path, .. } = *op else {
+                continue;
+            };
+            let _ = self.paths.touch_path(path);
+        }
     }
 
     pub(crate) fn diagnostics_path_cache_snapshot(&self) -> (usize, CacheStats) {
@@ -160,6 +186,7 @@ impl CanvasPaintCache {
         for entry in self.text_blobs.drain().map(|(_, e)| e) {
             services.text().release(entry.id);
         }
+        self.text_blob_by_id.clear();
         self.text_metrics.clear();
     }
 
@@ -187,6 +214,7 @@ impl CanvasPaintCache {
             let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
             if !keep {
                 services.text().release(entry.id);
+                self.text_blob_by_id.remove(&entry.id);
             }
             keep
         });
@@ -206,6 +234,7 @@ impl CanvasPaintCache {
             for (_, key) in candidates.into_iter().take(over) {
                 if let Some(entry) = self.text_blobs.remove(&key) {
                     services.text().release(entry.id);
+                    self.text_blob_by_id.remove(&entry.id);
                 }
             }
         }
@@ -568,6 +597,7 @@ impl CanvasPaintCache {
         let (id, metrics) = services
             .text()
             .prepare_str(text.as_ref(), style, constraints);
+        self.text_blob_by_id.insert(id, key.clone());
         self.text_blobs.insert(
             key,
             TextBlobEntry {
@@ -694,6 +724,7 @@ impl CanvasPaintCache {
         let (id, metrics) = services
             .text()
             .prepare_str(text.as_ref(), style, constraints);
+        self.text_blob_by_id.insert(id, key.clone());
         self.text_blobs.insert(
             key,
             TextBlobEntry {

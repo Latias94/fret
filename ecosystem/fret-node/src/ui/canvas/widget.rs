@@ -5,7 +5,8 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
-    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, warm_scene_op_tiles_u64,
+    SceneOpCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D,
+    warm_scene_op_tiles_u64,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
@@ -249,8 +250,30 @@ pub struct NodeGraphCanvasWith<M> {
     paint_cache: CanvasPaintCache,
     grid_scene_cache: SceneOpTileCache<u64>,
     grid_tiles_scratch: Vec<TileCoord>,
+    groups_scene_cache: SceneOpCache<u64>,
+    nodes_scene_cache: SceneOpCache<u64>,
+    edges_scene_cache: SceneOpCache<u64>,
+    edge_labels_scene_cache: SceneOpCache<u64>,
+    edges_build_state: Option<EdgesBuildState>,
+    edge_labels_build_state: Option<EdgeLabelsBuildState>,
     text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
+}
+
+#[derive(Debug, Clone)]
+struct EdgesBuildState {
+    key: u64,
+    ops: Vec<SceneOp>,
+    edges: Vec<paint_render_data::EdgeRender>,
+    next_edge: usize,
+}
+
+#[derive(Debug, Clone)]
+struct EdgeLabelsBuildState {
+    key: u64,
+    ops: Vec<SceneOp>,
+    edges: Vec<paint_render_data::EdgeRender>,
+    next_edge: usize,
 }
 
 impl NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware> {
@@ -275,6 +298,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
     const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget = InteractionBudget::new(32, 8);
+    const EDGE_WIRE_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(256, 64);
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
 
@@ -349,6 +373,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             paint_cache: CanvasPaintCache::default(),
             grid_scene_cache: SceneOpTileCache::default(),
             grid_tiles_scratch: Vec::new(),
+            groups_scene_cache: SceneOpCache::default(),
+            nodes_scene_cache: SceneOpCache::default(),
+            edges_scene_cache: SceneOpCache::default(),
+            edge_labels_scene_cache: SceneOpCache::default(),
+            edges_build_state: None,
+            edge_labels_build_state: None,
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
         }
@@ -408,6 +438,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             paint_cache: self.paint_cache,
             grid_scene_cache: self.grid_scene_cache,
             grid_tiles_scratch: self.grid_tiles_scratch,
+            groups_scene_cache: self.groups_scene_cache,
+            nodes_scene_cache: self.nodes_scene_cache,
+            edges_scene_cache: self.edges_scene_cache,
+            edge_labels_scene_cache: self.edge_labels_scene_cache,
+            edges_build_state: self.edges_build_state,
+            edge_labels_build_state: self.edge_labels_build_state,
             text_blobs: self.text_blobs,
             interaction: self.interaction,
         }
@@ -475,6 +511,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<M> {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.paint_cache.clear(services);
+        self.groups_scene_cache.clear();
+        self.nodes_scene_cache.clear();
+        self.edges_scene_cache.clear();
+        self.edge_labels_scene_cache.clear();
+        self.edges_build_state = None;
+        self.edge_labels_build_state = None;
         for id in self.text_blobs.drain(..) {
             services.text().release(id);
         }

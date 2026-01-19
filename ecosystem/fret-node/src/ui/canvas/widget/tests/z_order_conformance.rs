@@ -162,8 +162,18 @@ fn edges_are_sorted_by_endpoint_z_order() {
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
     let (geom, index) = canvas.canvas_derived(&host, &snapshot);
-    let render =
-        canvas.collect_render_data(&host, &snapshot, geom, index, None, snapshot.zoom, None);
+    let render = canvas.collect_render_data(
+        &host,
+        &snapshot,
+        geom,
+        index,
+        None,
+        snapshot.zoom,
+        None,
+        false,
+        false,
+        true,
+    );
 
     assert_eq!(render.edges.len(), 2);
     assert_eq!(render.edges[0].id, edge_low);
