@@ -710,6 +710,7 @@ pub mod primitives {
 
     #[derive(Debug, Clone, Default)]
     pub struct BreadcrumbEllipsis {
+        size: Option<Px>,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
     }
@@ -717,6 +718,11 @@ pub mod primitives {
     impl BreadcrumbEllipsis {
         pub fn new() -> Self {
             Self::default()
+        }
+
+        pub fn size(mut self, size: Px) -> Self {
+            self.size = Some(size);
+            self
         }
 
         pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
@@ -732,9 +738,11 @@ pub mod primitives {
         pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
             let theme = Theme::global(&*cx.app).clone();
             let (_fg, muted) = colors(&theme);
-            let size = theme
-                .metric_by_key("component.breadcrumb.ellipsis_size")
-                .unwrap_or(Px(36.0));
+            let size = self.size.unwrap_or_else(|| {
+                theme
+                    .metric_by_key("component.breadcrumb.ellipsis_size")
+                    .unwrap_or(Px(36.0))
+            });
 
             let mut props = FlexProps {
                 layout: Default::default(),
