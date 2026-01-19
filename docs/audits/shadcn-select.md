@@ -62,9 +62,15 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib select`
-- Web golden placement + sizing: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
-  - Evidence: `goldens/shadcn-web/v4/new-york-v4/select-demo.open.json`
-  - Gate: `web_vs_fret_select_demo_overlay_placement_matches`
+- Web goldens (placement + scroll-button geometry): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  - Evidence:
+    - `goldens/shadcn-web/v4/new-york-v4/select-demo.open.json`
+    - `goldens/shadcn-web/v4/new-york-v4/select-scrollable.open.json`
+  - Gates:
+    - `web_vs_fret_select_demo_overlay_placement_matches`
+    - `web_vs_fret_select_demo_open_option_metrics_match`
+    - `web_vs_fret_select_scrollable_listbox_width_matches`
+    - `web_vs_fret_select_scrollable_listbox_option_insets_match` (plus small/tiny viewport variants)
 
 ## Follow-ups (recommended)
 

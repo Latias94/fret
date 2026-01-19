@@ -131,11 +131,13 @@ maps naturally to a new ecosystem crate built on top of `fret-ui-shadcn`:
   - (Done) Programmatic scroll handle updates now invalidate bound scroll nodes, so cmdk/select-style
     “scroll active option into view” works even when cached layout/paint skips subtrees. Evidence:
     `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/declarative/mount.rs`.
-  - (Done) `Select` item-aligned positioning now matches Radix’s offset math: content inner-box offsets
-    (`clientHeight` vs border box) + first/last item padding guards + stable portal sizing for the
-    `select-demo`/`select-scrollable` goldens. Evidence: `ecosystem/fret-ui-headless/src/select_item_aligned.rs`,
-    `ecosystem/fret-ui-kit/src/primitives/select.rs`, and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
-    (`web_vs_fret_select_demo_overlay_placement_matches`).
+  - (Done) `Select` item-aligned positioning now matches Radix’s layout + scroll sequencing:
+    content inner-box offsets (`clientHeight` vs border box), scroll-button mount reposition, and the
+    post-position “focus selected item” scroll-into-view behavior needed for `select-scrollable`
+    option inset parity. Evidence: `ecosystem/fret-ui-headless/src/select_item_aligned.rs`,
+    `ecosystem/fret-ui-kit/src/primitives/select.rs`, `ecosystem/fret-ui-shadcn/src/select.rs`, and
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_demo_open_option_metrics_match`,
+    `web_vs_fret_select_scrollable_listbox_option_insets_match`).
   - (Done) `Button` shadcn variant styles are gated against `shadcn-web` computed styles (including `lab()` normalization to linear sRGB). Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`.
   - (Done) `Combobox` (shadcn recipe) listbox height is gated against `shadcn-web` open snapshots. Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (combobox-demo open variants).
   - (Done) `Select` listbox width parity is gated against shadcn-web: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
