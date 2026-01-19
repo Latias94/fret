@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_runtime::{CommandRegistry, InputContext, MenuBar, Model};
+use fret_runtime::{CommandId, InputContext, MenuBar, Model, Platform};
 use fret_ui::element::{AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, StackProps};
 use fret_ui::{ElementContext, GlobalElementId, PendingShortcutOverlayState, UiHost};
 
@@ -26,7 +26,6 @@ fn fill_layout() -> LayoutStyle {
 pub fn workspace_shell_model<H: UiHost, FTitle, FPane>(
     cx: &mut ElementContext<'_, H>,
     menu_bar: Option<&MenuBar>,
-    commands: Option<&CommandRegistry>,
     window: Model<crate::workspace::layout::WorkspaceWindowLayout>,
     tab_title: FTitle,
     mut render_pane_content: FPane,
@@ -35,8 +34,8 @@ where
     FTitle: Fn(&str) -> Arc<str> + Clone,
     FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
 {
-    let top = menu_bar
-        .map(|bar| menubar_from_runtime(cx, bar, commands, MenubarFromRuntimeOptions::default()));
+    let top =
+        menu_bar.map(|bar| menubar_from_runtime(cx, bar, MenubarFromRuntimeOptions::default()));
 
     let mut topbar_anchor_id: Option<GlobalElementId> = None;
 
@@ -132,7 +131,6 @@ where
 /// provided by `fret-workspace`.
 pub fn workspace_shell_model_default_menu<H: UiHost, FTitle, FPane>(
     cx: &mut ElementContext<'_, H>,
-    commands: Option<&CommandRegistry>,
     window: Model<crate::workspace::layout::WorkspaceWindowLayout>,
     tab_title: FTitle,
     render_pane_content: FPane,
@@ -141,16 +139,22 @@ where
     FTitle: Fn(&str) -> Arc<str> + Clone,
     FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
 {
-    let menu_bar = crate::workspace::menu::workspace_default_menu_bar(
-        crate::workspace::menu::WorkspaceMenuCommands::default(),
-    );
+    let mut cmds = crate::workspace::menu::WorkspaceMenuCommands::default();
+    if Platform::current() == Platform::Macos {
+        cmds.app_menu_title = cx
+            .app
+            .global::<fret_app::AppDisplayName>()
+            .map(|name| name.0.clone())
+            .or(Some(Arc::from("App")));
+        cmds.include_services_menu = true;
+        cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
+        cmds.preferences = Some(CommandId::new(fret_app::core_commands::APP_PREFERENCES));
+        cmds.hide = Some(CommandId::new(fret_app::core_commands::APP_HIDE));
+        cmds.hide_others = Some(CommandId::new(fret_app::core_commands::APP_HIDE_OTHERS));
+        cmds.show_all = Some(CommandId::new(fret_app::core_commands::APP_SHOW_ALL));
+        cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
+    }
+    let menu_bar = crate::workspace::menu::workspace_default_menu_bar(cmds);
 
-    workspace_shell_model(
-        cx,
-        Some(&menu_bar),
-        commands,
-        window,
-        tab_title,
-        render_pane_content,
-    )
+    workspace_shell_model(cx, Some(&menu_bar), window, tab_title, render_pane_content)
 }

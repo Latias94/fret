@@ -1243,11 +1243,9 @@ fn select_impl<H: UiHost>(
                         arrow.then_some(arrow_size),
                         item_aligned_inputs,
                     );
-                    let has_selected_value = cx.watch_model(&model).cloned().unwrap_or_default().is_some();
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
                         && !did_scroll
-                        && has_selected_value
                     {
                         let mut state =
                             trigger_state.lock().unwrap_or_else(|e| e.into_inner());
@@ -1531,6 +1529,15 @@ fn select_impl<H: UiHost>(
                                             move |cx, active_element| {
                                                                 let mut out = Vec::with_capacity(rows.len());
                                                                 let mut item_ordinal: usize = 0;
+                                                                let alignment_selected_value = selected.as_ref().and_then(|value| {
+                                                                    rows.iter()
+                                                                        .any(|row| match row {
+                                                                            SelectRow::Item(item) => item.value.as_ref() == value.as_ref(),
+                                                                            SelectRow::Label(_) | SelectRow::Separator => false,
+                                                                        })
+                                                                        .then(|| value.clone())
+                                                                });
+                                                                let mut first_valid_alignment_item_found = false;
 
                                                                 for (row_idx, row) in rows.iter().cloned().enumerate() {
                                                                     match row {
@@ -1627,11 +1634,17 @@ fn select_impl<H: UiHost>(
                                                                                 disabled.get(row_idx).copied().unwrap_or(true);
                                                                             let is_active =
                                                                                 active_row.is_some_and(|a| a == row_idx);
-                                                                            let is_selected = selected
+                                                                            let is_selected = alignment_selected_value
                                                                                 .as_ref()
                                                                                 .is_some_and(|v| v.as_ref() == item.value.as_ref());
-                                                                            let is_alignment_item = is_selected
-                                                                                || (selected.is_none() && is_active);
+                                                                            let is_first_valid_item = alignment_selected_value.is_none()
+                                                                                && !first_valid_alignment_item_found
+                                                                                && !item_disabled;
+                                                                            if is_first_valid_item {
+                                                                                first_valid_alignment_item_found = true;
+                                                                            }
+                                                                            let is_alignment_item =
+                                                                                is_selected || is_first_valid_item;
 
                                                                             let model = model.clone();
                                                                             let open = open_for_content.clone();

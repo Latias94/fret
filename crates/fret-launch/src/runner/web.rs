@@ -1286,6 +1286,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     WindowRequest::Create(_) | WindowRequest::Raise { .. } => {}
                 },
+                Effect::QuitApp => {
+                    self.exiting = true;
+                    self.web_cursor.take();
+                    event_loop.exit();
+                    return true;
+                }
+                Effect::HideApp | Effect::HideOtherApps | Effect::UnhideAllApps => {}
                 Effect::Command { window, command } => match window {
                     Some(target) if target == self.app_window => {
                         self.driver.handle_command(

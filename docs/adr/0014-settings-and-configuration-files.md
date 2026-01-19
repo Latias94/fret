@@ -42,6 +42,7 @@ Settings and layout are represented as a small set of well-known files, e.g.:
 - `user/settings.json`
 - `project/settings.json`
 - `user/keymap.json`
+- `user/menubar.json`
 - `user/layout.json` (dock/window layout)
 
 The exact paths can evolve, but the “file-scoped model” is part of the architecture.
@@ -62,6 +63,7 @@ Recommended user files:
 
 - `settings.json` (user settings)
 - `keymap.json` (user key bindings)
+- `menubar.json` (user menu bar, optional)
 - `layout.json` (user window/dock layout; see ADR 0013 + ADR 0017)
 
 Notes:
@@ -72,6 +74,28 @@ Notes:
 ### 2) Settings are strongly typed
 
 Model settings as strongly typed Rust structures that map directly to these files.
+
+#### Menu bar presentation (example)
+
+Apps may want different menu bar surfaces depending on platform and product goals (native OS menu
+bar vs an in-window menu bar for fully custom chrome).
+
+Example `settings.json` snippet:
+
+```json
+{
+  "settings_version": 1,
+  "menu_bar": {
+    "os": "auto",
+    "in_window": "auto"
+  }
+}
+```
+
+Suggested semantics (non-normative):
+
+- `os: auto|on|off` controls whether the app publishes `Effect::SetMenuBar` for native runners.
+- `in_window: auto|on|off` controls whether the app renders a menu bar inside its window chrome.
 
 ### 3) Scope layering is explicit
 

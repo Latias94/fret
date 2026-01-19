@@ -21,6 +21,7 @@ fn run() -> Result<(), String> {
         "help" | "-h" | "--help" => help(),
         "init" => crate::scaffold::init_cmd(args.collect()),
         "new" => crate::scaffold::new_cmd(args.collect()),
+        "config" => crate::config::config_cmd(args.collect()),
         "hotpatch" => crate::hotpatch::hotpatch_cmd(args.collect()),
         "diag" => crate::diag::diag_cmd(args.collect()),
         "list" => match args.next().as_deref() {
@@ -51,6 +52,7 @@ Usage:
   fretboard new hello       # non-interactive (template shortcut)
   fretboard new empty       # minimal Cargo-like project
   fretboard init <template> [...]    # alias for `new` (compat)
+  fretboard config menubar [--path <path>] [--force]
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
@@ -75,6 +77,7 @@ Examples:
   fretboard new hello --name hello-world --command-palette
   fretboard new todo --name my-todo --icons none
   fretboard new empty --name my-app
+  fretboard config menubar --path .
   fretboard dev native --bin components_gallery
   fretboard dev native --bin todo_demo
   fretboard dev native --bin assets_demo

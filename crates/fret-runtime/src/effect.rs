@@ -9,7 +9,7 @@ use fret_core::{
     ImageId, Rect, RectPx, WindowAnchor,
 };
 
-use crate::CommandId;
+use crate::{CommandId, MenuBar};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
@@ -29,6 +29,32 @@ pub enum Effect {
     Command {
         window: Option<AppWindowId>,
         command: CommandId,
+    },
+    /// Request the application to quit (native runners may exit their event loop).
+    ///
+    /// Web runners may ignore this request.
+    QuitApp,
+    /// Hide the application (macOS: `NSApplication hide:`).
+    ///
+    /// Other platforms may ignore this request.
+    HideApp,
+    /// Hide all other applications (macOS: `NSApplication hideOtherApplications:`).
+    ///
+    /// Other platforms may ignore this request.
+    HideOtherApps,
+    /// Unhide all applications (macOS: `NSApplication unhideAllApplications:`).
+    ///
+    /// Other platforms may ignore this request.
+    UnhideAllApps,
+    /// Set the application/window menu bar (native runners may map this to an OS menubar).
+    ///
+    /// Notes:
+    /// - This is a platform integration seam; web runners may ignore it.
+    /// - The menu model is data-only (`MenuBar`) and is typically derived from command metadata
+    ///   (ADR 0023).
+    SetMenuBar {
+        window: Option<AppWindowId>,
+        menu_bar: MenuBar,
     },
     ClipboardSetText {
         text: String,

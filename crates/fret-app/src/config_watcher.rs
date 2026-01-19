@@ -5,7 +5,7 @@ use fret_core::AppWindowId;
 use fret_runtime::{Effect, TimerToken};
 
 use crate::config_files::LayeredConfigPaths;
-use crate::{App, KeymapFileError, SettingsError};
+use crate::{App, KeymapFileError, MenuBarFileError, SettingsError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct FileStamp {
@@ -37,10 +37,33 @@ impl LayeredStamps {
 pub struct ConfigFilesWatcherTick {
     pub reloaded_settings: bool,
     pub reloaded_keymap: bool,
+    pub reloaded_menu_bar: bool,
     pub settings_error: Option<String>,
     pub keymap_error: Option<String>,
+    pub menu_bar_error: Option<String>,
     pub actionable_keymap_conflicts: usize,
     pub keymap_conflict_samples: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ConfigFilesWatcherStatus {
+    seq: u64,
+    last_tick: Option<ConfigFilesWatcherTick>,
+}
+
+impl ConfigFilesWatcherStatus {
+    pub fn seq(&self) -> u64 {
+        self.seq
+    }
+
+    pub fn last_tick(&self) -> Option<&ConfigFilesWatcherTick> {
+        self.last_tick.as_ref()
+    }
+
+    pub fn note(&mut self, tick: ConfigFilesWatcherTick) {
+        self.seq = self.seq.saturating_add(1);
+        self.last_tick = Some(tick);
+    }
 }
 
 #[derive(Debug, Default)]
@@ -50,6 +73,7 @@ pub struct ConfigFilesWatcher {
     project_root: PathBuf,
     stamps_settings: LayeredStamps,
     stamps_keymap: LayeredStamps,
+    stamps_menu_bar: LayeredStamps,
 }
 
 impl ConfigFilesWatcher {
@@ -85,6 +109,10 @@ impl ConfigFilesWatcher {
             user: paths.user_keymap_json().and_then(|p| file_stamp(&p)),
             project: file_stamp(&paths.project_keymap_json()),
         };
+        let next_menu_bar = LayeredStamps {
+            user: paths.user_menubar_json().and_then(|p| file_stamp(&p)),
+            project: file_stamp(&paths.project_menubar_json()),
+        };
 
         let token = app.next_timer_token();
         app.push_effect(Effect::SetTimer {
@@ -100,6 +128,7 @@ impl ConfigFilesWatcher {
             project_root,
             stamps_settings: next_settings,
             stamps_keymap: next_keymap,
+            stamps_menu_bar: next_menu_bar,
         });
     }
 
@@ -118,18 +147,26 @@ impl ConfigFilesWatcher {
             user: paths.user_keymap_json().and_then(|p| file_stamp(&p)),
             project: file_stamp(&paths.project_keymap_json()),
         };
+        let next_menu_bar = LayeredStamps {
+            user: paths.user_menubar_json().and_then(|p| file_stamp(&p)),
+            project: file_stamp(&paths.project_menubar_json()),
+        };
 
         let settings_changed = !self.stamps_settings.is_unchanged_from(&next_settings);
         let keymap_changed = !self.stamps_keymap.is_unchanged_from(&next_keymap);
+        let menu_bar_changed = !self.stamps_menu_bar.is_unchanged_from(&next_menu_bar);
 
         self.stamps_settings = next_settings;
         self.stamps_keymap = next_keymap;
+        self.stamps_menu_bar = next_menu_bar;
 
         let mut tick = ConfigFilesWatcherTick {
             reloaded_settings: false,
             reloaded_keymap: false,
+            reloaded_menu_bar: false,
             settings_error: None,
             keymap_error: None,
+            menu_bar_error: None,
             actionable_keymap_conflicts: 0,
             keymap_conflict_samples: Vec::new(),
         };
@@ -139,6 +176,7 @@ impl ConfigFilesWatcher {
                 Ok((settings, _report)) => {
                     app.set_global(settings.clone());
                     app.set_global(settings.docking_interaction_settings());
+                    crate::menu_bar::sync_os_menu_bar(app);
                     app.request_redraw(window);
                     tick.reloaded_settings = true;
                 }
@@ -171,6 +209,20 @@ impl ConfigFilesWatcher {
                 }
                 Err(e) => {
                     tick.keymap_error = Some(format_keymap_error(&e));
+                }
+            }
+        }
+
+        if menu_bar_changed {
+            match crate::config_files::load_layered_menu_bar(&paths) {
+                Ok((layered, _report)) => {
+                    match crate::menu_bar::apply_layered_menu_bar(app, Some(window), layered) {
+                        Ok(()) => tick.reloaded_menu_bar = true,
+                        Err(e) => tick.menu_bar_error = Some(format_menu_bar_error(&e)),
+                    }
+                }
+                Err(e) => {
+                    tick.menu_bar_error = Some(format_menu_bar_error(&e));
                 }
             }
         }
@@ -210,6 +262,13 @@ fn format_keymap_error(e: &KeymapFileError) -> String {
     match e {
         KeymapFileError::Read { path, source } => format!("read failed: {path}: {source}"),
         KeymapFileError::Parse { path, source } => format!("parse failed: {path}: {source}"),
+    }
+}
+
+fn format_menu_bar_error(e: &MenuBarFileError) -> String {
+    match e {
+        MenuBarFileError::Read { path, source } => format!("read failed: {path}: {source}"),
+        MenuBarFileError::Parse { path, source } => format!("parse failed: {path}: {source}"),
     }
 }
 

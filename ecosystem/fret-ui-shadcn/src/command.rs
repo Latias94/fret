@@ -59,6 +59,8 @@ fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         ui_has_modal: true,
         // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
         focus_is_text_input: false,
+        edit_can_undo: true,
+        edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Normal,
     }
 }
@@ -81,7 +83,10 @@ fn command_item_from_meta<H: UiHost>(
     let shortcut: Option<Arc<str>> = cx
         .app
         .global::<KeymapService>()
-        .and_then(|svc| svc.keymap.shortcut_for_command_sequence(input_ctx, id))
+        .and_then(|svc| {
+            svc.keymap
+                .display_shortcut_for_command_sequence(input_ctx, id)
+        })
         .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)));
 
     let mut item = CommandItem::new(meta.title.clone())

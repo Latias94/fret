@@ -531,6 +531,7 @@ impl UiDiagnosticsService {
                     next_step: 0,
                     wait_frames_remaining: 0,
                     wait_until: None,
+                    last_reported_step: Some(0),
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -554,6 +555,23 @@ impl UiDiagnosticsService {
 
         if active.next_step >= active.script.steps.len() {
             return UiScriptFrameOutput::default();
+        }
+
+        if active.last_reported_step != Some(active.next_step) {
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Running,
+                step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                reason: None,
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+            });
+            active.last_reported_step = Some(active.next_step);
         }
 
         if active.wait_frames_remaining > 0 {
@@ -2177,6 +2195,7 @@ struct ActiveScript {
     next_step: usize,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
+    last_reported_step: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -2882,6 +2901,10 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<ElementObservedModelsV1>,
     pub observed_globals: Vec<ElementObservedGlobalsV1>,
+    #[serde(default)]
+    pub view_cache_reuse_roots: Vec<u64>,
+    #[serde(default)]
+    pub view_cache_reuse_root_element_counts: Vec<(u64, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2953,6 +2976,16 @@ impl ElementDiagnosticsSnapshotV1 {
                         .map(|(id, inv)| (id, invalidation_label(inv).to_string()))
                         .collect(),
                 })
+                .collect(),
+            view_cache_reuse_roots: snapshot
+                .view_cache_reuse_roots
+                .into_iter()
+                .map(|id| id.0)
+                .collect(),
+            view_cache_reuse_root_element_counts: snapshot
+                .view_cache_reuse_root_element_counts
+                .into_iter()
+                .map(|(id, count)| (id.0, count))
                 .collect(),
         }
     }

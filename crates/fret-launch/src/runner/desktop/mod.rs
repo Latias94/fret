@@ -10,6 +10,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[cfg(windows)]
+use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(feature = "hotpatch-subsecond")]
 mod hotpatch;
 
@@ -47,16 +49,26 @@ use fret_platform::open_url::OpenUrl as _;
 type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
+#[cfg(target_os = "macos")]
+mod macos_menu;
 mod no_services;
 mod renderdoc_capture;
+#[cfg(windows)]
+mod windows_menu;
 
 use super::streaming_upload::StreamingUploadQueue;
 use no_services::NoUiServices;
 use renderdoc_capture::RenderDocCapture;
 
 #[cfg(windows)]
-pub fn ime_msg_hook(msg: *const std::ffi::c_void) -> bool {
-    fret_runner_winit::windows_ime::msg_hook(msg)
+static WINDOWS_IME_MSG_HOOK_ENABLED: AtomicBool = AtomicBool::new(true);
+
+#[cfg(windows)]
+pub fn windows_msg_hook(msg: *const std::ffi::c_void) -> bool {
+    if WINDOWS_IME_MSG_HOOK_ENABLED.load(Ordering::Relaxed) {
+        fret_runner_winit::windows_ime::msg_hook(msg);
+    }
+    windows_menu::msg_hook(msg)
 }
 
 #[derive(Debug, Clone)]
@@ -64,6 +76,16 @@ pub enum RunnerUserEvent {
     PlatformCompletion {
         window: fret_core::AppWindowId,
         completion: PlatformCompletion,
+    },
+    #[cfg(windows)]
+    WindowsMenuCommand {
+        window: fret_core::AppWindowId,
+        command: fret_runtime::CommandId,
+    },
+    #[cfg(target_os = "macos")]
+    MacosMenuCommand {
+        window: Option<fret_core::AppWindowId>,
+        command: fret_runtime::CommandId,
     },
 }
 
@@ -215,10 +237,10 @@ impl<D: WinitAppDriver + 'static> WinitAppBuilder<D> {
 
                 #[cfg(windows)]
                 {
-                    if windows_ime_msg_hook_enabled {
-                        use winit::platform::windows::EventLoopBuilderExtWindows as _;
-                        builder.with_msg_hook(ime_msg_hook);
-                    }
+                    use winit::platform::windows::EventLoopBuilderExtWindows as _;
+                    WINDOWS_IME_MSG_HOOK_ENABLED
+                        .store(windows_ime_msg_hook_enabled, Ordering::Relaxed);
+                    builder.with_msg_hook(windows_msg_hook);
                 }
 
                 let event_loop = builder.build()?;
@@ -822,6 +844,8 @@ struct WindowRuntime<S> {
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<fret_runtime::ExternalDropToken>,
     user: S,
+    #[cfg(windows)]
+    os_menu: Option<windows_menu::WindowsMenuBar>,
 }
 
 #[derive(Debug, Clone)]
@@ -849,6 +873,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
     main_window: Option<fret_core::AppWindowId>,
+    menu_bar: Option<fret_runtime::MenuBar>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
 
     /// True if this event-loop turn already observed a left mouse release via `WindowEvent`.
@@ -1944,6 +1969,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
+            menu_bar: None,
             windows_pending_front: HashMap::new(),
             saw_left_mouse_release_this_turn: false,
             left_mouse_down: false,
@@ -2112,6 +2138,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if let Some(hotpatch) = self.hotpatch.as_ref() {
             hotpatch.set_event_loop_proxy(proxy.clone());
         }
+        #[cfg(windows)]
+        windows_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
+        #[cfg(target_os = "macos")]
+        macos_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         self.event_loop_proxy = Some(proxy);
     }
 
@@ -2394,6 +2424,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 external_drag_files: Vec::new(),
                 external_drag_token: None,
                 user,
+                #[cfg(windows)]
+                os_menu: None,
             }
         });
 
@@ -2419,6 +2451,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
 
+        #[cfg(windows)]
+        windows_menu::register_window(self.windows[id].window.as_ref(), id);
+        #[cfg(target_os = "macos")]
+        macos_menu::register_window(self.windows[id].window.as_ref(), id);
+
+        #[cfg(windows)]
+        if let Some(menu_bar) = self.menu_bar.as_ref()
+            && let Some(state) = self.windows.get_mut(id)
+        {
+            if let Some(menu) =
+                windows_menu::set_window_menu_bar(&self.app, state.window.as_ref(), id, menu_bar)
+            {
+                state.os_menu = Some(menu);
+            }
+        }
+
         // Ensure the window draws at least one frame after creation.
         //
         // Important: `WindowEvent::RedrawRequested` is keyed by the winit `WindowId`, so we must
@@ -2443,10 +2491,28 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         state.surface.resize(&context.device, width, height);
     }
 
-    fn close_window(&mut self, window: fret_core::AppWindowId) {
-        let should_close = self.driver.before_close_window(&mut self.app, window);
-        if !should_close {
-            return;
+    fn close_window(&mut self, window: fret_core::AppWindowId) -> bool {
+        self.close_window_impl(window, true)
+    }
+
+    fn force_close_window(&mut self, window: fret_core::AppWindowId) -> bool {
+        self.close_window_impl(window, false)
+    }
+
+    fn close_window_impl(
+        &mut self,
+        window: fret_core::AppWindowId,
+        check_before_close: bool,
+    ) -> bool {
+        if !self.windows.contains_key(window) {
+            return false;
+        }
+
+        if check_before_close {
+            let should_close = self.driver.before_close_window(&mut self.app, window);
+            if !should_close {
+                return false;
+            }
         }
 
         if self
@@ -2469,9 +2535,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        if let Some(state) = self.windows.remove(window) {
-            self.window_registry.remove(state.window.id());
-        }
+        let Some(state) = self.windows.remove(window) else {
+            return false;
+        };
+        #[cfg(windows)]
+        windows_menu::unregister_window(state.window.as_ref());
+        #[cfg(target_os = "macos")]
+        macos_menu::unregister_window(state.window.as_ref());
+        self.window_registry.remove(state.window.id());
+
+        self.app.with_global_mut(
+            fret_runtime::WindowInputContextService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
+        self.app.with_global_mut(
+            fret_runtime::WindowCommandAvailabilityService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
         self.app
             .with_global_mut(WindowMetricsService::default, |svc, _app| {
                 svc.remove(window);
@@ -2479,6 +2563,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if Some(window) == self.main_window {
             self.main_window = None;
         }
+
+        true
     }
 
     fn compute_window_position_from_anchor(&self, anchor: WindowAnchor) -> Option<Position> {
@@ -2868,6 +2954,40 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     Effect::CancelTimer { token } => {
                         self.timers.remove(&token);
                     }
+                    Effect::QuitApp => {
+                        let prompt_window = self.main_window.or_else(|| self.windows.keys().next());
+                        if let Some(window) = prompt_window {
+                            if !self.driver.before_close_window(&mut self.app, window) {
+                                continue;
+                            }
+                        }
+
+                        let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();
+                        for window in windows {
+                            let _ = self.force_close_window(window);
+                        }
+
+                        event_loop.exit();
+                        return;
+                    }
+                    Effect::HideApp => {
+                        #[cfg(target_os = "macos")]
+                        {
+                            macos_menu::hide_app();
+                        }
+                    }
+                    Effect::HideOtherApps => {
+                        #[cfg(target_os = "macos")]
+                        {
+                            macos_menu::hide_other_apps();
+                        }
+                    }
+                    Effect::UnhideAllApps => {
+                        #[cfg(target_os = "macos")]
+                        {
+                            macos_menu::unhide_all_apps();
+                        }
+                    }
                     Effect::Command { window, command } => match window {
                         Some(window) => {
                             if let Some(state) = self.windows.get_mut(window) {
@@ -2898,6 +3018,41 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             );
                         }
                     },
+                    Effect::SetMenuBar { window, menu_bar } => {
+                        if window.is_none() {
+                            self.menu_bar = Some(menu_bar.clone());
+                        }
+                        #[cfg(windows)]
+                        {
+                            let targets: Vec<fret_core::AppWindowId> = match window {
+                                Some(window) => vec![window],
+                                None => self.windows.keys().collect(),
+                            };
+                            for window in targets {
+                                let Some(state) = self.windows.get_mut(window) else {
+                                    continue;
+                                };
+                                let Some(menu) = windows_menu::set_window_menu_bar(
+                                    &self.app,
+                                    state.window.as_ref(),
+                                    window,
+                                    &menu_bar,
+                                ) else {
+                                    continue;
+                                };
+                                state.os_menu = Some(menu);
+                            }
+                        }
+                        #[cfg(target_os = "macos")]
+                        {
+                            let _ = window;
+                            macos_menu::set_app_menu_bar(&self.app, &menu_bar);
+                        }
+                        #[cfg(all(not(windows), not(target_os = "macos")))]
+                        {
+                            let _ = (window, menu_bar);
+                        }
+                    }
                     Effect::ClipboardSetText { text } => {
                         if let Err(err) = self.clipboard.set_text(&text) {
                             tracing::debug!(?err, "failed to set clipboard text");
@@ -3448,12 +3603,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     Effect::Window(req) => match req {
                         WindowRequest::Close(window) => {
                             let is_main = Some(window) == self.main_window;
+                            let closed = self.close_window(window);
+                            if !closed {
+                                continue;
+                            }
+
                             if is_main && self.config.exit_on_main_window_close {
+                                let windows: Vec<fret_core::AppWindowId> =
+                                    self.windows.keys().collect();
+                                for window in windows {
+                                    let _ = self.force_close_window(window);
+                                }
                                 event_loop.exit();
                                 return;
                             }
-                            self.close_window(window);
-                            if is_main && self.windows.is_empty() {
+
+                            if self.windows.is_empty() {
                                 event_loop.exit();
                                 return;
                             }
@@ -3683,6 +3848,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let changed = self.app.take_changed_globals();
         if changed.is_empty() {
             return false;
+        }
+
+        #[cfg(windows)]
+        {
+            if changed.contains(&TypeId::of::<fret_runtime::KeymapService>()) {
+                windows_menu::sync_keymap_from_app(&self.app);
+            }
+            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>()) {
+                windows_menu::sync_input_context_from_app(&self.app);
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            let keymap_changed = changed.contains(&TypeId::of::<fret_runtime::KeymapService>());
+            if keymap_changed {
+                macos_menu::sync_keymap_from_app(&self.app);
+            }
+            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>()) {
+                macos_menu::sync_input_context_from_app(&self.app);
+            }
+            if keymap_changed && let Some(menu_bar) = self.menu_bar.clone() {
+                macos_menu::set_app_menu_bar(&self.app, &menu_bar);
+            }
         }
 
         if changed.contains(&TypeId::of::<fret_core::TextFontFamilyConfig>())
