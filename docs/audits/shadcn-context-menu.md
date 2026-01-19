@@ -99,6 +99,10 @@ _None tracked at this time._
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd-vp1440x320.open.json`).
 - Web placement gate (root, constrained viewport): `web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x320.open.json`).
+- Web scroll state gate (root, constrained viewport): `web_vs_fret_context_menu_demo_small_viewport_scroll_state_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x320.open.json`).
+- Web scroll state gate (root, tiny viewport): `web_vs_fret_context_menu_demo_tiny_viewport_scroll_state_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x240.open.json`).
 - Web menu row height gate (root, constrained viewport): `web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x320.open.json`).
 - Web menu content inset gate (root, constrained viewport): `web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match`

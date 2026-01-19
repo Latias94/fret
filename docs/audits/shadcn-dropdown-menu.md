@@ -115,6 +115,10 @@ Notes on API mapping:
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
 - Web placement gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
+- Web first visible item gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_first_visible_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
+- Web first visible item gate (submenu, constrained viewport): `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_first_visible_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x320.open.json`).
 - Web menu row height gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_menu_item_height_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
 - Web menu row height gate (submenu, hover): `web_vs_fret_dropdown_menu_demo_submenu_hover_menu_item_height_matches`
