@@ -31,3 +31,4 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   - `web_vs_fret_layout_breadcrumb_separator_geometry`
   - `web_vs_fret_layout_breadcrumb_ellipsis_geometry`
   - `web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry`
+  - `web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry`

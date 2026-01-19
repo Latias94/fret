@@ -75,6 +75,7 @@ patterns:
 - `breadcrumb-separator` (custom separator icon sizing)
 - `breadcrumb-ellipsis` (ellipsis box + icon centering)
 - `breadcrumb-dropdown` (dropdown trigger row height + chevron icon sizing)
+- `breadcrumb-demo` (ellipsis trigger variant sizing)
 - `badge-demo`
 - `checkbox-demo`
 - `checkbox-with-text`
