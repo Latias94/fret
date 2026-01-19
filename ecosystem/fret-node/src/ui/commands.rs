@@ -6,7 +6,7 @@
 
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
-    CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord,
+    CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, OsAction,
     PlatformFilter, WhenExpr,
 };
 
@@ -343,6 +343,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Undo")
             .with_category("Node Graph")
             .with_keywords(["undo", "history"])
+            .with_os_action(OsAction::Undo)
             .with_scope(widget)
             .with_when(when_node_graph_editing())
             .with_default_keybindings([
@@ -359,6 +360,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Redo")
             .with_category("Node Graph")
             .with_keywords(["redo", "history"])
+            .with_os_action(OsAction::Redo)
             .with_scope(widget)
             .with_when(when_node_graph_editing())
             .with_default_keybindings([
@@ -378,6 +380,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Copy")
             .with_category("Node Graph")
             .with_keywords(["copy", "clipboard"])
+            .with_os_action(OsAction::Copy)
             .with_scope(widget)
             .with_when(when_node_graph_editing())
             .with_default_keybindings([
@@ -393,6 +396,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Cut")
             .with_category("Node Graph")
             .with_keywords(["cut", "clipboard"])
+            .with_os_action(OsAction::Cut)
             .with_scope(widget)
             .with_when(when_node_graph_editing())
             .with_default_keybindings([
@@ -408,6 +412,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Paste")
             .with_category("Node Graph")
             .with_keywords(["paste", "clipboard"])
+            .with_os_action(OsAction::Paste)
             .with_scope(widget)
             .with_when(when_node_graph_editing())
             .with_default_keybindings([
@@ -438,6 +443,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Select All")
             .with_category("Node Graph")
             .with_keywords(["select", "all"])
+            .with_os_action(OsAction::SelectAll)
             .with_scope(widget)
             .with_when(when_node_graph_editing())
             .with_default_keybindings([

@@ -23,6 +23,14 @@ pub struct SceneOpCacheStats {
 }
 
 impl<K: Copy + PartialEq> SceneOpCache<K> {
+    pub fn ops(&self) -> &[SceneOp] {
+        &self.ops
+    }
+
+    pub fn matches(&self, key: K) -> bool {
+        self.key == Some(key)
+    }
+
     pub fn clear(&mut self) {
         self.key = None;
         self.ops.clear();

@@ -35,6 +35,7 @@ mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
 mod portal_pointer_passthrough_conformance;
+mod z_order_conformance;
 
 #[test]
 fn inflate_rect_expands_by_margin() {

@@ -5,7 +5,8 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
-    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, warm_scene_op_tiles_u64,
+    SceneOpCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D,
+    warm_scene_op_tiles_u64,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
@@ -110,12 +111,14 @@ mod event_pointer_wheel;
 mod event_router;
 mod event_timer;
 mod focus;
+mod focus_nav;
 mod graph_construction;
 mod group_drag;
 mod group_resize;
 mod hit_test;
 mod hover;
 mod insert_node_drag;
+mod interaction_policy;
 mod left_click;
 mod marquee;
 mod move_ops;
@@ -153,7 +156,9 @@ mod threshold;
 mod toast;
 mod view_math;
 mod view_state;
+mod viewport_timers;
 mod wire_drag;
+mod wire_drag_helpers;
 mod wire_math;
 
 use overlay_hit::{
@@ -245,8 +250,30 @@ pub struct NodeGraphCanvasWith<M> {
     paint_cache: CanvasPaintCache,
     grid_scene_cache: SceneOpTileCache<u64>,
     grid_tiles_scratch: Vec<TileCoord>,
+    groups_scene_cache: SceneOpCache<u64>,
+    nodes_scene_cache: SceneOpCache<u64>,
+    edges_scene_cache: SceneOpCache<u64>,
+    edge_labels_scene_cache: SceneOpCache<u64>,
+    edges_build_state: Option<EdgesBuildState>,
+    edge_labels_build_state: Option<EdgeLabelsBuildState>,
     text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
+}
+
+#[derive(Debug, Clone)]
+struct EdgesBuildState {
+    key: u64,
+    ops: Vec<SceneOp>,
+    edges: Vec<paint_render_data::EdgeRender>,
+    next_edge: usize,
+}
+
+#[derive(Debug, Clone)]
+struct EdgeLabelsBuildState {
+    key: u64,
+    ops: Vec<SceneOp>,
+    edges: Vec<paint_render_data::EdgeRender>,
+    next_edge: usize,
 }
 
 impl NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware> {
@@ -271,6 +298,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
     const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget = InteractionBudget::new(32, 8);
+    const EDGE_WIRE_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(256, 64);
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
 
@@ -345,6 +373,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             paint_cache: CanvasPaintCache::default(),
             grid_scene_cache: SceneOpTileCache::default(),
             grid_tiles_scratch: Vec::new(),
+            groups_scene_cache: SceneOpCache::default(),
+            nodes_scene_cache: SceneOpCache::default(),
+            edges_scene_cache: SceneOpCache::default(),
+            edge_labels_scene_cache: SceneOpCache::default(),
+            edges_build_state: None,
+            edge_labels_build_state: None,
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
         }
@@ -404,6 +438,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             paint_cache: self.paint_cache,
             grid_scene_cache: self.grid_scene_cache,
             grid_tiles_scratch: self.grid_tiles_scratch,
+            groups_scene_cache: self.groups_scene_cache,
+            nodes_scene_cache: self.nodes_scene_cache,
+            edges_scene_cache: self.edges_scene_cache,
+            edge_labels_scene_cache: self.edge_labels_scene_cache,
+            edges_build_state: self.edges_build_state,
+            edge_labels_build_state: self.edge_labels_build_state,
             text_blobs: self.text_blobs,
             interaction: self.interaction,
         }
@@ -466,883 +506,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.store_rev = None;
         self
     }
-
-    fn start_sticky_wire_drag_from_port<H: UiHost>(
-        &mut self,
-        cx: &mut EventCx<'_, H>,
-        from: PortId,
-        pos: Point,
-    ) {
-        self.interaction.wire_drag = Some(WireDrag {
-            kind: WireDragKind::New {
-                from,
-                bundle: Vec::new(),
-            },
-            pos,
-        });
-        self.interaction.sticky_wire = true;
-        self.interaction.sticky_wire_ignore_next_up = true;
-        self.interaction.hover_port = None;
-        self.interaction.hover_port_valid = false;
-        self.interaction.hover_port_convertible = false;
-        cx.capture_pointer(cx.node);
-        cx.request_redraw();
-        cx.invalidate_self(Invalidation::Paint);
-    }
-
-    fn restore_suspended_wire_drag<H: UiHost>(
-        &mut self,
-        cx: &mut EventCx<'_, H>,
-        fallback_from: Option<PortId>,
-        fallback_pos: Point,
-    ) {
-        if let Some(wire_drag) = self.interaction.suspended_wire_drag.take() {
-            self.interaction.wire_drag = Some(wire_drag);
-            self.interaction.sticky_wire = true;
-            self.interaction.sticky_wire_ignore_next_up = true;
-            self.interaction.hover_port = None;
-            self.interaction.hover_port_valid = false;
-            self.interaction.hover_port_convertible = false;
-            cx.capture_pointer(cx.node);
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-            return;
-        }
-
-        if let Some(from) = fallback_from {
-            self.start_sticky_wire_drag_from_port(cx, from, fallback_pos);
-        }
-    }
-
-    pub(super) fn snap_canvas_point(pos: CanvasPoint, grid: CanvasSize) -> CanvasPoint {
-        fn snap_axis(value: f32, grid: f32) -> f32 {
-            if !value.is_finite() {
-                return value;
-            }
-            if !grid.is_finite() || grid <= 0.0 {
-                return value;
-            }
-            (value / grid).round() * grid
-        }
-
-        CanvasPoint {
-            x: snap_axis(pos.x, grid.width),
-            y: snap_axis(pos.y, grid.height),
-        }
-    }
-
-    pub(super) fn auto_pan_delta(snapshot: &ViewSnapshot, pos: Point, bounds: Rect) -> CanvasPoint {
-        let zoom = snapshot.zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return CanvasPoint::default();
-        }
-
-        let margin_screen = snapshot.interaction.auto_pan.margin;
-        let speed_screen_per_s = snapshot.interaction.auto_pan.speed;
-        if !margin_screen.is_finite() || margin_screen <= 0.0 {
-            return CanvasPoint::default();
-        }
-        if !speed_screen_per_s.is_finite() || speed_screen_per_s <= 0.0 {
-            return CanvasPoint::default();
-        }
-
-        let viewport_w = bounds.size.width.0;
-        let viewport_h = bounds.size.height.0;
-        if !viewport_w.is_finite()
-            || viewport_w <= 0.0
-            || !viewport_h.is_finite()
-            || viewport_h <= 0.0
-        {
-            return CanvasPoint::default();
-        }
-
-        let pan = snapshot.pan;
-        let pos_screen_x = (pos.x.0 + pan.x) * zoom;
-        let pos_screen_y = (pos.y.0 + pan.y) * zoom;
-
-        let dist_left = pos_screen_x;
-        let dist_right = viewport_w - pos_screen_x;
-        let dist_top = pos_screen_y;
-        let dist_bottom = viewport_h - pos_screen_y;
-
-        let step_screen = speed_screen_per_s / Self::AUTO_PAN_TICK_HZ;
-        let step_graph = step_screen / zoom;
-
-        let mut delta_x = 0.0;
-        let mut delta_y = 0.0;
-
-        if dist_left.is_finite() && dist_left < margin_screen {
-            let factor = ((margin_screen - dist_left) / margin_screen).clamp(0.0, 1.0);
-            delta_x += step_graph * factor;
-        }
-        if dist_right.is_finite() && dist_right < margin_screen {
-            let factor = ((margin_screen - dist_right) / margin_screen).clamp(0.0, 1.0);
-            delta_x -= step_graph * factor;
-        }
-        if dist_top.is_finite() && dist_top < margin_screen {
-            let factor = ((margin_screen - dist_top) / margin_screen).clamp(0.0, 1.0);
-            delta_y += step_graph * factor;
-        }
-        if dist_bottom.is_finite() && dist_bottom < margin_screen {
-            let factor = ((margin_screen - dist_bottom) / margin_screen).clamp(0.0, 1.0);
-            delta_y -= step_graph * factor;
-        }
-
-        if !delta_x.is_finite() || !delta_y.is_finite() {
-            return CanvasPoint::default();
-        }
-
-        CanvasPoint {
-            x: delta_x,
-            y: delta_y,
-        }
-    }
-
-    fn wire_drag_suppresses_edge(kind: &WireDragKind, edge_id: EdgeId) -> bool {
-        match kind {
-            WireDragKind::Reconnect { edge, .. } => *edge == edge_id,
-            WireDragKind::ReconnectMany { edges } => {
-                edges.iter().any(|(edge, ..)| *edge == edge_id)
-            }
-            _ => false,
-        }
-    }
-
-    fn node_is_draggable(
-        graph: &Graph,
-        interaction: &NodeGraphInteractionState,
-        node: GraphNodeId,
-    ) -> bool {
-        if !interaction.nodes_draggable {
-            return false;
-        }
-        let Some(node) = graph.nodes.get(&node) else {
-            return false;
-        };
-        node.draggable.unwrap_or(true)
-    }
-
-    fn port_is_connectable_base(
-        graph: &Graph,
-        interaction: &NodeGraphInteractionState,
-        port: PortId,
-    ) -> bool {
-        let Some(port) = graph.ports.get(&port) else {
-            return false;
-        };
-        let node_connectable = Self::node_is_connectable(graph, interaction, port.node);
-        port.connectable.unwrap_or(node_connectable)
-    }
-
-    fn port_is_connectable_start(
-        graph: &Graph,
-        interaction: &NodeGraphInteractionState,
-        port: PortId,
-    ) -> bool {
-        let Some(port_value) = graph.ports.get(&port) else {
-            return false;
-        };
-        if !Self::port_is_connectable_base(graph, interaction, port) {
-            return false;
-        }
-        port_value.connectable_start.unwrap_or(true)
-    }
-
-    fn port_is_connectable_end(
-        graph: &Graph,
-        interaction: &NodeGraphInteractionState,
-        port: PortId,
-    ) -> bool {
-        let Some(port_value) = graph.ports.get(&port) else {
-            return false;
-        };
-        if !Self::port_is_connectable_base(graph, interaction, port) {
-            return false;
-        }
-        port_value.connectable_end.unwrap_or(true)
-    }
-
-    fn node_is_connectable(
-        graph: &Graph,
-        interaction: &NodeGraphInteractionState,
-        node: GraphNodeId,
-    ) -> bool {
-        let Some(node) = graph.nodes.get(&node) else {
-            return false;
-        };
-        node.connectable.unwrap_or(interaction.nodes_connectable)
-    }
-
-    fn should_add_bundle_port(
-        graph: &Graph,
-        from: PortId,
-        bundle: &[PortId],
-        candidate: PortId,
-    ) -> bool {
-        if candidate == from || bundle.contains(&candidate) {
-            return false;
-        }
-        let Some(from_port) = graph.ports.get(&from) else {
-            return false;
-        };
-        let Some(candidate_port) = graph.ports.get(&candidate) else {
-            return false;
-        };
-        candidate_port.dir == from_port.dir
-    }
-
-    fn zoom_about_center_factor(&mut self, bounds: Rect, factor: f32) {
-        let zoom = self.cached_zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return;
-        }
-        if !factor.is_finite() || factor <= 0.0 {
-            return;
-        }
-
-        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
-        if (new_zoom - zoom).abs() <= 1.0e-6 {
-            return;
-        }
-
-        let mut view = PanZoom2D {
-            pan: Point::new(Px(self.cached_pan.x), Px(self.cached_pan.y)),
-            zoom,
-        };
-        let center = Point::new(
-            Px(0.5 * bounds.size.width.0),
-            Px(0.5 * bounds.size.height.0),
-        );
-        view.zoom_about_screen_point(bounds, center, new_zoom);
-        self.cached_pan = CanvasPoint {
-            x: view.pan.x.0,
-            y: view.pan.y.0,
-        };
-        self.cached_zoom = view.zoom;
-    }
-
-    fn zoom_about_pointer_factor(&mut self, position: Point, factor: f32) {
-        let zoom = self.cached_zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return;
-        }
-        if !factor.is_finite() || factor <= 0.0 {
-            return;
-        }
-        if !position.x.0.is_finite() || !position.y.0.is_finite() {
-            return;
-        }
-
-        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
-        if (new_zoom - zoom).abs() <= 1.0e-6 {
-            return;
-        }
-
-        let pan_x = self.cached_pan.x;
-        let pan_y = self.cached_pan.y;
-
-        // `position` is in the widget's local (canvas) coordinates.
-        // Compute the pivot in screen coordinates (relative to bounds origin) to keep the
-        // graph point under the cursor stable.
-        let pivot_screen_x = (position.x.0 + pan_x) * zoom;
-        let pivot_screen_y = (position.y.0 + pan_y) * zoom;
-
-        let g0_x = pivot_screen_x / zoom - pan_x;
-        let g0_y = pivot_screen_y / zoom - pan_y;
-
-        let new_pan_x = pivot_screen_x / new_zoom - g0_x;
-        let new_pan_y = pivot_screen_y / new_zoom - g0_y;
-
-        self.cached_pan = CanvasPoint {
-            x: new_pan_x,
-            y: new_pan_y,
-        };
-        self.cached_zoom = new_zoom;
-    }
-
-    fn stop_auto_pan_timer<H: UiHost>(&mut self, host: &mut H) {
-        let Some(timer) = self.interaction.auto_pan_timer.take() else {
-            return;
-        };
-        host.push_effect(Effect::CancelTimer { token: timer });
-    }
-
-    fn stop_pan_inertia_timer<H: UiHost>(&mut self, host: &mut H) {
-        let Some(inertia) = self.interaction.pan_inertia.take() else {
-            return;
-        };
-        host.push_effect(Effect::CancelTimer {
-            token: inertia.timer,
-        });
-    }
-
-    fn bump_viewport_move_debounce<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-        snapshot: &ViewSnapshot,
-        kind: ViewportMoveKind,
-    ) {
-        if let Some(prev) = self.interaction.viewport_move_debounce.take() {
-            host.push_effect(Effect::CancelTimer { token: prev.timer });
-            if prev.kind != kind {
-                self.emit_move_end(snapshot, prev.kind, ViewportMoveEndOutcome::Ended);
-                self.emit_move_start(snapshot, kind);
-            }
-        } else {
-            self.emit_move_start(snapshot, kind);
-        }
-
-        let timer = host.next_timer_token();
-        host.push_effect(Effect::SetTimer {
-            window,
-            token: timer,
-            after: Self::VIEWPORT_MOVE_END_DEBOUNCE,
-            repeat: None,
-        });
-        self.interaction.viewport_move_debounce = Some(ViewportMoveDebounceState { kind, timer });
-    }
-
-    fn pan_inertia_should_tick(&self) -> bool {
-        if self.interaction.searcher.is_some() || self.interaction.context_menu.is_some() {
-            return false;
-        }
-        if self.interaction.panning {
-            return false;
-        }
-        self.interaction.pending_marquee.is_none()
-            && self.interaction.marquee.is_none()
-            && self.interaction.pending_node_drag.is_none()
-            && self.interaction.node_drag.is_none()
-            && self.interaction.pending_group_drag.is_none()
-            && self.interaction.group_drag.is_none()
-            && self.interaction.pending_group_resize.is_none()
-            && self.interaction.group_resize.is_none()
-            && self.interaction.pending_node_resize.is_none()
-            && self.interaction.node_resize.is_none()
-            && self.interaction.pending_wire_drag.is_none()
-            && self.interaction.wire_drag.is_none()
-            && self.interaction.edge_drag.is_none()
-    }
-
-    fn maybe_start_pan_inertia_timer<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-        snapshot: &ViewSnapshot,
-    ) -> bool {
-        self.stop_pan_inertia_timer(host);
-
-        let tuning = &snapshot.interaction.pan_inertia;
-        if !tuning.enabled {
-            return false;
-        }
-
-        let zoom = snapshot.zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return false;
-        }
-
-        let mut velocity = self.interaction.pan_velocity;
-        if !velocity.x.is_finite() || !velocity.y.is_finite() {
-            return false;
-        }
-
-        let speed_screen = (velocity.x * velocity.x + velocity.y * velocity.y).sqrt() * zoom;
-        let min_speed = tuning.min_speed.max(0.0);
-        if !speed_screen.is_finite() || speed_screen < min_speed {
-            return false;
-        }
-
-        let max_speed = tuning.max_speed.max(min_speed);
-        if max_speed.is_finite() && max_speed > 0.0 {
-            let max_speed_canvas = max_speed / zoom;
-            let speed_canvas = (velocity.x * velocity.x + velocity.y * velocity.y).sqrt();
-            if speed_canvas.is_finite() && speed_canvas > max_speed_canvas && speed_canvas > 0.0 {
-                let scale = max_speed_canvas / speed_canvas;
-                velocity.x *= scale;
-                velocity.y *= scale;
-            }
-        }
-
-        let timer = host.next_timer_token();
-        host.push_effect(Effect::SetTimer {
-            window,
-            token: timer,
-            after: Self::PAN_INERTIA_TICK_INTERVAL,
-            repeat: Some(Self::PAN_INERTIA_TICK_INTERVAL),
-        });
-        self.interaction.pan_inertia = Some(PanInertiaState {
-            timer,
-            velocity,
-            last_tick_at: Instant::now(),
-        });
-        true
-    }
-
-    fn ensure_auto_pan_timer_running<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-    ) {
-        if self.interaction.auto_pan_timer.is_some() {
-            return;
-        }
-        let timer = host.next_timer_token();
-        host.push_effect(Effect::SetTimer {
-            window,
-            token: timer,
-            after: Self::AUTO_PAN_TICK_INTERVAL,
-            repeat: Some(Self::AUTO_PAN_TICK_INTERVAL),
-        });
-        self.interaction.auto_pan_timer = Some(timer);
-    }
-
-    fn auto_pan_should_tick(&self, snapshot: &ViewSnapshot, bounds: Rect) -> bool {
-        if self.interaction.searcher.is_some() || self.interaction.context_menu.is_some() {
-            return false;
-        }
-        let Some(pos) = self.interaction.last_pos else {
-            return false;
-        };
-
-        let wants_node_drag = snapshot.interaction.auto_pan.on_node_drag
-            && (self.interaction.node_drag.is_some()
-                || self.interaction.group_drag.is_some()
-                || self.interaction.group_resize.is_some());
-        let wants_connect =
-            snapshot.interaction.auto_pan.on_connect && self.interaction.wire_drag.is_some();
-
-        if !wants_node_drag && !wants_connect {
-            return false;
-        }
-
-        let delta = Self::auto_pan_delta(snapshot, pos, bounds);
-        delta.x != 0.0 || delta.y != 0.0
-    }
-
-    fn sync_auto_pan_timer<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-        snapshot: &ViewSnapshot,
-        bounds: Rect,
-    ) {
-        if self.auto_pan_should_tick(snapshot, bounds) {
-            self.ensure_auto_pan_timer_running(host, window);
-        } else {
-            self.stop_auto_pan_timer(host);
-        }
-    }
-
-    fn focus_next_edge<H: UiHost>(&mut self, host: &mut H, forward: bool) -> bool {
-        let snapshot = self.sync_view_state(host);
-        if !snapshot.interaction.elements_selectable
-            || !snapshot.interaction.edges_selectable
-            || !snapshot.interaction.edges_focusable
-        {
-            return false;
-        }
-
-        let mut edges: Vec<EdgeId> = self
-            .graph
-            .read_ref(host, |g| {
-                g.edges
-                    .keys()
-                    .copied()
-                    .filter(|id| Self::edge_is_selectable(g, &snapshot.interaction, *id))
-                    .collect()
-            })
-            .ok()
-            .unwrap_or_default();
-        if edges.is_empty() {
-            return false;
-        }
-        edges.sort_unstable();
-
-        let current = self
-            .interaction
-            .focused_edge
-            .or_else(|| snapshot.selected_edges.first().copied());
-
-        let next = match current.and_then(|id| edges.iter().position(|e| *e == id)) {
-            Some(ix) => {
-                let len = edges.len();
-                let next_ix = if forward {
-                    (ix + 1) % len
-                } else {
-                    (ix + len - 1) % len
-                };
-                edges[next_ix]
-            }
-            None => {
-                if forward {
-                    edges[0]
-                } else {
-                    edges[edges.len() - 1]
-                }
-            }
-        };
-
-        self.interaction.focused_edge = Some(next);
-        self.interaction.focused_node = None;
-        self.interaction.focused_port = None;
-        self.interaction.focused_port_valid = false;
-        self.interaction.focused_port_convertible = false;
-        self.update_view_state(host, |s| {
-            s.selected_nodes.clear();
-            s.selected_groups.clear();
-            s.selected_edges.clear();
-            s.selected_edges.push(next);
-        });
-        true
-    }
-
-    fn focus_next_node<H: UiHost>(&mut self, host: &mut H, forward: bool) -> bool {
-        let snapshot = self.sync_view_state(host);
-        if !snapshot.interaction.elements_selectable {
-            return false;
-        }
-
-        let ordered: Vec<GraphNodeId> = self
-            .graph
-            .read_ref(host, |g| {
-                let mut out: Vec<GraphNodeId> = Vec::new();
-                let mut used: HashSet<GraphNodeId> = HashSet::new();
-
-                for id in &snapshot.draw_order {
-                    if Self::node_is_selectable(g, &snapshot.interaction, *id) && used.insert(*id) {
-                        out.push(*id);
-                    }
-                }
-
-                let mut rest: Vec<GraphNodeId> = g
-                    .nodes
-                    .keys()
-                    .copied()
-                    .filter(|id| Self::node_is_selectable(g, &snapshot.interaction, *id))
-                    .filter(|id| used.insert(*id))
-                    .collect();
-                rest.sort_unstable();
-                out.extend(rest);
-                out
-            })
-            .ok()
-            .unwrap_or_default();
-
-        if ordered.is_empty() {
-            return false;
-        }
-
-        let current = self
-            .interaction
-            .focused_node
-            .or_else(|| snapshot.selected_nodes.first().copied());
-
-        let next = match current.and_then(|id| ordered.iter().position(|e| *e == id)) {
-            Some(ix) => {
-                let len = ordered.len();
-                let next_ix = if forward {
-                    (ix + 1) % len
-                } else {
-                    (ix + len - 1) % len
-                };
-                ordered[next_ix]
-            }
-            None => {
-                if forward {
-                    ordered[0]
-                } else {
-                    ordered[ordered.len() - 1]
-                }
-            }
-        };
-
-        self.interaction.focused_node = Some(next);
-        self.interaction.focused_edge = None;
-        self.interaction.focused_port = None;
-        self.interaction.focused_port_valid = false;
-        self.interaction.focused_port_convertible = false;
-        self.update_view_state(host, |s| {
-            s.selected_edges.clear();
-            s.selected_groups.clear();
-            s.selected_nodes.clear();
-            s.selected_nodes.push(next);
-            s.draw_order.retain(|id| *id != next);
-            s.draw_order.push(next);
-        });
-        true
-    }
-
-    fn refresh_focused_port_hints<H: UiHost>(&mut self, host: &mut H) {
-        self.interaction.focused_port_valid = false;
-        self.interaction.focused_port_convertible = false;
-
-        let snapshot = self.sync_view_state(host);
-        let mode = snapshot.interaction.connection_mode;
-
-        let Some(target) = self.interaction.focused_port else {
-            return;
-        };
-        let Some(wire_drag) = self.interaction.wire_drag.clone() else {
-            return;
-        };
-
-        let presenter = &mut *self.presenter;
-        let (valid, convertible) = self
-            .graph
-            .read_ref(host, |graph| {
-                let mut scratch = graph.clone();
-
-                let valid = match &wire_drag.kind {
-                    WireDragKind::New { from, bundle } => {
-                        let sources = if bundle.is_empty() {
-                            std::slice::from_ref(from)
-                        } else {
-                            bundle.as_slice()
-                        };
-                        let mut any_accept = false;
-                        for src in sources {
-                            let plan = presenter.plan_connect(&scratch, *src, target, mode);
-                            if plan.decision != ConnectDecision::Accept {
-                                continue;
-                            }
-                            any_accept = true;
-                            let tx = GraphTransaction {
-                                label: None,
-                                ops: plan.ops.clone(),
-                            };
-                            let _ = apply_transaction(&mut scratch, &tx);
-                        }
-                        any_accept
-                    }
-                    WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
-                        presenter
-                            .plan_reconnect_edge(&scratch, *edge, *endpoint, target, mode)
-                            .decision,
-                        ConnectDecision::Accept
-                    ),
-                    WireDragKind::ReconnectMany { edges } => {
-                        let mut any_accept = false;
-                        for (edge, endpoint, _fixed) in edges {
-                            let plan = presenter
-                                .plan_reconnect_edge(&scratch, *edge, *endpoint, target, mode);
-                            if plan.decision != ConnectDecision::Accept {
-                                continue;
-                            }
-                            any_accept = true;
-                            let tx = GraphTransaction {
-                                label: None,
-                                ops: plan.ops.clone(),
-                            };
-                            let _ = apply_transaction(&mut scratch, &tx);
-                        }
-                        any_accept
-                    }
-                };
-
-                let convertible = if !valid {
-                    match &wire_drag.kind {
-                        WireDragKind::New { from, bundle } if bundle.len() <= 1 => {
-                            conversion::is_convertible(presenter, &scratch, *from, target)
-                        }
-                        _ => false,
-                    }
-                } else {
-                    false
-                };
-
-                (valid, convertible)
-            })
-            .ok()
-            .unwrap_or((false, false));
-
-        if self.interaction.wire_drag.is_some() && self.interaction.focused_port == Some(target) {
-            self.interaction.focused_port_valid = valid;
-            self.interaction.focused_port_convertible = convertible;
-        }
-    }
-
-    fn focus_next_port<H: UiHost>(&mut self, host: &mut H, forward: bool) -> bool {
-        let snapshot = self.sync_view_state(host);
-        if !snapshot.interaction.elements_selectable {
-            return false;
-        }
-
-        let focused_node = self
-            .interaction
-            .focused_node
-            .or_else(|| snapshot.selected_nodes.first().copied())
-            .or_else(|| {
-                self.graph
-                    .read_ref(host, |g| g.nodes.keys().next().copied())
-                    .ok()
-                    .flatten()
-            });
-
-        let Some(focused_node) = focused_node else {
-            return false;
-        };
-
-        let wire_dir = self.interaction.wire_drag.as_ref().and_then(|w| {
-            let from_port = match &w.kind {
-                WireDragKind::New { from, .. } => Some(*from),
-                WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
-                WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
-            }?;
-            self.graph
-                .read_ref(host, |g| g.ports.get(&from_port).map(|p| p.dir))
-                .ok()
-                .flatten()
-        });
-
-        let ports = self
-            .graph
-            .read_ref(host, |g| {
-                let (inputs, outputs) = node_ports(g, focused_node);
-                let mut ports = Vec::with_capacity(inputs.len() + outputs.len());
-                ports.extend(inputs);
-                ports.extend(outputs);
-
-                if let Some(wire_dir) = wire_dir {
-                    let want = match wire_dir {
-                        PortDirection::In => PortDirection::Out,
-                        PortDirection::Out => PortDirection::In,
-                    };
-                    ports.retain(|id| g.ports.get(id).is_some_and(|p| p.dir == want));
-                }
-
-                ports
-            })
-            .ok()
-            .unwrap_or_default();
-
-        if ports.is_empty() {
-            return false;
-        }
-
-        let current = self
-            .interaction
-            .focused_port
-            .filter(|id| ports.iter().any(|p| *p == *id));
-
-        let next = match current.and_then(|id| ports.iter().position(|p| *p == id)) {
-            Some(ix) => {
-                let len = ports.len();
-                let next_ix = if forward {
-                    (ix + 1) % len
-                } else {
-                    (ix + len - 1) % len
-                };
-                ports[next_ix]
-            }
-            None => {
-                if forward {
-                    ports[0]
-                } else {
-                    ports[ports.len() - 1]
-                }
-            }
-        };
-
-        self.interaction.focused_node = Some(focused_node);
-        self.interaction.focused_edge = None;
-        self.interaction.focused_port = Some(next);
-        self.refresh_focused_port_hints(host);
-        self.update_view_state(host, |s| {
-            s.selected_edges.clear();
-            s.selected_groups.clear();
-            s.selected_nodes.clear();
-            s.selected_nodes.push(focused_node);
-        });
-        true
-    }
-
-    fn port_center_canvas<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        snapshot: &ViewSnapshot,
-        port: PortId,
-    ) -> Option<CanvasPoint> {
-        let (geom, _) = self.canvas_derived(&*host, snapshot);
-        geom.ports.get(&port).map(|h| CanvasPoint {
-            x: h.center.x.0,
-            y: h.center.y.0,
-        })
-    }
-
-    fn activate_focused_port<H: UiHost>(
-        &mut self,
-        cx: &mut CommandCx<'_, H>,
-        snapshot: &ViewSnapshot,
-    ) -> bool {
-        if !snapshot.interaction.elements_selectable {
-            return false;
-        }
-
-        let Some(port) = self
-            .interaction
-            .focused_port
-            .or(self.interaction.hover_port)
-        else {
-            return false;
-        };
-
-        let pos = self
-            .port_center_canvas(cx.app, snapshot, port)
-            .map(|p| Point::new(Px(p.x), Px(p.y)))
-            .or(self.interaction.last_pos)
-            .unwrap_or_else(|| {
-                let bounds = self.interaction.last_bounds.unwrap_or_default();
-                Point::new(
-                    Px(bounds.origin.x.0 + 0.5 * bounds.size.width.0),
-                    Px(bounds.origin.y.0 + 0.5 * bounds.size.height.0),
-                )
-            });
-
-        if self.interaction.wire_drag.is_none() {
-            self.interaction.wire_drag = Some(WireDrag {
-                kind: WireDragKind::New {
-                    from: port,
-                    bundle: Vec::new(),
-                },
-                pos,
-            });
-            self.interaction.click_connect = true;
-            self.interaction.pending_wire_drag = None;
-            self.interaction.suspended_wire_drag = None;
-            self.interaction.sticky_wire = false;
-            self.interaction.sticky_wire_ignore_next_up = false;
-            self.interaction.focused_edge = None;
-            self.interaction.focused_port = None;
-            self.interaction.focused_port_valid = false;
-            self.interaction.focused_port_convertible = false;
-            self.interaction.hover_port = None;
-            self.interaction.hover_port_valid = false;
-            self.interaction.hover_port_convertible = false;
-            return true;
-        }
-
-        if let Some(mut w) = self.interaction.wire_drag.take() {
-            w.pos = pos;
-            self.interaction.wire_drag = Some(w);
-        }
-
-        let _ = wire_drag::handle_wire_left_up_with_forced_target(
-            self,
-            cx,
-            snapshot,
-            snapshot.zoom,
-            Some(port),
-        );
-        self.refresh_focused_port_hints(cx.app);
-        true
-    }
 }
 
 impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<M> {
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.paint_cache.clear(services);
+        self.groups_scene_cache.clear();
+        self.nodes_scene_cache.clear();
+        self.edges_scene_cache.clear();
+        self.edge_labels_scene_cache.clear();
+        self.edges_build_state = None;
+        self.edge_labels_build_state = None;
         for id in self.text_blobs.drain(..) {
             services.text().release(id);
         }

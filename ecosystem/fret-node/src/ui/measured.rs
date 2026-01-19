@@ -17,7 +17,8 @@ use crate::ops::GraphOp;
 use crate::profile::GraphProfile;
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate};
 use crate::ui::presenter::{
-    InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
+    EdgeRenderHint, InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter,
+    PortAnchorHint,
 };
 use crate::ui::style::NodeGraphStyle;
 
@@ -440,6 +441,15 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
         self.inner.edge_color(graph, edge, style)
     }
 
+    fn edge_render_hint(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        style: &NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        self.inner.edge_render_hint(graph, edge, style)
+    }
+
     fn node_size_hint_px(
         &mut self,
         graph: &Graph,
@@ -652,6 +662,15 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for FallbackMeasuredNodeGraphPres
 
     fn edge_color(&self, graph: &Graph, edge: EdgeId, style: &NodeGraphStyle) -> fret_core::Color {
         self.inner.edge_color(graph, edge, style)
+    }
+
+    fn edge_render_hint(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        style: &NodeGraphStyle,
+    ) -> EdgeRenderHint {
+        self.inner.edge_render_hint(graph, edge, style)
     }
 
     fn node_size_hint_px(
