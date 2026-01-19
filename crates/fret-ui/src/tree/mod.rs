@@ -2466,7 +2466,10 @@ impl<H: UiHost> UiTree<H> {
         let mut walked_nodes: u32 = 0;
         while let Some(id) = current {
             let already = visited.get(&id).copied().unwrap_or_default();
-            if source != UiDebugInvalidationSource::Notify && (already & needed) == needed {
+            if source != UiDebugInvalidationSource::Notify
+                && (already & needed) == needed
+                && !(stop_at_view_cache && Self::invalidation_source_marks_view_dirty(source))
+            {
                 break;
             }
 
@@ -2689,6 +2692,96 @@ impl<H: UiHost> UiTree<H> {
         did_invalidate
     }
 
+    fn propagate_model_changes_from_elements(&mut self, app: &mut H, changed: &[ModelId]) -> bool {
+        let Some(window) = self.window else {
+            return false;
+        };
+        if changed.is_empty() {
+            return false;
+        }
+
+        let changed: std::collections::HashSet<ModelId> = changed.iter().copied().collect();
+        let frame_id = app.frame_id();
+        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
+            let Some(window_state) = runtime.for_window(window) else {
+                return;
+            };
+            window_state.for_each_observed_model_for_invalidation(
+                frame_id,
+                |element, observations| {
+                    let mut mask = ObservationMask::default();
+                    for (model, inv) in observations {
+                        if changed.contains(model) {
+                            mask.add(*inv);
+                        }
+                    }
+                    if mask.is_empty() {
+                        return;
+                    }
+                    let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+                        return;
+                    };
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                },
+            );
+        });
+
+        if combined.is_empty() {
+            return false;
+        }
+        self.propagate_observation_masks(app, combined, UiDebugInvalidationSource::ModelChange)
+    }
+
+    fn propagate_global_changes_from_elements(&mut self, app: &mut H, changed: &[TypeId]) -> bool {
+        let Some(window) = self.window else {
+            return false;
+        };
+        if changed.is_empty() {
+            return false;
+        }
+
+        let changed: std::collections::HashSet<TypeId> = changed.iter().copied().collect();
+        let frame_id = app.frame_id();
+        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
+            let Some(window_state) = runtime.for_window(window) else {
+                return;
+            };
+            window_state.for_each_observed_global_for_invalidation(
+                frame_id,
+                |element, observations| {
+                    let mut mask = ObservationMask::default();
+                    for (global, inv) in observations {
+                        if changed.contains(global) {
+                            mask.add(*inv);
+                        }
+                    }
+                    if mask.is_empty() {
+                        return;
+                    }
+                    let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+                        return;
+                    };
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                },
+            );
+        });
+
+        if combined.is_empty() {
+            return false;
+        }
+        self.propagate_observation_masks(app, combined, UiDebugInvalidationSource::GlobalChange)
+    }
+
     pub fn propagate_model_changes(&mut self, app: &mut H, changed: &[ModelId]) -> bool {
         if changed.is_empty() {
             return false;
@@ -2698,6 +2791,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_model_change_hotspots.clear();
             self.debug_model_change_unobserved.clear();
         }
+
+        let mut did_invalidate = false;
 
         if changed.len() == 1 {
             let model = changed[0];
@@ -2720,11 +2815,13 @@ impl<H: UiHost> UiTree<H> {
                         changed: app.models().debug_last_changed_info_for_id(model),
                     }];
                 }
-                return self.propagate_observation_masks(
+                did_invalidate |= self.propagate_observation_masks(
                     app,
                     masks,
                     UiDebugInvalidationSource::ModelChange,
                 );
+                did_invalidate |= self.propagate_model_changes_from_elements(app, changed);
+                return did_invalidate;
             }
         }
 
@@ -2792,11 +2889,13 @@ impl<H: UiHost> UiTree<H> {
                 .sort_by(|a, b| a.model.data().as_ffi().cmp(&b.model.data().as_ffi()));
             self.debug_model_change_unobserved.truncate(5);
         }
-        self.propagate_observation_masks(
+        did_invalidate |= self.propagate_observation_masks(
             app,
             combined.into_iter(),
             UiDebugInvalidationSource::ModelChange,
-        )
+        );
+        did_invalidate |= self.propagate_model_changes_from_elements(app, changed);
+        did_invalidate
     }
 
     pub fn propagate_global_changes(&mut self, app: &mut H, changed: &[TypeId]) -> bool {
@@ -2808,6 +2907,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_global_change_hotspots.clear();
             self.debug_global_change_unobserved.clear();
         }
+
+        let mut did_invalidate = false;
 
         if changed.len() == 1 {
             let global = changed[0];
@@ -2825,11 +2926,13 @@ impl<H: UiHost> UiTree<H> {
                         masks.len().min(u32::MAX as usize) as u32;
                     self.debug_stats.global_change_unobserved_globals = 0;
                 }
-                return self.propagate_observation_masks(
+                did_invalidate |= self.propagate_observation_masks(
                     app,
                     masks,
                     UiDebugInvalidationSource::GlobalChange,
                 );
+                did_invalidate |= self.propagate_global_changes_from_elements(app, changed);
+                return did_invalidate;
             }
         }
 
@@ -2892,11 +2995,13 @@ impl<H: UiHost> UiTree<H> {
                 .sort_by_key(|u| type_id_sort_key(u.global));
             self.debug_global_change_unobserved.truncate(5);
         }
-        self.propagate_observation_masks(
+        did_invalidate |= self.propagate_observation_masks(
             app,
             combined.into_iter(),
             UiDebugInvalidationSource::GlobalChange,
-        )
+        );
+        did_invalidate |= self.propagate_global_changes_from_elements(app, changed);
+        did_invalidate
     }
 
     fn refresh_semantics_snapshot(&mut self, app: &mut H) {

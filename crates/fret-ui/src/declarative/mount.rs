@@ -885,6 +885,9 @@ fn inherit_observations_for_existing_subtree(
             let element = record.element;
             window_state.touch_observed_models_for_element_if_recorded(element);
             window_state.touch_observed_globals_for_element_if_recorded(element);
+            if matches!(record.instance, ElementInstance::ViewCache(_)) {
+                window_state.touch_view_cache_state_keys_if_recorded(element);
+            }
         }
 
         if let Some(children) = window_frame.children.get(&node) {

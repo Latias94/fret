@@ -5761,7 +5761,7 @@ fn declarative_elements_can_observe_models_for_invalidation() {
 }
 
 #[test]
-fn model_observation_requires_rerender_after_frame_advance() {
+fn model_observation_persists_after_frame_advance_without_render_root() {
     let mut app = TestHost::new();
     let model = app.models_mut().insert(0u32);
 
@@ -5807,16 +5807,17 @@ fn model_observation_requires_rerender_after_frame_advance() {
     );
 
     // Layout now runs on the advanced frame. Without a new render pass, the declarative layer
-    // has no per-frame observation data to re-register, so the observation index is cleared.
+    // has no per-frame observation data to re-register, but UiTree still retains the last known
+    // observation sets (needed for cache-hit frames where a subtree is reused without being rebuilt).
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
-    // A second model change no longer invalidates: this encodes the ADR 0028 execution contract
-    // that `render_root(...)` must be called each frame before layout/paint.
+    // A second model change still invalidates based on the previous observation set, even though
+    // `render_root(...)` was not called on this frame.
     let _ = model.update(&mut app, |v, _cx| *v += 1);
     let changed = app.take_changed_models();
     assert!(
-        !ui.propagate_model_changes(&mut app, &changed),
-        "expected no invalidation without re-rendering after a frame advance"
+        ui.propagate_model_changes(&mut app, &changed),
+        "expected invalidation based on the last recorded observation set"
     );
 }
 

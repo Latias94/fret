@@ -55,6 +55,10 @@ impl ElementRuntime {
         self.windows.entry(window).or_default()
     }
 
+    pub(crate) fn for_window(&self, window: AppWindowId) -> Option<&WindowElementState> {
+        self.windows.get(&window)
+    }
+
     pub fn prepare_window_for_frame(&mut self, window: AppWindowId, frame_id: FrameId) {
         let lag = self.gc_lag_frames;
         self.for_window_mut(window).prepare_for_frame(frame_id, lag);
@@ -340,6 +344,52 @@ impl WindowElementState {
 
     pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
         self.nodes.get(&id).copied()
+    }
+
+    pub(crate) fn for_each_observed_model_for_invalidation(
+        &self,
+        frame_id: FrameId,
+        mut f: impl FnMut(GlobalElementId, &Vec<(ModelId, Invalidation)>),
+    ) {
+        if self.prepared_frame != frame_id {
+            for (&element, observations) in &self.observed_models_next {
+                f(element, observations);
+            }
+            return;
+        }
+
+        for (&element, observations) in &self.observed_models_rendered {
+            if self.observed_models_next.contains_key(&element) {
+                continue;
+            }
+            f(element, observations);
+        }
+        for (&element, observations) in &self.observed_models_next {
+            f(element, observations);
+        }
+    }
+
+    pub(crate) fn for_each_observed_global_for_invalidation(
+        &self,
+        frame_id: FrameId,
+        mut f: impl FnMut(GlobalElementId, &Vec<(TypeId, Invalidation)>),
+    ) {
+        if self.prepared_frame != frame_id {
+            for (&element, observations) in &self.observed_globals_next {
+                f(element, observations);
+            }
+            return;
+        }
+
+        for (&element, observations) in &self.observed_globals_rendered {
+            if self.observed_globals_next.contains_key(&element) {
+                continue;
+            }
+            f(element, observations);
+        }
+        for (&element, observations) in &self.observed_globals_next {
+            f(element, observations);
+        }
     }
 
     pub(crate) fn element_for_node(&self, node: NodeId) -> Option<GlobalElementId> {
