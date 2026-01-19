@@ -454,6 +454,95 @@ fn make_graph_two_nodes_many_ports_and_edges(edge_count: usize) -> Graph {
     graph
 }
 
+fn make_graph_chain_edges(edge_count: usize, spacing: f32) -> Graph {
+    let mut graph = Graph::new(GraphId::new());
+    let kind = NodeKindKey::new("test.node");
+
+    let mut nodes: Vec<NodeId> = Vec::with_capacity(edge_count + 1);
+    let mut in_ports: Vec<PortId> = Vec::with_capacity(edge_count + 1);
+    let mut out_ports: Vec<PortId> = Vec::with_capacity(edge_count + 1);
+
+    for ix in 0..=edge_count {
+        let node = NodeId::new();
+        let inn = PortId::new();
+        let out = PortId::new();
+        nodes.push(node);
+        in_ports.push(inn);
+        out_ports.push(out);
+
+        graph.nodes.insert(
+            node,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint {
+                    x: ix as f32 * spacing,
+                    y: 0.0,
+                },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                collapsed: false,
+                ports: vec![inn, out],
+                data: serde_json::Value::Null,
+            },
+        );
+
+        graph.ports.insert(
+            inn,
+            Port {
+                node,
+                key: PortKey::new(format!("in{ix}")),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: serde_json::Value::Null,
+            },
+        );
+
+        graph.ports.insert(
+            out,
+            Port {
+                node,
+                key: PortKey::new(format!("out{ix}")),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: serde_json::Value::Null,
+            },
+        );
+    }
+
+    for ix in 0..edge_count {
+        graph.edges.insert(
+            EdgeId::new(),
+            Edge {
+                from: out_ports[ix],
+                to: in_ports[ix + 1],
+                kind: EdgeKind::Data,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+    }
+
+    graph
+}
+
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
@@ -795,6 +884,71 @@ fn paint_warms_edge_scene_cache_incrementally() {
     let prepare_done = services.path_prepare;
     let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
     assert_eq!(services.path_prepare, prepare_done);
+}
+
+#[test]
+fn paint_warms_edge_label_scene_cache_incrementally_for_large_viewport_tiles() {
+    #[derive(Default)]
+    struct UniqueEdgeLabelPresenter;
+
+    impl NodeGraphPresenter for UniqueEdgeLabelPresenter {
+        fn node_title(&self, _graph: &Graph, _node: NodeId) -> Arc<str> {
+            Arc::<str>::from("Node")
+        }
+
+        fn port_label(&self, _graph: &Graph, _port: PortId) -> Arc<str> {
+            Arc::<str>::from("Port")
+        }
+
+        fn edge_render_hint(
+            &self,
+            _graph: &Graph,
+            edge: EdgeId,
+            _style: &crate::ui::style::NodeGraphStyle,
+        ) -> EdgeRenderHint {
+            EdgeRenderHint {
+                label: Some(Arc::<str>::from(format!("Edge {edge:?}"))),
+                width_mul: 1.0,
+                ..EdgeRenderHint::default()
+            }
+        }
+    }
+
+    let mut host = TestUiHostImpl::default();
+    let graph = host.models.insert(make_graph_chain_edges(150, 40.0));
+    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(UniqueEdgeLabelPresenter);
+
+    // Large enough to force multi-tile static edge cache path.
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(5000.0), Px(700.0)),
+    );
+
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+    let mut services = CountingServices::default();
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let prepare_1 = services.text_prepare;
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let prepare_2 = services.text_prepare;
+    assert!(
+        prepare_2 > prepare_1,
+        "expected edge label warmup to be incremental under a per-frame budget"
+    );
+    assert!(
+        prepare_2 - prepare_1 <= 128,
+        "expected a bounded per-frame label budget; delta was {}",
+        prepare_2 - prepare_1
+    );
+
+    for _ in 0..32 {
+        let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    }
+    let prepare_done = services.text_prepare;
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    assert_eq!(services.text_prepare, prepare_done);
 }
 
 #[test]

@@ -252,11 +252,13 @@ pub struct NodeGraphCanvasWith<M> {
     grid_tiles_scratch: Vec<TileCoord>,
     edges_tiles_scratch: Vec<TileCoord>,
     edges_tile_keys_scratch: Vec<u64>,
+    edge_labels_tile_keys_scratch: Vec<u64>,
     groups_scene_cache: SceneOpTileCache<u64>,
     nodes_scene_cache: SceneOpTileCache<u64>,
     edges_scene_cache: SceneOpTileCache<u64>,
     edge_labels_scene_cache: SceneOpTileCache<u64>,
     edges_build_states: HashMap<u64, EdgesBuildState>,
+    edge_labels_build_states: HashMap<u64, EdgeLabelsBuildState>,
     edge_labels_build_state: Option<EdgeLabelsBuildState>,
     text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
@@ -299,6 +301,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_FOCUS_ANCHOR_OFFSET_SCREEN: f32 = 18.0;
     const GRID_TILE_SIZE_SCREEN_PX: f32 = 2048.0;
     const GRID_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget = InteractionBudget::new(32, 8);
+    const EDGE_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget = InteractionBudget::new(4, 1);
+    const EDGE_LABEL_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget =
+        InteractionBudget::new(2, 1);
     const EDGE_WIRE_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(256, 64);
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
@@ -378,11 +383,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             grid_tiles_scratch: Vec::new(),
             edges_tiles_scratch: Vec::new(),
             edges_tile_keys_scratch: Vec::new(),
+            edge_labels_tile_keys_scratch: Vec::new(),
             groups_scene_cache: SceneOpTileCache::default(),
             nodes_scene_cache: SceneOpTileCache::default(),
             edges_scene_cache: SceneOpTileCache::default(),
             edge_labels_scene_cache: SceneOpTileCache::default(),
             edges_build_states: HashMap::new(),
+            edge_labels_build_states: HashMap::new(),
             edge_labels_build_state: None,
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
@@ -445,11 +452,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             grid_tiles_scratch: self.grid_tiles_scratch,
             edges_tiles_scratch: self.edges_tiles_scratch,
             edges_tile_keys_scratch: self.edges_tile_keys_scratch,
+            edge_labels_tile_keys_scratch: self.edge_labels_tile_keys_scratch,
             groups_scene_cache: self.groups_scene_cache,
             nodes_scene_cache: self.nodes_scene_cache,
             edges_scene_cache: self.edges_scene_cache,
             edge_labels_scene_cache: self.edge_labels_scene_cache,
             edges_build_states: self.edges_build_states,
+            edge_labels_build_states: self.edge_labels_build_states,
             edge_labels_build_state: self.edge_labels_build_state,
             text_blobs: self.text_blobs,
             interaction: self.interaction,
@@ -523,6 +532,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         self.edges_scene_cache.clear();
         self.edge_labels_scene_cache.clear();
         self.edges_build_states.clear();
+        self.edge_labels_build_states.clear();
         self.edge_labels_build_state = None;
         for id in self.text_blobs.drain(..) {
             services.text().release(id);
