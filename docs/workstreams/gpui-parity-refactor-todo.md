@@ -130,6 +130,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Notes: a naive "detached + stale" sweep is not sufficient on its own; cache-hit frames can still cause overlay/demo semantics to disappear if layer/overlay presence
     depends on rerendered outputs. We likely need a GPUI-style "effect output replay" (or equivalent) for cache-hit frames (layers/overlays/semantics roots).
+  - Progress: add a diagnostics capture when script-driven clicks cannot resolve a selector in the current semantics snapshot.
+    - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`script-step-XXXX-click-no-semantics-match` forced dump label).
+    - Motivation: cache-hit correctness regressions can present as “step N stuck” without producing a per-step bundle; this ensures we always capture a bundle at the first missing target.
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 

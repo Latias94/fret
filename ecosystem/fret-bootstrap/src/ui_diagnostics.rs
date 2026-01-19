@@ -533,6 +533,7 @@ impl UiDiagnosticsService {
                     wait_frames_remaining: 0,
                     wait_until: None,
                     last_reported_step: Some(0),
+                    missing_target_dumped_step: None,
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -714,6 +715,14 @@ impl UiDiagnosticsService {
                 };
                 let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
                 else {
+                    if self.cfg.script_auto_dump
+                        && active.missing_target_dumped_step != Some(step_index)
+                    {
+                        self.request_force_dump(format!(
+                            "script-step-{step_index:04}-click-no-semantics-match"
+                        ));
+                        active.missing_target_dumped_step = Some(step_index);
+                    }
                     self.active_scripts.insert(window, active);
                     output.request_redraw = true;
                     return output;
@@ -2249,6 +2258,7 @@ struct ActiveScript {
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
     last_reported_step: Option<usize>,
+    missing_target_dumped_step: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
