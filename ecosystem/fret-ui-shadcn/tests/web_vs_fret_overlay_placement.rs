@@ -4064,6 +4064,61 @@ fn assert_dropdown_menu_demo_submenu_menu_item_height_matches(web_name: &str) {
     assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
 }
 
+fn assert_dropdown_menu_demo_submenu_first_visible_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let labels = ["Email", "Message", "More..."];
+    let expected = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(&theme, "dropdown-menu-sub-content"),
+        &labels,
+    )
+    .unwrap_or_else(|| panic!("missing web first visible submenu item for {web_name}"));
+
+    let (_, snap) = build_dropdown_menu_demo_submenu_snapshot(web_name);
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Invite users"))
+        .expect("fret submenu trigger semantics (Invite users)");
+    let submenu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|m| !fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("submenu menu does not contain sub-trigger");
+
+    let actual =
+        fret_first_visible_menu_item_label(&snap, submenu.bounds, &labels).unwrap_or("<missing>");
+    assert_eq!(
+        actual, expected,
+        "{web_name}: submenu first visible item mismatch"
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_first_visible_matches() {
+    assert_dropdown_menu_demo_submenu_first_visible_matches("dropdown-menu-demo.submenu-kbd");
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_hover_first_visible_matches() {
+    assert_dropdown_menu_demo_submenu_first_visible_matches("dropdown-menu-demo.submenu");
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_first_visible_matches() {
+    assert_dropdown_menu_demo_submenu_first_visible_matches(
+        "dropdown-menu-demo.submenu-kbd-vp1440x320",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_tiny_viewport_first_visible_matches() {
+    assert_dropdown_menu_demo_submenu_first_visible_matches(
+        "dropdown-menu-demo.submenu-kbd-vp1440x240",
+    );
+}
+
 #[test]
 fn web_vs_fret_dropdown_menu_demo_submenu_menu_item_height_matches() {
     assert_dropdown_menu_demo_submenu_menu_item_height_matches("dropdown-menu-demo.submenu-kbd");
@@ -5775,6 +5830,243 @@ fn assert_context_menu_demo_constrained_menu_content_insets_match(web_name: &str
     );
 }
 
+fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let open_point = theme
+        .open
+        .as_ref()
+        .map(|m| m.point)
+        .unwrap_or_else(|| panic!("missing web open point for {web_name}"));
+    let labels = [
+        "Back",
+        "Forward",
+        "Reload",
+        "More Tools",
+        "Show Bookmarks",
+        "Show Full URLs",
+        "Pedro Duarte",
+        "Colm Tuite",
+    ];
+    let expected_first_visible_label = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(&theme, "context-menu-content"),
+        &labels,
+    )
+    .unwrap_or_else(|| panic!("missing web first visible menu item for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuItem,
+            ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
+        };
+
+        ContextMenu::new(open.clone())
+            .min_width(Px(208.0))
+            .submenu_min_width(Px(176.0))
+            .into_element(
+                cx,
+                |cx| {
+                    cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(300.0));
+                                layout.size.height = Length::Px(Px(150.0));
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("Right click here")],
+                    )
+                },
+                |cx| {
+                    vec![
+                        ContextMenuEntry::Item(
+                            ContextMenuItem::new("Back")
+                                .inset(true)
+                                .trailing(ContextMenuShortcut::new("⌘[").into_element(cx)),
+                        ),
+                        ContextMenuEntry::Item(
+                            ContextMenuItem::new("Forward")
+                                .inset(true)
+                                .disabled(true)
+                                .trailing(ContextMenuShortcut::new("⌘]").into_element(cx)),
+                        ),
+                        ContextMenuEntry::Item(
+                            ContextMenuItem::new("Reload")
+                                .inset(true)
+                                .trailing(ContextMenuShortcut::new("⌘R").into_element(cx)),
+                        ),
+                        ContextMenuEntry::Item(ContextMenuItem::new("More Tools").inset(true).submenu(
+                            vec![
+                                ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                                ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                                ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                                ContextMenuEntry::Separator,
+                                ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                                ContextMenuEntry::Separator,
+                                ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
+                                    fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                )),
+                            ],
+                        )),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                            checked_bookmarks.clone(),
+                            "Show Bookmarks",
+                        )),
+                        ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                            checked_full_urls.clone(),
+                            "Show Full URLs",
+                        )),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Label(ContextMenuLabel::new("People").inset(true)),
+                        ContextMenuEntry::RadioGroup(
+                            ContextMenuRadioGroup::new(radio_person.clone())
+                                .item(ContextMenuRadioItemSpec::new("pedro", "Pedro Duarte"))
+                                .item(ContextMenuRadioItemSpec::new("colm", "Colm Tuite")),
+                        ),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(open_point.x), Px(open_point.y)),
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(open_point.x), Px(open_point.y)),
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| a.bounds.size.height.0.total_cmp(&b.bounds.size.height.0))
+        .expect("fret root menu semantics");
+    let wheel_pos = Point::new(
+        Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
+        Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
+    );
+
+    let mut did_match_web_scroll_state = false;
+    for attempt in 0..10 {
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let Some(root_menu) = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Menu)
+            .max_by(|a, b| a.bounds.size.height.0.total_cmp(&b.bounds.size.height.0))
+        else {
+            panic!("fret root menu semantics missing");
+        };
+
+        let first_visible = fret_first_visible_menu_item_label(&snap, root_menu.bounds, &labels)
+            .unwrap_or("<missing>");
+        if first_visible == expected_first_visible_label {
+            did_match_web_scroll_state = true;
+            break;
+        }
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
+                position: wheel_pos,
+                delta: Point::new(Px(0.0), Px(-40.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + settle_frames + attempt),
+            true,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    assert!(
+        did_match_web_scroll_state,
+        "{web_name}: failed to scroll context menu to match first visible item; expected={expected_first_visible_label:?}"
+    );
+}
+
 #[test]
 fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
     assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo.vp1440x320");
@@ -5783,6 +6075,16 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
 #[test]
 fn web_vs_fret_context_menu_demo_tiny_viewport_menu_content_insets_match() {
     assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_small_viewport_scroll_state_matches() {
+    assert_context_menu_demo_constrained_scroll_state_matches("context-menu-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_scroll_state_matches() {
+    assert_context_menu_demo_constrained_scroll_state_matches("context-menu-demo.vp1440x240");
 }
 
 #[test]
@@ -8974,6 +9276,57 @@ fn assert_menubar_demo_submenu_menu_item_height_matches(web_name: &str) {
 
     let actual_hs = fret_menu_item_heights_in_menus(&snap);
     assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+fn assert_menubar_demo_submenu_first_visible_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let labels = ["Email link", "Messages", "Notes"];
+    let expected = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(&theme, "menubar-sub-content"),
+        &labels,
+    )
+    .unwrap_or_else(|| panic!("missing web first visible submenu item for {web_name}"));
+
+    let (_, snap) = build_menubar_demo_submenu_snapshot(web_name);
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+        .expect("fret submenu trigger semantics (Share)");
+    let submenu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|m| !fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("submenu menu does not contain sub-trigger");
+
+    let actual =
+        fret_first_visible_menu_item_label(&snap, submenu.bounds, &labels).unwrap_or("<missing>");
+    assert_eq!(
+        actual, expected,
+        "{web_name}: submenu first visible item mismatch"
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_first_visible_matches() {
+    assert_menubar_demo_submenu_first_visible_matches("menubar-demo.submenu-kbd");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_hover_first_visible_matches() {
+    assert_menubar_demo_submenu_first_visible_matches("menubar-demo.submenu");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_small_viewport_first_visible_matches() {
+    assert_menubar_demo_submenu_first_visible_matches("menubar-demo.submenu-kbd-vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_tiny_viewport_first_visible_matches() {
+    assert_menubar_demo_submenu_first_visible_matches("menubar-demo.submenu-kbd-vp1440x240");
 }
 
 #[test]
