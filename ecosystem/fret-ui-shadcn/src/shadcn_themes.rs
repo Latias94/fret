@@ -441,6 +441,7 @@ fn with_oklch_alpha(raw: &str, alpha: f32) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_ui::Theme;
 
     #[test]
     fn new_york_v4_seeds_component_text_metrics() {
@@ -465,5 +466,53 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn new_york_v4_seeds_control_sizing_metrics() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        assert_eq!(
+            cfg.metrics.get("component.size.md.button.h").copied(),
+            Some(36.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("component.size.sm.button.h").copied(),
+            Some(32.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("component.size.lg.button.h").copied(),
+            Some(40.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("component.size.md.icon_button.size")
+                .copied(),
+            Some(36.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("component.size.sm.icon_button.size")
+                .copied(),
+            Some(32.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("component.size.lg.icon_button.size")
+                .copied(),
+            Some(40.0)
+        );
+
+        let mut app = fret_app::App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let theme = Theme::global(&app);
+        assert_eq!(
+            theme.metric_by_key("component.size.md.icon_button.size"),
+            Some(fret_core::Px(36.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.size.sm.button.h"),
+            Some(fret_core::Px(32.0))
+        );
     }
 }

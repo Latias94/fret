@@ -262,7 +262,10 @@ impl Button {
                 .then(|| decl_style::shadow_xs(&theme, shadow_radius));
 
             let size = self.size.component_size();
-            let radius = size.control_radius(&theme);
+            // shadcn/ui v4 buttons use `rounded-md` across sizes (including `sm` and `icon`), so
+            // we intentionally pin the default radius to `metric.radius.md` rather than scaling
+            // with `ComponentSize`.
+            let radius = theme.metric_required("metric.radius.md");
             let border_w = if self.variant == ButtonVariant::Outline {
                 Px(1.0)
             } else {
@@ -277,7 +280,13 @@ impl Button {
             );
             if is_icon_button {
                 let icon = size.icon_button_size(&theme);
+
+                // shadcn/ui v4 `size=icon` uses Tailwind `size-*` (a fixed square), not
+                // `min-width/min-height`. Using an explicit width/height avoids relying on flexbox
+                // min-size behavior and makes icon buttons match web goldens 1:1.
                 base_layout = base_layout
+                    .w_px(MetricRef::Px(icon))
+                    .h_px(MetricRef::Px(icon))
                     .min_w(MetricRef::Px(icon))
                     .min_h(MetricRef::Px(icon));
             } else {
