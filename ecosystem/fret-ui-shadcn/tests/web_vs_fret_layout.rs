@@ -1603,6 +1603,197 @@ fn web_vs_fret_layout_separator_demo_geometry() {
 }
 
 #[test]
+fn web_vs_fret_layout_breadcrumb_separator_geometry() {
+    let web = read_web_golden("breadcrumb-separator");
+    let theme = web_theme(&web);
+
+    let mut svgs: Vec<&WebNode> = Vec::new();
+    web_collect_tag(&theme.root, "svg", &mut svgs);
+    let mut slashes: Vec<&WebNode> = svgs
+        .into_iter()
+        .filter(|n| class_has_token(n, "lucide-slash"))
+        .collect();
+    slashes.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    assert!(
+        slashes.len() >= 2,
+        "expected at least 2 slashes in breadcrumb-separator web golden"
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, _snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        vec![
+            fret_ui_shadcn::Breadcrumb::new()
+                .separator(fret_ui_shadcn::BreadcrumbSeparator::Icon {
+                    icon: fret_icons::ids::ui::SLASH,
+                    size: Px(14.0),
+                })
+                .items([
+                    fret_ui_shadcn::BreadcrumbItem::new("Home"),
+                    fret_ui_shadcn::BreadcrumbItem::new("Components"),
+                    fret_ui_shadcn::BreadcrumbItem::new("Breadcrumb"),
+                ])
+                .into_element(cx),
+        ]
+    });
+
+    let mut stack = vec![root];
+    let mut rects: Vec<Rect> = Vec::new();
+    while let Some(node) = stack.pop() {
+        if let Some(bounds) = ui.debug_node_bounds(node) {
+            rects.push(bounds);
+        }
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+    }
+
+    let pick_best_by_size = |label: &str, expected: WebRect, rects: &[Rect]| -> Rect {
+        let mut best: Option<Rect> = None;
+        let mut best_score = f32::INFINITY;
+        for rect in rects {
+            let score =
+                (rect.size.width.0 - expected.w).abs() + (rect.size.height.0 - expected.h).abs();
+            if score < best_score {
+                best_score = score;
+                best = Some(*rect);
+            }
+        }
+        best.unwrap_or_else(|| panic!("missing {label} match"))
+    };
+
+    for (i, web_slash) in slashes.iter().take(2).enumerate() {
+        let fret_slash = pick_best_by_size("slash", web_slash.rect, &rects);
+        assert_close_px(
+            &format!("breadcrumb-separator slash[{i}] w"),
+            fret_slash.size.width,
+            web_slash.rect.w,
+            1.0,
+        );
+        assert_close_px(
+            &format!("breadcrumb-separator slash[{i}] h"),
+            fret_slash.size.height,
+            web_slash.rect.h,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_breadcrumb_ellipsis_geometry() {
+    let web = read_web_golden("breadcrumb-ellipsis");
+    let theme = web_theme(&web);
+
+    let web_ellipsis_box = find_first(&theme.root, &|n| {
+        n.tag == "span"
+            && class_has_all_tokens(n, &["flex", "size-9", "items-center", "justify-center"])
+    })
+    .expect("web breadcrumb ellipsis box");
+    let web_ellipsis_icon = find_first(&theme.root, &|n| {
+        n.tag == "svg" && class_has_token(n, "lucide-ellipsis")
+    })
+    .expect("web breadcrumb ellipsis icon");
+
+    let expected_icon_offset_x = web_ellipsis_icon.rect.x - web_ellipsis_box.rect.x;
+    let expected_icon_offset_y = web_ellipsis_icon.rect.y - web_ellipsis_box.rect.y;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, _snap, root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        vec![
+            fret_ui_shadcn::Breadcrumb::new()
+                .items([
+                    fret_ui_shadcn::BreadcrumbItem::new("Home"),
+                    fret_ui_shadcn::BreadcrumbItem::ellipsis(),
+                    fret_ui_shadcn::BreadcrumbItem::new("Components"),
+                    fret_ui_shadcn::BreadcrumbItem::new("Breadcrumb"),
+                ])
+                .into_element(cx),
+        ]
+    });
+
+    let mut stack = vec![root];
+    let mut rects: Vec<Rect> = Vec::new();
+    while let Some(node) = stack.pop() {
+        if let Some(bounds) = ui.debug_node_bounds(node) {
+            rects.push(bounds);
+        }
+        for child in ui.children(node).into_iter().rev() {
+            stack.push(child);
+        }
+    }
+
+    let pick_best_by_size = |label: &str, expected: WebRect, rects: &[Rect]| -> Rect {
+        let mut best: Option<Rect> = None;
+        let mut best_score = f32::INFINITY;
+        for rect in rects {
+            let score =
+                (rect.size.width.0 - expected.w).abs() + (rect.size.height.0 - expected.h).abs();
+            if score < best_score {
+                best_score = score;
+                best = Some(*rect);
+            }
+        }
+        best.unwrap_or_else(|| panic!("missing {label} match"))
+    };
+
+    let fret_box = pick_best_by_size("ellipsis box", web_ellipsis_box.rect, &rects);
+    assert_close_px(
+        "breadcrumb-ellipsis box w",
+        fret_box.size.width,
+        web_ellipsis_box.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-ellipsis box h",
+        fret_box.size.height,
+        web_ellipsis_box.rect.h,
+        1.0,
+    );
+
+    let fret_icon = pick_best_by_size("ellipsis icon", web_ellipsis_icon.rect, &rects);
+    let actual_icon_offset_x = fret_icon.origin.x.0 - fret_box.origin.x.0;
+    let actual_icon_offset_y = fret_icon.origin.y.0 - fret_box.origin.y.0;
+    assert_close_px(
+        "breadcrumb-ellipsis icon offset x",
+        Px(actual_icon_offset_x),
+        expected_icon_offset_x,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-ellipsis icon offset y",
+        Px(actual_icon_offset_y),
+        expected_icon_offset_y,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-ellipsis icon w",
+        fret_icon.size.width,
+        web_ellipsis_icon.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-ellipsis icon h",
+        fret_icon.size.height,
+        web_ellipsis_icon.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_badge_demo_heights() {
     let web = read_web_golden("badge-demo");
     let theme = web_theme(&web);
