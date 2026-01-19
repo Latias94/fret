@@ -26,7 +26,7 @@ examples in `repo-ref/ui`.
 - Pass: Exposes `side`/`align` and both `side_offset(...)` + `align_offset(...)`, mapping to
   `PopperContentPlacement`.
 - Pass: Exposes `position(...)` to switch between Radix `item-aligned` and `popper` positioning.
-  Default is `SelectPosition::Popper` to match shadcn/ui v4 examples (`position="popper"`).
+  Default is `SelectPosition::ItemAligned` to match the upstream wrapper default (`position="item-aligned"`).
 - Pass: Uses per-window overlay roots (portal-like) via `OverlayController`.
 - Pass: Optional diamond arrow rendering (`Select::arrow(true)`).
 
@@ -63,6 +63,8 @@ examples in `repo-ref/ui`.
 
 - `cargo test -p fret-ui-shadcn --lib select`
 - Web golden placement + sizing: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  - Evidence: `goldens/shadcn-web/v4/new-york-v4/select-demo.open.json`
+  - Gate: `web_vs_fret_select_demo_overlay_placement_matches`
 
 ## Follow-ups (recommended)
 

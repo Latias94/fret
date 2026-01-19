@@ -131,10 +131,13 @@ maps naturally to a new ecosystem crate built on top of `fret-ui-shadcn`:
   - (Done) Programmatic scroll handle updates now invalidate bound scroll nodes, so cmdk/select-style
     “scroll active option into view” works even when cached layout/paint skips subtrees. Evidence:
     `crates/fret-ui/src/scroll.rs`, `crates/fret-ui/src/declarative/mount.rs`.
-  - (Done) `Select` item-aligned positioning now accounts for viewport padding edge (ports Radix `selectedItem.offsetTop` semantics). Evidence: `ecosystem/fret-ui-headless/src/select_item_aligned.rs` + `ecosystem/fret-ui-kit/src/primitives/select.rs`.
+  - (Done) `Select` item-aligned positioning now matches Radix’s offset math: content inner-box offsets
+    (`clientHeight` vs border box) + first/last item padding guards + stable portal sizing for the
+    `select-demo`/`select-scrollable` goldens. Evidence: `ecosystem/fret-ui-headless/src/select_item_aligned.rs`,
+    `ecosystem/fret-ui-kit/src/primitives/select.rs`, and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_select_demo_overlay_placement_matches`).
   - (Done) `Button` shadcn variant styles are gated against `shadcn-web` computed styles (including `lab()` normalization to linear sRGB). Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`.
   - (Done) `Combobox` (shadcn recipe) listbox height is gated against `shadcn-web` open snapshots. Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (combobox-demo open variants).
-  - (Next) `Select` / listbox width parity: upstream listbox content can grow beyond the trigger
-    width (min-width = trigger, but long items expand); Fret currently pins desired width to the
-    trigger, so listbox portal `w/h` conformance is not yet gated 1:1.
+  - (Done) `Select` listbox width parity is gated against shadcn-web: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_select_scrollable_listbox_width_matches`).
   - (Next) extend `shadcn-web` open snapshots for additional multi-step states (e.g. navigation-menu hover + content open, and other chained interactions).

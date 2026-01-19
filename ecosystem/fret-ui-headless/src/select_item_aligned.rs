@@ -38,6 +38,11 @@ pub struct SelectItemAlignedInputs {
     pub viewport_padding_top: Px,
     pub viewport_padding_bottom: Px,
 
+    /// Whether the alignment item is the first selectable item (Radix `items[0]`).
+    pub selected_item_is_first: bool,
+    /// Whether the alignment item is the last selectable item (Radix `items[items.length - 1]`).
+    pub selected_item_is_last: bool,
+
     /// Scrollable height of all items (Radix `viewport.scrollHeight`).
     pub items_height: Px,
 }
@@ -146,11 +151,25 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
     let will_align_without_top_overflow = content_top_to_item_mid.0 <= top_edge_to_trigger_mid.0;
 
     if will_align_without_top_overflow {
-        let viewport_offset_bottom = Px((inputs.content.origin.y.0 + inputs.content.size.height.0)
-            - (inputs.viewport.origin.y.0 + inputs.viewport.size.height.0));
+        // Match Radix:
+        // `viewportOffsetBottom = content.clientHeight - viewport.offsetTop - viewport.offsetHeight`.
+        //
+        // `clientHeight` excludes borders, and `offsetTop` is measured from the content's padding
+        // edge. Compute the same offsets in window space by switching to the content inner box.
+        let content_inner_bottom = Px(inputs.content.origin.y.0 + inputs.content.size.height.0
+            - inputs.content_padding_bottom.0
+            - inputs.content_border_bottom.0);
+        let viewport_offset_bottom =
+            Px(content_inner_bottom.0
+                - (inputs.viewport.origin.y.0 + inputs.viewport.size.height.0));
+        let viewport_padding_bottom = if inputs.selected_item_is_last {
+            inputs.viewport_padding_bottom
+        } else {
+            Px(0.0)
+        };
         let clamped_trigger_mid_to_bottom_edge = Px(trigger_mid_to_bottom_edge.0.max(
             selected_item_half_h.0
-                + inputs.viewport_padding_bottom.0
+                + viewport_padding_bottom.0
                 + viewport_offset_bottom.0
                 + inputs.content_border_bottom.0,
         ));
@@ -173,11 +192,21 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             scroll_to_y: None,
         }
     } else {
-        let viewport_offset_top = Px(inputs.viewport.origin.y.0 - inputs.content.origin.y.0);
+        // Match Radix:
+        // `viewport.offsetTop` is measured from the content's padding edge (border excluded).
+        let content_inner_top = Px(inputs.content.origin.y.0
+            + inputs.content_border_top.0
+            + inputs.content_padding_top.0);
+        let viewport_offset_top = Px(inputs.viewport.origin.y.0 - content_inner_top.0);
+        let viewport_padding_top = if inputs.selected_item_is_first {
+            inputs.viewport_padding_top
+        } else {
+            Px(0.0)
+        };
         let clamped_top_edge_to_trigger_mid = Px(top_edge_to_trigger_mid.0.max(
             inputs.content_border_top.0
                 + viewport_offset_top.0
-                + inputs.viewport_padding_top.0
+                + viewport_padding_top.0
                 + selected_item_half_h.0,
         ));
         let height = Px(
@@ -230,6 +259,8 @@ mod tests {
             content_padding_bottom: Px(0.0),
             viewport_padding_top: Px(4.0),
             viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: false,
+            selected_item_is_last: false,
             items_height: Px(200.0),
         });
 
@@ -257,6 +288,8 @@ mod tests {
             content_padding_bottom: Px(0.0),
             viewport_padding_top: Px(4.0),
             viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: false,
+            selected_item_is_last: false,
             items_height: Px(200.0),
         });
 

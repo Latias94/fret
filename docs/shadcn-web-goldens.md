@@ -69,6 +69,10 @@ Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --viewportW=375 --viewportH=320 --openVariants=\"vp375x320=[data-fret-golden-target] button[role='combobox']\"`
 
+Select open-state example (`select-demo`):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 select-demo --modes=open --update --openSelector=\"[data-fret-golden-target] button[role='combobox']\"`
+
 Breadcrumb responsive variants (`breadcrumb-responsive`):
 
 Desktop open (dropdown menu trigger uses `aria-label="Toggle menu"`):

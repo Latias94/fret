@@ -88,6 +88,7 @@ fn select_scroll_with_buttons<H: UiHost>(
         },
         move |cx| {
             let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let did_initial_scroll = initial_scroll_to_y.is_some();
             if let Some(y) = initial_scroll_to_y {
                 let prev = handle.offset();
                 handle.scroll_to_offset(Point::new(prev.x, y));
@@ -256,7 +257,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                     viewport_id_out.set(Some(scroll.id));
 
                     if let Some(active_element) = active_element_ref.get() {
-                        if has_scroll && should_align_active_to_top() {
+                        if has_scroll && !did_initial_scroll && should_align_active_to_top() {
                             let did = active_desc::scroll_active_element_align_top_y(
                                 cx,
                                 &handle_for_stack,
@@ -814,6 +815,8 @@ fn select_impl<H: UiHost>(
             content_panel: Option<GlobalElementId>,
             selected_item: Option<GlobalElementId>,
             selected_item_text: Option<GlobalElementId>,
+            alignment_item_pos: Option<usize>,
+            alignment_item_has_leading_non_item: bool,
             width_probe: Option<GlobalElementId>,
             pending_item_aligned_scroll_to_y: Option<Px>,
             did_item_aligned_scroll: bool,
@@ -833,6 +836,8 @@ fn select_impl<H: UiHost>(
                     content_panel: None,
                     selected_item: None,
                     selected_item_text: None,
+                    alignment_item_pos: None,
+                    alignment_item_has_leading_non_item: false,
                     width_probe: None,
                     pending_item_aligned_scroll_to_y: None,
                     did_item_aligned_scroll: false,
@@ -1076,6 +1081,8 @@ fn select_impl<H: UiHost>(
                             width_probe,
                             selected_item,
                             selected_item_text,
+                            alignment_item_pos,
+                            alignment_item_has_leading_non_item,
                             did_scroll,
                         ) = {
                             let state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
@@ -1087,6 +1094,8 @@ fn select_impl<H: UiHost>(
                                 state.width_probe,
                                 state.selected_item,
                                 state.selected_item_text,
+                                state.alignment_item_pos,
+                                state.alignment_item_has_leading_non_item,
                                 state.did_item_aligned_scroll,
                             )
                         };
@@ -1106,6 +1115,14 @@ fn select_impl<H: UiHost>(
                             selected_item,
                             selected_item_text,
                         ) {
+                            let (selected_item_is_first, selected_item_is_last) = alignment_item_pos
+                                .and_then(|pos| (item_len > 0).then_some(pos))
+                                .map(|pos| {
+                                    let is_first_item = pos == 0 && !alignment_item_has_leading_non_item;
+                                    let is_last_item = pos + 1 == item_len;
+                                    (is_first_item, is_last_item)
+                                })
+                                .unwrap_or((false, false));
                             if debug_item_aligned {
                                 eprintln!(
                                     "select item-aligned theme min_width={}",
@@ -1137,6 +1154,8 @@ fn select_impl<H: UiHost>(
                                     content_padding_bottom: Px(0.0),
                                     viewport_padding_top: Px(4.0),
                                     viewport_padding_bottom: Px(4.0),
+                                    selected_item_is_first,
+                                    selected_item_is_last,
                                     value_node,
                                     viewport,
                                     listbox,
@@ -1289,6 +1308,11 @@ fn select_impl<H: UiHost>(
                     let selected_item_id_out = &selected_item_id_out_cell;
                     let selected_item_text_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let selected_item_text_id_out = &selected_item_text_id_out_cell;
+                    let alignment_item_pos_out_cell = Cell::new(None::<usize>);
+                    let alignment_item_pos_out = &alignment_item_pos_out_cell;
+                    let alignment_item_has_leading_non_item_out_cell = Cell::new(None::<bool>);
+                    let alignment_item_has_leading_non_item_out =
+                        &alignment_item_has_leading_non_item_out_cell;
                     let trigger_state_for_overlay_for_children = trigger_state_for_overlay.clone();
                     let popper_layout_for_children = popper_layout;
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
@@ -1675,6 +1699,9 @@ fn select_impl<H: UiHost>(
                                                                                 move |cx, st, id| {
                                                                                     if is_alignment_item {
                                                                                         selected_item_id_out.set(Some(id));
+                                                                                        alignment_item_pos_out.set(Some(pos));
+                                                                                        alignment_item_has_leading_non_item_out
+                                                                                            .set(Some(row_idx > 0));
                                                                                     }
                                                                                     if is_active {
                                                                                         active_element.set(Some(id));
@@ -2006,6 +2033,10 @@ fn select_impl<H: UiHost>(
                             state.width_probe = width_probe_id_out.get();
                             state.selected_item = selected_item_id_out.get();
                             state.selected_item_text = selected_item_text_id_out.get();
+                            state.alignment_item_pos = alignment_item_pos_out.get();
+                            state.alignment_item_has_leading_non_item = alignment_item_has_leading_non_item_out
+                                .get()
+                                .unwrap_or(false);
                             if !is_open {
                                 state.did_item_aligned_scroll = false;
                             }

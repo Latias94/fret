@@ -3648,6 +3648,43 @@ fn web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_select_demo_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "select-demo",
+        Some("listbox"),
+        |cx, open| {
+            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let entries: Vec<SelectEntry> = vec![
+                SelectGroup::new(vec![
+                    SelectLabel::new("Fruits").into(),
+                    SelectItem::new("apple", "Apple").into(),
+                    SelectItem::new("banana", "Banana").into(),
+                    SelectItem::new("blueberry", "Blueberry").into(),
+                    SelectItem::new("grapes", "Grapes").into(),
+                    SelectItem::new("pineapple", "Pineapple").into(),
+                ])
+                .into(),
+            ];
+
+            fret_ui_shadcn::Select::new(value, open.clone())
+                .a11y_label("Select")
+                .placeholder("Select a fruit")
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
+                )
+                .entries(entries)
+                .into_element(cx)
+        },
+        SemanticsRole::ComboBox,
+        Some("Select"),
+        SemanticsRole::ListBox,
+    );
+}
+
+#[test]
 fn web_vs_fret_select_scrollable_tiny_viewport_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "select-scrollable.vp1440x240",

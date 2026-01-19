@@ -300,7 +300,10 @@ fn apply_patch_op(
             MenuTarget::Path(parts) => parts.iter().map(|s| s.as_str()).collect(),
         };
         let (first, rest) = path.split_first()?;
-        let menu = menu_bar.menus.iter_mut().find(|m| m.title.as_ref() == *first)?;
+        let menu = menu_bar
+            .menus
+            .iter_mut()
+            .find(|m| m.title.as_ref() == *first)?;
         let mut items: *mut Vec<MenuItem> = &mut menu.items;
 
         for title in rest {
@@ -309,9 +312,9 @@ fn apply_patch_op(
             let next = unsafe { &mut *items }
                 .iter_mut()
                 .find_map(|item| match item {
-                    MenuItem::Submenu { title: t, items, .. } if t.as_ref() == *title => {
-                        Some(items as *mut Vec<MenuItem>)
-                    }
+                    MenuItem::Submenu {
+                        title: t, items, ..
+                    } if t.as_ref() == *title => Some(items as *mut Vec<MenuItem>),
                     _ => None,
                 })?;
             items = next;

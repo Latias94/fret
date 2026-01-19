@@ -415,6 +415,9 @@ pub struct SelectItemAlignedElementInputs {
     pub viewport_padding_top: Px,
     pub viewport_padding_bottom: Px,
 
+    pub selected_item_is_first: bool,
+    pub selected_item_is_last: bool,
+
     pub value_node: GlobalElementId,
     pub viewport: GlobalElementId,
     pub listbox: GlobalElementId,
@@ -471,6 +474,8 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
         content_padding_bottom: inputs.content_padding_bottom,
         viewport_padding_top: inputs.viewport_padding_top,
         viewport_padding_bottom: inputs.viewport_padding_bottom,
+        selected_item_is_first: inputs.selected_item_is_first,
+        selected_item_is_last: inputs.selected_item_is_last,
         items_height: listbox.size.height,
     }))
 }
@@ -1556,6 +1561,8 @@ mod tests {
             content_padding_bottom: Px(0.0),
             viewport_padding_top: Px(4.0),
             viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: false,
+            selected_item_is_last: false,
             items_height: Px(240.0),
         });
 
@@ -1649,6 +1656,8 @@ mod tests {
             content_padding_bottom: Px(0.0),
             viewport_padding_top: Px(4.0),
             viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: false,
+            selected_item_is_last: false,
             items_height: Px(240.0),
         });
 
