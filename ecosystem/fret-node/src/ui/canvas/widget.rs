@@ -104,6 +104,8 @@ mod move_ops;
 mod node_drag;
 mod node_resize;
 mod overlay_hit;
+mod paint_grid;
+mod paint_render_data;
 mod paint_root;
 mod pan_zoom;
 mod pending_drag;
