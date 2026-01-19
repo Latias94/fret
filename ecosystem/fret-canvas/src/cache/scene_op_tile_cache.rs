@@ -267,6 +267,14 @@ impl<K: Eq + Hash + Copy> SceneOpTileCache<K> {
         self.entries.len()
     }
 
+    pub fn contains_key(&self, key: K) -> bool {
+        self.entries.contains_key(&key)
+    }
+
+    pub fn ops_for_key(&self, key: K) -> Option<&[SceneOp]> {
+        self.entries.get(&key).map(|e| e.ops.as_slice())
+    }
+
     pub fn clear(&mut self) {
         self.entries.clear();
         self.stats.clear_calls = self.stats.clear_calls.saturating_add(1);

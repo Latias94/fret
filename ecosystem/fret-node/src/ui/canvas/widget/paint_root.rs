@@ -12,6 +12,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let view_interacting = self.view_interacting();
 
         self.paint_cache.begin_frame();
+        self.groups_scene_cache.begin_frame();
+        self.nodes_scene_cache.begin_frame();
+        self.edges_scene_cache.begin_frame();
+        self.edge_labels_scene_cache.begin_frame();
         if let Some(window) = cx.window {
             let (entries, stats) = self.paint_cache.diagnostics_path_cache_snapshot();
             let frame_id = cx.app.frame_id().0;
@@ -208,8 +212,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .groups_scene_cache
                 .try_replay(groups_key, cx.scene, replay_delta);
             if groups_hit {
-                self.paint_cache
-                    .touch_text_blobs_in_scene_ops(self.groups_scene_cache.ops());
+                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
             } else {
                 let render_groups: RenderData = self.collect_render_data(
                     &*cx.app,
@@ -239,8 +244,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 let _ = self
                     .groups_scene_cache
                     .try_replay(groups_key, cx.scene, replay_delta);
-                self.paint_cache
-                    .touch_text_blobs_in_scene_ops(self.groups_scene_cache.ops());
+                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
             }
 
             // Selected group border overlay must remain ordered before edges (ADR 0082).
@@ -343,16 +349,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     b.finish()
                 };
 
-                if self.edges_scene_cache.matches(edges_key) {
+                let edges_hit =
+                    self.edges_scene_cache
+                        .try_replay(edges_key, cx.scene, replay_delta);
+                if edges_hit {
                     self.edges_build_state = None;
-                }
-
-                if self
-                    .edges_scene_cache
-                    .try_replay(edges_key, cx.scene, replay_delta)
-                {
-                    self.paint_cache
-                        .touch_paths_in_scene_ops(self.edges_scene_cache.ops());
+                    if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
+                        self.paint_cache.touch_paths_in_scene_ops(ops);
+                    }
                 } else {
                     let mut state = self
                         .edges_build_state
@@ -449,8 +453,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let _ =
                             self.edges_scene_cache
                                 .try_replay(edges_key, cx.scene, replay_delta);
-                        self.paint_cache
-                            .touch_paths_in_scene_ops(self.edges_scene_cache.ops());
+                        if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
+                            self.paint_cache.touch_paths_in_scene_ops(ops);
+                        }
                     } else {
                         cx.scene.replay_ops_translated(&state.ops, replay_delta);
                         self.paint_cache.touch_paths_in_scene_ops(&state.ops);
@@ -458,7 +463,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
 
-                if self.edge_labels_scene_cache.matches(labels_key) {
+                if self.edge_labels_scene_cache.contains_key(labels_key) {
                     self.edge_labels_build_state = None;
                 } else {
                     let mut state = self
@@ -544,8 +549,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     .edge_labels_scene_cache
                     .try_replay(labels_key, cx.scene, replay_delta)
                 {
-                    self.paint_cache
-                        .touch_text_blobs_in_scene_ops(self.edge_labels_scene_cache.ops());
+                    if let Some(ops) = self.edge_labels_scene_cache.ops_for_key(labels_key) {
+                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                    }
                 } else if let Some(state) = self
                     .edge_labels_build_state
                     .as_ref()
@@ -590,8 +596,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .nodes_scene_cache
                 .try_replay(nodes_key, cx.scene, replay_delta);
             if nodes_hit {
-                self.paint_cache
-                    .touch_text_blobs_in_scene_ops(self.nodes_scene_cache.ops());
+                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
             } else {
                 let render_nodes: RenderData = self.collect_render_data(
                     &*cx.app,
@@ -621,8 +628,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 let _ = self
                     .nodes_scene_cache
                     .try_replay(nodes_key, cx.scene, replay_delta);
-                self.paint_cache
-                    .touch_text_blobs_in_scene_ops(self.nodes_scene_cache.ops());
+                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
             }
 
             // --- Nodes (dynamic overlays) ---
@@ -646,6 +654,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             );
 
             let prune = snapshot.interaction.paint_cache_prune;
+            self.groups_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
+            self.nodes_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
+            self.edges_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
+            self.edge_labels_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
             if prune.max_entries > 0 && prune.max_age_frames > 0 {
                 self.paint_cache
                     .prune(cx.services, prune.max_age_frames, prune.max_entries);
@@ -720,6 +744,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         );
 
         let prune = snapshot.interaction.paint_cache_prune;
+        self.groups_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
+        self.nodes_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
+        self.edges_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
+        self.edge_labels_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
         if prune.max_entries > 0 && prune.max_age_frames > 0 {
             self.paint_cache
                 .prune(cx.services, prune.max_age_frames, prune.max_entries);

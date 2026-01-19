@@ -5,8 +5,7 @@ use std::time::{Duration, Instant};
 
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
-    SceneOpCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D,
-    warm_scene_op_tiles_u64,
+    SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, warm_scene_op_tiles_u64,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
@@ -250,10 +249,10 @@ pub struct NodeGraphCanvasWith<M> {
     paint_cache: CanvasPaintCache,
     grid_scene_cache: SceneOpTileCache<u64>,
     grid_tiles_scratch: Vec<TileCoord>,
-    groups_scene_cache: SceneOpCache<u64>,
-    nodes_scene_cache: SceneOpCache<u64>,
-    edges_scene_cache: SceneOpCache<u64>,
-    edge_labels_scene_cache: SceneOpCache<u64>,
+    groups_scene_cache: SceneOpTileCache<u64>,
+    nodes_scene_cache: SceneOpTileCache<u64>,
+    edges_scene_cache: SceneOpTileCache<u64>,
+    edge_labels_scene_cache: SceneOpTileCache<u64>,
     edges_build_state: Option<EdgesBuildState>,
     edge_labels_build_state: Option<EdgeLabelsBuildState>,
     text_blobs: Vec<TextBlobId>,
@@ -301,6 +300,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_WIRE_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(256, 64);
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
+    const STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES: u64 = 60 * 30;
+    const STATIC_SCENE_TILE_CACHE_MAX_ENTRIES: usize = 16;
 
     fn view_interacting(&self) -> bool {
         self.interaction.viewport_move_debounce.is_some()
@@ -373,10 +374,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             paint_cache: CanvasPaintCache::default(),
             grid_scene_cache: SceneOpTileCache::default(),
             grid_tiles_scratch: Vec::new(),
-            groups_scene_cache: SceneOpCache::default(),
-            nodes_scene_cache: SceneOpCache::default(),
-            edges_scene_cache: SceneOpCache::default(),
-            edge_labels_scene_cache: SceneOpCache::default(),
+            groups_scene_cache: SceneOpTileCache::default(),
+            nodes_scene_cache: SceneOpTileCache::default(),
+            edges_scene_cache: SceneOpTileCache::default(),
+            edge_labels_scene_cache: SceneOpTileCache::default(),
             edges_build_state: None,
             edge_labels_build_state: None,
             text_blobs: Vec::new(),
