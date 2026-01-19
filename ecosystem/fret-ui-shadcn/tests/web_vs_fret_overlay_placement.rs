@@ -2715,6 +2715,11 @@ fn web_vs_fret_dropdown_menu_demo_tiny_viewport_menu_item_height_matches() {
     assert_dropdown_menu_demo_constrained_menu_item_height_matches("dropdown-menu-demo.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_dropdown_menu_demo_menu_item_height_matches() {
+    assert_dropdown_menu_demo_constrained_menu_item_height_matches("dropdown-menu-demo");
+}
+
 fn assert_dropdown_menu_demo_constrained_menu_item_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -2854,6 +2859,11 @@ fn web_vs_fret_dropdown_menu_demo_tiny_viewport_menu_content_insets_match() {
     assert_dropdown_menu_demo_constrained_menu_content_insets_match(
         "dropdown-menu-demo.vp1440x240",
     );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_menu_content_insets_match() {
+    assert_dropdown_menu_demo_constrained_menu_content_insets_match("dropdown-menu-demo");
 }
 
 fn assert_dropdown_menu_demo_constrained_menu_content_insets_match(web_name: &str) {
@@ -7503,6 +7513,11 @@ fn web_vs_fret_menubar_demo_tiny_viewport_menu_item_height_matches() {
     assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_menubar_demo_menu_item_height_matches() {
+    assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo");
+}
+
 fn assert_menubar_demo_constrained_menu_content_insets_match(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -7622,6 +7637,11 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
 #[test]
 fn web_vs_fret_menubar_demo_tiny_viewport_menu_content_insets_match() {
     assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_menu_content_insets_match() {
+    assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo");
 }
 
 fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {
