@@ -51,6 +51,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
     let mut launch: Option<Vec<String>> = None;
+    let mut launch_env: Vec<(String, String)> = Vec::new();
 
     // Parse global `diag` flags regardless of their position, leaving positional args intact.
     // This keeps the behavior aligned with the help text in `apps/fretboard/src/cli.rs`.
@@ -231,6 +232,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--json" => {
                 stats_json = true;
+                i += 1;
+            }
+            "--env" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --env (expected KEY=VALUE)".to_string());
+                };
+                let (key, value) = v
+                    .split_once('=')
+                    .ok_or_else(|| "invalid value for --env (expected KEY=VALUE)".to_string())?;
+                let key = key.trim();
+                if key.is_empty() {
+                    return Err("invalid value for --env (empty KEY)".to_string());
+                }
+                launch_env.push((key.to_string(), value.to_string()));
                 i += 1;
             }
             "--launch" => {
@@ -459,6 +475,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let src = resolve_path(&workspace_root, PathBuf::from(src));
             let mut child = maybe_launch_demo(
                 &launch,
+                &launch_env,
                 &workspace_root,
                 &resolved_out_dir,
                 &resolved_ready_path,
@@ -521,6 +538,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
+                    &launch_env,
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
@@ -534,6 +552,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if !reuse_process {
                     child = maybe_launch_demo(
                         &launch,
+                        &launch_env,
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
@@ -640,6 +659,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
+                    &launch_env,
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
@@ -658,6 +678,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if !reuse_process {
                     child = maybe_launch_demo(
                         &launch,
+                        &launch_env,
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
@@ -1108,6 +1129,7 @@ fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
 
 fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
+    launch_env: &[(String, String)],
     workspace_root: &Path,
     out_dir: &Path,
     ready_path: &Path,
@@ -1132,6 +1154,14 @@ fn maybe_launch_demo(
     cmd.env("FRET_DIAG", "1");
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
+    for (key, value) in launch_env {
+        match key.as_str() {
+            "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" => {
+                return Err(format!("--env cannot override reserved var: {key}"));
+            }
+            _ => cmd.env(key, value),
+        };
+    }
     if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR").filter(|v| !v.is_empty()) {
         cmd.env("CARGO_TARGET_DIR", target_dir);
     }
