@@ -78,6 +78,7 @@ use super::middleware::{
 use super::paint::CanvasPaintCache;
 use super::state::ViewportMoveDebounceState;
 
+mod apply;
 mod auto_measure;
 mod callbacks;
 mod cancel;
@@ -459,24 +460,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.store = Some(store);
         self.store_rev = None;
         self
-    }
-
-    fn apply_ops<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-        ops: Vec<GraphOp>,
-    ) {
-        let _ = self.apply_ops_result(host, window, ops);
-    }
-
-    fn apply_ops_result<H: UiHost>(
-        &mut self,
-        host: &mut H,
-        window: Option<AppWindowId>,
-        ops: Vec<GraphOp>,
-    ) -> bool {
-        self.commit_ops(host, window, None, ops)
     }
 
     fn start_sticky_wire_drag_from_port<H: UiHost>(
