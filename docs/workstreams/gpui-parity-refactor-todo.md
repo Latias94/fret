@@ -105,6 +105,11 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     `crates/fret-ui/src/tree/dispatch.rs` (notify-driven redraw scheduling), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
     (`UiTreeDebugSnapshotV1.dirty_views`), `crates/fret-ui/src/tree/tests/view_cache.rs`
     (`view_cache_notify_propagates_to_ancestor_cache_roots`).
+- [ ] GPUI-MVP2-rt-003 Make `request_animation_frame()` dirty the current view (GPUI-aligned).
+  - Touches: `crates/fret-ui/src/elements/cx.rs` (`ElementContext::request_animation_frame`), plus dirty-view scheduling if needed.
+  - Goal: if a subtree relies on frame-driven updates (animations), `request_animation_frame()` must not allow a cache-hit frame to replay stale output indefinitely.
+  - Reference: `repo-ref/zed/crates/gpui/src/window.rs` (`request_animation_frame` -> notify view / dirty views).
+  - Notes: v1 can implement this as `request_animation_frame()` implying `notify()` on the nearest cache root.
 - [~] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`, `crates/fret-ui/src/elements/runtime.rs`
   - Done when: a notified view never reuses cached ranges; a clean view reliably reuses them.
@@ -122,7 +127,8 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Fix (temporary liveness rule): skip stale-node sweeping when `UiTree::view_cache_enabled()` is on, to prevent deleting live cached subtrees.
   - Hardening: replay cached tooltip/hover-overlay requests when a cache-hit frame skips the subtree that emits them (prevents transient unmounts under shell reuse).
     - Touches: `ecosystem/fret-ui-kit/src/window_overlays/frame.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
-  - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+  - Evidence (pass): `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 120000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+  - Evidence (perf): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
   - Follow-up: reintroduce GC with GPUI-aligned "cache root liveness" (dirty views + notify) so cached subtrees can be skipped without leaking detached nodes.
 
 - [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
@@ -153,6 +159,11 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - `target/fret-diag/1768831095473-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag/1768828347887-script-step-0010-click-no-semantics-match/bundle.json`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+
+- [ ] GPUI-MVP2-cache-006 Add an explicit cache key gate for view-cache reuse (GPUI-aligned).
+  - Touches: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`), plus cache-root bookkeeping.
+  - Goal: prevent reusing a view-cache root when inputs like bounds/scale/theme/text style/content mask changed.
+  - Reference: `repo-ref/zed/crates/gpui/src/view.rs` (`ViewCacheKey`: bounds/content_mask/text_style).
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 

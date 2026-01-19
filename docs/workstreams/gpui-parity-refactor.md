@@ -157,6 +157,8 @@ The refactor should always move these metrics in the right direction, as reporte
 
 These commands exist to make A/B perf and correctness regressions easy to reproduce locally.
 
+Prefer `diag run` for a fast pass/fail signal, and `diag perf` when you want the per-frame counters in the exported bundle.
+
 Run a script without view cache (baseline):
 
 ```sh
