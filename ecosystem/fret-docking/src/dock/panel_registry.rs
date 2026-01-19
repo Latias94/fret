@@ -30,6 +30,7 @@ pub fn render_cached_panel_root<H: UiHost>(
             fret_ui::element::ViewCacheProps {
                 layout: fill_layout(),
                 contained_layout: true,
+                ..Default::default()
             },
             f,
         )]

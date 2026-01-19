@@ -22,11 +22,17 @@ pub trait CachedSubtreeExt {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CachedSubtreeProps {
     pub contained_layout: bool,
+    pub cache_key: u64,
 }
 
 impl CachedSubtreeProps {
     pub fn contained_layout(mut self, contained_layout: bool) -> Self {
         self.contained_layout = contained_layout;
+        self
+    }
+
+    pub fn cache_key(mut self, cache_key: u64) -> Self {
+        self.cache_key = cache_key;
         self
     }
 }
@@ -39,6 +45,7 @@ impl<'a, H: UiHost> CachedSubtreeExt for ElementContext<'a, H> {
     ) -> AnyElement {
         let mut view_cache = ViewCacheProps::default();
         view_cache.contained_layout = props.contained_layout;
+        view_cache.cache_key = props.cache_key;
         self.view_cache(view_cache, f)
     }
 }

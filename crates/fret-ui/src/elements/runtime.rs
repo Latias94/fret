@@ -108,6 +108,8 @@ pub struct WindowElementState {
     pub(super) view_cache_state_keys_rendered:
         HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
     pub(super) view_cache_state_keys_next: HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
+    view_cache_keys_rendered: HashMap<GlobalElementId, u64>,
+    view_cache_keys_next: HashMap<GlobalElementId, u64>,
     /// Last known element IDs contained by a view-cache root.
     ///
     /// When a cache root is reused, its child render closure can be skipped, which means none of
@@ -165,6 +167,12 @@ impl WindowElementState {
         self.advance_element_state_buffers(lag_frames);
 
         self.raf_notify_roots.clear();
+
+        std::mem::swap(
+            &mut self.view_cache_keys_rendered,
+            &mut self.view_cache_keys_next,
+        );
+        self.view_cache_keys_next.clear();
 
         std::mem::swap(
             &mut self.view_cache_state_keys_rendered,
@@ -338,6 +346,28 @@ impl WindowElementState {
         let out: Vec<GlobalElementId> = self.raf_notify_roots.iter().copied().collect();
         self.raf_notify_roots.clear();
         out
+    }
+
+    pub(crate) fn view_cache_key_matches_and_touch(
+        &mut self,
+        root: GlobalElementId,
+        key: u64,
+    ) -> bool {
+        if self.view_cache_keys_next.contains_key(&root) {
+            return self.view_cache_keys_next.get(&root).copied() == Some(key);
+        }
+        let Some(prev) = self.view_cache_keys_rendered.get(&root).copied() else {
+            return false;
+        };
+        if prev != key {
+            return false;
+        }
+        self.view_cache_keys_next.insert(root, key);
+        true
+    }
+
+    pub(crate) fn set_view_cache_key(&mut self, root: GlobalElementId, key: u64) {
+        self.view_cache_keys_next.insert(root, key);
     }
 
     pub(super) fn touch_state_key(&mut self, key: (GlobalElementId, TypeId)) {

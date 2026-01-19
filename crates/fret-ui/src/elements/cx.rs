@@ -578,12 +578,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            let reuse = cx
+            let should_reuse = cx
                 .window_state
                 .node_entry(id)
                 .map(|e| e.node)
                 .and_then(|node| cx.view_cache_should_reuse.as_mut().map(|f| f(node)))
                 .unwrap_or(false);
+
+            let theme_revision = Theme::global(&*cx.app).revision();
+            let key = stable_hash(&(
+                theme_revision,
+                cx.bounds.size.width.0.to_bits(),
+                cx.bounds.size.height.0.to_bits(),
+                props.cache_key,
+            ));
+
+            let reuse = should_reuse && cx.window_state.view_cache_key_matches_and_touch(id, key);
 
             let children = if reuse {
                 cx.window_state.mark_view_cache_reuse_root(id);
@@ -594,6 +604,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .touch_observed_globals_for_element_if_recorded(id);
                 Vec::new()
             } else {
+                cx.window_state.set_view_cache_key(id, key);
                 cx.window_state.begin_view_cache_scope(id);
                 let children = f(cx);
                 cx.window_state.end_view_cache_scope(id);

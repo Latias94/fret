@@ -928,6 +928,7 @@ where
                                 ViewCacheProps {
                                     layout: fill_layout(),
                                     contained_layout: true,
+                                    ..Default::default()
                                 },
                                 |cx| vec![render_pane(cx, pane, is_active, tab_drag.clone())],
                             )]
