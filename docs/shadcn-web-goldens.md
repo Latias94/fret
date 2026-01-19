@@ -217,6 +217,10 @@ To emit a JSON comparison report:
 
 `$env:WRITE_WEB_REPORT='1'; cargo nextest run -p fret-ui-shadcn --test web_vs_fret_button`
 
+Control chrome conformance (borders/radii + a few key control sizes):
+
+`cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
+
 Overlay placement + menu sizing conformance:
 
 `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`

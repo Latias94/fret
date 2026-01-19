@@ -363,6 +363,84 @@ fn web_vs_fret_badge_demo_chrome_matches() {
     }
 }
 
+fn assert_badge_variant_chrome_matches(
+    web_name: &str,
+    label: &'static str,
+    variant: fret_ui_shadcn::BadgeVariant,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_badge = find_first(&theme.root, &|n| {
+        n.tag == "span" && n.text.as_deref() == Some(label)
+    })
+    .expect("web badge node");
+
+    let web_border = web_border_width_px(web_badge).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_badge).expect("web radius px");
+    let web_w = web_badge.rect.w;
+    let web_h = web_badge.rect.h;
+
+    let (_snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Badge::new(label)
+                .variant(variant)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for badge");
+
+    assert_close("badge width", quad.rect.size.width.0, web_w, 1.0);
+    assert_close("badge height", quad.rect.size.height.0, web_h, 1.0);
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("badge border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("badge radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_badge_secondary_chrome_matches() {
+    assert_badge_variant_chrome_matches(
+        "badge-secondary",
+        "Secondary",
+        fret_ui_shadcn::BadgeVariant::Secondary,
+    );
+}
+
+#[test]
+fn web_vs_fret_badge_destructive_chrome_matches() {
+    assert_badge_variant_chrome_matches(
+        "badge-destructive",
+        "Destructive",
+        fret_ui_shadcn::BadgeVariant::Destructive,
+    );
+}
+
+#[test]
+fn web_vs_fret_badge_outline_chrome_matches() {
+    assert_badge_variant_chrome_matches(
+        "badge-outline",
+        "Outline",
+        fret_ui_shadcn::BadgeVariant::Outline,
+    );
+}
+
 #[test]
 fn web_vs_fret_kbd_demo_key_chrome_matches() {
     let web = read_web_golden("kbd-demo");
@@ -1177,6 +1255,54 @@ fn web_vs_fret_alert_demo_chrome_matches() {
                 fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
                     .into_element(cx),
             ])
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_w))),
+            )
+            .into_element(cx),
+        ]
+    });
+
+    let alert = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Alert)
+        .expect("fret alert semantics node");
+    let quad = find_best_quad(&scene, alert.bounds).expect("painted quad for alert");
+
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("alert border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("alert radius[{idx}]"), *corner, web_radius, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_alert_destructive_chrome_matches() {
+    let web = read_web_golden("alert-destructive");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_alert = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "alert")
+    })
+    .expect("web alert node");
+    let web_border = web_border_width_px(web_alert).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_alert).expect("web radius px");
+    let web_w = web_alert.rect.w;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Alert::new(vec![
+                fret_ui_shadcn::AlertTitle::new("Heads up!").into_element(cx),
+                fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
+                    .into_element(cx),
+            ])
+            .variant(fret_ui_shadcn::AlertVariant::Destructive)
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
                     .w_px(fret_ui_kit::MetricRef::Px(Px(web_w))),
