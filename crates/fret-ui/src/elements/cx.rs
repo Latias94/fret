@@ -218,6 +218,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a one-shot request. Prefer `begin_continuous_frames()` when driving animations from
     /// declarative UI code.
     pub fn request_animation_frame(&mut self) {
+        // Match GPUI: requesting an animation frame implies the current view's output may change
+        // on the next tick, so view-cache reuse must be disabled for the nearest cache root.
+        let root = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.stack[0]);
+        self.window_state.request_notify_for_animation_frame(root);
         self.app
             .push_effect(Effect::RequestAnimationFrame(self.window));
     }

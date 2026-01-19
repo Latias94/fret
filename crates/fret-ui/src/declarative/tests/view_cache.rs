@@ -84,6 +84,62 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
 }
 
 #[test]
+fn request_animation_frame_marks_view_cache_root_dirty() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let mut root: Option<NodeId> = None;
+
+    for frame in 0..2 {
+        let renders = renders.clone();
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-animation-frame",
+            move |cx| {
+                vec![
+                    cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                        renders.fetch_add(1, Ordering::SeqCst);
+                        cx.request_animation_frame();
+                        vec![cx.text("leaf")]
+                    }),
+                ]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        2,
+        "request_animation_frame should mark the nearest view-cache root dirty (disable reuse)"
+    );
+}
+
+#[test]
 fn view_cache_inherits_model_observations_on_cache_hit_layout() {
     let mut app = TestHost::new();
     let model = app.models_mut().insert(0u32);

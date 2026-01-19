@@ -117,6 +117,7 @@ pub struct WindowElementState {
     pub(super) view_cache_subtree_elements: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
+    raf_notify_roots: HashSet<GlobalElementId>,
     prepared_frame: FrameId,
     pub(super) prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
@@ -162,6 +163,8 @@ impl WindowElementState {
         self.prepared_frame = frame_id;
 
         self.advance_element_state_buffers(lag_frames);
+
+        self.raf_notify_roots.clear();
 
         std::mem::swap(
             &mut self.view_cache_state_keys_rendered,
@@ -322,6 +325,19 @@ impl WindowElementState {
 
     pub(crate) fn current_view_cache_root(&self) -> Option<GlobalElementId> {
         self.view_cache_stack.last().copied()
+    }
+
+    pub(crate) fn request_notify_for_animation_frame(&mut self, root: GlobalElementId) {
+        self.raf_notify_roots.insert(root);
+    }
+
+    pub(crate) fn take_notify_for_animation_frame(&mut self) -> Vec<GlobalElementId> {
+        if self.raf_notify_roots.is_empty() {
+            return Vec::new();
+        }
+        let out: Vec<GlobalElementId> = self.raf_notify_roots.iter().copied().collect();
+        self.raf_notify_roots.clear();
+        out
     }
 
     pub(super) fn touch_state_key(&mut self, key: (GlobalElementId, TypeId)) {

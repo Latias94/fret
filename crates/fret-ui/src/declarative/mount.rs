@@ -6,6 +6,8 @@ use super::host_widget::ElementHostWidget;
 use super::prelude::*;
 use std::collections::{HashMap, HashSet};
 
+use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
+
 pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
     pub app: &'a mut H,
@@ -217,6 +219,17 @@ pub fn render_root<H: UiHost>(
 
             apply_pending_invalidations(ui, pending_invalidations);
         });
+
+        for element in window_state.take_notify_for_animation_frame() {
+            if let Some(node) = window_state.node_entry(element).map(|e| e.node) {
+                ui.invalidate_with_source_and_detail(
+                    node,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Notify,
+                    UiDebugInvalidationDetail::AnimationFrameRequest,
+                );
+            }
+        }
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
             app,
