@@ -164,10 +164,16 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - `target/fret-diag/1768828347887-script-step-0010-click-no-semantics-match/bundle.json`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
 
-- [ ] GPUI-MVP2-cache-006 Add an explicit cache key gate for view-cache reuse (GPUI-aligned).
-  - Touches: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`), plus cache-root bookkeeping.
-  - Goal: prevent reusing a view-cache root when inputs like bounds/scale/theme/text style/content mask changed.
+- [x] GPUI-MVP2-cache-006 Add an explicit cache key gate for view-cache reuse (GPUI-aligned).
+  - Touches: `crates/fret-ui/src/element.rs` (`ViewCacheProps.cache_key`), `crates/fret-ui/src/elements/cx.rs` (reuse gating),
+    `crates/fret-ui/src/elements/runtime.rs` (per-root key storage), `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`.
+  - Goal: prevent reusing a view-cache root when key inputs like theme/bounds/text style/content mask changed.
+  - v1 key: `hash(theme_revision, window_bounds, ViewCacheProps.cache_key)`.
+    - Notes: this is a coarse proxy for GPUI's `bounds/content_mask/text_style` key and will be refined as more inputs become explicit.
   - Reference: `repo-ref/zed/crates/gpui/src/view.rs` (`ViewCacheKey`: bounds/content_mask/text_style).
+  - Evidence:
+    - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_gates_reuse_on_explicit_cache_key`)
+    - `cargo nextest run -p fret-ui`
 
 ## MVP3 — Prepaint + Interaction Stream Range Reuse
 

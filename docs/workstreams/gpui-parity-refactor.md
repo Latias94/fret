@@ -528,8 +528,8 @@ Behavior:
    - `cx.cached(key_inputs, |cx| children)`
 2) The runtime creates/uses a dedicated `NodeId` boundary for the cached subtree root.
 3) Cache key includes:
-   - bounds.size, scale_factor, theme_revision (match ADR 0055)
-   - plus “explicit cache key” from author (to cover content-mask/text-style changes if needed)
+   - v1: `hash(theme_revision, window_bounds, explicit_cache_key)` (implemented as `ViewCacheProps.cache_key`)
+   - v2+: extend toward GPUI’s `bounds/content_mask/text_style` key as those inputs become explicit at the cache boundary.
 4) Dependency sets:
    - track observed models/globals for that subtree (unify with §5.3)
 5) Inspection/picking disables caching:
