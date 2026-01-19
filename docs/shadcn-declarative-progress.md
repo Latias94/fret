@@ -186,7 +186,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 
 | Registry name | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
-| accordion | `accordion` | Present | Unreviewed | Selection model drives open/close; no animation yet |
+| accordion | `accordion` | Present | In review | Selection model drives open/close; measured-height motion is wired; shadcn-web layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`accordion-demo`, light+dark) |
 | alert | `alert` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`alert-demo`) |
 | alert-dialog | `alert_dialog` | Present | In review | Audit: `docs/audits/shadcn-alert-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | aspect-ratio | `aspect_ratio` | Present | Unreviewed |  |

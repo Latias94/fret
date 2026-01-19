@@ -56,6 +56,8 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib accordion`
+- shadcn web golden (geometry-first): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
+  - Gates: `web_vs_fret_layout_accordion_demo_geometry_light` / `web_vs_fret_layout_accordion_demo_geometry_dark`
 
 ## Follow-ups (recommended)
 

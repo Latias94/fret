@@ -77,6 +77,7 @@ patterns:
 - `checkbox-with-text`
 - `radio-group-demo`
 - `tabs-demo`
+- `accordion-demo` (measured-height content + spacing; open-state geometry in light/dark)
 - `switch-demo`
 - `input-demo`
 - `label-demo`

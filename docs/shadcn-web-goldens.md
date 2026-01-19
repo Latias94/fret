@@ -252,6 +252,7 @@ geometry contract (for example: ScrollArea thumb background/alpha in hover-visib
 
 Current layout gates include:
 
+- `accordion-demo`: trigger + open-content wrapper geometry and item heights (light+dark).
 - `table-demo`: header/body/footer row heights + caption gap (Table recipe conformance).
 - `data-table-demo`: row height + checkbox/action button sizing (Table + Checkbox + Button icon sizing).
 - `data-table-demo.empty`: empty-state `td` spans full table width (colSpan) + `h-24` height.
