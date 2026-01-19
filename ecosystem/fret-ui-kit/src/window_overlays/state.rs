@@ -77,6 +77,11 @@ pub(super) struct WindowOverlays {
     /// See `cached_popover_requests`.
     pub(super) cached_toast_layer_requests:
         HashMap<(AppWindowId, GlobalElementId), ToastLayerRequest>,
+    /// See `cached_popover_requests`.
+    pub(super) cached_hover_overlay_requests:
+        HashMap<(AppWindowId, GlobalElementId), HoverOverlayRequest>,
+    /// See `cached_popover_requests`.
+    pub(super) cached_tooltip_requests: HashMap<(AppWindowId, GlobalElementId), TooltipRequest>,
     pub(super) popovers: HashMap<(AppWindowId, GlobalElementId), ActivePopover>,
     pub(super) modals: HashMap<(AppWindowId, GlobalElementId), ActiveModal>,
     pub(super) hover_overlays: HashMap<(AppWindowId, GlobalElementId), ActiveHoverOverlay>,

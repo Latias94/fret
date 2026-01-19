@@ -120,6 +120,8 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Root cause: the declarative element GC ("stale nodes after gc lag frames") is keyed off `last_seen_frame`, but view-cache reuse intentionally skips re-mounting cached subtrees.
     This caused live overlay subtree nodes (e.g. `ui-gallery-overlay-reset`, `ui-gallery-dialog-trigger`) to be swept as soon as shell caching started reusing roots.
   - Fix (temporary liveness rule): skip stale-node sweeping when `UiTree::view_cache_enabled()` is on, to prevent deleting live cached subtrees.
+  - Hardening: replay cached tooltip/hover-overlay requests when a cache-hit frame skips the subtree that emits them (prevents transient unmounts under shell reuse).
+    - Touches: `ecosystem/fret-ui-kit/src/window_overlays/frame.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
   - Follow-up: reintroduce GC with GPUI-aligned "cache root liveness" (dirty views + notify) so cached subtrees can be skipped without leaking detached nodes.
 

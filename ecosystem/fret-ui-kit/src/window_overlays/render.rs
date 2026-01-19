@@ -19,8 +19,8 @@ use super::state::{
 };
 use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{
-    DismissiblePopoverRequest, ModalRequest, ToastLayerRequest, ToastPosition, ToastVariant,
-    dismiss_toast_action,
+    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, ToastPosition,
+    ToastVariant, TooltipRequest, dismiss_toast_action,
 };
 
 #[derive(Default)]
@@ -88,8 +88,8 @@ pub fn render<H: UiHost>(
     let (
         mut modal_requests,
         mut popover_requests,
-        hover_overlay_requests,
-        tooltip_requests,
+        mut hover_overlay_requests,
+        mut tooltip_requests,
         mut toast_requests,
     ) = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         overlays
@@ -121,12 +121,18 @@ pub fn render<H: UiHost>(
     let modal_request_ids: HashSet<GlobalElementId> = modal_requests.iter().map(|r| r.id).collect();
     let popover_request_ids: HashSet<GlobalElementId> =
         popover_requests.iter().map(|r| r.id).collect();
+    let hover_overlay_request_ids: HashSet<GlobalElementId> =
+        hover_overlay_requests.iter().map(|r| r.id).collect();
+    let tooltip_request_ids: HashSet<GlobalElementId> =
+        tooltip_requests.iter().map(|r| r.id).collect();
     let toast_request_ids: HashSet<GlobalElementId> = toast_requests.iter().map(|r| r.id).collect();
 
-    let (extra_modals, extra_popovers, extra_toasts) =
-        app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
+    let (extra_modals, extra_popovers, extra_hover_overlays, extra_tooltips, extra_toasts) = app
+        .with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut modals: Vec<ModalRequest> = Vec::new();
             let mut popovers: Vec<DismissiblePopoverRequest> = Vec::new();
+            let mut hover_overlays: Vec<HoverOverlayRequest> = Vec::new();
+            let mut tooltips: Vec<TooltipRequest> = Vec::new();
             let mut toasts: Vec<ToastLayerRequest> = Vec::new();
 
             for ((w, id), req) in overlays.cached_modal_requests.iter() {
@@ -155,6 +161,34 @@ pub fn render<H: UiHost>(
                 popovers.push(req);
             }
 
+            for ((w, id), req) in overlays.cached_hover_overlay_requests.iter() {
+                if *w != window || hover_overlay_request_ids.contains(id) {
+                    continue;
+                }
+                let key = (*w, *id);
+                let Some(active) = overlays.hover_overlays.get(&key) else {
+                    continue;
+                };
+                if !ui.is_layer_visible(active.layer) {
+                    continue;
+                }
+                hover_overlays.push(req.clone());
+            }
+
+            for ((w, id), req) in overlays.cached_tooltip_requests.iter() {
+                if *w != window || tooltip_request_ids.contains(id) {
+                    continue;
+                }
+                let key = (*w, *id);
+                let Some(active) = overlays.tooltips.get(&key) else {
+                    continue;
+                };
+                if !ui.is_layer_visible(active.layer) {
+                    continue;
+                }
+                tooltips.push(req.clone());
+            }
+
             for ((w, id), req) in overlays.cached_toast_layer_requests.iter() {
                 if *w != window || toast_request_ids.contains(id) {
                     continue;
@@ -162,11 +196,13 @@ pub fn render<H: UiHost>(
                 toasts.push(req.clone());
             }
 
-            (modals, popovers, toasts)
+            (modals, popovers, hover_overlays, tooltips, toasts)
         });
 
     modal_requests.extend(extra_modals);
     popover_requests.extend(extra_popovers);
+    hover_overlay_requests.extend(extra_hover_overlays);
+    tooltip_requests.extend(extra_tooltips);
     toast_requests.extend(extra_toasts);
 
     let mut seen_modals: HashSet<GlobalElementId> = HashSet::new();
