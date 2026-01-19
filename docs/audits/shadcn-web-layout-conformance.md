@@ -72,6 +72,8 @@ These shadcn v4 new-york-v4 pages are good early gates because they stress the m
 patterns:
 
 - `button-default`
+- `breadcrumb-separator` (custom separator icon sizing)
+- `breadcrumb-ellipsis` (ellipsis box + icon centering)
 - `badge-demo`
 - `checkbox-demo`
 - `checkbox-with-text`

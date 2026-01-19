@@ -163,6 +163,18 @@ Recent fixes:
   - Focus ring thickness (`3px`) and border color keys.
   - Placeholder color and selection colors.
 
+### `Breadcrumb`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/breadcrumb.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
+- Gaps to check:
+  - Separator icon sizing (`ChevronRight` at `size-3.5`).
+  - Ellipsis footprint (`size-9`) and icon centering (`MoreHorizontal` at `size-4`).
+  - Responsive gap (`gap-1.5` vs `sm:gap-2.5`): Fret currently aligns to the desktop (`sm`) outcome.
+- Conformance gates:
+  - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    (`web_vs_fret_layout_breadcrumb_separator_geometry`, `web_vs_fret_layout_breadcrumb_ellipsis_geometry`).
+
 ### `Button`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/button.tsx`
