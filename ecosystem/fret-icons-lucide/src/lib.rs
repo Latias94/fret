@@ -62,5 +62,6 @@ mod semantic_ui {
         reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));
         reg.alias(ids::ui::SETTINGS, IconId::new("lucide.settings"));
         reg.alias(ids::ui::PLAY, IconId::new("lucide.play"));
+        reg.alias(ids::ui::SLASH, IconId::new("lucide.slash"));
     }
 }

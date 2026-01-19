@@ -40,6 +40,7 @@ pub mod ids {
         pub const PLAY: IconId = IconId::new_static("ui.play");
         pub const SEARCH: IconId = IconId::new_static("ui.search");
         pub const SETTINGS: IconId = IconId::new_static("ui.settings");
+        pub const SLASH: IconId = IconId::new_static("ui.slash");
     }
 }
 
