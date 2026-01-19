@@ -87,6 +87,9 @@ pub(crate) fn sidebar_view(
                         .on_click(item.command)
                         .refine_layout(LayoutRefinement::default().w_full());
 
+                    button =
+                        button.test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")));
+
                     if item.id == PAGE_VIRTUAL_LIST_TORTURE {
                         let on_activate: fret_ui::action::OnActivate =
                             Arc::new(move |host, action_cx, _reason| {
@@ -106,7 +109,6 @@ pub(crate) fn sidebar_view(
                                 host.request_redraw(action_cx.window);
                             });
                         button = button.on_activate(on_activate);
-                        button = button.test_id("ui-gallery-nav-virtual-list-torture");
                     }
 
                     button.into_element(cx)
