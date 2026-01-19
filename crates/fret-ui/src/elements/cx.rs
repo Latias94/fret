@@ -26,6 +26,7 @@ use crate::element::{
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
+use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
@@ -586,8 +587,14 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 .unwrap_or(false);
 
             let theme_revision = Theme::global(&*cx.app).revision();
+            let scale_factor = cx
+                .app
+                .global::<WindowMetricsService>()
+                .and_then(|svc| svc.scale_factor(cx.window))
+                .unwrap_or(1.0);
             let key = stable_hash(&(
                 theme_revision,
+                scale_factor.to_bits(),
                 cx.bounds.size.width.0.to_bits(),
                 cx.bounds.size.height.0.to_bits(),
                 props.cache_key,
