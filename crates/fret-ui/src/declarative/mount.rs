@@ -123,6 +123,12 @@ pub fn render_root<H: UiHost>(
     let focused = ui.focus();
     ui.begin_debug_frame_if_needed(frame_id);
 
+    // Prepare per-window element runtime state up-front so render code can observe last-frame
+    // geometry via `ElementContext::last_bounds_for_element` (e.g. measured-height motion).
+    app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
+        runtime.prepare_window_for_frame(window, frame_id);
+    });
+
     let ui_ref: &UiTree<H> = &*ui;
     let children =
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
