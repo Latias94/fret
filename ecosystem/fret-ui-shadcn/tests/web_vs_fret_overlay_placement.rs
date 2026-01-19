@@ -3506,6 +3506,20 @@ fn web_vs_fret_dropdown_menu_demo_submenu_tiny_viewport_menu_content_insets_matc
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_menu_content_insets_match() {
+    assert_dropdown_menu_demo_submenu_constrained_menu_content_insets_match(
+        "dropdown-menu-demo.submenu-kbd",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_hover_menu_content_insets_match() {
+    assert_dropdown_menu_demo_submenu_constrained_menu_content_insets_match(
+        "dropdown-menu-demo.submenu",
+    );
+}
+
+#[test]
 fn web_vs_fret_select_scrollable_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "select-scrollable",
@@ -8050,6 +8064,16 @@ fn web_vs_fret_menubar_demo_submenu_tiny_viewport_menu_content_insets_match() {
     assert_menubar_demo_submenu_constrained_menu_content_insets_match(
         "menubar-demo.submenu-kbd-vp1440x240",
     );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_menu_content_insets_match() {
+    assert_menubar_demo_submenu_constrained_menu_content_insets_match("menubar-demo.submenu-kbd");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_hover_menu_content_insets_match() {
+    assert_menubar_demo_submenu_constrained_menu_content_insets_match("menubar-demo.submenu");
 }
 
 #[test]
