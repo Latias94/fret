@@ -13,7 +13,7 @@ pub(crate) struct ModalA11yRegistry {
 }
 
 pub(crate) fn begin_modal_a11y_scope<H: UiHost>(app: &mut H, modal: ModelId) {
-    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+    app.with_global_mut_untracked(ModalA11yRegistry::default, |reg, _app| {
         reg.stack.push(modal);
         reg.title_by_modal.remove(&modal);
         reg.description_by_modal.remove(&modal);
@@ -22,7 +22,7 @@ pub(crate) fn begin_modal_a11y_scope<H: UiHost>(app: &mut H, modal: ModelId) {
 }
 
 pub(crate) fn end_modal_a11y_scope<H: UiHost>(app: &mut H, expected: ModelId) {
-    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+    app.with_global_mut_untracked(ModalA11yRegistry::default, |reg, _app| {
         let popped = reg.stack.pop();
         if cfg!(debug_assertions) {
             assert_eq!(popped, Some(expected), "modal a11y scope stack mismatch");
@@ -33,7 +33,7 @@ pub(crate) fn end_modal_a11y_scope<H: UiHost>(app: &mut H, expected: ModelId) {
 }
 
 pub(crate) fn register_modal_title<H: UiHost>(app: &mut H, element: GlobalElementId) {
-    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+    app.with_global_mut_untracked(ModalA11yRegistry::default, |reg, _app| {
         let Some(active) = reg.stack.last().copied() else {
             return;
         };
@@ -42,7 +42,7 @@ pub(crate) fn register_modal_title<H: UiHost>(app: &mut H, element: GlobalElemen
 }
 
 pub(crate) fn register_modal_description<H: UiHost>(app: &mut H, element: GlobalElementId) {
-    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+    app.with_global_mut_untracked(ModalA11yRegistry::default, |reg, _app| {
         let Some(active) = reg.stack.last().copied() else {
             return;
         };
@@ -51,7 +51,7 @@ pub(crate) fn register_modal_description<H: UiHost>(app: &mut H, element: Global
 }
 
 pub(crate) fn register_modal_content_max_width<H: UiHost>(app: &mut H, max_width: fret_core::Px) {
-    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+    app.with_global_mut_untracked(ModalA11yRegistry::default, |reg, _app| {
         let Some(active) = reg.stack.last().copied() else {
             return;
         };
@@ -62,7 +62,7 @@ pub(crate) fn register_modal_content_max_width<H: UiHost>(app: &mut H, max_width
 pub(crate) fn modal_content_max_width_for_current_scope<H: UiHost>(
     app: &mut H,
 ) -> Option<fret_core::Px> {
-    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+    app.with_global_mut_untracked(ModalA11yRegistry::default, |reg, _app| {
         let Some(active) = reg.stack.last().copied() else {
             return None;
         };
@@ -73,7 +73,7 @@ pub(crate) fn modal_content_max_width_for_current_scope<H: UiHost>(
 pub(crate) fn modal_relations_for_current_scope<H: UiHost>(
     app: &mut H,
 ) -> (Option<u64>, Option<u64>) {
-    app.with_global_mut(ModalA11yRegistry::default, |reg, _app| {
+    app.with_global_mut_untracked(ModalA11yRegistry::default, |reg, _app| {
         let Some(active) = reg.stack.last().copied() else {
             return (None, None);
         };
