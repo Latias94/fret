@@ -622,6 +622,50 @@ fn paint_reuses_static_edge_scene_cache_without_revisiting_presenter() {
 }
 
 #[test]
+fn paint_reuses_static_edge_scene_cache_when_panning_back_across_tiles() {
+    let mut host = TestUiHostImpl::default();
+    let graph = host.models.insert(make_graph_two_nodes_one_edge());
+    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+    let presenter = CountingPresenter::default();
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_presenter(presenter);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+    let mut services = CountingServices::default();
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let entries_1 = canvas.edges_scene_cache.entries_len();
+    let stats_1 = canvas.edges_scene_cache.stats();
+    assert!(entries_1 > 0);
+
+    let _ = view.update(&mut host, |s, _cx| {
+        // Cross the static cache tile boundary while keeping the content in view.
+        s.pan.x += 500.0;
+    });
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let entries_2 = canvas.edges_scene_cache.entries_len();
+    let stats_2 = canvas.edges_scene_cache.stats();
+    assert!(entries_2 > entries_1);
+    assert!(stats_2.misses > stats_1.misses);
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.pan.x -= 500.0;
+    });
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let entries_3 = canvas.edges_scene_cache.entries_len();
+    let stats_3 = canvas.edges_scene_cache.stats();
+    assert_eq!(entries_3, entries_2);
+    assert!(stats_3.hits > stats_2.hits);
+}
+
+#[test]
 fn paint_warms_edge_label_scene_cache_incrementally() {
     #[derive(Default)]
     struct UniqueEdgeLabelPresenter;

@@ -2,7 +2,15 @@ use super::paint_render_data::RenderData;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    const STATIC_SCENE_CACHE_TILE_SIZE_SCREEN_PX: f32 = 8192.0;
+    const STATIC_NODES_TILE_MUL: f32 = 2.0;
+    const STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN: u32 = 1024;
+    const STATIC_EDGES_TILE_SIZE_SCREEN_PX: u32 = 8192;
+
+    fn next_power_of_two_at_least(min: u32, value: f32) -> u32 {
+        let target = value.ceil().max(1.0) as u32;
+        let pow2 = target.checked_next_power_of_two().unwrap_or(0x8000_0000);
+        pow2.max(min)
+    }
 
     pub(super) fn paint_root<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.observe_model(&self.graph, Invalidation::Paint);
@@ -105,26 +113,61 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && cx.bounds.size.width.0.is_finite()
             && cx.bounds.size.height.0.is_finite();
 
-        let static_cache_tile_size_canvas =
-            (Self::STATIC_SCENE_CACHE_TILE_SIZE_SCREEN_PX / zoom).max(1.0);
-        let static_cache_rect: Option<Rect> = if can_use_static_scene_cache
-            && static_cache_tile_size_canvas >= viewport_w
-            && static_cache_tile_size_canvas >= viewport_h
+        let viewport_max_screen_px = cx.bounds.size.width.0.max(cx.bounds.size.height.0);
+        let nodes_tile_size_screen_px = Self::next_power_of_two_at_least(
+            Self::STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
+            viewport_max_screen_px * Self::STATIC_NODES_TILE_MUL,
+        );
+
+        let nodes_cache_tile_size_canvas = (nodes_tile_size_screen_px as f32 / zoom).max(1.0);
+        let edges_cache_tile_size_canvas =
+            (Self::STATIC_EDGES_TILE_SIZE_SCREEN_PX as f32 / zoom).max(1.0);
+
+        let nodes_cache_rect: Option<Rect> = if can_use_static_scene_cache
+            && nodes_cache_tile_size_canvas >= viewport_w
+            && nodes_cache_tile_size_canvas >= viewport_h
         {
             let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
             let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
             if center_x.is_finite() && center_y.is_finite() {
-                let tile_x = (center_x / static_cache_tile_size_canvas).floor() as i32;
-                let tile_y = (center_y / static_cache_tile_size_canvas).floor() as i32;
+                let tile_x = (center_x / nodes_cache_tile_size_canvas).floor() as i32;
+                let tile_y = (center_y / nodes_cache_tile_size_canvas).floor() as i32;
                 let origin = Point::new(
-                    Px(tile_x as f32 * static_cache_tile_size_canvas),
-                    Px(tile_y as f32 * static_cache_tile_size_canvas),
+                    Px(tile_x as f32 * nodes_cache_tile_size_canvas),
+                    Px(tile_y as f32 * nodes_cache_tile_size_canvas),
                 );
                 Some(Rect::new(
                     origin,
                     Size::new(
-                        Px(static_cache_tile_size_canvas),
-                        Px(static_cache_tile_size_canvas),
+                        Px(nodes_cache_tile_size_canvas),
+                        Px(nodes_cache_tile_size_canvas),
+                    ),
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let edges_cache_rect: Option<Rect> = if can_use_static_scene_cache
+            && edges_cache_tile_size_canvas >= viewport_w
+            && edges_cache_tile_size_canvas >= viewport_h
+        {
+            let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
+            let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
+            if center_x.is_finite() && center_y.is_finite() {
+                let tile_x = (center_x / edges_cache_tile_size_canvas).floor() as i32;
+                let tile_y = (center_y / edges_cache_tile_size_canvas).floor() as i32;
+                let origin = Point::new(
+                    Px(tile_x as f32 * edges_cache_tile_size_canvas),
+                    Px(tile_y as f32 * edges_cache_tile_size_canvas),
+                );
+                Some(Rect::new(
+                    origin,
+                    Size::new(
+                        Px(edges_cache_tile_size_canvas),
+                        Px(edges_cache_tile_size_canvas),
                     ),
                 ))
             } else {
@@ -192,7 +235,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             presenter_rev: self.presenter.geometry_revision(),
         });
 
-        if let Some(cache_rect) = static_cache_rect {
+        if let Some(cache_rect) = nodes_cache_rect {
             // --- Groups (static, cached) ---
             let groups_key = {
                 let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_groups.v1");
@@ -201,7 +244,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
                 b.add_u64(style_key);
-                b.add_f32_bits(static_cache_tile_size_canvas);
+                b.add_f32_bits(nodes_cache_tile_size_canvas);
                 b.add_u32(cache_rect.origin.x.0.to_bits());
                 b.add_u32(cache_rect.origin.y.0.to_bits());
                 b.finish()
@@ -323,6 +366,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 });
 
             if edges_cache_allowed {
+                let edges_cache_rect = edges_cache_rect.unwrap_or(cache_rect);
+
                 let edges_key = {
                     let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_edges.v1");
                     b.add_u64(geom_key.graph_rev);
@@ -330,9 +375,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     b.add_u64(geom_key.draw_order_hash);
                     b.add_u64(geom_key.presenter_rev);
                     b.add_u64(style_key);
-                    b.add_f32_bits(static_cache_tile_size_canvas);
-                    b.add_u32(cache_rect.origin.x.0.to_bits());
-                    b.add_u32(cache_rect.origin.y.0.to_bits());
+                    b.add_f32_bits(edges_cache_tile_size_canvas);
+                    b.add_u32(edges_cache_rect.origin.x.0.to_bits());
+                    b.add_u32(edges_cache_rect.origin.y.0.to_bits());
                     b.finish()
                 };
 
@@ -343,9 +388,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     b.add_u64(geom_key.draw_order_hash);
                     b.add_u64(geom_key.presenter_rev);
                     b.add_u64(style_key);
-                    b.add_f32_bits(static_cache_tile_size_canvas);
-                    b.add_u32(cache_rect.origin.x.0.to_bits());
-                    b.add_u32(cache_rect.origin.y.0.to_bits());
+                    b.add_f32_bits(edges_cache_tile_size_canvas);
+                    b.add_u32(edges_cache_rect.origin.x.0.to_bits());
+                    b.add_u32(edges_cache_rect.origin.y.0.to_bits());
                     b.finish()
                 };
 
@@ -368,7 +413,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 &snapshot,
                                 geom.clone(),
                                 index.clone(),
-                                Some(cache_rect),
+                                Some(edges_cache_rect),
                                 zoom,
                                 None,
                                 false,
@@ -378,7 +423,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             EdgesBuildState {
                                 key: edges_key,
                                 ops: vec![
-                                    SceneOp::PushClipRect { rect: cache_rect },
+                                    SceneOp::PushClipRect {
+                                        rect: edges_cache_rect,
+                                    },
                                     SceneOp::PopClip,
                                 ],
                                 edges: render_edges.edges,
@@ -476,7 +523,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 &snapshot,
                                 geom.clone(),
                                 index.clone(),
-                                Some(cache_rect),
+                                Some(edges_cache_rect),
                                 zoom,
                                 None,
                                 false,
@@ -486,7 +533,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             EdgeLabelsBuildState {
                                 key: labels_key,
                                 ops: vec![
-                                    SceneOp::PushClipRect { rect: cache_rect },
+                                    SceneOp::PushClipRect {
+                                        rect: edges_cache_rect,
+                                    },
                                     SceneOp::PopClip,
                                 ],
                                 edges: render_edges.edges,
@@ -586,7 +635,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
                 b.add_u64(style_key);
-                b.add_f32_bits(static_cache_tile_size_canvas);
+                b.add_f32_bits(nodes_cache_tile_size_canvas);
                 b.add_u32(cache_rect.origin.x.0.to_bits());
                 b.add_u32(cache_rect.origin.y.0.to_bits());
                 b.finish()
