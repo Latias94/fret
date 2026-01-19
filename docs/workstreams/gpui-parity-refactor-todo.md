@@ -53,6 +53,12 @@ Keep this list short and evidence-backed:
   - Touches: `tools/diag-scripts/ui-gallery-overlay-torture.json`, `apps/fretboard/src/diag.rs`
 - [x] GPUI-MVP0-diag-004 Virtual list torture scripted scenario exists.
   - Touches: `tools/diag-scripts/ui-gallery-virtual-list-torture.json`, `apps/fretboard/src/diag.rs`
+- [x] GPUI-MVP0-diag-005 Export prepaint timing + add warmup filtering for perf runs.
+  - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `apps/fretboard/src/cli.rs`
+  - Notes: `--warmup-frames <n>` skips early `frame_id` snapshots when ranking; short scripts auto-fallback to unfiltered stats when warmup would skip everything.
+- [x] GPUI-MVP0-perf-006 Avoid false global-change churn from stable “service globals”.
+  - Touches: `ecosystem/fret-ui-kit/src/dnd/service.rs`
+  - Notes: use `with_global_mut_untracked` for lazy init + stable read paths (prevents global-change tracking from firing on every frame).
 
 ## MVP1 — Pseudoclasses + Structural Stability (Paint-only by Default)
 
