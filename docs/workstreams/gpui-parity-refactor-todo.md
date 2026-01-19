@@ -26,6 +26,10 @@ These defaults are intentionally “cache-root-first” to maximize performance 
 - `notify()` (no explicit target) marks the current/nearest cache root dirty; if no cache root is active, it falls back
   to the window root.
 - Dirty cache roots propagate to ancestor cache roots (nested boundaries must not replay stale ranges).
+- `request_animation_frame()` parity note (Zed/GPUI): in GPUI, RAF requested from within a view effectively `notify`s
+  that view on the next frame. In Fret today, RAF guarantees a paint pass (blocks paint replay) but does not
+  necessarily force a declarative rerender for cache roots unless the caller explicitly `notify()`s or triggers a
+  layout invalidation. Track this gap explicitly (see MVP2 tasks below).
 
 ## Guiding Principles
 
@@ -99,6 +103,29 @@ cache-root (ViewCache v1) mechanics (ADR 1152 + ADR 0055).
 - [ ] Document cache root placement guidance (panel granularity; avoid micro-boundaries; nesting rules).
   - Touches: `docs/workstreams/gpui-parity-refactor.md`
 
+### Zed/GPUI Parity Gaps (Frame Scheduling + Cache Gates)
+
+These are the most likely sources of “it repaints but the UI didn’t update” under view-cache shells.
+
+- [ ] Add a GPUI-aligned rule for RAF requested during declarative authoring.
+  - Problem: RAF currently guarantees paint execution, but does not imply a cache-root rerender.
+  - Options (pick one and lock it in ADR 0180/1152):
+    - A) `ElementContext::request_animation_frame()` also marks the nearest cache root dirty (like `notify()`),
+    - B) introduce an explicit `ElementContext::notify_on_next_frame()` helper (GPUI-style),
+    - C) document that RAF is paint-only and animations that change subtree shape must call `notify()` or update models.
+  - Evidence anchor (GPUI): `repo-ref/zed/crates/gpui/src/window.rs` (`request_animation_frame`).
+- [ ] Gate cache-root reuse on an explicit cache key (not only invalidation flags).
+  - Goal: match GPUI’s “bounds/content_mask/text_style + dirty_views + refreshing” style gating at the cache boundary.
+  - Minimum v1 key candidates: root bounds (final layout), theme/text-style revision, content mask/clip scope.
+  - Evidence anchor (GPUI): `repo-ref/zed/crates/gpui/src/view.rs` (`ViewCacheKey` checks in `AnyView::cached`).
+- [ ] Ensure diagnostics/inspector identity survives cache-hit frames (closed loop for debugging).
+  - Add/keep a regression test that passes under `--features diagnostics` for view-cache reuse identity.
+  - Evidence (current failing test intent): `crates/fret-ui/src/declarative/tests/view_cache.rs`.
+- [ ] Emit “why did this cache root rerender?” diagnostics similar to GPUI dirty view reasons.
+  - Surface should attribute: model/global change, notify, bounds/key change, inspection disable, layout invalidation,
+    nested descendant dirty, animation-frame requests (paint-only), etc.
+  - Evidence anchor (GPUI): `repo-ref/zed/crates/gpui/src/window.rs` (`dirty_views` behavior).
+
 ### Cache Roots (ViewCache) Closed Loop (Paint Stream)
 
 - [ ] Record nearest cache root ownership per node during declarative mount (`GlobalElementId -> NodeId` bridge).
@@ -120,6 +147,15 @@ cache-root (ViewCache v1) mechanics (ADR 1152 + ADR 0055).
 - [ ] Introduce a range-replay recording abstraction per stream (compatible with ADR 0055).
 - [ ] Thread cache root semantics through all streams (a cache hit must replay all stream ranges).
 - [ ] Add acceptance tests for interaction correctness under caching (hit-test, outside-press, focus path).
+
+### Zed/GPUI Parity Gaps (Interaction Streams)
+
+- [ ] Replace “component-local replay hacks” with a single prepaint/replay contract for overlay requests.
+  - Problem: in a view-cache shell, cache-hit frames skip the render closure, so any “issue overlay request” side effect
+    done during render must be replayed (tooltips/hovercards/menu portals).
+  - Goal: move this to an interaction/prepaint stream that is replayed when a cache root reuses.
+  - Evidence anchors: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`, `docs/reference-stack-ui-behavior.md`,
+    and GPUI’s cached prepaint reuse model (`repo-ref/zed/crates/gpui/src/view.rs`).
 
 ## MVP4 〞 Authoring Ergonomics + Adoption (Ecosystem)
 
