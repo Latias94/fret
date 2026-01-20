@@ -383,16 +383,19 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
     }
 
     let theme = Theme::global(&*cx.app).clone();
-    let pad = theme.metric_required("metric.padding.md");
-    let pad_sm = theme.metric_required("metric.padding.sm");
-    let radius = theme.metric_required("metric.radius.md");
-    let radius_sm = theme.metric_required("metric.radius.sm");
+    let pad = theme.metric_by_key("metric.padding.md").unwrap_or(Px(16.0));
+    let pad_sm = theme.metric_by_key("metric.padding.sm").unwrap_or(Px(12.0));
+    let radius = theme.metric_by_key("metric.radius.md").unwrap_or(Px(8.0));
+    let radius_sm = theme.metric_by_key("metric.radius.sm").unwrap_or(Px(6.0));
 
-    let card = theme.color_required("card");
-    let border = theme.color_required("border");
     let fg = theme.color_required("foreground");
-    let muted_fg = theme.color_required("muted-foreground");
-    let muted = theme.color_required("muted");
+    let muted_fg = theme.color_by_key("muted-foreground").unwrap_or(fg);
+    let card = theme
+        .color_by_key("card")
+        .or_else(|| theme.color_by_key("background"))
+        .unwrap_or(fg);
+    let muted = theme.color_by_key("muted").unwrap_or(card);
+    let border = theme.color_by_key("border").unwrap_or(muted_fg);
 
     let config_paths = fret_app::config_files::LayeredConfigPaths::for_project_root(".");
 
