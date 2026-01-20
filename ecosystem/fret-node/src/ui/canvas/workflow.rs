@@ -226,6 +226,7 @@ mod tests {
                 extent: None,
                 expand_parent: None,
                 size: None,
+                hidden: false,
                 collapsed: false,
                 ports: vec![src_out],
                 data: serde_json::Value::Null,

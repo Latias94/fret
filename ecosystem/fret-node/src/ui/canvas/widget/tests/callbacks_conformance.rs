@@ -264,6 +264,7 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![c_in],
             data: serde_json::Value::Null,

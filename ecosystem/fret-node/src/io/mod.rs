@@ -193,13 +193,24 @@ impl Default for NodeGraphViewState {
 impl NodeGraphViewState {
     /// Removes stale IDs (selection / draw order) that no longer exist in the target graph.
     pub fn sanitize_for_graph(&mut self, graph: &Graph) {
-        self.selected_nodes
-            .retain(|id| graph.nodes.contains_key(id));
-        self.selected_edges
-            .retain(|id| graph.edges.contains_key(id));
+        let visible_node = |id: &NodeId| graph.nodes.get(id).is_some_and(|n| !n.hidden);
+
+        self.selected_nodes.retain(visible_node);
+        self.selected_edges.retain(|id| {
+            let Some(edge) = graph.edges.get(id) else {
+                return false;
+            };
+            let Some(from) = graph.ports.get(&edge.from) else {
+                return false;
+            };
+            let Some(to) = graph.ports.get(&edge.to) else {
+                return false;
+            };
+            visible_node(&from.node) && visible_node(&to.node)
+        });
         self.selected_groups
             .retain(|id| graph.groups.contains_key(id));
-        self.draw_order.retain(|id| graph.nodes.contains_key(id));
+        self.draw_order.retain(visible_node);
         self.group_draw_order
             .retain(|id| graph.groups.contains_key(id));
     }
@@ -1255,6 +1266,7 @@ mod tests {
                 extent: None,
                 expand_parent: None,
                 size: None,
+                hidden: false,
                 collapsed: false,
                 ports: Vec::new(),
                 data: serde_json::Value::Null,

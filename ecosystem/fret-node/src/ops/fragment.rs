@@ -165,6 +165,7 @@ mod tests {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: ports.to_vec(),
             data: Value::Null,

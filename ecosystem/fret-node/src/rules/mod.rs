@@ -218,6 +218,7 @@ impl InsertNodeTemplate {
                 extent: None,
                 expand_parent: None,
                 size: None,
+                hidden: false,
                 collapsed: self.collapsed,
                 ports: Vec::new(),
                 data: self.data.clone(),

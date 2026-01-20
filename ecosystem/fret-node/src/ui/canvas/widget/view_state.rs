@@ -116,8 +116,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let mut did = false;
         for req in reqs {
             match req {
-                crate::ui::NodeGraphViewRequest::FrameNodes { nodes } => {
-                    did |= self.frame_nodes_in_view(host, window, bounds, &nodes);
+                crate::ui::NodeGraphViewRequest::FrameNodes { nodes, options } => {
+                    did |= self.frame_nodes_in_view_with_options(
+                        host,
+                        window,
+                        bounds,
+                        &nodes,
+                        Some(&options),
+                    );
                 }
             }
         }
@@ -260,6 +266,44 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         bounds: Rect,
         node_ids: &[GraphNodeId],
     ) -> bool {
+        self.frame_nodes_in_view_with_options(host, window, bounds, node_ids, None)
+    }
+
+    pub(super) fn frame_nodes_in_view_with_options<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        bounds: Rect,
+        node_ids: &[GraphNodeId],
+        options: Option<&crate::ui::NodeGraphFitViewOptions>,
+    ) -> bool {
+        let snapshot = self.sync_view_state(host);
+        let include_hidden_nodes = options.is_some_and(|o| o.include_hidden_nodes);
+
+        let mut target_min_zoom = self.style.min_zoom;
+        let mut target_max_zoom = self.style.max_zoom;
+        if let Some(options) = options {
+            if let Some(min) = options.min_zoom {
+                if min.is_finite() && min > 0.0 {
+                    target_min_zoom = target_min_zoom.max(min);
+                }
+            }
+            if let Some(max) = options.max_zoom {
+                if max.is_finite() && max > 0.0 {
+                    target_max_zoom = target_max_zoom.min(max);
+                }
+            }
+        }
+        if !target_min_zoom.is_finite()
+            || !target_max_zoom.is_finite()
+            || target_min_zoom <= 0.0
+            || target_max_zoom <= 0.0
+            || target_min_zoom > target_max_zoom
+        {
+            target_min_zoom = self.style.min_zoom;
+            target_max_zoom = self.style.max_zoom;
+        }
+
         if node_ids.is_empty() {
             self.show_toast(
                 host,
@@ -285,6 +329,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     let Some(node) = graph.nodes.get(id) else {
                         continue;
                     };
+                    if node.hidden && !include_hidden_nodes {
+                        continue;
+                    }
                     let (inputs, outputs) = node_ports(graph, *id);
                     let (w, h) = self.node_default_size_for_ports(inputs.len(), outputs.len());
                     out.push(NodeInfo {
@@ -318,8 +365,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return false;
         }
 
-        let snapshot = self.sync_view_state(host);
-        let padding = snapshot.interaction.frame_view_padding;
+        let padding = options
+            .and_then(|o| o.padding)
+            .unwrap_or(snapshot.interaction.frame_view_padding);
         let padding = if padding.is_finite() {
             padding.clamp(0.0, 0.45)
         } else {
@@ -349,8 +397,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let spread_x = (max_x - min_x).max(0.0);
         let spread_y = (max_y - min_y).max(0.0);
 
-        let mut zoom_x = self.style.max_zoom;
-        let mut zoom_y = self.style.max_zoom;
+        let mut zoom_x = target_max_zoom;
+        let mut zoom_y = target_max_zoom;
         if spread_x > 1.0e-3 {
             zoom_x = (viewport_w - max_w - 2.0 * margin_x) / spread_x;
         }
@@ -362,7 +410,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         if !zoom.is_finite() {
             zoom = 1.0;
         }
-        zoom = zoom.clamp(self.style.min_zoom, self.style.max_zoom);
+        zoom = zoom.clamp(target_min_zoom, target_max_zoom);
 
         let mut rect_min_x = f32::INFINITY;
         let mut rect_min_y = f32::INFINITY;
@@ -398,17 +446,25 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             y: target_center_y - center_y,
         };
 
-        let duration_ms = snapshot.interaction.frame_view_duration_ms;
+        let duration_ms = options
+            .and_then(|o| o.duration_ms)
+            .unwrap_or(snapshot.interaction.frame_view_duration_ms);
         let duration = std::time::Duration::from_millis(duration_ms as u64);
-        let interpolate = match snapshot.interaction.frame_view_interpolate {
+        let interpolate = options
+            .and_then(|o| o.interpolate)
+            .unwrap_or(snapshot.interaction.frame_view_interpolate);
+        let interpolate = match interpolate {
             crate::io::NodeGraphViewportInterpolate::Linear => ViewportAnimationInterpolate::Linear,
             crate::io::NodeGraphViewportInterpolate::Smooth => ViewportAnimationInterpolate::Smooth,
         };
-        let ease = snapshot.interaction.frame_view_ease.map(|ease| match ease {
-            crate::io::NodeGraphViewportEase::Linear => ViewportAnimationEase::Linear,
-            crate::io::NodeGraphViewportEase::Smoothstep => ViewportAnimationEase::Smoothstep,
-            crate::io::NodeGraphViewportEase::CubicInOut => ViewportAnimationEase::CubicInOut,
-        });
+        let ease = options
+            .and_then(|o| o.ease)
+            .or(snapshot.interaction.frame_view_ease)
+            .map(|ease| match ease {
+                crate::io::NodeGraphViewportEase::Linear => ViewportAnimationEase::Linear,
+                crate::io::NodeGraphViewportEase::Smoothstep => ViewportAnimationEase::Smoothstep,
+                crate::io::NodeGraphViewportEase::CubicInOut => ViewportAnimationEase::CubicInOut,
+            });
 
         let dx = new_pan.x - snapshot.pan.x;
         let dy = new_pan.y - snapshot.pan.y;

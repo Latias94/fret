@@ -21,6 +21,7 @@ fn make_node(kind: &str) -> Node {
         extent: None,
         expand_parent: None,
         size: None,
+        hidden: false,
         collapsed: false,
         ports: Vec::new(),
         data: serde_json::Value::Null,

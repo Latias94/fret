@@ -2,7 +2,7 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
 use crate::io::NodeGraphViewState;
-use crate::ui::{NodeGraphViewQueue, NodeGraphViewRequest};
+use crate::ui::NodeGraphViewQueue;
 
 use super::super::NodeGraphCanvas;
 use super::{TestUiHostImpl, make_test_graph_two_nodes_with_size};
@@ -41,7 +41,7 @@ fn frame_nodes_via_view_queue_matches_direct_framing() {
     canvas.interaction.last_bounds = Some(bounds);
 
     let _ = queue.update(&mut host, |q, _cx| {
-        q.push(NodeGraphViewRequest::FrameNodes { nodes: vec![a] });
+        q.push_frame_nodes(vec![a]);
     });
 
     assert!(canvas.drain_view_queue(&mut host, None));

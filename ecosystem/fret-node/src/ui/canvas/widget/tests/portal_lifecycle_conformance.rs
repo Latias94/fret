@@ -50,6 +50,7 @@ fn portal_subtree_resets_state_on_node_kind_change() {
                 width: 120.0,
                 height: 60.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: serde_json::Value::Null,

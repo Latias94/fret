@@ -59,7 +59,7 @@ pub use presenter::{
 };
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
 pub use style::NodeGraphStyle;
-pub use view_queue::{NodeGraphViewQueue, NodeGraphViewRequest};
+pub use view_queue::{NodeGraphFitViewOptions, NodeGraphViewQueue, NodeGraphViewRequest};
 
 pub use overlays::{
     GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphMiniMapOverlay, NodeGraphOverlayHost,

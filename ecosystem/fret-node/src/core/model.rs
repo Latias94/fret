@@ -9,6 +9,10 @@ use super::ids::{
     EdgeId, GraphId, GroupId, NodeId, NodeKindKey, PortId, PortKey, StickyNoteId, SymbolId,
 };
 
+fn is_false(v: &bool) -> bool {
+    !*v
+}
+
 /// Graph schema version (v1).
 pub const GRAPH_VERSION: u32 = 1;
 
@@ -153,6 +157,12 @@ pub struct Node {
     /// When `None`, the editor derives the size from measured geometry or style defaults.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<CanvasSize>,
+
+    /// Whether the node is hidden (XyFlow `node.hidden`).
+    ///
+    /// Hidden nodes are excluded from derived geometry (hit-testing, rendering, fit-view).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub hidden: bool,
 
     /// Whether the node is collapsed.
     #[serde(default)]

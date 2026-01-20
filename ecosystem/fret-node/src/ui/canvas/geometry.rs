@@ -145,13 +145,18 @@ pub(crate) fn node_order(graph: &Graph, draw_order: &[NodeId]) -> Vec<NodeId> {
     let mut seen: BTreeSet<NodeId> = BTreeSet::new();
     let mut out: Vec<NodeId> = Vec::new();
 
+    let visible = |id: &NodeId| graph.nodes.get(id).is_some_and(|n| !n.hidden);
+
     for id in draw_order {
-        if graph.nodes.contains_key(id) && seen.insert(*id) {
+        if visible(id) && seen.insert(*id) {
             out.push(*id);
         }
     }
 
     for id in graph.nodes.keys() {
+        if !visible(id) {
+            continue;
+        }
         if seen.insert(*id) {
             out.push(*id);
         }
