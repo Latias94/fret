@@ -8,15 +8,6 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-menus" }
-      },
-      "timeout_frames": 60
-    },
-    { "type": "press_key", "key": "enter" },
-    {
-      "type": "wait_until",
-      "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-menubar-file" }
       },
