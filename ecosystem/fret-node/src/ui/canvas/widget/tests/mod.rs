@@ -50,6 +50,7 @@ mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod viewport_animation_conformance;
 mod viewport_helper_conformance;
+mod xyflow_style_conformance;
 mod z_order_conformance;
 
 #[test]

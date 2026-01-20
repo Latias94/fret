@@ -31,6 +31,7 @@ pub struct NodeGraphStyle {
     pub node_width: f32,
     pub node_header_height: f32,
     pub node_padding: f32,
+    pub node_corner_radius: f32,
     pub pin_row_height: f32,
     pub pin_radius: f32,
 
@@ -139,6 +140,7 @@ impl Default for NodeGraphStyle {
             node_width: 220.0,
             node_header_height: 28.0,
             node_padding: 10.0,
+            node_corner_radius: 8.0,
             pin_row_height: 22.0,
             pin_radius: 6.0,
 
@@ -451,6 +453,26 @@ impl NodeGraphStyle {
         s
     }
 
+    /// Applies XyFlow default node style tokens (width/padding/radius/handle size/font size).
+    ///
+    /// This only touches node-related sizing/chrome fields. Colors remain unchanged so callers
+    /// can combine it with theme-driven palettes or `colorMode` overrides.
+    pub fn apply_xyflow_default_node_style(&mut self) {
+        // From `@xyflow/system` style defaults (adapted to fret-node's retained rendering):
+        // - node: width 150, padding 10, border radius 3, font-size 12
+        // - handle: 6x6 circle
+        self.node_width = 150.0;
+        self.node_padding = 10.0;
+        self.node_corner_radius = 3.0;
+        self.pin_radius = 3.0;
+        self.context_menu_text_style.size = Px(12.0);
+    }
+
+    pub fn with_xyflow_default_node_style(mut self) -> Self {
+        self.apply_xyflow_default_node_style();
+        self
+    }
+
     pub fn from_theme(theme: &Theme) -> Self {
         Self::from_snapshot(theme.snapshot())
     }
@@ -490,6 +512,7 @@ impl NodeGraphStyle {
             node_width: 220.0,
             node_header_height: 28.0,
             node_padding: padding_md,
+            node_corner_radius: radius_sm.max(8.0),
             pin_row_height: 22.0,
             pin_radius: radius_sm,
 

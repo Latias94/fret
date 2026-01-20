@@ -37,7 +37,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             lh.0 /= zoom;
         }
 
-        let corner = Px(8.0 / zoom);
+        let corner = Px(self.style.node_corner_radius / zoom);
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 
@@ -364,7 +364,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             lh.0 /= zoom;
         }
 
-        let corner = Px(8.0 / zoom);
+        let corner = Px(self.style.node_corner_radius / zoom);
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 
@@ -524,7 +524,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             lh.0 /= zoom;
         }
 
-        let corner = Px(8.0 / zoom);
+        let corner = Px(self.style.node_corner_radius / zoom);
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 

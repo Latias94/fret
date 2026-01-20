@@ -100,6 +100,7 @@ Scope notes:
 | `preventScrolling` | N/A | N/A | Browser scroll containment is web-only. |
 | `width`, `height` | N/A | N/A | Layout is controlled by the host UI tree. |
 | `colorMode` | `NodeGraphColorMode` + `NodeGraphCanvas::with_color_mode` | Implemented | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs` |
+| Default node CSS tokens (width/padding/radius/handle size/font size) | `NodeGraphStyle::with_xyflow_default_node_style` | Implemented | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/xyflow_style_conformance.rs` |
 
 ## Recommended Next Steps (Top 3)
 
