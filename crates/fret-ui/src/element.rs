@@ -668,6 +668,12 @@ pub struct PressableA11y {
     ///
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
     pub test_id: Option<Arc<str>>,
+    /// When true, suppress exposing this pressable to assistive technologies (aria-hidden).
+    ///
+    /// This is useful for purely visual affordances (e.g. decorative scroll buttons in Radix
+    /// Select) that should remain interactive for pointer users but should not appear in the
+    /// accessibility tree.
+    pub hidden: bool,
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
