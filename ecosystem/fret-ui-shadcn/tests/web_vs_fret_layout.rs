@@ -271,6 +271,125 @@ fn rect_contains(outer: WebRect, inner: WebRect) -> bool {
         && inner.y + inner.h <= outer.y + outer.h + eps
 }
 
+fn fret_rect_contains(outer: Rect, inner: Rect) -> bool {
+    let eps = 0.01;
+    inner.origin.x.0 + eps >= outer.origin.x.0
+        && inner.origin.y.0 + eps >= outer.origin.y.0
+        && inner.origin.x.0 + inner.size.width.0 <= outer.origin.x.0 + outer.size.width.0 + eps
+        && inner.origin.y.0 + inner.size.height.0 <= outer.origin.y.0 + outer.size.height.0 + eps
+}
+
+#[derive(Debug, Clone, Copy)]
+struct InsetQuad {
+    left: f32,
+    top_to_first_option: f32,
+    right: f32,
+    bottom_from_last_option: f32,
+}
+
+fn web_listbox_option_inset(theme: &WebGoldenTheme, listbox: &WebNode) -> InsetQuad {
+    let mut all = Vec::new();
+    web_collect_all(&theme.root, &mut all);
+
+    let options: Vec<_> = all
+        .into_iter()
+        .filter(|n| n.attrs.get("role").is_some_and(|v| v == "option"))
+        .filter(|n| rect_contains(listbox.rect, n.rect))
+        .collect();
+
+    if options.is_empty() {
+        panic!("missing web listbox options");
+    }
+
+    let mut min_x = options[0].rect.x;
+    let mut min_y = options[0].rect.y;
+    let mut max_right = options[0].rect.x + options[0].rect.w;
+    let mut max_bottom = options[0].rect.y + options[0].rect.h;
+    for option in options.iter().skip(1) {
+        min_x = min_x.min(option.rect.x);
+        min_y = min_y.min(option.rect.y);
+        max_right = max_right.max(option.rect.x + option.rect.w);
+        max_bottom = max_bottom.max(option.rect.y + option.rect.h);
+    }
+
+    let panel_right = listbox.rect.x + listbox.rect.w;
+    let panel_bottom = listbox.rect.y + listbox.rect.h;
+
+    InsetQuad {
+        left: min_x - listbox.rect.x,
+        top_to_first_option: min_y - listbox.rect.y,
+        right: panel_right - max_right,
+        bottom_from_last_option: panel_bottom - max_bottom,
+    }
+}
+
+fn fret_listbox_option_inset(snap: &fret_core::SemanticsSnapshot) -> InsetQuad {
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox"));
+
+    let options: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBoxOption)
+        .filter(|n| fret_rect_contains(listbox.bounds, n.bounds))
+        .collect();
+
+    if options.is_empty() {
+        panic!("missing fret listbox options");
+    }
+
+    let mut min_x = options[0].bounds.origin.x.0;
+    let mut min_y = options[0].bounds.origin.y.0;
+    let mut max_right = options[0].bounds.origin.x.0 + options[0].bounds.size.width.0;
+    let mut max_bottom = options[0].bounds.origin.y.0 + options[0].bounds.size.height.0;
+    for option in options.iter().skip(1) {
+        min_x = min_x.min(option.bounds.origin.x.0);
+        min_y = min_y.min(option.bounds.origin.y.0);
+        max_right = max_right.max(option.bounds.origin.x.0 + option.bounds.size.width.0);
+        max_bottom = max_bottom.max(option.bounds.origin.y.0 + option.bounds.size.height.0);
+    }
+
+    let panel_right = listbox.bounds.origin.x.0 + listbox.bounds.size.width.0;
+    let panel_bottom = listbox.bounds.origin.y.0 + listbox.bounds.size.height.0;
+
+    InsetQuad {
+        left: min_x - listbox.bounds.origin.x.0,
+        top_to_first_option: min_y - listbox.bounds.origin.y.0,
+        right: panel_right - max_right,
+        bottom_from_last_option: panel_bottom - max_bottom,
+    }
+}
+
+fn assert_inset_quad_close(label: &str, actual: InsetQuad, expected: InsetQuad, tol: f32) {
+    assert_close_px(
+        &format!("{label} listbox left_inset"),
+        Px(actual.left),
+        expected.left,
+        tol,
+    );
+    assert_close_px(
+        &format!("{label} listbox top_to_first_option"),
+        Px(actual.top_to_first_option),
+        expected.top_to_first_option,
+        tol,
+    );
+    assert_close_px(
+        &format!("{label} listbox right_inset"),
+        Px(actual.right),
+        expected.right,
+        tol,
+    );
+    assert_close_px(
+        &format!("{label} listbox bottom_from_last_option"),
+        Px(actual.bottom_from_last_option),
+        expected.bottom_from_last_option,
+        tol,
+    );
+}
+
 fn web_find_smallest_container<'a>(root: &'a WebNode, nodes: &[&WebNode]) -> Option<&'a WebNode> {
     if nodes.is_empty() {
         return None;
@@ -5847,6 +5966,148 @@ fn web_vs_fret_layout_input_demo_geometry() {
         web_input.rect.h,
         1.0,
     );
+}
+
+fn command_demo_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    run_fret_root_with_services(bounds, &mut services, |cx| {
+        use fret_ui_shadcn::{
+            CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator,
+        };
+
+        let query: Model<String> = cx.app.models_mut().insert(String::new());
+
+        let entries: Vec<CommandEntry> = vec![
+            CommandGroup::new(vec![
+                CommandItem::new("Calendar"),
+                CommandItem::new("Search Emoji"),
+                CommandItem::new("Calculator"),
+            ])
+            .heading("Suggestions")
+            .into(),
+            CommandSeparator::new().into(),
+            CommandGroup::new(vec![
+                CommandItem::new("Profile"),
+                CommandItem::new("Billing"),
+                CommandItem::new("Settings"),
+            ])
+            .heading("Settings")
+            .into(),
+        ];
+
+        vec![
+            CommandPalette::new(query, Vec::new())
+                .entries(entries)
+                .into_element(cx),
+        ]
+    })
+}
+
+#[test]
+fn web_vs_fret_layout_command_demo_input_height_matches() {
+    let web = read_web_golden("command-demo");
+    let theme = web_theme(&web);
+    let web_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web command-demo combobox input");
+
+    let snap = command_demo_snapshot(theme);
+    let combobox = find_semantics(&snap, SemanticsRole::ComboBox, None)
+        .unwrap_or_else(|| panic!("missing fret command-demo combobox"));
+
+    assert_close_px(
+        "command-demo input height",
+        combobox.bounds.size.height,
+        web_input.rect.h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_command_demo_listbox_height_matches() {
+    let web = read_web_golden("command-demo");
+    let theme = web_theme(&web);
+    let web_listbox = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "listbox")
+    })
+    .expect("web command-demo listbox");
+
+    let snap = command_demo_snapshot(theme);
+    let listbox = find_semantics(&snap, SemanticsRole::ListBox, None)
+        .unwrap_or_else(|| panic!("missing fret command-demo listbox"));
+
+    assert_close_px(
+        "command-demo listbox height",
+        listbox.bounds.size.height,
+        web_listbox.rect.h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_command_demo_listbox_option_height_matches() {
+    let web = read_web_golden("command-demo");
+    let theme = web_theme(&web);
+    let web_listbox = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "listbox")
+    })
+    .expect("web command-demo listbox");
+
+    let mut all = Vec::new();
+    web_collect_all(&theme.root, &mut all);
+    let web_heights: std::collections::BTreeSet<i32> = all
+        .into_iter()
+        .filter(|n| n.attrs.get("role").is_some_and(|v| v == "option"))
+        .filter(|n| rect_contains(web_listbox.rect, n.rect))
+        .map(|n| n.rect.h.round() as i32)
+        .collect();
+    assert!(
+        web_heights.len() == 1,
+        "command-demo expected uniform web option height; got {web_heights:?}"
+    );
+
+    let snap = command_demo_snapshot(theme);
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret command-demo listbox"));
+    let fret_heights: std::collections::BTreeSet<i32> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBoxOption)
+        .filter(|n| fret_rect_contains(listbox.bounds, n.bounds))
+        .map(|n| n.bounds.size.height.0.round() as i32)
+        .collect();
+    assert!(
+        fret_heights.len() == 1,
+        "command-demo expected uniform fret option height; got {fret_heights:?}"
+    );
+
+    let expected_h = web_heights.iter().next().copied().unwrap_or_default() as f32;
+    let actual_h = fret_heights.iter().next().copied().unwrap_or_default() as f32;
+    assert_close_px("command-demo option height", Px(actual_h), expected_h, 1.0);
+}
+
+#[test]
+fn web_vs_fret_layout_command_demo_listbox_option_insets_match() {
+    let web = read_web_golden("command-demo");
+    let theme = web_theme(&web);
+    let web_listbox = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "listbox")
+    })
+    .expect("web command-demo listbox");
+    let expected = web_listbox_option_inset(theme, web_listbox);
+
+    let snap = command_demo_snapshot(theme);
+    let actual = fret_listbox_option_inset(&snap);
+    assert_inset_quad_close("command-demo", actual, expected, 1.0);
 }
 
 #[test]

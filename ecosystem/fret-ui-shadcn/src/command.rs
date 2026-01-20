@@ -586,6 +586,9 @@ impl CommandInput {
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
                 .unwrap_or(Px(36.0));
+            let input_h = theme
+                .metric_by_key("component.command.input.height")
+                .unwrap_or(Px(40.0));
             let icon_size = theme
                 .metric_by_key("component.command.input.icon_size")
                 .unwrap_or(Px(16.0));
@@ -675,7 +678,9 @@ impl CommandInput {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
+                            layout.size.height = Length::Px(input_h);
+                            layout.margin.top = fret_ui::element::MarginEdge::Auto;
+                            layout.margin.bottom = fret_ui::element::MarginEdge::Auto;
                             layout
                         },
                         gap,
@@ -1198,10 +1203,12 @@ pub struct CommandPalette {
     input_role: Option<SemanticsRole>,
     input_expanded: Option<bool>,
     input_wrapper_h: MetricRef,
+    input_h: MetricRef,
     input_icon_size: MetricRef,
     item_pad_y: MetricRef,
     group_pad_x: MetricRef,
     group_pad_y: MetricRef,
+    pad_group_separators: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     scroll: LayoutRefinement,
@@ -1215,9 +1222,18 @@ enum CommandPaletteRenderRow {
     Item(usize),
 }
 
+#[cfg(test)]
 fn command_palette_render_rows_for_query(
     entries: Vec<CommandEntry>,
     query: &str,
+) -> (Vec<CommandPaletteRenderRow>, Vec<CommandItem>) {
+    command_palette_render_rows_for_query_with_options(entries, query, true)
+}
+
+fn command_palette_render_rows_for_query_with_options(
+    entries: Vec<CommandEntry>,
+    query: &str,
+    pad_group_separators: bool,
 ) -> (Vec<CommandPaletteRenderRow>, Vec<CommandItem>) {
     #[derive(Clone)]
     enum PendingRow {
@@ -1382,7 +1398,16 @@ fn command_palette_render_rows_for_query(
                 saw_heading = true;
                 out
             }
-            PendingRow::Separator => vec![CommandPaletteRenderRow::Separator],
+            PendingRow::Separator => {
+                if pad_group_separators && saw_heading {
+                    vec![
+                        CommandPaletteRenderRow::GroupPad,
+                        CommandPaletteRenderRow::Separator,
+                    ]
+                } else {
+                    vec![CommandPaletteRenderRow::Separator]
+                }
+            }
             PendingRow::Item(item) => {
                 let idx = items.len();
                 items.push(item);
@@ -1424,10 +1449,12 @@ impl CommandPalette {
             input_role: Some(SemanticsRole::ComboBox),
             input_expanded: None,
             input_wrapper_h: MetricRef::Px(Px(36.0)),
+            input_h: MetricRef::Px(Px(40.0)),
             input_icon_size: MetricRef::Px(Px(16.0)),
             item_pad_y: MetricRef::space(Space::N1p5),
             group_pad_x: MetricRef::space(Space::N1),
             group_pad_y: MetricRef::space(Space::N1),
+            pad_group_separators: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
@@ -1460,10 +1487,12 @@ impl CommandPalette {
     /// - `[&_[cmdk-group]]:px-2`
     pub fn command_dialog_defaults(mut self) -> Self {
         self.input_wrapper_h = MetricRef::Px(Px(48.0));
+        self.input_h = MetricRef::Px(Px(48.0));
         self.input_icon_size = MetricRef::Px(Px(20.0));
         self.item_pad_y = MetricRef::space(Space::N3);
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
+        self.pad_group_separators = false;
         self
     }
 
@@ -1552,6 +1581,7 @@ impl CommandPalette {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let input_wrapper_h_fallback = self.input_wrapper_h.resolve(&theme);
+            let input_h_fallback = self.input_h.resolve(&theme);
             let input_icon_size_fallback = self.input_icon_size.resolve(&theme);
             let item_pad_y = self.item_pad_y.resolve(&theme);
             let group_pad_x = self.group_pad_x.resolve(&theme);
@@ -1566,8 +1596,11 @@ impl CommandPalette {
                 .unwrap_or_default();
             let query_for_render: Arc<str> = Arc::from(query.as_str());
 
-            let (render_rows, items) =
-                command_palette_render_rows_for_query(self.entries, query.as_str());
+            let (render_rows, items) = command_palette_render_rows_for_query_with_options(
+                self.entries,
+                query.as_str(),
+                self.pad_group_separators,
+            );
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
@@ -1976,6 +2009,9 @@ impl CommandPalette {
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
                 .unwrap_or(input_wrapper_h_fallback);
+            let input_h = theme
+                .metric_by_key("component.command.input.height")
+                .unwrap_or(input_h_fallback);
             let icon_size = theme
                 .metric_by_key("component.command.input.icon_size")
                 .unwrap_or(input_icon_size_fallback);
@@ -2034,7 +2070,9 @@ impl CommandPalette {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
+                        layout.size.height = Length::Px(input_h);
+                        layout.margin.top = fret_ui::element::MarginEdge::Auto;
+                        layout.margin.bottom = fret_ui::element::MarginEdge::Auto;
                         layout
                     },
                     gap,
@@ -3441,6 +3479,7 @@ mod tests {
                 "H:Basics".to_string(),
                 "I:Alpha".to_string(),
                 "I:Beta".to_string(),
+                "P".to_string(),
                 "S".to_string(),
                 "I:Gamma".to_string()
             ]
