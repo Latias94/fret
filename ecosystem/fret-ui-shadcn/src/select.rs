@@ -3610,6 +3610,14 @@ mod tests {
             .iter()
             .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
             .expect("scroll down node");
+        assert_eq!(scroll_down.role, SemanticsRole::Generic);
+
+        let scroll_up = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+            .expect("scroll up node");
+        assert_eq!(scroll_up.role, SemanticsRole::Generic);
 
         let down_bounds = ui
             .debug_node_bounds(scroll_down.id)
