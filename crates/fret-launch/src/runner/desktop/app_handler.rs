@@ -310,6 +310,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     self.app
                         .push_effect(fret_app::Effect::Command { window, command });
                 }
+                #[cfg(target_os = "macos")]
+                RunnerUserEvent::MacosMenuWillOpen => {
+                    macos_menu::sync_input_context_from_app(&self.app);
+                }
             }
         }
 

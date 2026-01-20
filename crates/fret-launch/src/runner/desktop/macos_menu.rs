@@ -214,10 +214,22 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         state.tag_to_def.clear();
         state.next_tag = 1;
 
+        let mut app_menu: Option<&fret_runtime::Menu> = None;
+        let mut other_menus: Vec<&fret_runtime::Menu> = Vec::new();
         for menu in &menu_bar.menus {
+            if menu.role == Some(MenuRole::App) && app_menu.is_none() {
+                app_menu = Some(menu);
+            } else {
+                other_menus.push(menu);
+            }
+        }
+        let menus_iter = app_menu.into_iter().chain(other_menus);
+
+        for menu in menus_iter {
             let submenu = NSMenu::new(nil).autorelease();
             let title = ns_string(&menu.title);
             submenu.setTitle_(title);
+            submenu.setDelegate_(state.delegate);
 
             for item in &menu.items {
                 append_menu_item(&mut state, submenu, item, &commands, &base_ctx);
@@ -307,6 +319,7 @@ unsafe fn append_menu_item(
 
             let submenu = NSMenu::new(nil).autorelease();
             submenu.setTitle_(ns_string(title));
+            submenu.setDelegate_(state.delegate);
             for item in items {
                 append_menu_item(state, submenu, item, commands, base_ctx);
             }
@@ -513,6 +526,29 @@ fn key_window_ptr() -> Option<isize> {
     }
 }
 
+fn main_window_ptr() -> Option<isize> {
+    unsafe {
+        let app = NSApp();
+        let main_window: id = msg_send![app, mainWindow];
+        if main_window == nil {
+            return None;
+        }
+        Some(main_window as isize)
+    }
+}
+
+fn active_app_window_id(state: &MacosMenuState) -> Option<AppWindowId> {
+    let from_ptr = |p: isize| state.ns_window_to_app_window.get(&p).copied();
+
+    key_window_ptr()
+        .and_then(from_ptr)
+        .or_else(|| main_window_ptr().and_then(from_ptr))
+        .or_else(|| {
+            (state.ns_window_to_app_window.len() == 1)
+                .then(|| *state.ns_window_to_app_window.values().next().expect("len==1"))
+        })
+}
+
 fn menu_delegate_class() -> &'static Class {
     let superclass = Class::get("NSObject").expect("NSObject class");
     let mut decl = ClassDecl::new("FretMenuDelegate", superclass).expect("FretMenuDelegate class");
@@ -550,6 +586,10 @@ fn menu_delegate_class() -> &'static Class {
             sel!(validateMenuItem:),
             fret_validate_menu_item as extern "C" fn(&Object, Sel, id) -> BOOL,
         );
+        decl.add_method(
+            sel!(menuWillOpen:),
+            fret_menu_will_open as extern "C" fn(&Object, Sel, id),
+        );
     }
 
     decl.register()
@@ -564,7 +604,7 @@ extern "C" fn fret_menu_item_invoked(_this: &Object, _cmd: Sel, item: id) {
     let Some(def) = state.tag_to_def.get(&tag) else {
         return;
     };
-    let window = key_window_ptr().and_then(|p| state.ns_window_to_app_window.get(&p).copied());
+    let window = active_app_window_id(&state);
     let command = def.command.clone();
 
     let Some(events) = PROXY_EVENTS.get() else {
@@ -575,6 +615,19 @@ extern "C" fn fret_menu_item_invoked(_this: &Object, _cmd: Sel, item: id) {
     };
     if let Ok(mut queue) = events.lock() {
         queue.push(RunnerUserEvent::MacosMenuCommand { window, command });
+    }
+    proxy.wake_up();
+}
+
+extern "C" fn fret_menu_will_open(_this: &Object, _cmd: Sel, _menu: id) {
+    let Some(events) = PROXY_EVENTS.get() else {
+        return;
+    };
+    let Some(proxy) = EVENT_LOOP_PROXY.get() else {
+        return;
+    };
+    if let Ok(mut queue) = events.lock() {
+        queue.push(RunnerUserEvent::MacosMenuWillOpen);
     }
     proxy.wake_up();
 }
@@ -601,8 +654,7 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
         dispatch_phase: InputDispatchPhase::Normal,
     };
 
-    let input_ctx = key_window_ptr()
-        .and_then(|p| state.ns_window_to_app_window.get(&p).copied())
+    let input_ctx = active_app_window_id(&state)
         .and_then(|w| state.cached_input_ctx_by_window.get(&w).cloned())
         .unwrap_or(fallback);
 

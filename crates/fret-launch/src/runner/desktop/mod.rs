@@ -87,6 +87,8 @@ pub enum RunnerUserEvent {
         window: Option<fret_core::AppWindowId>,
         command: fret_runtime::CommandId,
     },
+    #[cfg(target_os = "macos")]
+    MacosMenuWillOpen,
 }
 
 #[cfg(feature = "hotpatch-subsecond")]
