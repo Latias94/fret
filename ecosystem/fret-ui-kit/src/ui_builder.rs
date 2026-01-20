@@ -1,5 +1,6 @@
 use crate::{
-    ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorRef, Edges4, LayoutRefinement, LengthRefinement, MarginEdge, MetricRef,
+    Radius, SignedMetricRef, Space,
 };
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -111,6 +112,24 @@ macro_rules! forward_layout_noargs {
 }
 
 impl<T: UiSupportsChrome> UiBuilder<T> {
+    pub fn paddings(self, paddings: impl Into<Edges4<MetricRef>>) -> Self {
+        self.style_with(|mut c| {
+            let Edges4 {
+                top,
+                right,
+                bottom,
+                left,
+            } = paddings.into();
+            let mut padding = c.padding.unwrap_or_default();
+            padding.top = Some(top);
+            padding.right = Some(right);
+            padding.bottom = Some(bottom);
+            padding.left = Some(left);
+            c.padding = Some(padding);
+            c
+        })
+    }
+
     pub fn px(self, space: Space) -> Self {
         self.style_with(|c| c.px(space))
     }
@@ -162,6 +181,42 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
 }
 
 impl<T: UiSupportsLayout> UiBuilder<T> {
+    pub fn insets(self, insets: impl Into<Edges4<SignedMetricRef>>) -> Self {
+        self.layout_with(|mut l| {
+            let Edges4 {
+                top,
+                right,
+                bottom,
+                left,
+            } = insets.into();
+            let mut inset = l.inset.unwrap_or_default();
+            inset.top = Some(top);
+            inset.right = Some(right);
+            inset.bottom = Some(bottom);
+            inset.left = Some(left);
+            l.inset = Some(inset);
+            l
+        })
+    }
+
+    pub fn margins(self, margins: impl Into<Edges4<MarginEdge>>) -> Self {
+        self.layout_with(|mut l| {
+            let Edges4 {
+                top,
+                right,
+                bottom,
+                left,
+            } = margins.into();
+            let mut margin = l.margin.unwrap_or_default();
+            margin.top = Some(top.into());
+            margin.right = Some(right.into());
+            margin.bottom = Some(bottom.into());
+            margin.left = Some(left.into());
+            l.margin = Some(margin);
+            l
+        })
+    }
+
     pub fn aspect_ratio(self, ratio: f32) -> Self {
         self.layout_with(|l| l.aspect_ratio(ratio))
     }
@@ -525,10 +580,64 @@ mod tests {
     }
 
     #[test]
+    fn ui_builder_edges4_helpers_write_fields() {
+        let dummy = Dummy::default()
+            .ui()
+            .paddings(Edges4::trbl(Space::N1, Space::N2, Space::N3, Space::N4))
+            .margins(Edges4::trbl(
+                MarginEdge::auto(),
+                Space::N2.into(),
+                Space::N3.into(),
+                Space::N4.into(),
+            ))
+            .insets(Edges4::all(Space::N1).neg())
+            .build();
+
+        let padding = dummy.chrome.padding.expect("expected padding refinement");
+        match padding.top {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N1.token_key()),
+            other => panic!("expected top padding token, got {other:?}"),
+        }
+        match padding.right {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N2.token_key()),
+            other => panic!("expected right padding token, got {other:?}"),
+        }
+        match padding.bottom {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N3.token_key()),
+            other => panic!("expected bottom padding token, got {other:?}"),
+        }
+        match padding.left {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N4.token_key()),
+            other => panic!("expected left padding token, got {other:?}"),
+        }
+
+        let margin = dummy.layout.margin.expect("expected margin refinement");
+        assert!(matches!(
+            margin.top,
+            Some(crate::style::MarginEdgeRefinement::Auto)
+        ));
+        match margin.right {
+            Some(crate::style::MarginEdgeRefinement::Px(SignedMetricRef::Pos(
+                MetricRef::Token { key, .. },
+            ))) => assert_eq!(key, Space::N2.token_key()),
+            other => panic!("expected right margin token, got {other:?}"),
+        }
+
+        let inset = dummy.layout.inset.expect("expected inset refinement");
+        match inset.left {
+            Some(SignedMetricRef::Neg(MetricRef::Token { key, .. })) => {
+                assert_eq!(key, Space::N1.token_key())
+            }
+            other => panic!("expected left inset negative token, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn ui_builder_forwards_full_vocabulary_smoke() {
         let _ = Dummy::default()
             .ui()
             // ChromeRefinement
+            .paddings(Edges4::all(Space::N1))
             .px(Space::N1)
             .py(Space::N2)
             .p(Space::N3)
@@ -589,6 +698,8 @@ mod tests {
             .overflow_visible()
             .overflow_x_hidden()
             .overflow_y_hidden()
+            .margins(Edges4::all(Space::N1))
+            .insets(Edges4::all(Space::N1))
             .inset(Space::N2)
             .top(Space::N3)
             .top_neg(Space::N3)

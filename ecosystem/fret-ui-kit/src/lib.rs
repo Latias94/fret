@@ -10,6 +10,7 @@
 pub mod declarative;
 #[cfg(feature = "dnd")]
 pub mod dnd;
+mod edges4;
 pub mod headless;
 pub mod overlay;
 pub mod overlay_controller;
@@ -31,10 +32,11 @@ mod sizing;
 mod style;
 mod styled;
 
+pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef,
-    OverflowRefinement, Radius, Space,
+    OverflowRefinement, Radius, SignedMetricRef, Space,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
@@ -64,8 +66,8 @@ pub mod prelude {
     pub use fret_icons::IconId;
 
     pub use crate::{
-        ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
-        UiExt,
+        ChromeRefinement, ColorRef, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
+        SignedMetricRef, Size, Space, StyledExt, UiExt,
     };
     pub use crate::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
 
