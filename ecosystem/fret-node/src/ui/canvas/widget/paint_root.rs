@@ -49,7 +49,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
             Size::new(Px(viewport_w), Px(viewport_h)),
         );
-        let render_cull_rect = {
+        let only_render_visible_elements = snapshot.interaction.only_render_visible_elements;
+        let render_cull_rect = if !only_render_visible_elements {
+            None
+        } else {
             let margin_screen = self.style.render_cull_margin_px;
             if !margin_screen.is_finite()
                 || margin_screen <= 0.0
@@ -105,6 +108,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.update_internals_store(&*cx.app, &snapshot, cx.bounds, &geom);
 
         let can_use_static_scene_cache = self.geometry.drag_preview.is_none()
+            && only_render_visible_elements
             && zoom.is_finite()
             && zoom > 1.0e-6
             && cx.bounds.size.width.0.is_finite()

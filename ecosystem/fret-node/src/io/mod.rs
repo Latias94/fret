@@ -601,6 +601,14 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_spatial_index_tuning")]
     pub spatial_index: NodeGraphSpatialIndexTuning,
 
+    /// Whether to only process/render elements near the visible viewport (XyFlow
+    /// `onlyRenderVisibleElements`).
+    ///
+    /// Note: Fret's canvas is always clipped to the viewport, but this flag controls whether we
+    /// cull work (geometry queries, render data collection) to a padded viewport rect.
+    #[serde(default = "default_only_render_visible_elements")]
+    pub only_render_visible_elements: bool,
+
     /// Paint-cache pruning tuning for long-lived graphs.
     #[serde(default = "default_paint_cache_prune_tuning")]
     pub paint_cache_prune: NodeGraphPaintCachePruneTuning,
@@ -855,6 +863,7 @@ impl Default for NodeGraphInteractionState {
             edge_interaction_width: default_edge_interaction_width(),
             bezier_hit_test_steps: default_bezier_hit_test_steps(),
             spatial_index: NodeGraphSpatialIndexTuning::default(),
+            only_render_visible_elements: default_only_render_visible_elements(),
             paint_cache_prune: NodeGraphPaintCachePruneTuning::default(),
             snap_to_grid: false,
             snap_grid: default_snap_grid(),
@@ -983,6 +992,10 @@ fn default_edges_reconnectable() -> bool {
 }
 
 fn default_pan_on_scroll() -> bool {
+    true
+}
+
+fn default_only_render_visible_elements() -> bool {
     true
 }
 

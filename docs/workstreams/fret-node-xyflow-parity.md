@@ -80,7 +80,7 @@ Scope notes:
 
 | xyflow prop / behavior | fret-node equivalent | Status | Evidence |
 |---|---|---|---|
-| `onlyRenderVisibleElements` | Always-on culling via `render_cull_margin_px` + spatial index | Partial (no toggle) | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/spatial.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs` |
+| `onlyRenderVisibleElements` | `NodeGraphInteractionState.only_render_visible_elements` (default `true`) | Implemented (different default; preserves current behavior) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs` |
 | Z-index modes, elevate-on-select (`elevateNodesOnSelect`, `elevateEdgesOnSelect`) | Explicit draw order + edge draw order derived from endpoints | Partial (no “elevate on select” policy toggle) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/z_order_conformance.rs` |
 | Cache stability under large graphs | Scene op tile caches + per-frame warmup budgets | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs` |
 
@@ -103,6 +103,6 @@ Scope notes:
 
 ## Recommended Next Steps (Top 3)
 
-1) **Rendering toggle parity**: consider an explicit `onlyRenderVisibleElements` switch (currently culling is always-on), so apps can trade overhead vs pop-in.
-2) **Viewport helper APIs**: add a public UI helper that animates from current viewport to a target (XyFlow `viewportHelper` mental model); keep runtime helpers headless-safe.
-3) **View-state shaping**: decide whether `nodeOrigin` should be moved from view-state tuning to a higher-level config surface for apps that want `Node.pos` in different coordinate conventions.
+1) **Viewport helper APIs**: add a public UI helper that animates from current viewport to a target (XyFlow `viewportHelper` mental model); keep runtime helpers headless-safe.
+2) **View-state shaping**: decide whether `nodeOrigin` should be moved from view-state tuning to a higher-level config surface for apps that want `Node.pos` in different coordinate conventions.
+3) **Node sizing parity**: consider port-driven auto-sizing and handle/label layout parity with upstream defaults (depends on UX direction).
