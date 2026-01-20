@@ -99,6 +99,9 @@ Conformance gates:
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_command_dialog_panel_chrome_matches`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_command_dialog_overlay_center_matches`).
+  - List metrics: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_command_dialog_input_height_matches`, `web_vs_fret_command_dialog_listbox_height_matches`,
+    `web_vs_fret_command_dialog_listbox_option_height_matches`, `web_vs_fret_command_dialog_listbox_option_insets_match`).
 
 ### `ContextMenu`
 
