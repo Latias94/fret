@@ -70,7 +70,6 @@ Known gaps:
     - A minimal App menu baseline can be authored as commands (About/Preferences/Services/Hide/Hide Others/Show All/Quit),
       and the golden path (`fret-bootstrap`) handles `app.about`/`app.quit`/`app.hide*` by emitting platform effects.
   - Remaining: finalize macOS App menu conventions (exact wording + ordering, and what stays command-driven vs runner-native).
-  - Preferences remains app-owned (ADR 0187); golden-path apps can route it to an in-app settings UI.
 
 ## MVP Milestones
 
@@ -233,7 +232,6 @@ Evidence anchors:
 - About effect: `crates/fret-runtime/src/effect.rs` (`Effect::ShowAboutPanel`).
 - Golden-path default handling: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (handles `app.quit`/`app.hide*`).
 - ADR: `docs/adr/0186-macos-about-panel-effect.md`.
-- Preferences policy: `docs/adr/0187-preferences-command-policy.md`.
 - Workspace baseline supports App menu: `ecosystem/fret-workspace/src/menu.rs` (`WorkspaceMenuCommands`).
 - Golden-path in-window default: `ecosystem/fret-kit/src/workspace_shell.rs` (`workspace_shell_model_default_menu`).
 - Undo/Redo availability seam example: `apps/fret-examples/src/gizmo3d_demo.rs` (`sync_window_command_availability`).

@@ -59,7 +59,7 @@ pub use presenter::{
     NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
-pub use style::{NodeGraphColorMode, NodeGraphStyle};
+pub use style::NodeGraphStyle;
 pub use view_queue::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };

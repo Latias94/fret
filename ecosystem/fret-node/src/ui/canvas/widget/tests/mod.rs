@@ -22,7 +22,6 @@ use crate::core::{
 };
 
 mod callbacks_conformance;
-mod color_mode_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod elevate_on_select_conformance;
