@@ -228,7 +228,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn paint_wire_drag_hint<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
-        snapshot: &ViewSnapshot,
+        _snapshot: &ViewSnapshot,
         wire_drag: &WireDrag,
         zoom: f32,
     ) {
@@ -274,28 +274,26 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             Size::new(Px(box_w), Px(box_h)),
         );
 
-        let border_color = if snapshot.interaction.connection_mode == NodeGraphConnectionMode::Loose
-            && self.interaction.hover_port.is_some()
-            && !self.interaction.hover_port_valid
-        {
-            if self.interaction.hover_port_convertible {
-                Color {
-                    r: 0.95,
-                    g: 0.75,
-                    b: 0.20,
-                    a: 1.0,
+        let border_color =
+            if self.interaction.hover_port.is_some() && !self.interaction.hover_port_valid {
+                if self.interaction.hover_port_convertible {
+                    Color {
+                        r: 0.95,
+                        g: 0.75,
+                        b: 0.20,
+                        a: 1.0,
+                    }
+                } else {
+                    Color {
+                        r: 0.90,
+                        g: 0.35,
+                        b: 0.35,
+                        a: 1.0,
+                    }
                 }
             } else {
-                Color {
-                    r: 0.90,
-                    g: 0.35,
-                    b: 0.35,
-                    a: 1.0,
-                }
-            }
-        } else {
-            self.style.context_menu_border
-        };
+                self.style.context_menu_border
+            };
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(69),

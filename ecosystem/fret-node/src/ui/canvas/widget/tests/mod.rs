@@ -35,6 +35,7 @@ mod insert_node_drag_conformance;
 mod interaction_conformance;
 mod internals_conformance;
 mod invalidation_ordering_conformance;
+mod is_valid_connection_conformance;
 mod middleware_conformance;
 mod node_origin_conformance;
 mod only_render_visible_elements_conformance;

@@ -71,7 +71,7 @@ Scope notes:
 | `connectionMode` (`strict` / `loose`) | `NodeGraphInteractionState.connection_mode` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs` |
 | `connectOnClick` | `NodeGraphInteractionState.connect_on_click` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs` |
 | `connectionRadius`, `reconnectRadius` | `NodeGraphInteractionState.connection_radius`, `.reconnect_radius` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs` |
-| `isValidConnection` | Commit-time validation via middleware/rules | Partial (different hook point) | `ecosystem/fret-node/src/ui/canvas/middleware.rs`, `ecosystem/fret-node/src/rules` |
+| `isValidConnection` | Drag-time hover validity via `NodeGraphPresenter::can_connect` / `can_reconnect_edge` + connectability gates | Implemented (different integration shape) | `ecosystem/fret-node/src/ui/presenter.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/is_valid_connection_conformance.rs` |
 | Edge routing kinds (`Bezier`, `Straight`, `Step`) | `EdgeRouteKind` in presenter hints | Implemented | `ecosystem/fret-node/src/ui/presenter.rs`, `ecosystem/fret-node/src/ui/canvas/route_math.rs` |
 | Connection line styling / component | Rendered via canvas scene ops; not a React component surface | N/A | `ecosystem/fret-node/src/ui/canvas/widget/paint_edges.rs` |
 | Edge labels | Cached + incremental warmup (single-tile and multi-tile) | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs` |
@@ -103,6 +103,6 @@ Scope notes:
 
 ## Recommended Next Steps (Top 3)
 
-1) **Connection validation UX**: add drag-time validity feedback (`isValidConnection` mental model) beyond commit-time validation hooks.
+1) **Connection validation UX**: optionally surface hover-time diagnostics and/or middleware-derived constraints (if apps need parity with commit-time middleware rejection).
 2) **View-state shaping**: decide whether `nodeOrigin` should be moved from view-state tuning to a higher-level config surface for apps that want `Node.pos` in different coordinate conventions.
 3) **Node sizing parity**: consider port-driven auto-sizing and handle/label layout parity with upstream defaults (depends on UX direction).

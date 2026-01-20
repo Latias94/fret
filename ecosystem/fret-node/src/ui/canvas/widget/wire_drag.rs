@@ -149,7 +149,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         this.graph
             .read_ref(cx.app, |graph| {
                 let mut scratch_ports: Vec<PortId> = Vec::new();
-                this.pick_target_port(
+                this.pick_wire_hover_port(
                     graph,
                     snapshot,
                     geom.as_ref(),
@@ -194,58 +194,68 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         let presenter = &mut *canvas.presenter;
         canvas
             .graph
-            .read_ref(cx.app, |graph| match &w.kind {
-                WireDragKind::New { from, bundle } => {
-                    let sources = if bundle.is_empty() {
-                        std::slice::from_ref(from)
-                    } else {
-                        bundle.as_slice()
-                    };
-                    let mut any_accept = false;
-                    for src in sources {
-                        let plan = presenter.plan_connect(
-                            graph,
-                            *src,
-                            target,
-                            snapshot.interaction.connection_mode,
-                        );
-                        if plan.decision != ConnectDecision::Accept {
-                            continue;
-                        }
-                        any_accept = true;
-                        break;
-                    }
-                    any_accept
+            .read_ref(cx.app, |graph| {
+                if !NodeGraphCanvasWith::<M>::port_is_connectable_end(
+                    graph,
+                    &snapshot.interaction,
+                    target,
+                ) {
+                    return false;
                 }
-                WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
-                    presenter
-                        .plan_reconnect_edge(
-                            graph,
-                            *edge,
-                            *endpoint,
-                            target,
-                            snapshot.interaction.connection_mode,
-                        )
-                        .decision,
-                    ConnectDecision::Accept
-                ),
-                WireDragKind::ReconnectMany { edges } => {
-                    let mut any_accept = false;
-                    for (edge, endpoint, _fixed) in edges {
-                        let plan = presenter.plan_reconnect_edge(
-                            graph,
-                            *edge,
-                            *endpoint,
-                            target,
-                            snapshot.interaction.connection_mode,
-                        );
-                        if plan.decision != ConnectDecision::Accept {
-                            continue;
+
+                match &w.kind {
+                    WireDragKind::New { from, bundle } => {
+                        let sources = if bundle.is_empty() {
+                            std::slice::from_ref(from)
+                        } else {
+                            bundle.as_slice()
+                        };
+                        let mut any_accept = false;
+                        for src in sources {
+                            let plan = presenter.can_connect(
+                                graph,
+                                *src,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
+                            if plan.decision != ConnectDecision::Accept {
+                                continue;
+                            }
+                            any_accept = true;
+                            break;
                         }
-                        any_accept = true;
-                        break;
+                        any_accept
                     }
-                    any_accept
+                    WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
+                        presenter
+                            .can_reconnect_edge(
+                                graph,
+                                *edge,
+                                *endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            )
+                            .decision,
+                        ConnectDecision::Accept
+                    ),
+                    WireDragKind::ReconnectMany { edges } => {
+                        let mut any_accept = false;
+                        for (edge, endpoint, _fixed) in edges {
+                            let plan = presenter.can_reconnect_edge(
+                                graph,
+                                *edge,
+                                *endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
+                            if plan.decision != ConnectDecision::Accept {
+                                continue;
+                            }
+                            any_accept = true;
+                            break;
+                        }
+                        any_accept
+                    }
                 }
             })
             .ok()
@@ -262,6 +272,13 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     canvas
                         .graph
                         .read_ref(cx.app, |graph| {
+                            if !NodeGraphCanvasWith::<M>::port_is_connectable_end(
+                                graph,
+                                &snapshot.interaction,
+                                target,
+                            ) {
+                                return false;
+                            }
                             conversion::is_convertible(presenter, graph, *from, target)
                         })
                         .ok()

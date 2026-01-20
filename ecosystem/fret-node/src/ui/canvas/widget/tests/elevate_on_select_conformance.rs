@@ -9,8 +9,8 @@ use crate::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use crate::io::NodeGraphViewState;
-use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 use crate::ui::presenter::NodeGraphPresenter;
+use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
 use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_size};
 
