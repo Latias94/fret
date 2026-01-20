@@ -42,7 +42,8 @@ Related:
 
 - [x] AUE-layout-020 Add `ui::h_flex(...)` / `ui::v_flex(...)` constructors in `fret-ui-kit` that return a patchable builder.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
-- [ ] AUE-layout-021 Add a minimal `ui::stack(...)` constructor (overlay composition helper; optional).
+- [x] AUE-layout-021 Add a minimal `ui::stack(...)` constructor (overlay composition helper; optional).
+  - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - [x] AUE-layout-022 Add “gap” and alignment shorthands on the layout constructor path (not only on components).
   - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs`
 
