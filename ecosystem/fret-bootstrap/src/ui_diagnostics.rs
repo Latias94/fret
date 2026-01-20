@@ -2391,6 +2391,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub cache_roots: Vec<UiCacheRootStatsV1>,
     #[serde(default)]
+    pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
+    #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
@@ -2453,6 +2455,11 @@ impl UiTreeDebugSnapshotV1 {
                     )
                 })
                 .collect(),
+            removed_subtrees: ui
+                .debug_removed_subtrees()
+                .iter()
+                .map(UiRemovedSubtreeV1::from_record)
+                .collect(),
             layout_engine_solves: ui
                 .debug_layout_engine_solves()
                 .iter()
@@ -2466,6 +2473,57 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiRemovedSubtreeV1 {
+    pub root: u64,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub root_parent: Option<u64>,
+    #[serde(default)]
+    pub root_root: Option<u64>,
+    #[serde(default)]
+    pub root_layer: Option<u64>,
+    #[serde(default)]
+    pub removed_nodes: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed_tail: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outcome: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+}
+
+impl UiRemovedSubtreeV1 {
+    fn from_record(r: &fret_ui::tree::UiDebugRemoveSubtreeRecord) -> Self {
+        let outcome = match r.outcome {
+            fret_ui::tree::UiDebugRemoveSubtreeOutcome::SkippedLayerRoot => "skipped_layer_root",
+            fret_ui::tree::UiDebugRemoveSubtreeOutcome::RootMissing => "root_missing",
+            fret_ui::tree::UiDebugRemoveSubtreeOutcome::Removed => "removed",
+        };
+
+        Self {
+            root: key_to_u64(r.root),
+            root_element: r.root_element.map(|e| e.0),
+            root_parent: r.root_parent.map(key_to_u64),
+            root_root: r.root_root.map(key_to_u64),
+            root_layer: r.root_layer.map(|id| id.data().as_ffi()),
+            removed_nodes: r.removed_nodes,
+            removed_head: r.removed_head[..(r.removed_head_len as usize).min(r.removed_head.len())]
+                .to_vec(),
+            removed_tail: r.removed_tail[..(r.removed_tail_len as usize).min(r.removed_tail.len())]
+                .to_vec(),
+            outcome: Some(outcome.to_string()),
+            frame_id: Some(r.frame_id.0),
+            location: Some(format!("{}:{}:{}", r.file, r.line, r.column)),
         }
     }
 }

@@ -391,6 +391,34 @@ pub struct UiDebugSetChildrenWrite {
     pub column: u32,
 }
 
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugRemoveSubtreeOutcome {
+    SkippedLayerRoot,
+    RootMissing,
+    Removed,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugRemoveSubtreeRecord {
+    pub outcome: UiDebugRemoveSubtreeOutcome,
+    pub frame_id: FrameId,
+    pub root: NodeId,
+    pub root_element: Option<GlobalElementId>,
+    pub root_parent: Option<NodeId>,
+    pub root_root: Option<NodeId>,
+    pub root_layer: Option<UiLayerId>,
+    pub removed_nodes: u32,
+    pub removed_head_len: u8,
+    pub removed_head: [u64; 16],
+    pub removed_tail_len: u8,
+    pub removed_tail: [u64; 16],
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct UiDebugLayoutEngineMeasureHotspot {
     pub node: NodeId,
@@ -737,6 +765,8 @@ pub struct UiTree<H: UiHost> {
     debug_dirty_views: Vec<UiDebugDirtyView>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
+    #[cfg(feature = "diagnostics")]
+    debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -802,6 +832,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_dirty_views: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_removed_subtrees: Vec::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -949,6 +981,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_dirty_views.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_set_children_writes.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_removed_subtrees.clear();
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
         for root in dirty_roots {
@@ -1143,6 +1177,14 @@ impl<H: UiHost> UiTree<H> {
             return None;
         }
         self.debug_set_children_writes.get(&parent).copied()
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_removed_subtrees(&self) -> &[UiDebugRemoveSubtreeRecord] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_removed_subtrees.as_slice()
     }
 
     pub fn debug_layout_engine_solves(&self) -> &[UiDebugLayoutEngineSolve] {
@@ -1765,12 +1807,119 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[track_caller]
     pub fn remove_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) -> Vec<NodeId> {
+        #[cfg(feature = "diagnostics")]
+        let remove_record = if self.debug_enabled {
+            let location = std::panic::Location::caller();
+            let pre_exists = self.nodes.contains_key(root);
+            let root_element = self.nodes.get(root).and_then(|n| n.element);
+            let root_parent = self.nodes.get(root).and_then(|n| n.parent);
+            let root_root = self.node_root(root);
+            let root_layer = self.node_layer(root);
+            Some((
+                location.file(),
+                location.line(),
+                location.column(),
+                pre_exists,
+                root_element,
+                root_parent,
+                root_root,
+                root_layer,
+            ))
+        } else {
+            None
+        };
+
         if self.root_to_layer.contains_key(&root) {
+            #[cfg(feature = "diagnostics")]
+            if let Some((
+                file,
+                line,
+                column,
+                _pre_exists,
+                root_element,
+                root_parent,
+                root_root,
+                root_layer,
+            )) = remove_record
+            {
+                self.debug_removed_subtrees
+                    .push(UiDebugRemoveSubtreeRecord {
+                        outcome: UiDebugRemoveSubtreeOutcome::SkippedLayerRoot,
+                        frame_id: self.debug_stats.frame_id,
+                        root,
+                        root_element,
+                        root_parent,
+                        root_root,
+                        root_layer,
+                        removed_nodes: 0,
+                        removed_head_len: 0,
+                        removed_head: [0u64; 16],
+                        removed_tail_len: 0,
+                        removed_tail: [0u64; 16],
+                        file,
+                        line,
+                        column,
+                    });
+            }
             return Vec::new();
         }
         let mut removed: Vec<NodeId> = Vec::new();
         self.remove_subtree_inner(services, root, &mut removed);
+
+        #[cfg(feature = "diagnostics")]
+        if let Some((
+            file,
+            line,
+            column,
+            pre_exists,
+            root_element,
+            root_parent,
+            root_root,
+            root_layer,
+        )) = remove_record
+        {
+            let outcome = if pre_exists {
+                UiDebugRemoveSubtreeOutcome::Removed
+            } else {
+                UiDebugRemoveSubtreeOutcome::RootMissing
+            };
+
+            let mut removed_head: [u64; 16] = [0u64; 16];
+            let mut removed_head_len: u8 = 0;
+            for (idx, node) in removed.iter().take(16).enumerate() {
+                removed_head[idx] = node.data().as_ffi();
+                removed_head_len = removed_head_len.saturating_add(1);
+            }
+
+            let mut removed_tail: [u64; 16] = [0u64; 16];
+            let mut removed_tail_len: u8 = 0;
+            for (idx, node) in removed.iter().rev().take(16).enumerate() {
+                removed_tail[idx] = node.data().as_ffi();
+                removed_tail_len = removed_tail_len.saturating_add(1);
+            }
+
+            self.debug_removed_subtrees
+                .push(UiDebugRemoveSubtreeRecord {
+                    outcome,
+                    frame_id: self.debug_stats.frame_id,
+                    root,
+                    root_element,
+                    root_parent,
+                    root_root,
+                    root_layer,
+                    removed_nodes: removed.len().min(u32::MAX as usize) as u32,
+                    removed_head_len,
+                    removed_head,
+                    removed_tail_len,
+                    removed_tail,
+                    file,
+                    line,
+                    column,
+                });
+        }
+
         removed
     }
 
