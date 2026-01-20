@@ -70,6 +70,37 @@ impl<K: Copy + PartialEq> SceneOpCache<K> {
         }
     }
 
+    /// Replay cached ops when `key` matches, with an additional on-hit hook.
+    ///
+    /// This is useful for replay caches that must keep renderer-owned resources alive (e.g. by
+    /// touching `TextBlobId`/`PathId`/`SvgId` caches) before replaying ops.
+    ///
+    /// `replay_delta` is applied via `Scene::replay_ops_translated()`.
+    /// Returns `true` when the cache was hit.
+    pub fn try_replay_with(
+        &mut self,
+        key: K,
+        scene: &mut Scene,
+        replay_delta: Point,
+        on_hit: impl FnOnce(&[SceneOp]),
+    ) -> bool {
+        self.stats.calls = self.stats.calls.saturating_add(1);
+
+        if self.key == Some(key) {
+            self.stats.hits = self.stats.hits.saturating_add(1);
+            self.stats.replayed_ops = self
+                .stats
+                .replayed_ops
+                .saturating_add(self.ops.len().min(u64::MAX as usize) as u64);
+            on_hit(&self.ops);
+            scene.replay_ops_translated(&self.ops, replay_delta);
+            true
+        } else {
+            self.stats.misses = self.stats.misses.saturating_add(1);
+            false
+        }
+    }
+
     /// Replace cached ops for `key`.
     pub fn store_ops(&mut self, key: K, ops: Vec<SceneOp>) {
         self.key = Some(key);
@@ -112,11 +143,46 @@ impl<K: Copy + PartialEq> SceneOpCache<K> {
 
         false
     }
+
+    /// Replay cached ops when `key` matches; otherwise run `record` and replace the cache.
+    ///
+    /// Like `replay_or_record`, but calls `on_hit` with the cached ops before replaying.
+    /// Returns `true` when the cache was hit.
+    pub fn replay_or_record_with(
+        &mut self,
+        key: K,
+        scene: &mut Scene,
+        replay_delta: Point,
+        on_hit: impl FnOnce(&[SceneOp]),
+        record: impl FnOnce(&mut Scene),
+    ) -> bool {
+        if self.try_replay_with(key, scene, replay_delta, on_hit) {
+            return true;
+        }
+
+        self.key = Some(key);
+        self.ops.clear();
+
+        let start = scene.ops_len();
+        record(scene);
+        let end = scene.ops_len();
+
+        if end > start {
+            self.ops.extend_from_slice(&scene.ops()[start..end]);
+            self.stats.recorded_ops = self
+                .stats
+                .recorded_ops
+                .saturating_add((end - start).min(u64::MAX as usize) as u64);
+        }
+
+        false
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use fret_core::{Color, DrawOrder, Px, Rect, Size};
+    use std::cell::Cell;
 
     use super::*;
 
@@ -177,5 +243,44 @@ mod tests {
         let mut scene = Scene::default();
         assert!(cache.try_replay(9, &mut scene, Point::new(Px(0.0), Px(0.0))));
         assert_eq!(scene.ops_len(), 1);
+    }
+
+    #[test]
+    fn scene_op_cache_try_replay_with_calls_hook_only_on_hit() {
+        let mut cache: SceneOpCache<u64> = SceneOpCache::default();
+        cache.store_ops(
+            9,
+            vec![SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+                background: Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
+                border: fret_core::Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            }],
+        );
+
+        let calls = Cell::new(0usize);
+        let mut scene = Scene::default();
+        assert!(
+            cache.try_replay_with(9, &mut scene, Point::new(Px(0.0), Px(0.0)), |ops| {
+                assert_eq!(ops.len(), 1);
+                calls.set(calls.get() + 1);
+            })
+        );
+        assert_eq!(calls.get(), 1);
+
+        let mut scene = Scene::default();
+        assert!(
+            !cache.try_replay_with(10, &mut scene, Point::new(Px(0.0), Px(0.0)), |_ops| {
+                calls.set(calls.get() + 1);
+            })
+        );
+        assert_eq!(calls.get(), 1);
     }
 }
