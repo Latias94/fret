@@ -224,6 +224,21 @@ pub enum NodeGraphBoxSelectEdges {
     BothEndpoints,
 }
 
+/// Behavior for selecting nodes during marquee (box) selection.
+///
+/// This matches XyFlow's `selectionMode`:
+/// - `full`: select nodes only when their rect is fully contained in the marquee.
+/// - `partial`: select nodes when they intersect the marquee.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphSelectionMode {
+    /// Select nodes only when fully contained by the marquee (XyFlow default).
+    #[default]
+    Full,
+    /// Select nodes when partially intersecting the marquee.
+    Partial,
+}
+
 impl<'de> Deserialize<'de> for NodeGraphBoxSelectEdges {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Visitor;
@@ -569,6 +584,10 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub selection_on_drag: bool,
 
+    /// Selection behavior for marquee selection (XyFlow `selectionMode`).
+    #[serde(default)]
+    pub selection_mode: NodeGraphSelectionMode,
+
     /// How to select edges when marquee-selecting nodes (XyFlow behavior).
     ///
     /// Backward compatibility: this field accepts either:
@@ -776,6 +795,7 @@ impl Default for NodeGraphInteractionState {
             pan_on_scroll: default_pan_on_scroll(),
             pan_on_drag: default_pan_on_drag_buttons(),
             selection_on_drag: false,
+            selection_mode: NodeGraphSelectionMode::default(),
             box_select_edges: default_box_select_edges(),
             selection_key: default_selection_key(),
             multi_selection_key: default_multi_selection_key(),
