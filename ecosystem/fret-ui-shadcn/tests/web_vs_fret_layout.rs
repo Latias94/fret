@@ -1834,6 +1834,215 @@ fn web_vs_fret_layout_breadcrumb_separator_geometry() {
 }
 
 #[test]
+fn web_vs_fret_layout_breadcrumb_link_geometry() {
+    let web = read_web_golden("breadcrumb-link");
+    let theme = web_theme(&web);
+
+    let web_home = web_find_by_tag_and_text(&theme.root, "a", "Home").expect("web Home link");
+    let web_components =
+        web_find_by_tag_and_text(&theme.root, "a", "Components").expect("web Components link");
+    let web_page = find_first(&theme.root, &|n| n.text.as_deref() == Some("Breadcrumb"))
+        .expect("web Breadcrumb page text");
+
+    let mut svgs: Vec<&WebNode> = Vec::new();
+    web_collect_tag(&theme.root, "svg", &mut svgs);
+    let mut chevrons: Vec<&WebNode> = svgs
+        .into_iter()
+        .filter(|n| class_has_token(n, "lucide-chevron-right"))
+        .collect();
+    chevrons.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    assert!(
+        chevrons.len() >= 2,
+        "expected at least 2 chevrons in breadcrumb-link web golden"
+    );
+
+    let web_chevron0 = chevrons[0];
+    let web_chevron1 = chevrons[1];
+
+    let expected_chevron0_offset_y = web_chevron0.rect.y - web_home.rect.y;
+    let expected_chevron1_offset_y = web_chevron1.rect.y - web_components.rect.y;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, snap, _root) = {
+        let mut services = StyleAwareServices::default();
+        run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+
+            vec![bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    let label = |s: &'static str| Some(Arc::from(s));
+
+                    let home = bc::BreadcrumbLink::new("Home").into_element(cx);
+                    let home = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: label("Golden:breadcrumb-link:home"),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![home],
+                    );
+
+                    let components = bc::BreadcrumbLink::new("Components").into_element(cx);
+                    let components = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: label("Golden:breadcrumb-link:components"),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![components],
+                    );
+
+                    let page = bc::BreadcrumbPage::new("Breadcrumb").into_element(cx);
+                    let page = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: label("Golden:breadcrumb-link:page"),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![page],
+                    );
+
+                    let chevron0 = bc::BreadcrumbSeparator::new()
+                        .kind(bc::BreadcrumbSeparatorKind::ChevronRight)
+                        .into_element(cx);
+                    let chevron0 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: label("Golden:breadcrumb-link:chevron-0"),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![chevron0],
+                    );
+
+                    let chevron1 = bc::BreadcrumbSeparator::new()
+                        .kind(bc::BreadcrumbSeparatorKind::ChevronRight)
+                        .into_element(cx);
+                    let chevron1 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: label("Golden:breadcrumb-link:chevron-1"),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![chevron1],
+                    );
+
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, move |_cx| vec![home]),
+                        chevron0,
+                        bc::BreadcrumbItem::new().into_element(cx, move |_cx| vec![components]),
+                        chevron1,
+                        bc::BreadcrumbItem::new().into_element(cx, move |_cx| vec![page]),
+                    ]
+                })]
+            })]
+        })
+    };
+
+    let home = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-link:home"),
+    )
+    .expect("fret Home link wrapper");
+    let components = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-link:components"),
+    )
+    .expect("fret Components link wrapper");
+    let page = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-link:page"),
+    )
+    .expect("fret Breadcrumb page wrapper");
+
+    let chevron0 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-link:chevron-0"),
+    )
+    .expect("fret chevron-0 wrapper");
+    let chevron1 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:breadcrumb-link:chevron-1"),
+    )
+    .expect("fret chevron-1 wrapper");
+
+    assert_close_px(
+        "breadcrumb-link Home height",
+        home.bounds.size.height,
+        web_home.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-link Components height",
+        components.bounds.size.height,
+        web_components.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-link Page height",
+        page.bounds.size.height,
+        web_page.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "breadcrumb-link chevron-0 w",
+        chevron0.bounds.size.width,
+        web_chevron0.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-link chevron-0 h",
+        chevron0.bounds.size.height,
+        web_chevron0.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-link chevron-1 w",
+        chevron1.bounds.size.width,
+        web_chevron1.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "breadcrumb-link chevron-1 h",
+        chevron1.bounds.size.height,
+        web_chevron1.rect.h,
+        1.0,
+    );
+
+    let actual_chevron0_offset_y = chevron0.bounds.origin.y.0 - home.bounds.origin.y.0;
+    assert_close_px(
+        "breadcrumb-link chevron-0 offset y",
+        Px(actual_chevron0_offset_y),
+        expected_chevron0_offset_y,
+        1.0,
+    );
+    let actual_chevron1_offset_y = chevron1.bounds.origin.y.0 - components.bounds.origin.y.0;
+    assert_close_px(
+        "breadcrumb-link chevron-1 offset y",
+        Px(actual_chevron1_offset_y),
+        expected_chevron1_offset_y,
+        1.0,
+    );
+
+    // Keep `ui` alive until after the snapshot-driven assertions (matches other tests' patterns).
+    drop(ui);
+}
+
+#[test]
 fn web_vs_fret_layout_breadcrumb_ellipsis_geometry() {
     let web = read_web_golden("breadcrumb-ellipsis");
     let theme = web_theme(&web);

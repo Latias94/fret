@@ -75,6 +75,7 @@ patterns:
 - `aspect-ratio-demo`
 - `breadcrumb-separator` (custom separator icon sizing)
 - `breadcrumb-ellipsis` (ellipsis box + icon centering)
+- `breadcrumb-link` (link row height + chevron separator sizing/centering)
 - `breadcrumb-dropdown` (dropdown trigger row height + chevron icon sizing)
 - `breadcrumb-demo` (ellipsis trigger variant sizing)
 - `badge-demo`
