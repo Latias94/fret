@@ -56,11 +56,16 @@ impl Hash for TextCacheKey {
 }
 
 impl TextCacheKey {
+    #[cfg(test)]
     fn new(text: &str, style: &TextStyle, constraints: TextConstraints) -> Self {
+        Self::new_arc(Arc::<str>::from(text), style, constraints)
+    }
+
+    fn new_arc(text: Arc<str>, style: &TextStyle, constraints: TextConstraints) -> Self {
         Self {
-            text_hash: hash_text(text),
+            text_hash: hash_text(text.as_ref()),
             text_len: text.len() as u32,
-            text: Arc::<str>::from(text),
+            text,
             font: style.font.clone(),
             size_bits: style.size.0.to_bits(),
             weight: style.weight.0,
@@ -158,19 +163,52 @@ impl TextCache {
         touched
     }
 
+    /// Returns a cached prepared text blob for `(text, style, constraints)` if present.
+    ///
+    /// This updates the entry's `last_used_frame` for pruning purposes.
+    pub fn get_arc(
+        &mut self,
+        text: Arc<str>,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> Option<PreparedText> {
+        self.stats.get_calls = self.stats.get_calls.saturating_add(1);
+        let key = TextCacheKey::new_arc(text, style, constraints);
+        let entry = match self.entries.get_mut(&key) {
+            Some(entry) => entry,
+            None => {
+                self.stats.get_misses = self.stats.get_misses.saturating_add(1);
+                return None;
+            }
+        };
+        entry.last_used_frame = self.frame;
+        self.stats.get_hits = self.stats.get_hits.saturating_add(1);
+        Some(entry.prepared)
+    }
+
+    /// Convenience wrapper around [`Self::get_arc`] for `&str`.
+    pub fn get(
+        &mut self,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> Option<PreparedText> {
+        self.get_arc(Arc::<str>::from(text), style, constraints)
+    }
+
     /// Prepares text and caches it by a stable key derived from `(text, style, constraints)`.
     ///
     /// Note: callers that apply additional view-zoom scaling should incorporate that into
     /// `constraints.scale_factor` (e.g. `dpi * zoom`).
-    pub fn prepare(
+    pub fn prepare_arc(
         &mut self,
         services: &mut dyn UiServices,
-        text: &str,
+        text: Arc<str>,
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> PreparedText {
         self.stats.prepare_calls = self.stats.prepare_calls.saturating_add(1);
-        let key = TextCacheKey::new(text, style, constraints);
+        let key = TextCacheKey::new_arc(text, style, constraints);
         match self.entries.entry(key) {
             Entry::Occupied(mut e) => {
                 e.get_mut().last_used_frame = self.frame;
@@ -178,7 +216,10 @@ impl TextCache {
                 e.get().prepared
             }
             Entry::Vacant(e) => {
-                let (blob, metrics) = services.text().prepare_str(text, style, constraints);
+                let (blob, metrics) =
+                    services
+                        .text()
+                        .prepare_str(e.key().text.as_ref(), style, constraints);
                 let prepared = PreparedText {
                     blob,
                     metrics,
@@ -193,6 +234,20 @@ impl TextCache {
                 prepared
             }
         }
+    }
+
+    /// Prepares text and caches it by a stable key derived from `(text, style, constraints)`.
+    ///
+    /// Note: callers that apply additional view-zoom scaling should incorporate that into
+    /// `constraints.scale_factor` (e.g. `dpi * zoom`).
+    pub fn prepare(
+        &mut self,
+        services: &mut dyn UiServices,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> PreparedText {
+        self.prepare_arc(services, Arc::<str>::from(text), style, constraints)
     }
 
     /// Drops old cache entries and releases their blobs.
