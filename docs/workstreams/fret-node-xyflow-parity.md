@@ -99,7 +99,7 @@ Scope notes:
 | `noDragClassName`, `noPanClassName`, `noWheelClassName` | N/A | N/A | CSS class-based event filtering is a DOM concern. |
 | `preventScrolling` | N/A | N/A | Browser scroll containment is web-only. |
 | `width`, `height` | N/A | N/A | Layout is controlled by the host UI tree. |
-| `colorMode` | Theme-driven | Partial | `fret-node` consumes `fret_ui::ThemeSnapshot` for style selection. |
+| `colorMode` | `NodeGraphColorMode` + `NodeGraphCanvas::with_color_mode` | Implemented | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs` |
 
 ## Recommended Next Steps (Top 3)
 
