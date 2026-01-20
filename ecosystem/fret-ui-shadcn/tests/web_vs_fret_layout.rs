@@ -1001,6 +1001,28 @@ fn web_vs_fret_layout_button_default_height() {
 }
 
 #[test]
+fn web_vs_fret_layout_aspect_ratio_demo_geometry_matches() {
+    let web = read_web_golden("aspect-ratio-demo");
+    let theme = web_theme(&web);
+
+    let web_img = find_first(&theme.root, &|n| n.tag == "img").expect("web img node");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
+        let child = cx.container(ContainerProps::default(), |_cx| Vec::new());
+        vec![fret_ui_shadcn::AspectRatio::new(16.0 / 9.0, child).into_element(cx)]
+    });
+
+    let (_node, fret_bounds) = find_node_with_bounds_close(&ui, root, web_img.rect, 2.0)
+        .expect("fret aspect ratio bounds close to web image rect");
+    assert_rect_close_px("aspect-ratio-demo", fret_bounds, web_img.rect, 2.0);
+}
+
+#[test]
 fn web_vs_fret_layout_checkbox_demo_control_size() {
     let web = read_web_golden("checkbox-demo");
     let theme = web_theme(&web);
