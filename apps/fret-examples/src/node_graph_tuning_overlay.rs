@@ -659,7 +659,7 @@ impl NodeGraphTuningOverlay {
         let (id, metrics) =
             cx.services
                 .text()
-                .prepare(text, &self.style.context_menu_text_style, constraints);
+                .prepare_str(text, &self.style.context_menu_text_style, constraints);
         self.text_blobs.push(id);
         cx.scene.push(SceneOp::Text {
             order: DrawOrder(order),

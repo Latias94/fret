@@ -1,11 +1,15 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
+use fret_core::{
+    AppWindowId, Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, Modifiers,
+    MouseButton, Point, Px, Rect, SceneOp, Size, TextBlobId, TextConstraints, TextOverflow,
+    TextWrap,
+};
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext, run_app,
@@ -16,8 +20,8 @@ use fret_runtime::{
     WhenExpr,
 };
 use fret_ui::Theme;
-use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _};
-use fret_ui::{UiFrameCx, UiTree};
+use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _, *};
+use fret_ui::{UiFrameCx, UiHost, UiTree};
 use serde_json::Value;
 
 use crate::node_graph_tuning_overlay::{NodeGraphTuningCommands, NodeGraphTuningOverlay};
@@ -41,13 +45,14 @@ use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
     NodeGraphPresenter, PortAnchorHint,
 };
-use fret_node::ui::style::NodeGraphStyle;
+use fret_node::ui::style::{NodeGraphBackgroundPattern, NodeGraphStyle};
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
     NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphControlsOverlay,
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
-    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel,
-    NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    NodeGraphEdgeToolbar, NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore,
+    NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes, NodeGraphOverlayHost,
+    NodeGraphOverlayState, NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost,
+    NodeGraphPortalNodeLayout, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
     PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
     RegistryNodeGraphPresenter, register_node_graph_commands,
 };
@@ -72,12 +77,46 @@ const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
 const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
+const CMD_CYCLE_BACKGROUND_PATTERN: &str = "node_graph_demo.cycle_background_pattern";
 const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
 const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
 const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
 const CMD_SPAWN_STRESS_10K: &str = "node_graph_demo.spawn_stress_10k";
 const CMD_UPGRADE_GRAPH: &str = "node_graph_demo.upgrade_graph";
 const WEIRD_KIND: &str = "demo.weird_layout";
+
+#[derive(Debug)]
+struct NodeGraphDemoStyleState {
+    background_pattern: AtomicUsize,
+}
+
+impl NodeGraphDemoStyleState {
+    fn new() -> Self {
+        Self {
+            background_pattern: AtomicUsize::new(0),
+        }
+    }
+
+    fn background_pattern(&self) -> NodeGraphBackgroundPattern {
+        match self.background_pattern.load(Ordering::Relaxed) % 3 {
+            1 => NodeGraphBackgroundPattern::Dots,
+            2 => NodeGraphBackgroundPattern::Cross,
+            _ => NodeGraphBackgroundPattern::Lines,
+        }
+    }
+
+    fn cycle_background_pattern(&self) -> NodeGraphBackgroundPattern {
+        let next = self
+            .background_pattern
+            .fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(1);
+        match next % 3 {
+            1 => NodeGraphBackgroundPattern::Dots,
+            2 => NodeGraphBackgroundPattern::Cross,
+            _ => NodeGraphBackgroundPattern::Lines,
+        }
+    }
+}
 
 #[derive(Clone)]
 struct NodeGraphDemoMeasuredStores {
@@ -537,6 +576,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![port_value_a_out],
             data: serde_json::json!({ "val": 0.25 }),
@@ -556,6 +596,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![port_value_b_out],
             data: serde_json::json!({ "value": 0.75 }),
@@ -575,6 +616,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![port_merge_in0, port_merge_in1, port_merge_out],
             data: serde_json::Value::Null,
@@ -594,6 +636,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![port_add_a, port_add_b, port_add_out],
             data: serde_json::Value::Null,
@@ -613,6 +656,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![port_out_in],
             data: serde_json::Value::Null,
@@ -632,6 +676,7 @@ fn build_demo_graph(graph_id: GraphId) -> Graph {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![
                 port_weird_in_a,
@@ -957,6 +1002,7 @@ fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
                 extent: None,
                 expand_parent: None,
                 size: None,
+                hidden: false,
                 collapsed: false,
                 ports: vec![port_out],
                 data: serde_json::json!({ "value": value }),
@@ -1007,6 +1053,7 @@ fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
                 extent: None,
                 expand_parent: None,
                 size: None,
+                hidden: false,
                 collapsed: false,
                 ports: vec![port_a, port_b, port_out],
                 data: serde_json::Value::Null,
@@ -1245,7 +1292,10 @@ impl NodeGraphDemoDriver {
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
         let store = models.store.clone();
-        let style = NodeGraphStyle::from_theme(Theme::global(app));
+        let mut style = NodeGraphStyle::from_theme(Theme::global(app));
+        if let Some(style_state) = app.global::<Arc<NodeGraphDemoStyleState>>().cloned() {
+            style.grid_pattern = style_state.background_pattern();
+        }
 
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
@@ -1344,7 +1394,7 @@ impl NodeGraphDemoDriver {
             canvas_node,
             models.graph.clone(),
             models.view.clone(),
-            internals_overlay,
+            internals_overlay.clone(),
             style.clone(),
         )
         .with_store(store)
@@ -1356,6 +1406,34 @@ impl NodeGraphDemoDriver {
         let minimap_node = ui.create_node_retained(minimap_panel);
         ui.set_children(minimap_node, vec![minimap_overlay_node]);
 
+        let node_toolbar = NodeGraphNodeToolbar::new(
+            canvas_node,
+            models.graph.clone(),
+            models.view.clone(),
+            internals_overlay.clone(),
+        )
+        .with_position(NodeGraphToolbarPosition::Top)
+        .with_align(NodeGraphToolbarAlign::Center)
+        .with_gap_px(10.0);
+        let node_toolbar_node = ui.create_node_retained(node_toolbar);
+        let node_toolbar_content =
+            ui.create_node_retained(DemoToolbarStrip::node_toolbar(canvas_node, style.clone()));
+        ui.set_children(node_toolbar_node, vec![node_toolbar_content]);
+
+        let edge_toolbar = NodeGraphEdgeToolbar::new(
+            canvas_node,
+            models.graph.clone(),
+            models.view.clone(),
+            internals_overlay.clone(),
+        )
+        .with_align_x(NodeGraphToolbarAlign::Center)
+        .with_align_y(NodeGraphToolbarAlign::End)
+        .with_offset_px(0.0, -10.0);
+        let edge_toolbar_node = ui.create_node_retained(edge_toolbar);
+        let edge_toolbar_content =
+            ui.create_node_retained(DemoToolbarStrip::edge_toolbar(canvas_node, style.clone()));
+        ui.set_children(edge_toolbar_node, vec![edge_toolbar_content]);
+
         let root = ui.create_node_retained(NodeGraphEditor::new());
         ui.set_children(
             root,
@@ -1365,6 +1443,8 @@ impl NodeGraphDemoDriver {
                 controls_node,
                 tuning_node,
                 minimap_node,
+                node_toolbar_node,
+                edge_toolbar_node,
                 overlay_node,
             ],
         );
@@ -1579,6 +1659,19 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 });
                 app.request_redraw(window);
             }
+        }
+
+        if command.as_str() == CMD_CYCLE_BACKGROUND_PATTERN {
+            let Some(style_state) = app.global::<Arc<NodeGraphDemoStyleState>>().cloned() else {
+                return;
+            };
+
+            let pattern = style_state.cycle_background_pattern();
+            tracing::info!(?pattern, "node graph demo background pattern changed");
+
+            *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
         }
 
         if command.as_str() == CMD_LOG_INTERNALS {
@@ -1835,6 +1928,7 @@ pub fn run() -> anyhow::Result<()> {
     });
     app.set_global(Arc::new(NodeGraphInternalsStore::new()));
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
+    app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
@@ -1848,7 +1942,7 @@ pub fn run() -> anyhow::Result<()> {
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
         platform,
-        chord: KeyChord::new(key, mods),
+        sequence: vec![KeyChord::new(key, mods)],
         when: None,
     }
 }
@@ -1956,6 +2050,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
+        CommandId::new(CMD_CYCLE_BACKGROUND_PATTERN),
+        CommandMeta::new("Cycle NodeGraph Background Pattern")
+            .with_category("Demo")
+            .with_keywords(["background", "grid", "pattern", "dots", "cross"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::KeyB),
+                win_ctrl(KeyCode::KeyB),
+                linux_ctrl(KeyCode::KeyB),
+                web_ctrl(KeyCode::KeyB),
+            ]),
+    );
+
+    registry.register(
         CommandId::new(CMD_RESET_GRAPH),
         CommandMeta::new("Reset Demo Graph")
             .with_category("Demo")
@@ -2003,4 +2112,272 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             .with_scope(CommandScope::App)
             .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
     );
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DemoToolbarButton {
+    Delete,
+    Fit,
+}
+
+struct DemoToolbarLayout {
+    panel: Rect,
+    delete: Rect,
+    fit: Rect,
+}
+
+struct DemoToolbarStrip {
+    canvas_node: fret_core::NodeId,
+    style: NodeGraphStyle,
+    label: &'static str,
+    hovered: Option<DemoToolbarButton>,
+    pressed: Option<DemoToolbarButton>,
+    text_blobs: Vec<TextBlobId>,
+}
+
+impl DemoToolbarStrip {
+    const PAD_PX: f32 = 6.0;
+    const GAP_PX: f32 = 6.0;
+    const BUTTON_W_PX: f32 = 44.0;
+    const BUTTON_H_PX: f32 = 22.0;
+    const LABEL_W_PX: f32 = 92.0;
+
+    fn node_toolbar(canvas_node: fret_core::NodeId, style: NodeGraphStyle) -> Self {
+        Self {
+            canvas_node,
+            style,
+            label: "Node Toolbar",
+            hovered: None,
+            pressed: None,
+            text_blobs: Vec::new(),
+        }
+    }
+
+    fn edge_toolbar(canvas_node: fret_core::NodeId, style: NodeGraphStyle) -> Self {
+        Self {
+            canvas_node,
+            style,
+            label: "Edge Toolbar",
+            hovered: None,
+            pressed: None,
+            text_blobs: Vec::new(),
+        }
+    }
+
+    fn panel_size_px(&self) -> (f32, f32) {
+        let w = 2.0 * Self::PAD_PX
+            + Self::LABEL_W_PX
+            + Self::GAP_PX
+            + 2.0 * Self::BUTTON_W_PX
+            + Self::GAP_PX;
+        let h = 2.0 * Self::PAD_PX + Self::BUTTON_H_PX;
+        (w, h)
+    }
+
+    fn compute_layout(&self, bounds: Rect) -> DemoToolbarLayout {
+        let (panel_w, panel_h) = self.panel_size_px();
+        let panel = Rect::new(bounds.origin, Size::new(Px(panel_w), Px(panel_h)));
+
+        let delete = Rect::new(
+            Point::new(
+                Px(panel.origin.x.0 + panel.size.width.0
+                    - Self::PAD_PX
+                    - 2.0 * Self::BUTTON_W_PX
+                    - Self::GAP_PX),
+                Px(panel.origin.y.0 + Self::PAD_PX),
+            ),
+            Size::new(Px(Self::BUTTON_W_PX), Px(Self::BUTTON_H_PX)),
+        );
+        let fit = Rect::new(
+            Point::new(
+                Px(panel.origin.x.0 + panel.size.width.0 - Self::PAD_PX - Self::BUTTON_W_PX),
+                Px(panel.origin.y.0 + Self::PAD_PX),
+            ),
+            Size::new(Px(Self::BUTTON_W_PX), Px(Self::BUTTON_H_PX)),
+        );
+
+        DemoToolbarLayout { panel, delete, fit }
+    }
+
+    fn button_at(&self, bounds: Rect, position: Point) -> Option<DemoToolbarButton> {
+        let layout = self.compute_layout(bounds);
+        if layout.delete.contains(position) {
+            return Some(DemoToolbarButton::Delete);
+        }
+        if layout.fit.contains(position) {
+            return Some(DemoToolbarButton::Fit);
+        }
+        None
+    }
+
+    fn dispatch_button<H: UiHost>(&self, cx: &mut EventCx<'_, H>, btn: DemoToolbarButton) {
+        cx.request_focus(self.canvas_node);
+        let id = match btn {
+            DemoToolbarButton::Delete => {
+                CommandId::new(fret_node::ui::commands::CMD_NODE_GRAPH_DELETE_SELECTION)
+            }
+            DemoToolbarButton::Fit => {
+                CommandId::new(fret_node::ui::commands::CMD_NODE_GRAPH_FRAME_SELECTION)
+            }
+        };
+        cx.dispatch_command(id);
+        cx.request_redraw();
+    }
+
+    fn label_for(btn: DemoToolbarButton) -> &'static str {
+        match btn {
+            DemoToolbarButton::Delete => "Del",
+            DemoToolbarButton::Fit => "Fit",
+        }
+    }
+}
+
+impl<H: UiHost> Widget<H> for DemoToolbarStrip {
+    fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
+        let (w, h) = self.panel_size_px();
+        Size::new(Px(w), Px(h))
+    }
+
+    fn hit_test(&self, bounds: Rect, position: Point) -> bool {
+        self.compute_layout(bounds).panel.contains(position)
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        for id in self.text_blobs.drain(..) {
+            services.text().release(id);
+        }
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        match event {
+            Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
+                let hovered = self.button_at(cx.bounds, *position);
+                if hovered.is_some() {
+                    cx.set_cursor_icon(CursorIcon::Pointer);
+                }
+                if hovered != self.hovered {
+                    self.hovered = hovered;
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+            }
+            Event::Pointer(fret_core::PointerEvent::Down {
+                position, button, ..
+            }) => {
+                if *button != MouseButton::Left {
+                    return;
+                }
+                let Some(btn) = self.button_at(cx.bounds, *position) else {
+                    return;
+                };
+                self.pressed = Some(btn);
+                cx.capture_pointer(cx.node);
+                cx.stop_propagation();
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+            }
+            Event::Pointer(fret_core::PointerEvent::Up {
+                position, button, ..
+            }) => {
+                if *button != MouseButton::Left {
+                    return;
+                }
+                let pressed = self.pressed.take();
+                cx.release_pointer_capture();
+                if pressed.is_some() {
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                let Some(pressed) = pressed else {
+                    return;
+                };
+                if self.button_at(cx.bounds, *position) == Some(pressed) {
+                    self.dispatch_button(cx, pressed);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        for id in self.text_blobs.drain(..) {
+            cx.services.text().release(id);
+        }
+
+        let layout = self.compute_layout(cx.bounds);
+        let corner = self.style.context_menu_corner_radius.max(6.0);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(21_500),
+            rect: layout.panel,
+            background: self.style.context_menu_background,
+            border: Edges::all(Px(1.0)),
+            border_color: self.style.context_menu_border,
+            corner_radii: Corners::all(Px(corner)),
+        });
+
+        let text_style = self.style.controls_text_style.clone();
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let (label_id, label_metrics) =
+            cx.services
+                .text()
+                .prepare_str(self.label, &text_style, constraints);
+        self.text_blobs.push(label_id);
+        let lx = layout.panel.origin.x.0 + 8.0;
+        let ly = layout.panel.origin.y.0
+            + 0.5 * (layout.panel.size.height.0 - label_metrics.size.height.0);
+        cx.scene.push(SceneOp::Text {
+            order: DrawOrder(21_501),
+            text: label_id,
+            origin: Point::new(Px(lx), Px(ly)),
+            color: self.style.controls_text,
+        });
+
+        let buttons = [
+            (DemoToolbarButton::Delete, layout.delete),
+            (DemoToolbarButton::Fit, layout.fit),
+        ];
+        for (btn, rect) in buttons {
+            let hovered = self.hovered == Some(btn);
+            let pressed = self.pressed == Some(btn);
+            let bg = if pressed {
+                self.style.controls_active_background
+            } else if hovered {
+                self.style.controls_hover_background
+            } else {
+                Color::TRANSPARENT
+            };
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(21_501),
+                rect,
+                background: bg,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px((corner - 2.0).max(4.0))),
+            });
+
+            let label = Self::label_for(btn);
+            let (id, metrics) = cx
+                .services
+                .text()
+                .prepare_str(label, &text_style, constraints);
+            self.text_blobs.push(id);
+            let tx = rect.origin.x.0 + 0.5 * (rect.size.width.0 - metrics.size.width.0);
+            let ty = rect.origin.y.0 + 0.5 * (rect.size.height.0 - metrics.size.height.0);
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(21_502),
+                text: id,
+                origin: Point::new(Px(tx), Px(ty)),
+                color: self.style.controls_text,
+            });
+        }
+    }
 }
