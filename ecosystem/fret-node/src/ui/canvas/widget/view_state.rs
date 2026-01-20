@@ -460,6 +460,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             crate::runtime::fit_view::FitViewComputeOptions {
                 viewport_width_px: viewport_w,
                 viewport_height_px: viewport_h,
+                node_origin: {
+                    let origin = snapshot.interaction.node_origin.normalized();
+                    (origin.x, origin.y)
+                },
                 padding,
                 margin_px_fallback: 48.0,
                 min_zoom: target_min_zoom,

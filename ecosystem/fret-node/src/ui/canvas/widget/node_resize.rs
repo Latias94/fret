@@ -2,7 +2,9 @@ use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
 use crate::core::{CanvasRect, CanvasSize, NodeExtent};
+use crate::io::NodeGraphNodeOrigin;
 
+use super::super::geometry::node_rect_origin_from_anchor;
 use super::super::geometry::{node_ports, node_size_default_px};
 use super::super::state::{NodeResizeHandle, ViewSnapshot};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
@@ -117,6 +119,7 @@ fn apply_resize_handle(
     handle: NodeResizeHandle,
     keep_aspect_ratio: bool,
     start_node_pos: crate::core::CanvasPoint,
+    node_origin: NodeGraphNodeOrigin,
     start_size_px: CanvasSize,
     start_pointer: Point,
     pointer: Point,
@@ -132,10 +135,11 @@ fn apply_resize_handle(
         1.0
     };
 
+    let node_origin = node_origin.normalized();
     let start_w_canvas = start_size_px.width / zoom;
     let start_h_canvas = start_size_px.height / zoom;
-    let start_left = start_node_pos.x;
-    let start_top = start_node_pos.y;
+    let start_left = start_node_pos.x - node_origin.x * start_w_canvas;
+    let start_top = start_node_pos.y - node_origin.y * start_h_canvas;
     let start_right = start_left + start_w_canvas;
     let start_bottom = start_top + start_h_canvas;
 
@@ -298,9 +302,14 @@ fn apply_resize_handle(
         }
     }
 
-    let new_pos = crate::core::CanvasPoint { x: left, y: top };
     let new_size_px = size_canvas_to_px((right - left, bottom - top), zoom);
-    (new_pos, new_size_px)
+    let w_canvas = (new_size_px.width / zoom).max(0.0);
+    let h_canvas = (new_size_px.height / zoom).max(0.0);
+    let anchor = crate::core::CanvasPoint {
+        x: left + node_origin.x * w_canvas,
+        y: top + node_origin.y * h_canvas,
+    };
+    (anchor, new_size_px)
 }
 
 pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -381,6 +390,7 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         resize.handle,
         modifiers.shift,
         resize.start_node_pos,
+        snapshot.interaction.node_origin,
         resize.start_size,
         resize.start_pos,
         position,
@@ -412,12 +422,14 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 return Vec::new();
             };
             let z = zoom.max(1.0e-6);
+            let origin = snapshot.interaction.node_origin.normalized();
+            let child_size_canvas = CanvasSize {
+                width: (new_size_px.width / z).max(0.0),
+                height: (new_size_px.height / z).max(0.0),
+            };
             let child_rect = CanvasRect {
-                origin: new_pos,
-                size: CanvasSize {
-                    width: (new_size_px.width / z).max(0.0),
-                    height: (new_size_px.height / z).max(0.0),
-                },
+                origin: node_rect_origin_from_anchor(new_pos, child_size_canvas, origin),
+                size: child_size_canvas,
             };
             vec![(parent, canvas_rect_union(group.rect, child_rect))]
         })
@@ -444,6 +456,7 @@ pub(super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
 mod tests {
     use super::{NodeResizeHandle, apply_resize_handle};
     use crate::core::{CanvasPoint, CanvasRect, CanvasSize};
+    use crate::io::NodeGraphNodeOrigin;
     use fret_core::{Point, Px};
 
     #[test]
@@ -465,6 +478,7 @@ mod tests {
             NodeResizeHandle::Right,
             false,
             start_pos,
+            NodeGraphNodeOrigin::default(),
             start_size_px,
             start_pointer,
             pointer,
@@ -498,6 +512,7 @@ mod tests {
             NodeResizeHandle::Left,
             false,
             start_pos,
+            NodeGraphNodeOrigin::default(),
             start_size_px,
             start_pointer,
             pointer,
@@ -539,6 +554,7 @@ mod tests {
             NodeResizeHandle::Right,
             false,
             start_pos,
+            NodeGraphNodeOrigin::default(),
             start_size_px,
             start_pointer,
             pointer,
@@ -574,6 +590,7 @@ mod tests {
             NodeResizeHandle::Right,
             false,
             start_pos,
+            NodeGraphNodeOrigin::default(),
             start_size_px,
             start_pointer,
             pointer,
@@ -609,6 +626,7 @@ mod tests {
             NodeResizeHandle::BottomRight,
             false,
             start_pos,
+            NodeGraphNodeOrigin::default(),
             start_size_px,
             start_pointer,
             pointer,
@@ -641,6 +659,7 @@ mod tests {
             NodeResizeHandle::BottomRight,
             true,
             start_pos,
+            NodeGraphNodeOrigin::default(),
             start_size_px,
             start_pointer,
             pointer,

@@ -10,6 +10,11 @@ pub struct FitViewComputeOptions {
     pub viewport_width_px: f32,
     /// Viewport height in logical px.
     pub viewport_height_px: f32,
+    /// Node origin (anchor) used to interpret `FitViewNodeInfo.pos`.
+    ///
+    /// When `(0.0, 0.0)`, `pos` is treated as the node's top-left.
+    /// When `(0.5, 0.5)`, `pos` is treated as the node's center.
+    pub node_origin: (f32, f32),
     /// Extra padding as a fraction of viewport size (0.0 .. 0.45 recommended).
     ///
     /// When `0.0`, `margin_px_fallback` is used instead.
@@ -31,6 +36,15 @@ impl FitViewComputeOptions {
         {
             return None;
         }
+
+        if !self.node_origin.0.is_finite() {
+            self.node_origin.0 = 0.0;
+        }
+        if !self.node_origin.1.is_finite() {
+            self.node_origin.1 = 0.0;
+        }
+        self.node_origin.0 = self.node_origin.0.clamp(0.0, 1.0);
+        self.node_origin.1 = self.node_origin.1.clamp(0.0, 1.0);
 
         if !self.margin_px_fallback.is_finite() || self.margin_px_fallback < 0.0 {
             self.margin_px_fallback = 0.0;
@@ -75,94 +89,141 @@ pub fn compute_fit_view_target(
         return None;
     }
 
+    fn compute_fit_view_target_top_left(
+        nodes: &[FitViewNodeInfo],
+        options: FitViewComputeOptions,
+    ) -> Option<(CanvasPoint, f32)> {
+        let (viewport_w, viewport_h) = (options.viewport_width_px, options.viewport_height_px);
+        let (margin_x, margin_y) = if options.padding > 0.0 {
+            (viewport_w * options.padding, viewport_h * options.padding)
+        } else {
+            (options.margin_px_fallback, options.margin_px_fallback)
+        };
+
+        let mut min_x = f32::INFINITY;
+        let mut min_y = f32::INFINITY;
+        let mut max_x = f32::NEG_INFINITY;
+        let mut max_y = f32::NEG_INFINITY;
+        let mut max_w = 0.0f32;
+        let mut max_h = 0.0f32;
+
+        for n in nodes {
+            let (w, h) = n.size_px;
+            if !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0 {
+                continue;
+            }
+            min_x = min_x.min(n.pos.x);
+            min_y = min_y.min(n.pos.y);
+            max_x = max_x.max(n.pos.x);
+            max_y = max_y.max(n.pos.y);
+            max_w = max_w.max(w);
+            max_h = max_h.max(h);
+        }
+
+        if !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite() {
+            return None;
+        }
+
+        let spread_x = (max_x - min_x).max(0.0);
+        let spread_y = (max_y - min_y).max(0.0);
+
+        let mut zoom_x = options.max_zoom;
+        let mut zoom_y = options.max_zoom;
+        if spread_x > 1.0e-3 {
+            zoom_x = (viewport_w - max_w - 2.0 * margin_x) / spread_x;
+        }
+        if spread_y > 1.0e-3 {
+            zoom_y = (viewport_h - max_h - 2.0 * margin_y) / spread_y;
+        }
+
+        let mut zoom = zoom_x.min(zoom_y);
+        if !zoom.is_finite() {
+            zoom = 1.0;
+        }
+        zoom = zoom.clamp(options.min_zoom, options.max_zoom);
+
+        let mut rect_min_x = f32::INFINITY;
+        let mut rect_min_y = f32::INFINITY;
+        let mut rect_max_x = f32::NEG_INFINITY;
+        let mut rect_max_y = f32::NEG_INFINITY;
+        for n in nodes {
+            let (w_px, h_px) = n.size_px;
+            if !w_px.is_finite() || !h_px.is_finite() || w_px <= 0.0 || h_px <= 0.0 {
+                continue;
+            }
+            let w = w_px / zoom;
+            let h = h_px / zoom;
+            rect_min_x = rect_min_x.min(n.pos.x);
+            rect_min_y = rect_min_y.min(n.pos.y);
+            rect_max_x = rect_max_x.max(n.pos.x + w);
+            rect_max_y = rect_max_y.max(n.pos.y + h);
+        }
+
+        if !rect_min_x.is_finite()
+            || !rect_min_y.is_finite()
+            || !rect_max_x.is_finite()
+            || !rect_max_y.is_finite()
+        {
+            return None;
+        }
+
+        let center_x = 0.5 * (rect_min_x + rect_max_x);
+        let center_y = 0.5 * (rect_min_y + rect_max_y);
+
+        let viewport_w_canvas = viewport_w / zoom;
+        let viewport_h_canvas = viewport_h / zoom;
+        let target_center_x = 0.5 * viewport_w_canvas;
+        let target_center_y = 0.5 * viewport_h_canvas;
+
+        let pan = CanvasPoint {
+            x: target_center_x - center_x,
+            y: target_center_y - center_y,
+        };
+
+        Some((pan, zoom))
+    }
+
     let (viewport_w, viewport_h) = (options.viewport_width_px, options.viewport_height_px);
-    let (margin_x, margin_y) = if options.padding > 0.0 {
-        (viewport_w * options.padding, viewport_h * options.padding)
-    } else {
-        (options.margin_px_fallback, options.margin_px_fallback)
-    };
-
-    let mut min_x = f32::INFINITY;
-    let mut min_y = f32::INFINITY;
-    let mut max_x = f32::NEG_INFINITY;
-    let mut max_y = f32::NEG_INFINITY;
-    let mut max_w = 0.0f32;
-    let mut max_h = 0.0f32;
-
-    for n in nodes {
-        let (w, h) = n.size_px;
-        if !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0 {
-            continue;
-        }
-        min_x = min_x.min(n.pos.x);
-        min_y = min_y.min(n.pos.y);
-        max_x = max_x.max(n.pos.x);
-        max_y = max_y.max(n.pos.y);
-        max_w = max_w.max(w);
-        max_h = max_h.max(h);
-    }
-
-    if !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite() {
+    if !viewport_w.is_finite() || !viewport_h.is_finite() {
         return None;
     }
 
-    let spread_x = (max_x - min_x).max(0.0);
-    let spread_y = (max_y - min_y).max(0.0);
+    let mut zoom_guess = options.max_zoom;
+    let mut best: Option<(CanvasPoint, f32)> = None;
 
-    let mut zoom_x = options.max_zoom;
-    let mut zoom_y = options.max_zoom;
-    if spread_x > 1.0e-3 {
-        zoom_x = (viewport_w - max_w - 2.0 * margin_x) / spread_x;
-    }
-    if spread_y > 1.0e-3 {
-        zoom_y = (viewport_h - max_h - 2.0 * margin_y) / spread_y;
-    }
-
-    let mut zoom = zoom_x.min(zoom_y);
-    if !zoom.is_finite() {
-        zoom = 1.0;
-    }
-    zoom = zoom.clamp(options.min_zoom, options.max_zoom);
-
-    let mut rect_min_x = f32::INFINITY;
-    let mut rect_min_y = f32::INFINITY;
-    let mut rect_max_x = f32::NEG_INFINITY;
-    let mut rect_max_y = f32::NEG_INFINITY;
-    for n in nodes {
-        let (w_px, h_px) = n.size_px;
-        if !w_px.is_finite() || !h_px.is_finite() || w_px <= 0.0 || h_px <= 0.0 {
-            continue;
+    for _ in 0..4 {
+        if !zoom_guess.is_finite() || zoom_guess <= 0.0 {
+            zoom_guess = 1.0;
         }
-        let w = w_px / zoom;
-        let h = h_px / zoom;
-        rect_min_x = rect_min_x.min(n.pos.x);
-        rect_min_y = rect_min_y.min(n.pos.y);
-        rect_max_x = rect_max_x.max(n.pos.x + w);
-        rect_max_y = rect_max_y.max(n.pos.y + h);
+        zoom_guess = zoom_guess.clamp(options.min_zoom, options.max_zoom);
+
+        let mut scratch: Vec<FitViewNodeInfo> = Vec::with_capacity(nodes.len());
+        let ox = options.node_origin.0;
+        let oy = options.node_origin.1;
+        for n in nodes {
+            let (w_px, h_px) = n.size_px;
+            if !w_px.is_finite() || !h_px.is_finite() || w_px <= 0.0 || h_px <= 0.0 {
+                continue;
+            }
+            let w_canvas = w_px / zoom_guess;
+            let h_canvas = h_px / zoom_guess;
+            scratch.push(FitViewNodeInfo {
+                pos: CanvasPoint {
+                    x: n.pos.x - ox * w_canvas,
+                    y: n.pos.y - oy * h_canvas,
+                },
+                size_px: n.size_px,
+            });
+        }
+
+        let Some((pan, zoom_next)) = compute_fit_view_target_top_left(&scratch, options) else {
+            return best;
+        };
+        best = Some((pan, zoom_next));
+        zoom_guess = zoom_next;
     }
 
-    if !rect_min_x.is_finite()
-        || !rect_min_y.is_finite()
-        || !rect_max_x.is_finite()
-        || !rect_max_y.is_finite()
-    {
-        return None;
-    }
-
-    let center_x = 0.5 * (rect_min_x + rect_max_x);
-    let center_y = 0.5 * (rect_min_y + rect_max_y);
-
-    let viewport_w_canvas = viewport_w / zoom;
-    let viewport_h_canvas = viewport_h / zoom;
-    let target_center_x = 0.5 * viewport_w_canvas;
-    let target_center_y = 0.5 * viewport_h_canvas;
-
-    let pan = CanvasPoint {
-        x: target_center_x - center_x,
-        y: target_center_y - center_y,
-    };
-
-    Some((pan, zoom))
+    best
 }
 
 #[cfg(test)]
@@ -188,6 +249,7 @@ mod tests {
             FitViewComputeOptions {
                 viewport_width_px: 800.0,
                 viewport_height_px: 600.0,
+                node_origin: (0.0, 0.0),
                 padding: 0.1,
                 margin_px_fallback: 48.0,
                 min_zoom: 0.1,

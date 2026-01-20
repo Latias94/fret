@@ -225,9 +225,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             b.finish()
         };
 
+        let node_origin = snapshot.interaction.node_origin.normalized();
         let geom_key = self.geometry.key.unwrap_or(GeometryCacheKey {
             graph_rev: self.graph.revision(&*cx.app).unwrap_or(0),
             zoom_bits: zoom.to_bits(),
+            node_origin_x_bits: node_origin.x.to_bits(),
+            node_origin_y_bits: node_origin.y.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
             presenter_rev: self.presenter.geometry_revision(),
         });
@@ -238,6 +241,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_groups.v1");
                 b.add_u64(geom_key.graph_rev);
                 b.add_u32(geom_key.zoom_bits);
+                b.add_u32(geom_key.node_origin_x_bits);
+                b.add_u32(geom_key.node_origin_y_bits);
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
                 b.add_u64(style_key);
@@ -385,6 +390,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             TileCacheKeyBuilder::new("fret-node.canvas.static_edges.tile.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -555,6 +562,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             TileCacheKeyBuilder::new("fret-node.canvas.static_edge_labels.tile.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -705,6 +714,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_edges.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -719,6 +730,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             TileCacheKeyBuilder::new("fret-node.canvas.static_edge_labels.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -970,6 +983,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_nodes.v1");
                 b.add_u64(geom_key.graph_rev);
                 b.add_u32(geom_key.zoom_bits);
+                b.add_u32(geom_key.node_origin_x_bits);
+                b.add_u32(geom_key.node_origin_y_bits);
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
                 b.add_u64(style_key);

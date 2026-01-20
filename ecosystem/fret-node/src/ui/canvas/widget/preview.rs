@@ -1,3 +1,4 @@
+use super::super::geometry::node_rect_origin_from_anchor;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -12,6 +13,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         if nodes.is_empty() {
             return None;
         }
+
+        let node_origin = snapshot.interaction.node_origin.normalized();
 
         let base_key = self.geometry.key?;
         let base_geom = self.geometry.geom.clone();
@@ -49,15 +52,24 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     continue;
                 };
 
+                let size_canvas = crate::core::CanvasSize {
+                    width: node_geom.rect.size.width.0,
+                    height: node_geom.rect.size.height.0,
+                };
+                let next_origin = node_rect_origin_from_anchor(*pos, size_canvas, node_origin);
+
                 let base_x = node_geom.rect.origin.x.0;
                 let base_y = node_geom.rect.origin.y.0;
-                let dx = pos.x - base_x;
-                let dy = pos.y - base_y;
+                let dx = next_origin.x - base_x;
+                let dy = next_origin.y - base_y;
                 if !dx.is_finite() || !dy.is_finite() {
                     continue;
                 }
 
-                node_geom.rect = Rect::new(Point::new(Px(pos.x), Px(pos.y)), node_geom.rect.size);
+                node_geom.rect = Rect::new(
+                    Point::new(Px(next_origin.x), Px(next_origin.y)),
+                    node_geom.rect.size,
+                );
                 index.update_node_rect(*id, node_geom.rect);
                 node_rects.insert(*id, node_geom.rect);
 
@@ -150,15 +162,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             if !moved_nodes.is_empty() {
                 for (id, prev, next) in &moved_nodes {
-                    let dx = next.x - prev.x;
-                    let dy = next.y - prev.y;
+                    let Some(node_geom) = geom_mut.nodes.get(id) else {
+                        continue;
+                    };
+                    let size_canvas = crate::core::CanvasSize {
+                        width: node_geom.rect.size.width.0,
+                        height: node_geom.rect.size.height.0,
+                    };
+                    let prev_origin = node_rect_origin_from_anchor(*prev, size_canvas, node_origin);
+                    let next_origin = node_rect_origin_from_anchor(*next, size_canvas, node_origin);
+
+                    let dx = next_origin.x - prev_origin.x;
+                    let dy = next_origin.y - prev_origin.y;
                     if !dx.is_finite() || !dy.is_finite() {
                         continue;
                     }
 
                     if let Some(node_geom) = geom_mut.nodes.get_mut(id) {
-                        node_geom.rect =
-                            Rect::new(Point::new(Px(next.x), Px(next.y)), node_geom.rect.size);
+                        node_geom.rect = Rect::new(
+                            Point::new(Px(next_origin.x), Px(next_origin.y)),
+                            node_geom.rect.size,
+                        );
                         index_mut.update_node_rect(*id, node_geom.rect);
                         cache.node_rects.insert(*id, node_geom.rect);
                     }
@@ -248,7 +272,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 )
             })
             .unwrap_or(base_rect.size);
-        let next_rect = Rect::new(Point::new(Px(pos.x), Px(pos.y)), size);
+        let node_origin = snapshot.interaction.node_origin.normalized();
+        let size_canvas = crate::core::CanvasSize {
+            width: size.width.0,
+            height: size.height.0,
+        };
+        let next_origin = node_rect_origin_from_anchor(pos, size_canvas, node_origin);
+        let next_rect = Rect::new(Point::new(Px(next_origin.x), Px(next_origin.y)), size);
 
         let rebuild = self.geometry.drag_preview.as_ref().is_none_or(|cache| {
             cache.kind != DragPreviewKind::NodeResize || cache.base_key != base_key

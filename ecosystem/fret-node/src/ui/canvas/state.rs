@@ -529,6 +529,8 @@ pub(crate) struct PendingPaste {
 pub(crate) struct GeometryCacheKey {
     pub(crate) graph_rev: u64,
     pub(crate) zoom_bits: u32,
+    pub(crate) node_origin_x_bits: u32,
+    pub(crate) node_origin_y_bits: u32,
     pub(crate) draw_order_hash: u64,
     pub(crate) presenter_rev: u64,
 }
@@ -537,6 +539,8 @@ pub(crate) struct GeometryCacheKey {
 pub(crate) struct InternalsCacheKey {
     pub(crate) graph_rev: u64,
     pub(crate) zoom_bits: u32,
+    pub(crate) node_origin_x_bits: u32,
+    pub(crate) node_origin_y_bits: u32,
     pub(crate) draw_order_hash: u64,
     pub(crate) presenter_rev: u64,
     pub(crate) pan_x_bits: u32,

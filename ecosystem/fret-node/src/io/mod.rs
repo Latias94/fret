@@ -250,6 +250,32 @@ pub enum NodeGraphSelectionMode {
     Partial,
 }
 
+/// Node origin (anchor) used to interpret `Node.pos` (XyFlow `nodeOrigin`).
+///
+/// This is expressed as a normalized fraction of the node rect:
+/// - `(0.0, 0.0)` means `Node.pos` is the node's top-left.
+/// - `(0.5, 0.5)` means `Node.pos` is the node's center.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphNodeOrigin {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl NodeGraphNodeOrigin {
+    pub fn normalized(self) -> Self {
+        let mut out = self;
+        if !out.x.is_finite() {
+            out.x = 0.0;
+        }
+        if !out.y.is_finite() {
+            out.y = 0.0;
+        }
+        out.x = out.x.clamp(0.0, 1.0);
+        out.y = out.y.clamp(0.0, 1.0);
+        out
+    }
+}
+
 impl<'de> Deserialize<'de> for NodeGraphBoxSelectEdges {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Visitor;
@@ -799,6 +825,10 @@ pub struct NodeGraphInteractionState {
     /// extent. Parent groups may further constrain movement.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node_extent: Option<CanvasRect>,
+
+    /// Node origin (anchor) used to interpret `Node.pos` (XyFlow `nodeOrigin`).
+    #[serde(default)]
+    pub node_origin: NodeGraphNodeOrigin,
 }
 
 impl NodeGraphInteractionState {
@@ -865,6 +895,7 @@ impl Default for NodeGraphInteractionState {
             auto_pan: NodeGraphAutoPanTuning::default(),
             translate_extent: None,
             node_extent: None,
+            node_origin: NodeGraphNodeOrigin::default(),
         }
     }
 }

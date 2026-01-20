@@ -1,4 +1,5 @@
 use super::*;
+use super::super::geometry::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn nudge_selection_by_screen_delta<H: UiHost>(
@@ -75,6 +76,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .read_ref(host, |g| {
                 let mut delta = delta;
                 let mut ops: Vec<GraphOp> = Vec::new();
+                let node_origin = snapshot.interaction.node_origin.normalized();
 
                 let selected_groups_set: std::collections::HashSet<crate::core::GroupId> =
                     selected_groups.iter().copied().collect();
@@ -289,8 +291,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
                             let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
-                            to.x = to.x.clamp(min_x, max_x);
-                            to.y = to.y.clamp(min_y, max_y);
+                            let mut rect_origin =
+                                node_rect_origin_from_anchor(to, node_size, node_origin);
+                            rect_origin.x = rect_origin.x.clamp(min_x, max_x);
+                            rect_origin.y = rect_origin.y.clamp(min_y, max_y);
+                            to = node_anchor_from_rect_origin(rect_origin, node_size, node_origin);
                         }
 
                         if let Some(crate::core::NodeExtent::Rect { rect }) = node.extent {
@@ -298,8 +303,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let min_y = rect.origin.y;
                             let max_x = rect.origin.x + (rect.size.width - node_w).max(0.0);
                             let max_y = rect.origin.y + (rect.size.height - node_h).max(0.0);
-                            to.x = to.x.clamp(min_x, max_x);
-                            to.y = to.y.clamp(min_y, max_y);
+                            let mut rect_origin =
+                                node_rect_origin_from_anchor(to, node_size, node_origin);
+                            rect_origin.x = rect_origin.x.clamp(min_x, max_x);
+                            rect_origin.y = rect_origin.y.clamp(min_y, max_y);
+                            to = node_anchor_from_rect_origin(rect_origin, node_size, node_origin);
                         }
 
                         if let Some(parent) = node.parent
@@ -311,8 +319,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 group.rect.origin.x + (group.rect.size.width - node_w).max(0.0);
                             let max_y =
                                 group.rect.origin.y + (group.rect.size.height - node_h).max(0.0);
-                            to.x = to.x.clamp(min_x, max_x);
-                            to.y = to.y.clamp(min_y, max_y);
+                            let mut rect_origin =
+                                node_rect_origin_from_anchor(to, node_size, node_origin);
+                            rect_origin.x = rect_origin.x.clamp(min_x, max_x);
+                            rect_origin.y = rect_origin.y.clamp(min_y, max_y);
+                            to = node_anchor_from_rect_origin(rect_origin, node_size, node_origin);
                         }
                     }
 
@@ -355,6 +366,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let ops = self
             .graph
             .read_ref(host, |g| {
+                let node_origin = snapshot.interaction.node_origin.normalized();
                 #[derive(Clone, Copy)]
                 enum ElementId {
                     Node(GraphNodeId),
@@ -979,8 +991,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let min_y = extent.origin.y;
                             let max_x = extent.origin.x + (extent.size.width - node_w).max(0.0);
                             let max_y = extent.origin.y + (extent.size.height - node_h).max(0.0);
-                            to.x = to.x.clamp(min_x, max_x);
-                            to.y = to.y.clamp(min_y, max_y);
+                            let mut rect_origin =
+                                node_rect_origin_from_anchor(to, node_size, node_origin);
+                            rect_origin.x = rect_origin.x.clamp(min_x, max_x);
+                            rect_origin.y = rect_origin.y.clamp(min_y, max_y);
+                            to = node_anchor_from_rect_origin(rect_origin, node_size, node_origin);
                         }
 
                         if moved && let Some(crate::core::NodeExtent::Rect { rect }) = node.extent {
@@ -988,8 +1003,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let min_y = rect.origin.y;
                             let max_x = rect.origin.x + (rect.size.width - node_w).max(0.0);
                             let max_y = rect.origin.y + (rect.size.height - node_h).max(0.0);
-                            to.x = to.x.clamp(min_x, max_x);
-                            to.y = to.y.clamp(min_y, max_y);
+                            let mut rect_origin =
+                                node_rect_origin_from_anchor(to, node_size, node_origin);
+                            rect_origin.x = rect_origin.x.clamp(min_x, max_x);
+                            rect_origin.y = rect_origin.y.clamp(min_y, max_y);
+                            to = node_anchor_from_rect_origin(rect_origin, node_size, node_origin);
                         }
 
                         if let Some(parent) = node.parent
@@ -1001,8 +1019,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 group.rect.origin.x + (group.rect.size.width - node_w).max(0.0);
                             let max_y =
                                 group.rect.origin.y + (group.rect.size.height - node_h).max(0.0);
-                            to.x = to.x.clamp(min_x, max_x);
-                            to.y = to.y.clamp(min_y, max_y);
+                            let mut rect_origin =
+                                node_rect_origin_from_anchor(to, node_size, node_origin);
+                            rect_origin.x = rect_origin.x.clamp(min_x, max_x);
+                            rect_origin.y = rect_origin.y.clamp(min_y, max_y);
+                            to = node_anchor_from_rect_origin(rect_origin, node_size, node_origin);
                         }
                     }
 
