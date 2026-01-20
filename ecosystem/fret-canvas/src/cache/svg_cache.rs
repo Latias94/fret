@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{SvgId, UiServices};
+use fret_core::{SceneOp, SvgId, UiServices};
 
 use super::CacheStats;
 
@@ -64,6 +64,7 @@ pub struct SvgCache {
     frame: u64,
     bytes_ready: u64,
     entries: HashMap<SvgCacheKey, SvgCacheEntry>,
+    id_to_key: HashMap<SvgId, u64>,
     stats: CacheStats,
 }
 
@@ -125,10 +126,41 @@ impl SvgCache {
             if let Some(svg) = entry.svg.take() {
                 let _ = services.svg().unregister_svg(svg);
                 self.stats.release_clear = self.stats.release_clear.saturating_add(1);
+                self.id_to_key.remove(&svg);
             }
         }
         self.entries.clear();
+        self.id_to_key.clear();
         self.bytes_ready = 0;
+    }
+
+    /// Touch an existing cached SVG ID so it is not pruned.
+    pub fn touch_svg(&mut self, svg: SvgId) -> bool {
+        let Some(key) = self.id_to_key.get(&svg).copied() else {
+            return false;
+        };
+        let Some(entry) = self.entries.get_mut(&SvgCacheKey { key }) else {
+            self.id_to_key.remove(&svg);
+            return false;
+        };
+        entry.last_used_frame = self.frame;
+        true
+    }
+
+    /// Touch any SVG IDs referenced by `SceneOp::SvgMaskIcon` / `SceneOp::SvgImage` so they are not pruned.
+    pub fn touch_svgs_in_scene_ops(&mut self, ops: &[SceneOp]) -> u32 {
+        let mut touched: u32 = 0;
+        for op in ops {
+            let svg = match *op {
+                SceneOp::SvgMaskIcon { svg, .. } => svg,
+                SceneOp::SvgImage { svg, .. } => svg,
+                _ => continue,
+            };
+            if self.touch_svg(svg) {
+                touched = touched.saturating_add(1);
+            }
+        }
+        touched
     }
 
     pub fn evict(&mut self, services: &mut dyn UiServices, key: u64) -> bool {
@@ -140,6 +172,7 @@ impl SvgCache {
         if let Some(svg) = entry.svg.take() {
             let _ = services.svg().unregister_svg(svg);
             self.stats.release_evict = self.stats.release_evict.saturating_add(1);
+            self.id_to_key.remove(&svg);
         }
         true
     }
@@ -162,7 +195,9 @@ impl SvgCache {
             if let Some(old) = entry.svg.replace(svg_id) {
                 let _ = services.svg().unregister_svg(old);
                 self.stats.release_replaced = self.stats.release_replaced.saturating_add(1);
+                self.id_to_key.remove(&old);
             }
+            self.id_to_key.insert(svg_id, key);
             self.bytes_ready = self
                 .bytes_ready
                 .saturating_sub(entry.bytes_len)
@@ -197,17 +232,22 @@ impl SvgCache {
         self.stats.prune_calls = self.stats.prune_calls.saturating_add(1);
         let now = self.frame;
 
+        let mut removed_ids: Vec<SvgId> = Vec::new();
         self.entries.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
             if !keep {
                 if let Some(svg) = entry.svg.take() {
                     let _ = services.svg().unregister_svg(svg);
                     self.stats.release_prune_age = self.stats.release_prune_age.saturating_add(1);
+                    removed_ids.push(svg);
                 }
                 self.bytes_ready = self.bytes_ready.saturating_sub(entry.bytes_len);
             }
             keep
         });
+        for id in removed_ids {
+            self.id_to_key.remove(&id);
+        }
 
         if max_entries == 0 || max_bytes == 0 {
             self.clear(services);
@@ -235,6 +275,7 @@ impl SvgCache {
                     let _ = services.svg().unregister_svg(svg);
                     self.stats.release_prune_budget =
                         self.stats.release_prune_budget.saturating_add(1);
+                    self.id_to_key.remove(&svg);
                 }
             }
         }
@@ -346,5 +387,46 @@ mod tests {
         cache.prepare(&mut services, 3, SvgBytes::Static(b"<svg/>"));
         cache.prune(&mut services, 99, 1);
         assert!(services.svg_unregister_calls >= 2);
+    }
+
+    #[test]
+    fn touch_svg_prevents_prune_age_release() {
+        let mut cache = SvgCache::default();
+        let mut services = FakeServices::default();
+
+        cache.begin_frame(); // frame 1
+        let id = cache.prepare(&mut services, 1, SvgBytes::Static(b"<svg/>"));
+        assert_eq!(services.svg_register_calls, 1);
+
+        cache.begin_frame(); // frame 2
+        assert!(cache.touch_svg(id));
+        cache.prune(&mut services, 0, 10);
+        assert_eq!(services.svg_unregister_calls, 0);
+    }
+
+    #[test]
+    fn touch_svgs_in_scene_ops_prevents_prune_age_release() {
+        let mut cache = SvgCache::default();
+        let mut services = FakeServices::default();
+
+        cache.begin_frame(); // frame 1
+        let id = cache.prepare(&mut services, 1, SvgBytes::Static(b"<svg/>"));
+
+        let ops = [fret_core::SceneOp::SvgImage {
+            order: fret_core::DrawOrder(0),
+            rect: fret_core::Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(1.0), Px(1.0)),
+            ),
+            svg: id,
+            fit: fret_core::SvgFit::Contain,
+            opacity: 1.0,
+        }];
+
+        cache.begin_frame(); // frame 2
+        let touched = cache.touch_svgs_in_scene_ops(&ops);
+        assert_eq!(touched, 1);
+        cache.prune(&mut services, 0, 10);
+        assert_eq!(services.svg_unregister_calls, 0);
     }
 }

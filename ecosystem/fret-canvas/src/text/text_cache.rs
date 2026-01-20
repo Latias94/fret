@@ -1,4 +1,4 @@
-use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextStyle, UiServices};
+use fret_core::{SceneOp, TextBlobId, TextConstraints, TextMetrics, TextStyle, UiServices};
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -95,6 +95,7 @@ struct TextCacheEntry {
 pub struct TextCache {
     frame: u64,
     entries: HashMap<TextCacheKey, TextCacheEntry>,
+    blob_by_id: HashMap<TextBlobId, TextCacheKey>,
     stats: CacheStats,
 }
 
@@ -127,6 +128,34 @@ impl TextCache {
             self.stats.release_clear = self.stats.release_clear.saturating_add(1);
         }
         self.entries.clear();
+        self.blob_by_id.clear();
+    }
+
+    /// Touch an existing prepared text blob so it is not pruned.
+    pub fn touch_blob(&mut self, blob: TextBlobId) -> bool {
+        let Some(key) = self.blob_by_id.get(&blob).cloned() else {
+            return false;
+        };
+        let Some(entry) = self.entries.get_mut(&key) else {
+            self.blob_by_id.remove(&blob);
+            return false;
+        };
+        entry.last_used_frame = self.frame;
+        true
+    }
+
+    /// Touch any text blobs referenced by `SceneOp::Text` so they are not pruned.
+    pub fn touch_blobs_in_scene_ops(&mut self, ops: &[SceneOp]) -> u32 {
+        let mut touched: u32 = 0;
+        for op in ops {
+            let SceneOp::Text { text, .. } = *op else {
+                continue;
+            };
+            if self.touch_blob(text) {
+                touched = touched.saturating_add(1);
+            }
+        }
+        touched
     }
 
     /// Prepares text and caches it by a stable key derived from `(text, style, constraints)`.
@@ -155,6 +184,7 @@ impl TextCache {
                     metrics,
                     key: e.key().stable_key(),
                 };
+                self.blob_by_id.insert(blob, e.key().clone());
                 e.insert(TextCacheEntry {
                     prepared,
                     last_used_frame: self.frame,
@@ -177,14 +207,20 @@ impl TextCache {
     ) {
         self.stats.prune_calls = self.stats.prune_calls.saturating_add(1);
         let now = self.frame;
+
+        let mut removed_blobs: Vec<TextBlobId> = Vec::new();
         self.entries.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
             if !keep {
+                removed_blobs.push(entry.prepared.blob);
                 services.text().release(entry.prepared.blob);
                 self.stats.release_prune_age = self.stats.release_prune_age.saturating_add(1);
             }
             keep
         });
+        for blob in removed_blobs {
+            self.blob_by_id.remove(&blob);
+        }
 
         if self.entries.len() <= max_entries {
             return;
@@ -201,6 +237,7 @@ impl TextCache {
             if let Some(entry) = self.entries.remove(&key) {
                 services.text().release(entry.prepared.blob);
                 self.stats.release_prune_budget = self.stats.release_prune_budget.saturating_add(1);
+                self.blob_by_id.remove(&entry.prepared.blob);
             }
         }
     }
@@ -359,5 +396,96 @@ mod tests {
         assert_eq!(services.text_prepare_calls, 1);
         assert_eq!(cache.stats().prepare_misses, 1);
         assert_eq!(cache.stats().prepare_hits, 1);
+    }
+
+    #[derive(Default)]
+    struct TouchServices {
+        text_prepare_calls: u64,
+        text_release_calls: u64,
+    }
+
+    impl TextService for TouchServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            self.text_prepare_calls += 1;
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::default(),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {
+            self.text_release_calls += 1;
+        }
+    }
+
+    impl PathService for TouchServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for TouchServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn touch_blob_prevents_prune_age_release() {
+        let mut cache = TextCache::default();
+        let mut services = TouchServices::default();
+
+        cache.begin_frame(); // frame 1
+        let style = TextStyle::default();
+        let constraints = TextConstraints::default();
+        let prepared = cache.prepare(&mut services, "hello", &style, constraints);
+        assert_eq!(services.text_prepare_calls, 1);
+
+        cache.begin_frame(); // frame 2
+        assert!(cache.touch_blob(prepared.blob));
+        cache.prune(&mut services, 0, 10);
+        assert_eq!(services.text_release_calls, 0);
+    }
+
+    #[test]
+    fn touch_blobs_in_scene_ops_prevents_prune_age_release() {
+        let mut cache = TextCache::default();
+        let mut services = TouchServices::default();
+
+        cache.begin_frame(); // frame 1
+        let style = TextStyle::default();
+        let constraints = TextConstraints::default();
+        let prepared = cache.prepare(&mut services, "hello", &style, constraints);
+
+        let ops = [fret_core::SceneOp::Text {
+            order: fret_core::DrawOrder(0),
+            origin: fret_core::Point::new(Px(0.0), Px(0.0)),
+            text: prepared.blob,
+            color: fret_core::Color::TRANSPARENT,
+        }];
+
+        cache.begin_frame(); // frame 2
+        let touched = cache.touch_blobs_in_scene_ops(&ops);
+        assert_eq!(touched, 1);
+        cache.prune(&mut services, 0, 10);
+        assert_eq!(services.text_release_calls, 0);
     }
 }
