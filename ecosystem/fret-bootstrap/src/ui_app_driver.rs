@@ -31,6 +31,9 @@ type EventHookFn<S> =
 type CommandHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &CommandId);
 
+type PreferencesHookFn<S> =
+    fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S);
+
 type HotReloadHookFn<S> = fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S);
 
 type ModelChangesHookFn<S> =
@@ -60,6 +63,7 @@ pub struct UiAppDriver<S> {
 
     on_event: Option<EventHookFn<S>>,
     on_command: Option<CommandHookFn<S>>,
+    on_preferences: Option<PreferencesHookFn<S>>,
     on_hot_reload_window: Option<HotReloadHookFn<S>>,
     on_model_changes: Option<ModelChangesHookFn<S>>,
     on_global_changes: Option<GlobalChangesHookFn<S>>,
@@ -93,6 +97,7 @@ impl<S> UiAppDriver<S> {
             drive_ui_assets: true,
             on_event: None,
             on_command: None,
+            on_preferences: None,
             on_hot_reload_window: None,
             on_model_changes: None,
             on_global_changes: None,
@@ -142,6 +147,14 @@ impl<S> UiAppDriver<S> {
 
     pub fn on_command(mut self, f: CommandHookFn<S>) -> Self {
         self.on_command = Some(f);
+        self
+    }
+
+    /// Register a handler for the standard `app.preferences` command.
+    ///
+    /// This is intentionally app-owned (no OS-native default beyond menu wiring).
+    pub fn on_preferences(mut self, f: PreferencesHookFn<S>) -> Self {
+        self.on_preferences = Some(f);
         self
     }
 
@@ -646,6 +659,12 @@ fn ui_app_handle_command<S>(
             #[cfg(target_os = "macos")]
             {
                 app.push_effect(Effect::ShowAboutPanel);
+                return;
+            }
+        }
+        fret_app::core_commands::APP_PREFERENCES => {
+            if let Some(f) = driver.on_preferences {
+                f(app, services, window, &mut state.ui, &mut state.state);
                 return;
             }
         }

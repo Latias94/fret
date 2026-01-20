@@ -141,6 +141,20 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    pub fn on_preferences(
+        mut self,
+        f: fn(
+            &mut App,
+            &mut dyn fret_core::UiServices,
+            fret_core::AppWindowId,
+            &mut fret_ui::UiTree<App>,
+            &mut S,
+        ),
+    ) -> Self {
+        self.inner = self.inner.on_preferences(f);
+        self
+    }
+
     pub fn on_hot_reload_window(
         mut self,
         f: fn(
