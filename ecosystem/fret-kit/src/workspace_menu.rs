@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem, Platform,
-    PlatformCapabilities, WindowInputContextService, format_sequence,
+    PlatformCapabilities, WhenExpr, WindowInputContextService, format_sequence,
 };
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -66,15 +66,18 @@ fn menu_entries<H: UiHost>(
     match item {
         MenuItem::Separator => vec![MenubarEntry::Separator],
         MenuItem::SystemMenu { .. } => Vec::new(),
-        MenuItem::Command { command, when: _ } => {
-            vec![MenubarEntry::Item(command_entry(cx, command, opts))]
+        MenuItem::Command { command, when } => {
+            vec![MenubarEntry::Item(command_entry(
+                cx,
+                command,
+                when.as_ref(),
+                opts,
+            ))]
         }
-        MenuItem::Submenu {
-            title,
-            when: _,
-            items,
-        } => {
-            let trigger = MenubarItem::new(title.clone());
+        MenuItem::Submenu { title, when, items } => {
+            let base_ctx = menu_shortcut_input_context(cx, opts.platform);
+            let disabled = when.as_ref().is_some_and(|w| !w.eval(&base_ctx));
+            let trigger = MenubarItem::new(title.clone()).disabled(disabled);
             let mut out = Vec::new();
             for item in items {
                 out.extend(menu_entries(cx, item, opts));
@@ -87,11 +90,12 @@ fn menu_entries<H: UiHost>(
 fn command_entry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     command: &CommandId,
+    item_when: Option<&WhenExpr>,
     opts: &MenubarFromRuntimeOptions,
 ) -> MenubarItem {
     let base_ctx = menu_shortcut_input_context(cx, opts.platform);
 
-    let (label, shortcut) = match cx.app.commands().get(command.clone()) {
+    let (label, shortcut, meta_disabled) = match cx.app.commands().get(command.clone()) {
         Some(meta) => {
             let label = meta.title.clone();
             let shortcut = if opts.include_shortcuts {
@@ -111,12 +115,18 @@ fn command_entry<H: UiHost>(
             } else {
                 None
             };
-            (label, shortcut)
+            let meta_disabled = meta.when.as_ref().is_some_and(|w| !w.eval(&base_ctx));
+            (label, shortcut, meta_disabled)
         }
-        None => (Arc::<str>::from(command.as_str()), None),
+        None => (Arc::<str>::from(command.as_str()), None, false),
     };
 
-    let mut item = MenubarItem::new(label).value(command.as_str());
+    let item_disabled = item_when.is_some_and(|w| !w.eval(&base_ctx));
+    let disabled = meta_disabled || item_disabled;
+
+    let mut item = MenubarItem::new(label)
+        .value(command.as_str())
+        .disabled(disabled);
     item.command = Some(command.clone());
     if let Some(shortcut) = shortcut {
         item.trailing = Some(MenubarShortcut::new(shortcut).into_element(cx));
