@@ -319,3 +319,10 @@ Current layout gates include:
 - `--outDir=<path>`
 - `--update` (overwrite existing files; env: `UPDATE_GOLDENS=1`)
 - `--timeoutMs=60000` (env: `TIMEOUT_MS=60000`)
+
+## Coverage quick check
+
+To see which shadcn web golden keys are referenced by Rust tests (rough heuristic, but useful for
+planning):
+
+`powershell -ExecutionPolicy Bypass -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowMissing`
