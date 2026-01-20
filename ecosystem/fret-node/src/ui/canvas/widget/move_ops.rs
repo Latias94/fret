@@ -1,5 +1,5 @@
-use super::*;
 use super::super::geometry::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};
+use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn nudge_selection_by_screen_delta<H: UiHost>(
