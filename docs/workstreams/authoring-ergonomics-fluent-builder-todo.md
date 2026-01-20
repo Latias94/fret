@@ -31,7 +31,9 @@ Related:
 - [x] AUE-chrome-011 Add a kit-level “focused border/ring” preset usable by multiple shadcn components.
   - Evidence: `ecosystem/fret-ui-kit/src/style/chrome.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - [ ] AUE-chrome-012 Add per-corner radius refinement support (`corner_radii(...)` or `rounded_tl/...`).
-- [ ] AUE-chrome-013 Add shadow shorthands to the `ui()` chain (e.g. `shadow_sm/md/lg`).
+- [x] AUE-chrome-013 Add shadow shorthands to the `ui()` chain (e.g. `shadow_sm/md/lg`).
+  - Evidence: `ecosystem/fret-ui-kit/src/style/chrome.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
+  - Resolution: `ecosystem/fret-ui-kit/src/declarative/style.rs`
 
 ## C. Layout Constructors (Reduce Props Noise)
 
