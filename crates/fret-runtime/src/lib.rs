@@ -18,6 +18,7 @@ pub mod time;
 pub mod ui_host;
 pub mod when_expr;
 pub mod window_command_availability;
+pub mod window_command_enabled;
 pub mod window_input_context;
 pub mod window_metrics;
 
@@ -64,5 +65,6 @@ pub use when_expr::WhenExpr;
 pub use window_command_availability::{
     WindowCommandAvailability, WindowCommandAvailabilityService,
 };
+pub use window_command_enabled::WindowCommandEnabledService;
 pub use window_input_context::WindowInputContextService;
 pub use window_metrics::apply_window_metrics_event;
