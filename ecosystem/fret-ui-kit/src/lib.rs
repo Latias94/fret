@@ -20,6 +20,7 @@ pub mod recipes;
 pub mod theme_tokens;
 pub mod tooltip_provider;
 pub mod tree;
+pub mod ui;
 pub mod ui_builder;
 pub mod viewport_tooling;
 #[cfg(feature = "unstable-internals")]
@@ -61,6 +62,7 @@ pub mod prelude {
     pub use crate::declarative::prelude::*;
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
     pub use crate::declarative::{stack, style};
+    pub use crate::ui;
 
     #[cfg(feature = "icons")]
     pub use crate::declarative::icon;

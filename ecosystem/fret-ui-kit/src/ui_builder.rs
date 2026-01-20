@@ -1,7 +1,7 @@
 use crate::Corners4;
 use crate::{
-    ChromeRefinement, ColorRef, Edges4, LayoutRefinement, LengthRefinement, MarginEdge, MetricRef,
-    Radius, SignedMetricRef, Space,
+    ChromeRefinement, ColorRef, Edges4, Items, Justify, LayoutRefinement, LengthRefinement,
+    MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -556,8 +556,76 @@ impl<T: UiPatchTarget> UiBuilder<T> {
     }
 }
 
+impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
+    pub fn gap(mut self, space: Space) -> Self {
+        self.inner.gap = space;
+        self
+    }
+
+    pub fn justify(mut self, justify: Justify) -> Self {
+        self.inner.justify = justify;
+        self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
+    pub fn items(mut self, items: Items) -> Self {
+        self.inner.items = items;
+        self
+    }
+
+    pub fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
+    }
+
+    pub fn wrap(mut self) -> Self {
+        self.inner.wrap = true;
+        self
+    }
+
+    pub fn no_wrap(mut self) -> Self {
+        self.inner.wrap = false;
+        self
+    }
+}
+
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, F> UiBuilder<crate::ui::FlexBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
 }
@@ -575,6 +643,7 @@ impl<T: UiPatchTarget> UiExt for T {}
 mod tests {
     use super::*;
     use crate::{LengthRefinement, MetricRef};
+    use fret_core::Axis;
     use fret_core::Color;
     use fret_core::Px;
 
@@ -928,5 +997,21 @@ mod tests {
             .max_w_11()
             .max_h_11()
             .build();
+    }
+
+    #[test]
+    fn ui_flex_box_builder_records_gap_and_alignment() {
+        let flex = crate::ui::FlexBox::<(), ()>::new(Axis::Horizontal, ())
+            .ui()
+            .gap(Space::N2)
+            .justify_between()
+            .items_center()
+            .wrap()
+            .build();
+
+        assert_eq!(flex.gap, Space::N2);
+        assert_eq!(flex.justify, Justify::Between);
+        assert_eq!(flex.items, Items::Center);
+        assert!(flex.wrap);
     }
 }
