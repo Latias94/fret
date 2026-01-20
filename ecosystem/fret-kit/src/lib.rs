@@ -371,7 +371,8 @@ pub fn app_with_hooks<S: 'static>(
     ) -> Vec<fret_ui::element::AnyElement>,
     configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
 ) -> Result<UiAppBuilder<S>> {
-    let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view);
+    let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
+        .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
     let driver = configure(UiAppDriver::new(driver)).into_inner();
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
 
