@@ -211,9 +211,10 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     /// cannot short-circuit the widget `paint()` pass on the next frame.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate_with_detail(
+        self.tree.invalidate_with_source_and_detail(
             self.node,
             Invalidation::Paint,
+            crate::tree::UiDebugInvalidationSource::Notify,
             crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
         );
         let Some(window) = self.window else {
@@ -365,9 +366,10 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     /// widget `paint()` on the next frame.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate_with_detail(
+        self.tree.invalidate_with_source_and_detail(
             self.node,
             Invalidation::Paint,
+            crate::tree::UiDebugInvalidationSource::Notify,
             crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
         );
         let Some(window) = self.window else {
@@ -453,9 +455,10 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     /// while it remains active.
     pub fn request_animation_frame(&mut self) {
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
-        self.tree.invalidate_with_detail(
+        self.tree.invalidate_with_source_and_detail(
             self.node,
             Invalidation::Paint,
+            crate::tree::UiDebugInvalidationSource::Notify,
             crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
         );
         let Some(window) = self.window else {

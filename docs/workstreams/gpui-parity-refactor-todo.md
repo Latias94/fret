@@ -112,14 +112,16 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     (`UiTreeDebugSnapshotV1.dirty_views`), `crates/fret-ui/src/tree/tests/view_cache.rs`
     (`view_cache_notify_propagates_to_ancestor_cache_roots`).
 - [x] GPUI-MVP2-rt-003 Make `request_animation_frame()` dirty the current view (GPUI-aligned).
-  - Touches: `crates/fret-ui/src/elements/cx.rs` (`ElementContext::request_animation_frame`), plus dirty-view scheduling if needed.
+  - Touches: `crates/fret-ui/src/elements/cx.rs` (`ElementContext::request_animation_frame`), `crates/fret-ui/src/widget.rs` (`*Cx::request_animation_frame`).
   - Goal: if a subtree relies on frame-driven updates (animations), `request_animation_frame()` must not allow a cache-hit frame to replay stale output indefinitely.
   - Reference: `repo-ref/zed/crates/gpui/src/window.rs` (`request_animation_frame` -> notify view / dirty views).
   - Notes: v1 implements this as `request_animation_frame()` implying `notify()` on the nearest cache root.
   - Evidence:
     - `crates/fret-ui/src/elements/cx.rs` (`ElementContext::request_animation_frame`)
+    - `crates/fret-ui/src/widget.rs` (`LayoutCx::request_animation_frame`, `MeasureCx::request_animation_frame`, `PaintCx::request_animation_frame`)
     - `crates/fret-ui/src/declarative/mount.rs` (drains animation-frame notify requests and invalidates with `UiDebugInvalidationDetail::AnimationFrameRequest`)
     - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`request_animation_frame_marks_view_cache_root_dirty`)
+    - `crates/fret-ui/src/tree/tests/view_cache.rs` (`widget_request_animation_frame_marks_nearest_view_cache_root_dirty`)
 - [~] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`, `crates/fret-ui/src/elements/runtime.rs`
   - Done when: a notified view never reuses cached ranges; a clean view reliably reuses them.
