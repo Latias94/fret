@@ -188,6 +188,8 @@ cargo run -p fretboard -- diag stats target/fret-diag-sidebar-scroll/$bundle_dir
 Notes:
 
 - The UI Gallery supports `FRET_UI_GALLERY_VIEW_CACHE{,_SHELL,_INNER,_CONTINUOUS}` (bool parsing) to keep harnesses deterministic.
+- When a script step cannot resolve its semantics selector, diagnostics fails fast with `reason=click_no_semantics_match`
+  (or `no_semantics_snapshot`) and writes an auto-dumped `script-step-XXXX-...` bundle in `target/fret-diag/`.
 - If overlay torture flakes under shell reuse, use `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json` as a stable A/B baseline while debugging.
 
 ---

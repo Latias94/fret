@@ -140,7 +140,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Touches: `ecosystem/fret-ui-kit/src/window_overlays/frame.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
   - Evidence (pass): `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 120000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
   - Evidence (perf): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
-  - Current failure: script can still get stuck at step 10 (`click ui-gallery-dialog-trigger`) and auto-dump `script-step-0010-click-no-semantics-match`.
+  - Current failure: step 10 (`click ui-gallery-dialog-trigger`) fails with `click_no_semantics_match` (selector miss in semantics snapshot).
+    - Diagnostics: selector misses now fail immediately and always dump a per-step bundle (no more “hang until timeout”).
+    - Example: `target/fret-diag/1768878276583-script-step-0010-click-no-semantics-match/bundle.json`
   - Follow-up: reintroduce GC with GPUI-aligned "cache root liveness" (dirty views + notify) so cached subtrees can be skipped without leaking detached nodes.
 
 - [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
@@ -148,9 +150,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Notes: a naive "detached + stale" sweep is not sufficient on its own; cache-hit frames can still cause overlay/demo semantics to disappear if layer/overlay presence
     depends on rerendered outputs. We likely need a GPUI-style "effect output replay" (or equivalent) for cache-hit frames (layers/overlays/semantics roots).
-  - Progress: add a diagnostics capture when script-driven clicks cannot resolve a selector in the current semantics snapshot.
-    - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`script-step-XXXX-click-no-semantics-match` forced dump label).
-    - Motivation: cache-hit correctness regressions can present as “step N stuck” without producing a per-step bundle; this ensures we always capture a bundle at the first missing target.
+  - Progress: make selector misses + missing semantics snapshots “fail fast” with an immediate bundle dump.
+    - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (script runner: `click_no_semantics_match`, `no_semantics_snapshot`).
+    - Motivation: cache-hit correctness regressions can present as “step N stuck” without producing a per-step bundle; this ensures we always capture a bundle at the first missing target and stop the run deterministically.
   - Progress: make cache-hit subtree walks use `UiTree::children` (avoid stale/partial `window_frame.children` tables).
     - Touches: `crates/fret-ui/src/declarative/mount.rs` (cache-hit helpers).
   - Progress: introduce cache-root subtree bookkeeping for future liveness/GC work.
@@ -167,9 +169,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - We still sweep detached nodes for dismissible overlay roots via `render_dismissible_root_impl`.
   - Evidence:
     - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
-    - Failure bundles (example):
-      - `target/fret-diag/1768831095473-script-step-0010-click-no-semantics-match/bundle.json`
-      - `target/fret-diag/1768828347887-script-step-0010-click-no-semantics-match/bundle.json`
+    - Failure bundles (examples):
+      - `target/fret-diag/1768878276583-script-step-0010-click-no-semantics-match/bundle.json`
+      - `target/fret-diag/1768873491574-script-step-0010-click-no-semantics-match/bundle.json`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
 
 - [x] GPUI-MVP2-cache-006 Add an explicit cache key gate for view-cache reuse (GPUI-aligned).
