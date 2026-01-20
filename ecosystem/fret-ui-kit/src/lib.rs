@@ -7,6 +7,7 @@
 //! Note: This crate is declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface.
 
+mod corners4;
 pub mod declarative;
 #[cfg(feature = "dnd")]
 pub mod dnd;
@@ -32,6 +33,7 @@ mod sizing;
 mod style;
 mod styled;
 
+pub use corners4::Corners4;
 pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
@@ -66,8 +68,8 @@ pub mod prelude {
     pub use fret_icons::IconId;
 
     pub use crate::{
-        ChromeRefinement, ColorRef, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
-        ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+        ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
+        Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
     };
     pub use crate::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
 

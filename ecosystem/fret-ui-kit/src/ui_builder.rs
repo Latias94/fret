@@ -1,3 +1,4 @@
+use crate::Corners4;
 use crate::{
     ChromeRefinement, ColorRef, Edges4, LayoutRefinement, LengthRefinement, MarginEdge, MetricRef,
     Radius, SignedMetricRef, Space,
@@ -132,6 +133,26 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
 
     pub fn focused_border(self) -> Self {
         self.style_with(ChromeRefinement::focused_border)
+    }
+
+    pub fn corner_radii(self, radii: impl Into<Corners4<MetricRef>>) -> Self {
+        self.style_with(|c| c.corner_radii(radii))
+    }
+
+    pub fn rounded_tl(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_tl(radius))
+    }
+
+    pub fn rounded_tr(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_tr(radius))
+    }
+
+    pub fn rounded_br(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_br(radius))
+    }
+
+    pub fn rounded_bl(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_bl(radius))
     }
 
     pub fn shadow_none(self) -> Self {
@@ -632,6 +653,13 @@ mod tests {
             ))
             .insets(Edges4::all(Space::N1).neg())
             .focused_border()
+            .corner_radii(Corners4::tltrbrbl(
+                Radius::Sm,
+                Radius::Md,
+                Radius::Lg,
+                Radius::Full,
+            ))
+            .rounded_tl(Radius::Lg)
             .shadow_md()
             .debug_border_primary()
             .debug_border_destructive()
@@ -681,6 +709,15 @@ mod tests {
         }
 
         assert_eq!(dummy.chrome.shadow, Some(crate::style::ShadowPreset::Md));
+
+        let radii = dummy
+            .chrome
+            .corner_radii
+            .expect("expected corner radii refinement");
+        match radii.top_left {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, "component.radius.lg"),
+            other => panic!("expected top_left token radius, got {other:?}"),
+        }
     }
 
     #[test]

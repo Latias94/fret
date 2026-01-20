@@ -2,6 +2,7 @@ use fret_core::Px;
 use fret_ui::Theme;
 
 use super::{ColorFallback, ColorRef, MetricRef, Radius, SignedMetricRef, Space};
+use crate::Corners4;
 
 #[derive(Debug, Clone, Default)]
 pub struct PaddingRefinement {
@@ -105,11 +106,38 @@ pub struct ChromeRefinement {
     pub padding: Option<PaddingRefinement>,
     pub min_height: Option<MetricRef>,
     pub radius: Option<MetricRef>,
+    pub corner_radii: Option<CornerRadiiRefinement>,
     pub shadow: Option<ShadowPreset>,
     pub border_width: Option<MetricRef>,
     pub background: Option<ColorRef>,
     pub border_color: Option<ColorRef>,
     pub text_color: Option<ColorRef>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CornerRadiiRefinement {
+    pub top_left: Option<MetricRef>,
+    pub top_right: Option<MetricRef>,
+    pub bottom_right: Option<MetricRef>,
+    pub bottom_left: Option<MetricRef>,
+}
+
+impl CornerRadiiRefinement {
+    pub fn merge(mut self, other: CornerRadiiRefinement) -> Self {
+        if other.top_left.is_some() {
+            self.top_left = other.top_left;
+        }
+        if other.top_right.is_some() {
+            self.top_right = other.top_right;
+        }
+        if other.bottom_right.is_some() {
+            self.bottom_right = other.bottom_right;
+        }
+        if other.bottom_left.is_some() {
+            self.bottom_left = other.bottom_left;
+        }
+        self
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -131,6 +159,9 @@ impl ChromeRefinement {
         }
         if other.radius.is_some() {
             self.radius = other.radius;
+        }
+        if let Some(r) = other.corner_radii {
+            self.corner_radii = Some(self.corner_radii.unwrap_or_default().merge(r));
         }
         if other.shadow.is_some() {
             self.shadow = other.shadow;
@@ -209,6 +240,45 @@ impl ChromeRefinement {
 
     pub fn rounded(mut self, radius: Radius) -> Self {
         self.radius = Some(MetricRef::radius(radius));
+        self
+    }
+
+    pub fn corner_radii(mut self, radii: impl Into<Corners4<MetricRef>>) -> Self {
+        let radii = radii.into();
+        self.corner_radii = Some(CornerRadiiRefinement {
+            top_left: Some(radii.top_left),
+            top_right: Some(radii.top_right),
+            bottom_right: Some(radii.bottom_right),
+            bottom_left: Some(radii.bottom_left),
+        });
+        self
+    }
+
+    pub fn rounded_tl(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.top_left = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
+        self
+    }
+
+    pub fn rounded_tr(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.top_right = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
+        self
+    }
+
+    pub fn rounded_br(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.bottom_right = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
+        self
+    }
+
+    pub fn rounded_bl(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.bottom_left = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
         self
     }
 
