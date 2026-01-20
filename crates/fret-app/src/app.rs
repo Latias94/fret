@@ -10,7 +10,7 @@ use fret_runtime::{ClipboardToken, FrameId, ImageUploadToken, TickId, TimerToken
 use crate::drag::{DragKindId, DragSession, DragSessionId};
 use fret_runtime::{
     BindingV1, CommandRegistry, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, ModelHost,
-    ModelId, ModelStore,
+    ModelId, ModelStore, WindowCommandEnabledService,
 };
 
 use crate::SettingsFileV1;
@@ -367,6 +367,19 @@ impl App {
     }
 
     pub fn push_effect(&mut self, effect: Effect) {
+        if let Effect::Command {
+            window: Some(window),
+            command,
+        } = &effect
+        {
+            if self
+                .global::<WindowCommandEnabledService>()
+                .is_some_and(|svc| svc.enabled(*window, command) == Some(false))
+            {
+                return;
+            }
+        }
+
         match effect {
             Effect::Redraw(window) => self.request_redraw(window),
             Effect::SetMenuBar {
@@ -445,6 +458,63 @@ mod menu_bar_effect_tests {
                 |e| matches!(e, Effect::SetMenuBar { menu_bar, .. } if !menu_bar.menus.is_empty())
             ),
             "non-empty SetMenuBar should be filtered when OS menubar is disabled"
+        );
+    }
+}
+
+#[cfg(test)]
+mod command_enabled_effect_tests {
+    use super::*;
+    use fret_runtime::{CommandId, WindowCommandEnabledService};
+
+    #[test]
+    fn push_effect_drops_window_scoped_command_when_disabled() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let cmd = CommandId::from("app.preferences");
+
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        app.push_effect(Effect::Command {
+            window: Some(window),
+            command: cmd.clone(),
+        });
+
+        let effects = app.flush_effects();
+        assert!(
+            !effects.iter().any(|e| {
+                matches!(
+                    e,
+                    Effect::Command { window: Some(w), command } if *w == window && command == &cmd
+                )
+            }),
+            "disabled window-scoped commands should be dropped as a final guardrail"
+        );
+    }
+
+    #[test]
+    fn push_effect_keeps_global_command_even_if_a_window_override_disables_it() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let cmd = CommandId::from("app.preferences");
+
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        app.push_effect(Effect::Command {
+            window: None,
+            command: cmd.clone(),
+        });
+
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::Command { window: None, command } if command == &cmd)),
+            "window-scoped overrides should not affect global commands"
         );
     }
 }
