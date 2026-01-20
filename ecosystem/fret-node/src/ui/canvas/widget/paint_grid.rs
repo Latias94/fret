@@ -109,7 +109,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             b.add_u32(minor_color.a.to_bits());
             b.finish()
         };
-        let warmup = warm_scene_op_tiles_u64(
+        let warmup = warm_scene_op_tiles_u64_with(
             &mut self.grid_scene_cache,
             cx.scene,
             &self.grid_tiles_scratch,
@@ -117,6 +117,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             1,
             &mut tile_budget,
             |tile| tile.origin(tile_size_canvas),
+            |_ops| {},
             tile_ops_for_key,
         );
         let skipped_tiles = warmup.skipped_tiles;

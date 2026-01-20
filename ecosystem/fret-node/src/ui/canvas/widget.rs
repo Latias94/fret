@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
     SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D, tile_cache_key,
-    warm_scene_op_tiles_u64,
+    warm_scene_op_tiles_u64_with,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
