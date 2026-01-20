@@ -121,7 +121,7 @@ Legend:
 | `dropdown_menu` | `DropdownMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
 | `context_menu` | `ContextMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
 | `menubar` | `Menubar` | Chrome+Layout |  |
-| `select` | `Select` | Chrome+Layout |  |
+| `select` | `Select` | Chrome+Layout | Layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (select-scrollable listbox width/height + option row height + scroll buttons). |
 | `slider` | `Slider` | Chrome+Layout |  |
 | `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
 | `accordion` | `AccordionContent` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
