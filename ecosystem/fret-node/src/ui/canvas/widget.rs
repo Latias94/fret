@@ -68,8 +68,8 @@ use crate::ui::presenter::{
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
-    NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphInternalsSnapshot,
-    NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphViewQueue,
+    NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
+    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -238,6 +238,9 @@ pub struct NodeGraphCanvasWith<M> {
     view_queue_key: Option<u64>,
     overlays: Option<Model<NodeGraphOverlayState>>,
 
+    fit_view_on_mount: Option<NodeGraphFitViewOptions>,
+    did_fit_view_on_mount: bool,
+
     measured_output: Option<Arc<MeasuredGeometryStore>>,
     measured_output_key: Option<GeometryCacheKey>,
 
@@ -374,6 +377,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             view_queue: None,
             view_queue_key: None,
             overlays: None,
+            fit_view_on_mount: None,
+            did_fit_view_on_mount: false,
             measured_output: None,
             measured_output_key: None,
             internals: None,
@@ -444,6 +449,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             view_queue: self.view_queue,
             view_queue_key: self.view_queue_key,
             overlays: self.overlays,
+            fit_view_on_mount: self.fit_view_on_mount,
+            did_fit_view_on_mount: self.did_fit_view_on_mount,
             measured_output: self.measured_output,
             measured_output_key: self.measured_output_key,
             internals: self.internals,
@@ -521,6 +528,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
+    /// Enables a one-shot initial fit-view on mount (XyFlow `fitView` mental model).
+    pub fn with_fit_view_on_mount(self) -> Self {
+        self.with_fit_view_on_mount_options(NodeGraphFitViewOptions::default())
+    }
+
+    /// Enables a one-shot initial fit-view on mount with custom options (XyFlow `fitViewOptions`).
+    pub fn with_fit_view_on_mount_options(mut self, options: NodeGraphFitViewOptions) -> Self {
+        self.fit_view_on_mount = Some(options);
+        self.did_fit_view_on_mount = false;
+        self
+    }
+
     /// Attaches an overlay state model (`Model<NodeGraphOverlayState>`).
     pub fn with_overlay_state(mut self, overlays: Model<NodeGraphOverlayState>) -> Self {
         self.overlays = Some(overlays);
@@ -535,6 +554,52 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.store = Some(store);
         self.store_rev = None;
         self
+    }
+
+    fn maybe_fit_view_on_mount<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        bounds: Rect,
+        did_drain_view_queue: bool,
+    ) -> bool {
+        if did_drain_view_queue || self.did_fit_view_on_mount {
+            return false;
+        }
+
+        let Some(options) = self.fit_view_on_mount.clone() else {
+            return false;
+        };
+
+        let include_hidden_nodes = options.include_hidden_nodes;
+        let node_ids: Vec<GraphNodeId> = self
+            .graph
+            .read_ref(host, |graph| {
+                graph
+                    .nodes
+                    .iter()
+                    .filter_map(|(id, node)| {
+                        if node.hidden && !include_hidden_nodes {
+                            None
+                        } else {
+                            Some(*id)
+                        }
+                    })
+                    .collect()
+            })
+            .ok()
+            .unwrap_or_default();
+
+        if node_ids.is_empty() {
+            return false;
+        }
+
+        let did =
+            self.frame_nodes_in_view_with_options(host, window, bounds, &node_ids, Some(&options));
+        if did {
+            self.did_fit_view_on_mount = true;
+        }
+        did
     }
 }
 
@@ -676,7 +741,10 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         self.sync_view_state(cx.app);
         self.drain_edit_queue(cx.app, cx.window);
         self.update_auto_measured_node_sizes(cx);
-        if self.drain_view_queue(cx.app, cx.window) {
+        let did_view_queue = self.drain_view_queue(cx.app, cx.window);
+        let did_fit_on_mount =
+            self.maybe_fit_view_on_mount(cx.app, cx.window, cx.bounds, did_view_queue);
+        if did_view_queue || did_fit_on_mount {
             cx.request_redraw();
         }
         cx.available

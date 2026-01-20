@@ -25,6 +25,7 @@ mod callbacks_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod fit_view_nodes_conformance;
+mod fit_view_on_mount_conformance;
 mod fit_view_options_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;

@@ -314,17 +314,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return false;
         }
 
-        #[derive(Debug, Clone, Copy)]
-        struct NodeInfo {
-            pos: CanvasPoint,
-            w: f32,
-            h: f32,
-        }
-
-        let infos: Vec<NodeInfo> = self
+        let infos: Vec<crate::runtime::fit_view::FitViewNodeInfo> = self
             .graph
             .read_ref(host, |graph| {
-                let mut out: Vec<NodeInfo> = Vec::new();
+                let mut out: Vec<crate::runtime::fit_view::FitViewNodeInfo> = Vec::new();
                 for id in node_ids {
                     let Some(node) = graph.nodes.get(id) else {
                         continue;
@@ -334,10 +327,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                     let (inputs, outputs) = node_ports(graph, *id);
                     let (w, h) = self.node_default_size_for_ports(inputs.len(), outputs.len());
-                    out.push(NodeInfo {
+                    out.push(crate::runtime::fit_view::FitViewNodeInfo {
                         pos: node.pos,
-                        w,
-                        h,
+                        size_px: (w, h),
                     });
                 }
                 out
@@ -357,13 +349,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let viewport_w = bounds.size.width.0;
         let viewport_h = bounds.size.height.0;
-        if !viewport_w.is_finite()
-            || !viewport_h.is_finite()
-            || viewport_w <= 1.0
-            || viewport_h <= 1.0
-        {
-            return false;
-        }
 
         let padding = options
             .and_then(|o| o.padding)
@@ -373,77 +358,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         } else {
             0.0
         };
-        let (margin_x, margin_y) = if padding > 0.0 {
-            (viewport_w * padding, viewport_h * padding)
-        } else {
-            (48.0f32, 48.0f32)
-        };
-
-        let mut min_x = f32::INFINITY;
-        let mut min_y = f32::INFINITY;
-        let mut max_x = f32::NEG_INFINITY;
-        let mut max_y = f32::NEG_INFINITY;
-        let mut max_w = 0.0f32;
-        let mut max_h = 0.0f32;
-        for n in &infos {
-            min_x = min_x.min(n.pos.x);
-            min_y = min_y.min(n.pos.y);
-            max_x = max_x.max(n.pos.x);
-            max_y = max_y.max(n.pos.y);
-            max_w = max_w.max(n.w);
-            max_h = max_h.max(n.h);
-        }
-
-        let spread_x = (max_x - min_x).max(0.0);
-        let spread_y = (max_y - min_y).max(0.0);
-
-        let mut zoom_x = target_max_zoom;
-        let mut zoom_y = target_max_zoom;
-        if spread_x > 1.0e-3 {
-            zoom_x = (viewport_w - max_w - 2.0 * margin_x) / spread_x;
-        }
-        if spread_y > 1.0e-3 {
-            zoom_y = (viewport_h - max_h - 2.0 * margin_y) / spread_y;
-        }
-
-        let mut zoom = zoom_x.min(zoom_y);
-        if !zoom.is_finite() {
-            zoom = 1.0;
-        }
-        zoom = zoom.clamp(target_min_zoom, target_max_zoom);
-
-        let mut rect_min_x = f32::INFINITY;
-        let mut rect_min_y = f32::INFINITY;
-        let mut rect_max_x = f32::NEG_INFINITY;
-        let mut rect_max_y = f32::NEG_INFINITY;
-        for n in &infos {
-            let w = n.w / zoom;
-            let h = n.h / zoom;
-            rect_min_x = rect_min_x.min(n.pos.x);
-            rect_min_y = rect_min_y.min(n.pos.y);
-            rect_max_x = rect_max_x.max(n.pos.x + w);
-            rect_max_y = rect_max_y.max(n.pos.y + h);
-        }
-
-        if !rect_min_x.is_finite()
-            || !rect_min_y.is_finite()
-            || !rect_max_x.is_finite()
-            || !rect_max_y.is_finite()
-        {
+        let Some((new_pan, zoom)) = crate::runtime::fit_view::compute_fit_view_target(
+            &infos,
+            crate::runtime::fit_view::FitViewComputeOptions {
+                viewport_width_px: viewport_w,
+                viewport_height_px: viewport_h,
+                padding,
+                margin_px_fallback: 48.0,
+                min_zoom: target_min_zoom,
+                max_zoom: target_max_zoom,
+            },
+        ) else {
             return false;
-        }
-
-        let center_x = 0.5 * (rect_min_x + rect_max_x);
-        let center_y = 0.5 * (rect_min_y + rect_max_y);
-
-        let viewport_w_canvas = viewport_w / zoom;
-        let viewport_h_canvas = viewport_h / zoom;
-        let target_center_x = 0.5 * viewport_w_canvas;
-        let target_center_y = 0.5 * viewport_h_canvas;
-
-        let new_pan = CanvasPoint {
-            x: target_center_x - center_x,
-            y: target_center_y - center_y,
         };
 
         let duration_ms = options
