@@ -34,6 +34,12 @@ Semantics:
 - The hook is invoked for window-scoped command dispatch of `app.preferences`.
 - Apps decide whether Preferences is a window-local surface (sheet/panel) or a global window.
 
+Note:
+
+- `fret-kit` enables a small default Preferences overlay by default (built with `fret-ui-kit`
+  primitives) that surfaces layered config file locations and clipboard copy actions. Apps can
+  override this by installing their own `on_preferences` hook.
+
 ## Consequences
 
 ### Positive
