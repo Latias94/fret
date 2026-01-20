@@ -40,7 +40,10 @@ pub mod prelude {
     pub use crate::shadcn;
     #[cfg(feature = "shadcn")]
     pub use crate::shadcn::prelude::*;
-    pub use crate::workspace_menu::{MenubarFromRuntimeOptions, menubar_from_runtime};
+    pub use crate::workspace_menu::{
+        InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime,
+        menubar_from_runtime_with_focus_handle,
+    };
 
     pub use fret_app::App;
     pub use fret_app::Effect;
