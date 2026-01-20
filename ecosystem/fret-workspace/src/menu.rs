@@ -1,12 +1,25 @@
 use std::sync::Arc;
 
-use fret_runtime::{CommandId, Menu, MenuBar, MenuItem};
+use fret_runtime::{CommandId, Menu, MenuBar, MenuItem, MenuRole, SystemMenuType};
 
 /// Command IDs used by `workspace_default_menu_bar`.
 ///
 /// This keeps `fret-workspace` independent from `fret-app` core command constants.
 #[derive(Debug, Clone)]
 pub struct WorkspaceMenuCommands {
+    /// Optional app menu title for macOS `MenuRole::App` (e.g. "Fret", "MyApp").
+    ///
+    /// If not provided, defaults to "App".
+    pub app_menu_title: Option<Arc<str>>,
+    /// Include a Services system menu in the app menu (macOS only; ignored elsewhere).
+    pub include_services_menu: bool,
+    pub about: Option<CommandId>,
+    pub preferences: Option<CommandId>,
+    pub hide: Option<CommandId>,
+    pub hide_others: Option<CommandId>,
+    pub show_all: Option<CommandId>,
+    pub quit_app: Option<CommandId>,
+
     pub command_palette: Option<CommandId>,
 
     pub open: Option<CommandId>,
@@ -45,6 +58,15 @@ pub struct WorkspaceMenuCommands {
 impl Default for WorkspaceMenuCommands {
     fn default() -> Self {
         Self {
+            app_menu_title: None,
+            include_services_menu: false,
+            about: None,
+            preferences: None,
+            hide: None,
+            hide_others: None,
+            show_all: None,
+            quit_app: None,
+
             command_palette: None,
 
             open: None,
@@ -95,38 +117,160 @@ fn push_command(items: &mut Vec<MenuItem>, command: Option<CommandId>) {
     }
 }
 
+fn push_separator(items: &mut Vec<MenuItem>) {
+    if items
+        .last()
+        .is_some_and(|i| matches!(i, MenuItem::Separator))
+    {
+        return;
+    }
+    items.push(MenuItem::Separator);
+}
+
+fn trim_trailing_separators(items: &mut Vec<MenuItem>) {
+    while items
+        .last()
+        .is_some_and(|i| matches!(i, MenuItem::Separator))
+    {
+        items.pop();
+    }
+}
+
+fn build_app_menu(cmds: &WorkspaceMenuCommands) -> Option<Menu> {
+    if cmds.about.is_none()
+        && cmds.preferences.is_none()
+        && cmds.hide.is_none()
+        && cmds.hide_others.is_none()
+        && cmds.show_all.is_none()
+        && cmds.quit_app.is_none()
+        && !cmds.include_services_menu
+    {
+        return None;
+    }
+
+    let title = cmds
+        .app_menu_title
+        .clone()
+        .unwrap_or_else(|| Arc::<str>::from("App"));
+
+    let mut items = Vec::new();
+    push_command(&mut items, cmds.about.clone());
+
+    if cmds.preferences.is_some() {
+        if !items.is_empty() {
+            push_separator(&mut items);
+        }
+        push_command(&mut items, cmds.preferences.clone());
+    }
+
+    if cmds.include_services_menu {
+        if !items.is_empty() {
+            push_separator(&mut items);
+        }
+        items.push(MenuItem::SystemMenu {
+            title: Arc::from("Services"),
+            menu_type: SystemMenuType::Services,
+        });
+    }
+
+    if cmds.hide.is_some() || cmds.hide_others.is_some() || cmds.show_all.is_some() {
+        if !items.is_empty() {
+            push_separator(&mut items);
+        }
+        push_command(&mut items, cmds.hide.clone());
+        push_command(&mut items, cmds.hide_others.clone());
+        push_command(&mut items, cmds.show_all.clone());
+    }
+
+    if cmds.quit_app.is_some() {
+        if !items.is_empty() {
+            push_separator(&mut items);
+        }
+        push_command(&mut items, cmds.quit_app.clone());
+    }
+
+    trim_trailing_separators(&mut items);
+    if items.is_empty() {
+        return None;
+    }
+
+    Some(Menu {
+        title,
+        role: Some(MenuRole::App),
+        items,
+    })
+}
+
 /// A minimal editor-style menu bar for workspace shells.
 ///
 /// Notes:
 /// - Menus are data-only (`fret-runtime`) and can be rendered by any UI surface.
 /// - Apps can extend/replace this entirely; this is a "golden path" starting point.
 pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
+    let app_menu = build_app_menu(&cmds);
+
+    let WorkspaceMenuCommands {
+        app_menu_title: _,
+        include_services_menu: _,
+        about: _,
+        preferences: _,
+        hide: _,
+        hide_others: _,
+        show_all: _,
+        quit_app: _,
+        command_palette,
+        open,
+        save,
+        save_as,
+        quit,
+        undo,
+        redo,
+        cut,
+        copy,
+        paste,
+        select_all,
+        next_tab,
+        prev_tab,
+        close_tab,
+        next_pane,
+        prev_pane,
+        split_right,
+        split_left,
+        split_up,
+        split_down,
+        move_active_tab_next_pane,
+        move_active_tab_prev_pane,
+        resize_pane_right,
+        resize_pane_left,
+        resize_pane_up,
+        resize_pane_down,
+    } = cmds;
+
     let mut file_items = Vec::new();
-    push_command(&mut file_items, cmds.open);
-    push_command(&mut file_items, cmds.save);
-    push_command(&mut file_items, cmds.save_as);
-    if cmds.quit.is_some() && !file_items.is_empty() {
+    push_command(&mut file_items, open);
+    push_command(&mut file_items, save);
+    push_command(&mut file_items, save_as);
+    if quit.is_some() && !file_items.is_empty() {
         file_items.push(MenuItem::Separator);
     }
-    push_command(&mut file_items, cmds.quit);
+    push_command(&mut file_items, quit);
 
     let mut edit_items = Vec::new();
-    push_command(&mut edit_items, cmds.undo);
-    push_command(&mut edit_items, cmds.redo);
-    if (cmds.cut.is_some() || cmds.copy.is_some() || cmds.paste.is_some()) && !edit_items.is_empty()
-    {
+    push_command(&mut edit_items, undo);
+    push_command(&mut edit_items, redo);
+    if (cut.is_some() || copy.is_some() || paste.is_some()) && !edit_items.is_empty() {
         edit_items.push(MenuItem::Separator);
     }
-    push_command(&mut edit_items, cmds.cut);
-    push_command(&mut edit_items, cmds.copy);
-    push_command(&mut edit_items, cmds.paste);
-    if cmds.select_all.is_some() && !edit_items.is_empty() {
+    push_command(&mut edit_items, cut);
+    push_command(&mut edit_items, copy);
+    push_command(&mut edit_items, paste);
+    if select_all.is_some() && !edit_items.is_empty() {
         edit_items.push(MenuItem::Separator);
     }
-    push_command(&mut edit_items, cmds.select_all);
+    push_command(&mut edit_items, select_all);
 
     let mut view_items = Vec::new();
-    if let Some(cp) = cmds.command_palette {
+    if let Some(cp) = command_palette {
         view_items.push(MenuItem::Command {
             command: cp,
             when: None,
@@ -134,34 +278,41 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     }
 
     let mut menus = Vec::new();
+    if let Some(app_menu) = app_menu {
+        menus.push(app_menu);
+    }
     if !file_items.is_empty() {
         menus.push(Menu {
             title: Arc::from("File"),
+            role: Some(MenuRole::File),
             items: file_items,
         });
     }
     if !edit_items.is_empty() {
         menus.push(Menu {
             title: Arc::from("Edit"),
+            role: Some(MenuRole::Edit),
             items: edit_items,
         });
     }
     if !view_items.is_empty() {
         menus.push(Menu {
             title: Arc::from("View"),
+            role: Some(MenuRole::View),
             items: view_items,
         });
     }
 
     menus.push(Menu {
         title: Arc::from("Window"),
+        role: Some(MenuRole::Window),
         items: vec![
             MenuItem::Command {
-                command: cmds.next_tab,
+                command: next_tab,
                 when: None,
             },
             MenuItem::Command {
-                command: cmds.prev_tab,
+                command: prev_tab,
                 when: None,
             },
             MenuItem::Separator,
@@ -175,7 +326,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
             },
             MenuItem::Separator,
             MenuItem::Command {
-                command: cmds.close_tab,
+                command: close_tab,
                 when: None,
             },
             MenuItem::Command {
@@ -192,11 +343,11 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
             },
             MenuItem::Separator,
             MenuItem::Command {
-                command: cmds.next_pane,
+                command: next_pane,
                 when: None,
             },
             MenuItem::Command {
-                command: cmds.prev_pane,
+                command: prev_pane,
                 when: None,
             },
             MenuItem::Separator,
@@ -205,19 +356,19 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                 when: None,
                 items: vec![
                     MenuItem::Command {
-                        command: cmds.split_right,
+                        command: split_right,
                         when: None,
                     },
                     MenuItem::Command {
-                        command: cmds.split_left,
+                        command: split_left,
                         when: None,
                     },
                     MenuItem::Command {
-                        command: cmds.split_up,
+                        command: split_up,
                         when: None,
                     },
                     MenuItem::Command {
-                        command: cmds.split_down,
+                        command: split_down,
                         when: None,
                     },
                 ],
@@ -227,11 +378,11 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                 when: None,
                 items: vec![
                     MenuItem::Command {
-                        command: cmds.move_active_tab_next_pane,
+                        command: move_active_tab_next_pane,
                         when: None,
                     },
                     MenuItem::Command {
-                        command: cmds.move_active_tab_prev_pane,
+                        command: move_active_tab_prev_pane,
                         when: None,
                     },
                     MenuItem::Separator,
@@ -288,19 +439,19 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                 when: None,
                 items: vec![
                     MenuItem::Command {
-                        command: cmds.resize_pane_right,
+                        command: resize_pane_right,
                         when: None,
                     },
                     MenuItem::Command {
-                        command: cmds.resize_pane_left,
+                        command: resize_pane_left,
                         when: None,
                     },
                     MenuItem::Command {
-                        command: cmds.resize_pane_up,
+                        command: resize_pane_up,
                         when: None,
                     },
                     MenuItem::Command {
-                        command: cmds.resize_pane_down,
+                        command: resize_pane_down,
                         when: None,
                     },
                 ],

@@ -1,9 +1,11 @@
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    pub(super) fn paint_groups<H: UiHost>(
+    pub(super) fn paint_groups_static(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        scene: &mut fret_core::Scene,
+        services: &mut dyn fret_core::UiServices,
+        scale_factor: f32,
         groups: &[(Rect, Arc<str>, bool)],
         zoom: f32,
     ) {
@@ -20,18 +22,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let group_pad = 10.0 / zoom;
         let group_corner = Px(10.0 / zoom);
-        for (rect, title, selected) in groups {
-            let border_color = if *selected {
-                self.style.node_border_selected
-            } else {
-                self.style.group_border
-            };
-            cx.scene.push(SceneOp::Quad {
+        for (rect, title, _selected) in groups {
+            scene.push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect: *rect,
                 background: self.style.group_background,
                 border: Edges::all(Px(1.0 / zoom)),
-                border_color,
+                border_color: self.style.group_border,
                 corner_radii: Corners::all(group_corner),
             });
 
@@ -41,10 +38,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     max_width: Some(Px(max_w)),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
-                    scale_factor: effective_scale_factor(cx.scale_factor, zoom),
+                    scale_factor: effective_scale_factor(scale_factor, zoom),
                 };
                 let (blob, metrics) = self.paint_cache.text_blob(
-                    cx.services,
+                    services,
                     title.clone(),
                     &group_text_style,
                     constraints,
@@ -52,13 +49,39 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 let text_x = Px(rect.origin.x.0 + group_pad);
                 let text_y = Px(rect.origin.y.0 + group_pad + metrics.baseline.0);
-                cx.scene.push(SceneOp::Text {
+                scene.push(SceneOp::Text {
                     order: DrawOrder(1),
                     origin: Point::new(text_x, text_y),
                     text: blob,
                     color: self.style.context_menu_text,
                 });
             }
+        }
+    }
+
+    pub(super) fn paint_groups_selected_overlay(
+        &mut self,
+        scene: &mut fret_core::Scene,
+        groups: &[(Rect, Arc<str>, bool)],
+        zoom: f32,
+    ) {
+        if groups.is_empty() {
+            return;
+        }
+
+        let group_corner = Px(10.0 / zoom);
+        for (rect, _title, selected) in groups {
+            if !*selected {
+                continue;
+            }
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(1),
+                rect: *rect,
+                background: self.style.group_background,
+                border: Edges::all(Px(1.0 / zoom)),
+                border_color: self.style.node_border_selected,
+                corner_radii: Corners::all(group_corner),
+            });
         }
     }
 }

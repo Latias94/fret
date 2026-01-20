@@ -38,10 +38,11 @@
 //! ```
 
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use fret_app::config_files::LayeredConfigPaths;
-use fret_app::{App, KeymapFileError, SettingsError, SettingsFileV1};
+use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, SettingsFileV1};
 use fret_icons::IconRegistry;
 
 #[cfg(feature = "preload-icon-svgs")]
@@ -53,6 +54,8 @@ pub enum BootstrapError {
     Settings(#[from] SettingsError),
     #[error(transparent)]
     Keymap(#[from] KeymapFileError),
+    #[error(transparent)]
+    MenuBar(#[from] MenuBarFileError),
 }
 
 /// Apply `SettingsFileV1` to an `App` and runner config.
@@ -103,6 +106,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.inner = self.inner.init_app(move |app| {
             app.set_global(settings.clone());
             app.set_global(settings.docking_interaction_settings());
+            fret_app::sync_os_menu_bar(app);
         });
 
         Ok(self)
@@ -127,6 +131,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.inner = self.inner.init_app(move |app| {
             app.set_global(settings.clone());
             app.set_global(settings.docking_interaction_settings());
+            fret_app::sync_os_menu_bar(app);
         });
 
         Ok(self)
@@ -141,6 +146,36 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
 
         self.inner = self.inner.init_app(move |app| {
             fret_app::apply_layered_keymap(app, layered.clone());
+        });
+
+        Ok(self)
+    }
+
+    pub fn with_layered_menu_bar(
+        mut self,
+        project_root: impl AsRef<Path>,
+    ) -> Result<Self, BootstrapError> {
+        let paths = LayeredConfigPaths::for_project_root(project_root);
+        let (layered, _report) = fret_app::load_layered_menu_bar(&paths)?;
+
+        self.inner = self.inner.init_app(move |app| {
+            if let Err(e) = fret_app::apply_layered_menu_bar(app, None, layered.clone()) {
+                app.with_global_mut(
+                    fret_app::ConfigFilesWatcherStatus::default,
+                    |status, _app| {
+                        status.note(fret_app::ConfigFilesWatcherTick {
+                            reloaded_settings: false,
+                            reloaded_keymap: false,
+                            reloaded_menu_bar: false,
+                            settings_error: None,
+                            keymap_error: None,
+                            menu_bar_error: Some(e.to_string()),
+                            actionable_keymap_conflicts: 0,
+                            keymap_conflict_samples: Vec::new(),
+                        });
+                    },
+                );
+            }
         });
 
         Ok(self)
@@ -174,10 +209,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         Ok(self
             .with_layered_settings(".")?
             .with_command_default_keybindings()
-            .with_layered_keymap(".")?)
+            .with_layered_keymap(".")?
+            .with_layered_menu_bar(".")?)
     }
 
-    /// Enables polling-based hot reload for layered `settings.json` / `keymap.json` files.
+    /// Enables polling-based hot reload for layered `settings.json` / `keymap.json` / `menubar.json` files.
     ///
     /// This uses a repeating `Effect::SetTimer` and checks file metadata (mtime/len) on each tick.
     /// It is intended for local dev workflows and stays portable (no platform-specific watcher deps).
@@ -369,6 +405,13 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     pub fn with_main_window(mut self, title: impl Into<String>, size: (f64, f64)) -> Self {
         let title = title.into();
         let (width, height) = size;
+
+        let title_for_global = title.clone();
+        self.inner = self.inner.init_app(move |app| {
+            app.set_global(fret_app::AppDisplayName(Arc::from(
+                title_for_global.clone(),
+            )));
+        });
 
         self.inner = self.inner.configure(move |config| {
             config.main_window_title = title.clone();

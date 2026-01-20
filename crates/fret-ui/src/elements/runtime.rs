@@ -27,6 +27,8 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
+    pub view_cache_reuse_roots: Vec<GlobalElementId>,
+    pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
 }
 
 #[derive(Default)]
@@ -111,13 +113,8 @@ pub struct WindowElementState {
     view_cache_keys_rendered: HashMap<GlobalElementId, u64>,
     view_cache_keys_next: HashMap<GlobalElementId, u64>,
     view_cache_key_mismatch_roots: HashSet<GlobalElementId>,
-    /// Last known element IDs contained by a view-cache root.
-    ///
-    /// When a cache root is reused, its child render closure can be skipped, which means none of
-    /// the descendant element IDs are re-created in the current frame. We keep this list so we can
-    /// explicitly mark the retained subtree as "seen" for declarative GC, without requiring a full
-    /// subtree walk on cache-hit frames.
-    pub(super) view_cache_subtree_elements: HashMap<GlobalElementId, Vec<GlobalElementId>>,
+    pub(super) view_cache_elements_rendered: HashMap<GlobalElementId, Vec<GlobalElementId>>,
+    pub(super) view_cache_elements_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
@@ -181,6 +178,13 @@ impl WindowElementState {
             &mut self.view_cache_state_keys_next,
         );
         self.view_cache_state_keys_next.clear();
+
+        std::mem::swap(
+            &mut self.view_cache_elements_rendered,
+            &mut self.view_cache_elements_next,
+        );
+        self.view_cache_elements_next.clear();
+
         self.view_cache_reuse_roots.clear();
         self.view_cache_stack.clear();
 
@@ -276,18 +280,38 @@ impl WindowElementState {
     }
 
     pub(super) fn record_state_key_access(&mut self, key: (GlobalElementId, TypeId)) {
-        let Some(root) = self.view_cache_stack.last().copied() else {
+        if self.view_cache_stack.is_empty() {
             return;
         };
-        self.view_cache_state_keys_next
-            .entry(root)
-            .or_default()
-            .push(key);
+        // Nested view-cache correctness: when entering a child view-cache scope, parent cache
+        // roots still need to keep the child's state alive if the parent reuses without
+        // re-rendering that subtree.
+        for &root in &self.view_cache_stack {
+            self.view_cache_state_keys_next
+                .entry(root)
+                .or_default()
+                .push(key);
+        }
+    }
+
+    pub(super) fn record_view_cache_element_access(&mut self, element: GlobalElementId) {
+        if self.view_cache_stack.is_empty() {
+            return;
+        };
+        // Like `record_state_key_access`, record elements in all active cache roots so outer cache
+        // roots can keep nested subtree nodes alive when reusing.
+        for &root in &self.view_cache_stack {
+            self.view_cache_elements_next
+                .entry(root)
+                .or_default()
+                .push(element);
+        }
     }
 
     pub(super) fn begin_view_cache_scope(&mut self, root: GlobalElementId) {
         self.view_cache_stack.push(root);
         self.view_cache_state_keys_next.remove(&root);
+        self.view_cache_elements_next.remove(&root);
     }
 
     pub(super) fn end_view_cache_scope(&mut self, root: GlobalElementId) {
@@ -296,6 +320,10 @@ impl WindowElementState {
         if let Some(keys) = self.view_cache_state_keys_next.get_mut(&root) {
             let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
             keys.retain(|&key| seen.insert(key));
+        }
+        if let Some(elements) = self.view_cache_elements_next.get_mut(&root) {
+            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(elements.len());
+            elements.retain(|&id| seen.insert(id));
         }
     }
 
@@ -331,6 +359,10 @@ impl WindowElementState {
 
     pub(crate) fn should_reuse_view_cache_root(&self, root: GlobalElementId) -> bool {
         self.view_cache_reuse_roots.contains(&root)
+    }
+
+    pub(crate) fn view_cache_reuse_roots(&self) -> impl Iterator<Item = GlobalElementId> + '_ {
+        self.view_cache_reuse_roots.iter().copied()
     }
 
     pub(crate) fn current_view_cache_root(&self) -> Option<GlobalElementId> {
@@ -402,11 +434,12 @@ impl WindowElementState {
         root: GlobalElementId,
         elements: Vec<GlobalElementId>,
     ) {
-        self.view_cache_subtree_elements.insert(root, elements);
+        self.view_cache_elements_next.insert(root, elements);
     }
 
     pub(crate) fn forget_view_cache_subtree_elements(&mut self, root: GlobalElementId) {
-        self.view_cache_subtree_elements.remove(&root);
+        self.view_cache_elements_rendered.remove(&root);
+        self.view_cache_elements_next.remove(&root);
     }
 
     pub(crate) fn touch_view_cache_subtree_elements_if_recorded(
@@ -415,9 +448,15 @@ impl WindowElementState {
         frame_id: FrameId,
         root_id: GlobalElementId,
     ) -> bool {
-        let Some(elements) = self.view_cache_subtree_elements.get(&root).cloned() else {
+        if self.view_cache_elements_next.contains_key(&root) {
+            return true;
+        }
+
+        let Some(elements) = self.view_cache_elements_rendered.get(&root).cloned() else {
             return false;
         };
+
+        self.view_cache_elements_next.insert(root, elements.clone());
 
         for element in elements {
             let Some(entry) = self.nodes.get_mut(&element) else {
@@ -431,6 +470,15 @@ impl WindowElementState {
         }
 
         true
+    }
+
+    pub(crate) fn view_cache_elements_for_root(
+        &self,
+        root: GlobalElementId,
+    ) -> Option<&[GlobalElementId]> {
+        self.view_cache_elements_rendered
+            .get(&root)
+            .map(|v| v.as_slice())
     }
 
     pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
@@ -555,6 +603,23 @@ impl WindowElementState {
 
     #[cfg(feature = "diagnostics")]
     fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        let mut view_cache_reuse_roots: Vec<GlobalElementId> =
+            self.view_cache_reuse_roots.iter().copied().collect();
+        view_cache_reuse_roots.sort_by_key(|id| id.0);
+
+        let view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)> =
+            view_cache_reuse_roots
+                .iter()
+                .map(|root| {
+                    let count = self
+                        .view_cache_elements_rendered
+                        .get(root)
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+                    (*root, count.min(u32::MAX as usize) as u32)
+                })
+                .collect();
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
             active_text_selection: self
@@ -588,6 +653,8 @@ impl WindowElementState {
                     )
                 })
                 .collect(),
+            view_cache_reuse_roots,
+            view_cache_reuse_root_element_counts,
         }
     }
 

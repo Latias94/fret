@@ -2,6 +2,16 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{CommandId, DefaultKeybinding, WhenExpr};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum OsAction {
+    Cut,
+    Copy,
+    Paste,
+    SelectAll,
+    Undo,
+    Redo,
+}
+
 #[derive(Default)]
 pub struct CommandRegistry {
     commands: HashMap<CommandId, CommandMeta>,
@@ -15,6 +25,7 @@ pub struct CommandMeta {
     pub keywords: Vec<Arc<str>>,
     pub default_keybindings: Vec<DefaultKeybinding>,
     pub when: Option<WhenExpr>,
+    pub os_action: Option<OsAction>,
     pub scope: CommandScope,
     pub hidden: bool,
     pub repeatable: bool,
@@ -39,6 +50,7 @@ impl CommandMeta {
             keywords: Vec::new(),
             default_keybindings: Vec::new(),
             when: None,
+            os_action: None,
             scope: CommandScope::Window,
             hidden: false,
             repeatable: false,
@@ -73,6 +85,11 @@ impl CommandMeta {
 
     pub fn with_when(mut self, when: WhenExpr) -> Self {
         self.when = Some(when);
+        self
+    }
+
+    pub fn with_os_action(mut self, os_action: OsAction) -> Self {
+        self.os_action = Some(os_action);
         self
     }
 

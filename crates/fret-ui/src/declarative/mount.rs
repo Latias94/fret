@@ -241,51 +241,74 @@ pub fn render_root<H: UiHost>(
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        // Node GC is keyed off `last_seen_frame`, but view-cache reuse can legitimately skip
-        // re-mounting cached subtrees. Cache-hit frames must therefore mark the retained subtree
-        // as "seen" (handled by the cache-root reuse path).
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
+            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+
+            while let Some(root) = stack.pop() {
+                if !visited_roots.insert(root) {
+                    continue;
+                }
+                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                    continue;
+                };
+                for &element in elements {
+                    keep_alive.insert(element);
+                    if !visited_roots.contains(&element)
+                        && window_state.view_cache_elements_for_root(element).is_some()
+                    {
+                        stack.push(element);
+                    }
+                }
+            }
+
+            keep_alive
+        };
+
+        // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
+        // re-mounting cached subtrees, so cache roots must keep the retained subtree alive.
         //
         // We only sweep nodes that are both stale and detached from any UI layer.
-        //
-        // NOTE: In view-cache mode, cache-hit frames can skip re-mounting large subtrees. Until we
-        // have a GPUI-style "output replay" contract for semantics + overlay declarations, keep
-        // sweeping disabled for the main window root to avoid deleting live cached subtrees (the
-        // overlay roots are swept independently via `render_dismissible_root_impl`).
-        if !ui.view_cache_enabled() {
-            let mut stale_nodes: Vec<NodeId> = Vec::new();
-            let mut stale_elements: Vec<GlobalElementId> = Vec::new();
-            window_state.retain_nodes(|id, entry| {
-                if *id == root_id {
-                    return true;
+        let mut stale_nodes: Vec<NodeId> = Vec::new();
+        let mut stale_elements: Vec<GlobalElementId> = Vec::new();
+        window_state.retain_nodes(|id, entry| {
+            if *id == root_id {
+                return true;
+            }
+            if entry.root != root_id {
+                return true;
+            }
+            if !keep_alive_view_cache_elements.is_empty()
+                && keep_alive_view_cache_elements.contains(id)
+            {
+                entry.last_seen_frame = frame_id;
+                return true;
+            }
+            if entry.last_seen_frame.0 >= cutoff {
+                return true;
+            }
+            if ui.node_layer(entry.node).is_some() {
+                return true;
+            }
+            stale_nodes.push(entry.node);
+            stale_elements.push(*id);
+            false
+        });
+
+        for element in stale_elements {
+            window_state.forget_view_cache_subtree_elements(element);
+        }
+
+        for node in stale_nodes {
+            let removed = ui.remove_subtree(services, node);
+            app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+                let window_frame = frame.windows.entry(window).or_default();
+                for removed in removed {
+                    window_frame.instances.remove(&removed);
+                    window_frame.children.remove(&removed);
                 }
-                if entry.root != root_id {
-                    return true;
-                }
-                if entry.last_seen_frame.0 >= cutoff {
-                    return true;
-                }
-                if ui.node_layer(entry.node).is_some() {
-                    return true;
-                }
-                stale_nodes.push(entry.node);
-                stale_elements.push(*id);
-                false
             });
-
-            for element in stale_elements {
-                window_state.forget_view_cache_subtree_elements(element);
-            }
-
-            for node in stale_nodes {
-                let removed = ui.remove_subtree(services, node);
-                app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-                    let window_frame = frame.windows.entry(window).or_default();
-                    for removed in removed {
-                        window_frame.instances.remove(&removed);
-                        window_frame.children.remove(&removed);
-                    }
-                });
-            }
         }
 
         if window_state.wants_continuous_frames() {
@@ -426,6 +449,31 @@ fn render_dismissible_root_impl<
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
+            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+
+            while let Some(root) = stack.pop() {
+                if !visited_roots.insert(root) {
+                    continue;
+                }
+                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                    continue;
+                };
+                for &element in elements {
+                    keep_alive.insert(element);
+                    if !visited_roots.contains(&element)
+                        && window_state.view_cache_elements_for_root(element).is_some()
+                    {
+                        stack.push(element);
+                    }
+                }
+            }
+
+            keep_alive
+        };
+
         // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
         // only detached nodes that have been stale beyond the configured lag window.
         let mut stale_nodes: Vec<NodeId> = Vec::new();
@@ -437,6 +485,14 @@ fn render_dismissible_root_impl<
             if entry.root != root_id {
                 return true;
             }
+
+            if !keep_alive_view_cache_elements.is_empty()
+                && keep_alive_view_cache_elements.contains(id)
+            {
+                entry.last_seen_frame = frame_id;
+                return true;
+            }
+
             if entry.last_seen_frame.0 >= cutoff {
                 return true;
             }
@@ -958,7 +1014,6 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
     }
     out
 }
-
 fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
     ui: &UiTree<H>,
     window_frame: &WindowFrame,

@@ -181,11 +181,12 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - `NodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes` overrides are applied in `NodeGraphCanvas`.
     - Custom edge painters/path builders are deferred (Stage 2).
 
-- [ ] **Per-node/edge view lifecycle + memoization strategy**
+- [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
   - fret-node:
     - `NodeGraphNodeTypes` stores per-kind renderers as `FnMut`, enabling per-type state/caches
     - portal subtree instances are keyed by `NodeId` via `NodeGraphPortalHost` (`ecx.keyed(node_id, ...)`)
+    - lifecycle conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
   - Notes:
     - still missing a first-class lifecycle contract for node/edge wrappers and update scheduling (internals measurement invalidation, memoization policy).
 
@@ -694,9 +695,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - enable/disable handles: `NodeGraphPresenter::node_resize_handles`
       - explicit min/max size: `NodeGraphPresenter::node_resize_constraints_px`
 
-- [ ] **Keep aspect ratio**
+- [x] **Keep aspect ratio**
   - XyFlow: `keepAspectRatio`
-  - fret-node: not implemented
+  - fret-node:
+    - aspect ratio option in the resize session: `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` (`resize_keeps_aspect_ratio_for_corner_handles`)
 
 - [x] **Resize snaps to grid**
   - XyFlow: `XYResizer` uses `snapGrid` / `snapToGrid`
@@ -809,13 +812,16 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - [x] node visibility culling uses a spatial index rect query (avoids per-frame full scans): `ecosystem/fret-node/src/ui/canvas/spatial.rs` (`CanvasSpatialIndex::query_nodes_in_rect`), `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::paint`)
     - [x] cached edge path tessellation (wires + markers; preview uses the same cache): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [x] cached text shaping/metrics (covers `TextService::{prepare,measure}`): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
-    - [ ] incremental scene op updates (true retained scene graph diffing)
+    - [~] incremental scene op updates (true retained scene graph diffing)
+      - node/group/edge chrome static layer replay cache (viewport-tile keyed): `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs` (`groups_scene_cache` / `nodes_scene_cache` / `edges_scene_cache` / `edge_labels_scene_cache`)
+      - perf conformance: cached edge scene does not revisit presenter on small pans: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+      - edge + edge label cache warmup is budgeted per frame: `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
 
 - [~] **Derived geometry invalidation discipline**
   - XyFlow: `updateNodeInternals` is explicit and batched
   - fret-node:
     - [~] measured geometry epsilon + batch semantics conformance tests: `ecosystem/fret-node/src/ui/measured.rs`
-    - [ ] conformance harness for invalidation ordering (ADR 0135 notes “frame-order hazards”)
+    - [x] invalidation ordering conformance harness: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
 
 ---
 
@@ -835,9 +841,13 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - Stage 1 (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` + `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - Stage 2 (custom painters/path builders): TODO
 
-- [ ] **Plugin-like extension hooks**
+- [~] **Plugin-like extension hooks**
   - XyFlow: store middleware maps for node/edge changes
-  - fret-node: profile pipeline exists (domain); consider UI middleware for selection/commands without forking canvas
+  - fret-node:
+    - store middleware (headless-safe): `ecosystem/fret-node/src/runtime/middleware.rs` (`NodeGraphStoreMiddleware`)
+    - canvas middleware (UI input/tx gate): `ecosystem/fret-node/src/ui/canvas/middleware.rs` (`NodeGraphCanvasMiddleware`)
+  - Notes:
+    - A higher-level "plugin packaging" story (capability discovery, composition rules, versioning) is still evolving.
 
 ---
 

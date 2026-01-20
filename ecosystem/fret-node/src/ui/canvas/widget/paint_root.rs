@@ -2,6 +2,16 @@ use super::paint_render_data::RenderData;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    const STATIC_NODES_TILE_MUL: f32 = 2.0;
+    const STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN: u32 = 1024;
+    const STATIC_EDGES_TILE_SIZE_SCREEN_PX: u32 = 2048;
+
+    fn next_power_of_two_at_least(min: u32, value: f32) -> u32 {
+        let target = value.ceil().max(1.0) as u32;
+        let pow2 = target.checked_next_power_of_two().unwrap_or(0x8000_0000);
+        pow2.max(min)
+    }
+
     pub(super) fn paint_root<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.observe_model(&self.graph, Invalidation::Paint);
         cx.observe_model(&self.view_state, Invalidation::Paint);
@@ -10,6 +20,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let view_interacting = self.view_interacting();
 
         self.paint_cache.begin_frame();
+        self.groups_scene_cache.begin_frame();
+        self.nodes_scene_cache.begin_frame();
+        self.edges_scene_cache.begin_frame();
+        self.edge_labels_scene_cache.begin_frame();
         if let Some(window) = cx.window {
             let (entries, stats) = self.paint_cache.diagnostics_path_cache_snapshot();
             let frame_id = cx.app.frame_id().0;
@@ -92,6 +106,965 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
         self.update_measured_output_store(snapshot.zoom, &geom);
         self.update_internals_store(&*cx.app, &snapshot, cx.bounds, &geom);
+
+        let can_use_static_scene_cache = self.geometry.drag_preview.is_none()
+            && zoom.is_finite()
+            && zoom > 1.0e-6
+            && cx.bounds.size.width.0.is_finite()
+            && cx.bounds.size.height.0.is_finite();
+
+        let viewport_max_screen_px = cx.bounds.size.width.0.max(cx.bounds.size.height.0);
+        let nodes_tile_size_screen_px = Self::next_power_of_two_at_least(
+            Self::STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
+            viewport_max_screen_px * Self::STATIC_NODES_TILE_MUL,
+        );
+
+        let nodes_cache_tile_size_canvas = (nodes_tile_size_screen_px as f32 / zoom).max(1.0);
+        let edges_cache_tile_size_canvas =
+            (Self::STATIC_EDGES_TILE_SIZE_SCREEN_PX as f32 / zoom).max(1.0);
+
+        let nodes_cache_rect: Option<Rect> = if can_use_static_scene_cache
+            && nodes_cache_tile_size_canvas >= viewport_w
+            && nodes_cache_tile_size_canvas >= viewport_h
+        {
+            let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
+            let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
+            if center_x.is_finite() && center_y.is_finite() {
+                let tile_x = (center_x / nodes_cache_tile_size_canvas).floor() as i32;
+                let tile_y = (center_y / nodes_cache_tile_size_canvas).floor() as i32;
+                let origin = Point::new(
+                    Px(tile_x as f32 * nodes_cache_tile_size_canvas),
+                    Px(tile_y as f32 * nodes_cache_tile_size_canvas),
+                );
+                Some(Rect::new(
+                    origin,
+                    Size::new(
+                        Px(nodes_cache_tile_size_canvas),
+                        Px(nodes_cache_tile_size_canvas),
+                    ),
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let edges_cache_rect: Option<Rect> = if can_use_static_scene_cache
+            && edges_cache_tile_size_canvas >= viewport_w
+            && edges_cache_tile_size_canvas >= viewport_h
+        {
+            let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
+            let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
+            if center_x.is_finite() && center_y.is_finite() {
+                let tile_x = (center_x / edges_cache_tile_size_canvas).floor() as i32;
+                let tile_y = (center_y / edges_cache_tile_size_canvas).floor() as i32;
+                let origin = Point::new(
+                    Px(tile_x as f32 * edges_cache_tile_size_canvas),
+                    Px(tile_y as f32 * edges_cache_tile_size_canvas),
+                );
+                Some(Rect::new(
+                    origin,
+                    Size::new(
+                        Px(edges_cache_tile_size_canvas),
+                        Px(edges_cache_tile_size_canvas),
+                    ),
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let style_key: u64 = {
+            let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_scene_style.v1");
+            b.add_u32(self.style.group_background.r.to_bits());
+            b.add_u32(self.style.group_background.g.to_bits());
+            b.add_u32(self.style.group_background.b.to_bits());
+            b.add_u32(self.style.group_background.a.to_bits());
+            b.add_u32(self.style.group_border.r.to_bits());
+            b.add_u32(self.style.group_border.g.to_bits());
+            b.add_u32(self.style.group_border.b.to_bits());
+            b.add_u32(self.style.group_border.a.to_bits());
+            b.add_u32(self.style.node_background.r.to_bits());
+            b.add_u32(self.style.node_background.g.to_bits());
+            b.add_u32(self.style.node_background.b.to_bits());
+            b.add_u32(self.style.node_background.a.to_bits());
+            b.add_u32(self.style.node_border.r.to_bits());
+            b.add_u32(self.style.node_border.g.to_bits());
+            b.add_u32(self.style.node_border.b.to_bits());
+            b.add_u32(self.style.node_border.a.to_bits());
+            b.add_u32(self.style.wire_color_data.r.to_bits());
+            b.add_u32(self.style.wire_color_data.g.to_bits());
+            b.add_u32(self.style.wire_color_data.b.to_bits());
+            b.add_u32(self.style.wire_color_data.a.to_bits());
+            b.add_u32(self.style.wire_color_exec.r.to_bits());
+            b.add_u32(self.style.wire_color_exec.g.to_bits());
+            b.add_u32(self.style.wire_color_exec.b.to_bits());
+            b.add_u32(self.style.wire_color_exec.a.to_bits());
+            b.add_u32(self.style.wire_width.to_bits());
+            b.add_u32(self.style.wire_width_selected_mul.to_bits());
+            b.add_u32(self.style.wire_width_hover_mul.to_bits());
+            b.add_u32(self.style.context_menu_background.r.to_bits());
+            b.add_u32(self.style.context_menu_background.g.to_bits());
+            b.add_u32(self.style.context_menu_background.b.to_bits());
+            b.add_u32(self.style.context_menu_background.a.to_bits());
+            b.add_u32(self.style.context_menu_border.r.to_bits());
+            b.add_u32(self.style.context_menu_border.g.to_bits());
+            b.add_u32(self.style.context_menu_border.b.to_bits());
+            b.add_u32(self.style.context_menu_border.a.to_bits());
+            b.add_u32(self.style.context_menu_text.r.to_bits());
+            b.add_u32(self.style.context_menu_text.g.to_bits());
+            b.add_u32(self.style.context_menu_text.b.to_bits());
+            b.add_u32(self.style.context_menu_text.a.to_bits());
+            b.add_f32_bits(self.style.node_padding);
+            b.add_f32_bits(self.style.node_header_height);
+            b.add_f32_bits(self.style.pin_row_height);
+            b.add_f32_bits(self.style.pin_radius);
+            b.add_u32(self.style.context_menu_text_style.size.0.to_bits());
+            b.add_u32(u32::from(self.style.context_menu_text_style.weight.0));
+            b.add_u32(cx.scale_factor.to_bits());
+            b.finish()
+        };
+
+        let geom_key = self.geometry.key.unwrap_or(GeometryCacheKey {
+            graph_rev: self.graph.revision(&*cx.app).unwrap_or(0),
+            zoom_bits: zoom.to_bits(),
+            draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
+            presenter_rev: self.presenter.geometry_revision(),
+        });
+
+        if let Some(cache_rect) = nodes_cache_rect {
+            // --- Groups (static, cached) ---
+            let groups_key = {
+                let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_groups.v1");
+                b.add_u64(geom_key.graph_rev);
+                b.add_u32(geom_key.zoom_bits);
+                b.add_u64(geom_key.draw_order_hash);
+                b.add_u64(geom_key.presenter_rev);
+                b.add_u64(style_key);
+                b.add_f32_bits(nodes_cache_tile_size_canvas);
+                b.add_u32(cache_rect.origin.x.0.to_bits());
+                b.add_u32(cache_rect.origin.y.0.to_bits());
+                b.finish()
+            };
+
+            let replay_delta = Point::new(Px(0.0), Px(0.0));
+            let groups_hit = self
+                .groups_scene_cache
+                .try_replay(groups_key, cx.scene, replay_delta);
+            if groups_hit {
+                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
+            } else {
+                let render_groups: RenderData = self.collect_render_data(
+                    &*cx.app,
+                    &snapshot,
+                    geom.clone(),
+                    index.clone(),
+                    Some(cache_rect),
+                    zoom,
+                    None,
+                    true,
+                    false,
+                    false,
+                );
+
+                let mut tmp = fret_core::Scene::default();
+                tmp.push(SceneOp::PushClipRect { rect: cache_rect });
+                self.paint_groups_static(
+                    &mut tmp,
+                    cx.services,
+                    cx.scale_factor,
+                    &render_groups.groups,
+                    zoom,
+                );
+                tmp.push(SceneOp::PopClip);
+                self.groups_scene_cache
+                    .store_ops(groups_key, tmp.ops().to_vec());
+                let _ = self
+                    .groups_scene_cache
+                    .try_replay(groups_key, cx.scene, replay_delta);
+                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
+            }
+
+            // Selected group border overlay must remain ordered before edges (ADR 0082).
+            let group_corner = Px(10.0 / zoom);
+            let selected_groups = snapshot.selected_groups.clone();
+            let _ = self.graph.read_ref(cx.app, |g| {
+                for group_id in selected_groups {
+                    let Some(group) = g.groups.get(&group_id) else {
+                        continue;
+                    };
+                    let rect0 = self.group_rect_with_preview(group_id, group.rect);
+                    let rect = Rect::new(
+                        Point::new(Px(rect0.origin.x), Px(rect0.origin.y)),
+                        Size::new(Px(rect0.size.width), Px(rect0.size.height)),
+                    );
+                    if render_cull_rect.is_some_and(|c| !rects_intersect(rect, c)) {
+                        continue;
+                    }
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect,
+                        background: self.style.group_background,
+                        border: Edges::all(Px(1.0 / zoom)),
+                        border_color: self.style.node_border_selected,
+                        corner_radii: Corners::all(group_corner),
+                    });
+                }
+            });
+
+            // --- Edges (static + overlays) ---
+            let edges_cache_allowed = self.interaction.pending_wire_drag.is_none()
+                && self.interaction.wire_drag.is_none()
+                && self.interaction.suspended_wire_drag.is_none()
+                && self.interaction.pending_edge_insert_drag.is_none()
+                && self.interaction.edge_insert_drag.is_none()
+                && self.interaction.edge_drag.is_none()
+                && self.interaction.pending_insert_node_drag.is_none()
+                && self.interaction.insert_node_drag_preview.is_none();
+
+            let edge_anchor_target_id = self
+                .interaction
+                .focused_edge
+                .or_else(|| {
+                    (snapshot.selected_edges.len() == 1).then(|| snapshot.selected_edges[0])
+                })
+                .filter(|edge_id| {
+                    self.graph
+                        .read_ref(cx.app, |g| {
+                            let edge = g.edges.get(edge_id)?;
+                            let (allow_source, allow_target) =
+                                Self::edge_reconnectable_flags(edge, &snapshot.interaction);
+                            Some(allow_source || allow_target)
+                        })
+                        .ok()
+                        .flatten()
+                        .unwrap_or(false)
+                });
+            let edge_anchor_target: Option<(EdgeRouteKind, Point, Point, Color)> =
+                edge_anchor_target_id.and_then(|edge_id| {
+                    self.graph
+                        .read_ref(cx.app, |g| {
+                            let edge = g.edges.get(&edge_id)?;
+                            let from = geom.port_center(edge.from)?;
+                            let to = geom.port_center(edge.to)?;
+                            let hint = self.edge_render_hint(g, edge_id).normalized();
+                            let mut color = self.presenter.edge_color(g, edge_id, &self.style);
+                            if let Some(override_color) = hint.color {
+                                color = override_color;
+                            }
+                            Some((hint.route, from, to, color))
+                        })
+                        .ok()
+                        .flatten()
+                });
+
+            if edges_cache_allowed {
+                if edges_cache_tile_size_canvas.is_finite()
+                    && (edges_cache_tile_size_canvas < viewport_w
+                        || edges_cache_tile_size_canvas < viewport_h)
+                {
+                    self.edge_labels_build_state = None;
+                    self.edges_tiles_scratch.clear();
+                    self.edges_tile_keys_scratch.clear();
+
+                    let edges_rect = render_cull_rect.unwrap_or(viewport_rect);
+                    let tiles = TileGrid2D::new(edges_cache_tile_size_canvas);
+                    tiles.tiles_in_rect(edges_rect, &mut self.edges_tiles_scratch);
+                    tiles.sort_tiles_center_first(viewport_rect, &mut self.edges_tiles_scratch);
+                    let tiles = self.edges_tiles_scratch.clone();
+
+                    let edges_base_key = {
+                        let mut b =
+                            TileCacheKeyBuilder::new("fret-node.canvas.static_edges.tile.v1");
+                        b.add_u64(geom_key.graph_rev);
+                        b.add_u32(geom_key.zoom_bits);
+                        b.add_u64(geom_key.draw_order_hash);
+                        b.add_u64(geom_key.presenter_rev);
+                        b.add_u64(style_key);
+                        b.add_f32_bits(edges_cache_tile_size_canvas);
+                        b.finish()
+                    };
+
+                    let wire_budget_limit =
+                        Self::EDGE_WIRE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+                    let marker_budget_limit =
+                        Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+                    let tile_budget_limit =
+                        Self::EDGE_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
+                    let mut wire_budget = WorkBudget::new(wire_budget_limit);
+                    let mut marker_budget = WorkBudget::new(marker_budget_limit);
+                    let mut tile_budget = WorkBudget::new(tile_budget_limit);
+
+                    let mut skipped = false;
+
+                    for tile in tiles.iter().copied() {
+                        let tile_key = tile_cache_key(edges_base_key, tile);
+                        self.edges_tile_keys_scratch.push(tile_key);
+
+                        let tile_origin = tile.origin(edges_cache_tile_size_canvas);
+                        let tile_rect = Rect::new(
+                            tile_origin,
+                            Size::new(
+                                Px(edges_cache_tile_size_canvas),
+                                Px(edges_cache_tile_size_canvas),
+                            ),
+                        );
+
+                        if self
+                            .edges_scene_cache
+                            .try_replay(tile_key, cx.scene, replay_delta)
+                        {
+                            self.edges_build_states.remove(&tile_key);
+                            if let Some(ops) = self.edges_scene_cache.ops_for_key(tile_key) {
+                                self.paint_cache.touch_paths_in_scene_ops(ops);
+                            }
+                            continue;
+                        }
+
+                        if !tile_budget.try_consume(1) {
+                            skipped = true;
+                            continue;
+                        }
+
+                        let tile_cull_rect = {
+                            let margin_screen = self.style.render_cull_margin_px;
+                            if margin_screen.is_finite() && margin_screen > 0.0 {
+                                inflate_rect(tile_rect, margin_screen / zoom)
+                            } else {
+                                tile_rect
+                            }
+                        };
+
+                        let mut state =
+                            self.edges_build_states
+                                .remove(&tile_key)
+                                .unwrap_or_else(|| {
+                                    let render_edges: RenderData = self.collect_render_data(
+                                        &*cx.app,
+                                        &snapshot,
+                                        geom.clone(),
+                                        index.clone(),
+                                        Some(tile_cull_rect),
+                                        zoom,
+                                        None,
+                                        false,
+                                        false,
+                                        true,
+                                    );
+                                    EdgesBuildState {
+                                        ops: vec![
+                                            SceneOp::PushClipRect { rect: tile_rect },
+                                            SceneOp::PopClip,
+                                        ],
+                                        edges: render_edges.edges,
+                                        next_edge: 0,
+                                    }
+                                });
+
+                        let mut tmp = fret_core::Scene::default();
+                        let mut next_edge = state.next_edge.min(state.edges.len());
+                        let mut tile_skipped = false;
+                        for edge in state.edges.iter().skip(next_edge) {
+                            let width = self.style.wire_width * edge.hint.width_mul.max(0.0);
+                            let (stop, _marker_skipped) = self.push_edge_wire_and_markers_budgeted(
+                                &mut tmp,
+                                cx.services,
+                                zoom,
+                                cx.scale_factor,
+                                edge.hint.route,
+                                edge.from,
+                                edge.to,
+                                edge.color,
+                                width,
+                                edge.hint.start_marker.as_ref(),
+                                edge.hint.end_marker.as_ref(),
+                                &mut wire_budget,
+                                &mut marker_budget,
+                                true,
+                            );
+                            if stop {
+                                tile_skipped = true;
+                                break;
+                            }
+                            next_edge = next_edge.saturating_add(1);
+                        }
+
+                        state.next_edge = next_edge;
+                        if tile_skipped || state.next_edge < state.edges.len() {
+                            skipped = true;
+                        }
+
+                        if state.edges.is_empty() {
+                            self.edges_scene_cache.store_ops(tile_key, Vec::new());
+                            continue;
+                        }
+
+                        if tmp.ops_len() > 0 {
+                            match state.ops.pop() {
+                                Some(SceneOp::PopClip) => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                    state.ops.push(SceneOp::PopClip);
+                                }
+                                Some(other) => {
+                                    state.ops.push(other);
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                                None => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                            }
+                            if !matches!(state.ops.last(), Some(SceneOp::PopClip)) {
+                                state.ops.push(SceneOp::PopClip);
+                            }
+                        }
+
+                        if state.ops.len() > 2 {
+                            cx.scene.replay_ops_translated(&state.ops, replay_delta);
+                            self.paint_cache.touch_paths_in_scene_ops(&state.ops);
+                        }
+
+                        if state.next_edge >= state.edges.len() {
+                            self.edges_scene_cache.store_ops(tile_key, state.ops);
+                        } else {
+                            self.edges_build_states.insert(tile_key, state);
+                        }
+                    }
+
+                    self.edges_build_states
+                        .retain(|k, _| self.edges_tile_keys_scratch.contains(k));
+
+                    if skipped {
+                        cx.request_redraw();
+                    }
+
+                    self.paint_edge_overlays_selected_hovered(cx, &snapshot, &geom, zoom);
+
+                    // --- Edge labels (static, cached tiles) ---
+                    self.edge_labels_tile_keys_scratch.clear();
+
+                    let labels_base_key = {
+                        let mut b =
+                            TileCacheKeyBuilder::new("fret-node.canvas.static_edge_labels.tile.v1");
+                        b.add_u64(geom_key.graph_rev);
+                        b.add_u32(geom_key.zoom_bits);
+                        b.add_u64(geom_key.draw_order_hash);
+                        b.add_u64(geom_key.presenter_rev);
+                        b.add_u64(style_key);
+                        b.add_f32_bits(edges_cache_tile_size_canvas);
+                        b.finish()
+                    };
+
+                    let tile_budget_limit =
+                        Self::EDGE_LABEL_TILE_BUILD_BUDGET_TILES_PER_FRAME.select(view_interacting);
+                    let label_budget_limit =
+                        Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+                    let mut tile_budget = WorkBudget::new(tile_budget_limit);
+                    let mut label_budget = WorkBudget::new(label_budget_limit);
+
+                    let mut skipped_labels = false;
+
+                    for tile in tiles.iter().copied() {
+                        let tile_key = tile_cache_key(labels_base_key, tile);
+                        self.edge_labels_tile_keys_scratch.push(tile_key);
+
+                        if self
+                            .edge_labels_scene_cache
+                            .try_replay(tile_key, cx.scene, replay_delta)
+                        {
+                            self.edge_labels_build_states.remove(&tile_key);
+                            if let Some(ops) = self.edge_labels_scene_cache.ops_for_key(tile_key) {
+                                self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                            }
+                            continue;
+                        }
+
+                        if !tile_budget.try_consume(1) {
+                            skipped_labels = true;
+                            continue;
+                        }
+
+                        let tile_origin = tile.origin(edges_cache_tile_size_canvas);
+                        let tile_rect = Rect::new(
+                            tile_origin,
+                            Size::new(
+                                Px(edges_cache_tile_size_canvas),
+                                Px(edges_cache_tile_size_canvas),
+                            ),
+                        );
+
+                        let tile_cull_rect = {
+                            let margin_screen = self.style.render_cull_margin_px;
+                            if margin_screen.is_finite() && margin_screen > 0.0 {
+                                inflate_rect(tile_rect, margin_screen / zoom)
+                            } else {
+                                tile_rect
+                            }
+                        };
+
+                        let mut state = self
+                            .edge_labels_build_states
+                            .remove(&tile_key)
+                            .unwrap_or_else(|| {
+                                let render_edges: RenderData = self.collect_render_data(
+                                    &*cx.app,
+                                    &snapshot,
+                                    geom.clone(),
+                                    index.clone(),
+                                    Some(tile_cull_rect),
+                                    zoom,
+                                    None,
+                                    false,
+                                    false,
+                                    true,
+                                );
+                                EdgeLabelsBuildState {
+                                    key: tile_key,
+                                    ops: vec![
+                                        SceneOp::PushClipRect { rect: tile_rect },
+                                        SceneOp::PopClip,
+                                    ],
+                                    edges: render_edges.edges,
+                                    next_edge: 0,
+                                }
+                            });
+
+                        if state.edges.is_empty() {
+                            self.edge_labels_scene_cache.store_ops(tile_key, Vec::new());
+                            continue;
+                        }
+
+                        let mut tmp = fret_core::Scene::default();
+                        let (next_edge, tile_skipped) = self.paint_edge_labels_static_budgeted(
+                            &mut tmp,
+                            cx.services,
+                            cx.scale_factor,
+                            &state.edges,
+                            zoom,
+                            state.next_edge,
+                            &mut label_budget,
+                        );
+                        state.next_edge = next_edge;
+                        if tile_skipped || state.next_edge < state.edges.len() {
+                            skipped_labels = true;
+                        }
+
+                        if tmp.ops_len() > 0 {
+                            match state.ops.pop() {
+                                Some(SceneOp::PopClip) => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                    state.ops.push(SceneOp::PopClip);
+                                }
+                                Some(other) => {
+                                    state.ops.push(other);
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                                None => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                            }
+                            if !matches!(state.ops.last(), Some(SceneOp::PopClip)) {
+                                state.ops.push(SceneOp::PopClip);
+                            }
+                        }
+
+                        if state.ops.len() > 2 {
+                            cx.scene.replay_ops_translated(&state.ops, replay_delta);
+                            self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
+                        }
+
+                        if state.next_edge >= state.edges.len() {
+                            if state.ops.len() == 2 {
+                                self.edge_labels_scene_cache.store_ops(tile_key, Vec::new());
+                            } else {
+                                self.edge_labels_scene_cache.store_ops(tile_key, state.ops);
+                            }
+                        } else {
+                            self.edge_labels_build_states.insert(tile_key, state);
+                        }
+                    }
+
+                    self.edge_labels_build_states
+                        .retain(|k, _| self.edge_labels_tile_keys_scratch.contains(k));
+
+                    if skipped_labels {
+                        cx.request_redraw();
+                    }
+                } else {
+                    let edges_cache_rect = edges_cache_rect.unwrap_or(cache_rect);
+
+                    let edges_key = {
+                        let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_edges.v1");
+                        b.add_u64(geom_key.graph_rev);
+                        b.add_u32(geom_key.zoom_bits);
+                        b.add_u64(geom_key.draw_order_hash);
+                        b.add_u64(geom_key.presenter_rev);
+                        b.add_u64(style_key);
+                        b.add_f32_bits(edges_cache_tile_size_canvas);
+                        b.add_u32(edges_cache_rect.origin.x.0.to_bits());
+                        b.add_u32(edges_cache_rect.origin.y.0.to_bits());
+                        b.finish()
+                    };
+
+                    let labels_key = {
+                        let mut b =
+                            TileCacheKeyBuilder::new("fret-node.canvas.static_edge_labels.v1");
+                        b.add_u64(geom_key.graph_rev);
+                        b.add_u32(geom_key.zoom_bits);
+                        b.add_u64(geom_key.draw_order_hash);
+                        b.add_u64(geom_key.presenter_rev);
+                        b.add_u64(style_key);
+                        b.add_f32_bits(edges_cache_tile_size_canvas);
+                        b.add_u32(edges_cache_rect.origin.x.0.to_bits());
+                        b.add_u32(edges_cache_rect.origin.y.0.to_bits());
+                        b.finish()
+                    };
+
+                    let edges_hit =
+                        self.edges_scene_cache
+                            .try_replay(edges_key, cx.scene, replay_delta);
+                    if edges_hit {
+                        self.edges_build_states.remove(&edges_key);
+                        if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
+                            self.paint_cache.touch_paths_in_scene_ops(ops);
+                        }
+                    } else {
+                        let mut state =
+                            self.edges_build_states
+                                .remove(&edges_key)
+                                .unwrap_or_else(|| {
+                                    let render_edges: RenderData = self.collect_render_data(
+                                        &*cx.app,
+                                        &snapshot,
+                                        geom.clone(),
+                                        index.clone(),
+                                        Some(edges_cache_rect),
+                                        zoom,
+                                        None,
+                                        false,
+                                        false,
+                                        true,
+                                    );
+                                    EdgesBuildState {
+                                        ops: vec![
+                                            SceneOp::PushClipRect {
+                                                rect: edges_cache_rect,
+                                            },
+                                            SceneOp::PopClip,
+                                        ],
+                                        edges: render_edges.edges,
+                                        next_edge: 0,
+                                    }
+                                });
+
+                        let wire_budget_limit =
+                            Self::EDGE_WIRE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+                        let marker_budget_limit =
+                            Self::EDGE_MARKER_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+                        let mut wire_budget = WorkBudget::new(wire_budget_limit);
+                        let mut marker_budget = WorkBudget::new(marker_budget_limit);
+
+                        let mut tmp = fret_core::Scene::default();
+                        let mut next_edge = state.next_edge.min(state.edges.len());
+                        let mut skipped = false;
+
+                        for edge in state.edges.iter().skip(next_edge) {
+                            let width = self.style.wire_width * edge.hint.width_mul.max(0.0);
+                            let (stop, _marker_skipped) = self.push_edge_wire_and_markers_budgeted(
+                                &mut tmp,
+                                cx.services,
+                                zoom,
+                                cx.scale_factor,
+                                edge.hint.route,
+                                edge.from,
+                                edge.to,
+                                edge.color,
+                                width,
+                                edge.hint.start_marker.as_ref(),
+                                edge.hint.end_marker.as_ref(),
+                                &mut wire_budget,
+                                &mut marker_budget,
+                                true,
+                            );
+                            if stop {
+                                skipped = true;
+                                break;
+                            }
+                            next_edge = next_edge.saturating_add(1);
+                        }
+
+                        state.next_edge = next_edge;
+                        if skipped || state.next_edge < state.edges.len() {
+                            cx.request_redraw();
+                        }
+
+                        if tmp.ops_len() > 0 {
+                            match state.ops.pop() {
+                                Some(SceneOp::PopClip) => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                    state.ops.push(SceneOp::PopClip);
+                                }
+                                Some(other) => {
+                                    state.ops.push(other);
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                                None => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                            }
+                            if !matches!(state.ops.last(), Some(SceneOp::PopClip)) {
+                                state.ops.push(SceneOp::PopClip);
+                            }
+                        }
+
+                        if state.next_edge >= state.edges.len() {
+                            self.edges_scene_cache
+                                .store_ops(edges_key, state.ops.clone());
+                            let _ = self.edges_scene_cache.try_replay(
+                                edges_key,
+                                cx.scene,
+                                replay_delta,
+                            );
+                            if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
+                                self.paint_cache.touch_paths_in_scene_ops(ops);
+                            }
+                        } else {
+                            cx.scene.replay_ops_translated(&state.ops, replay_delta);
+                            self.paint_cache.touch_paths_in_scene_ops(&state.ops);
+                            self.edges_build_states.insert(edges_key, state);
+                        }
+                    }
+
+                    if self.edge_labels_scene_cache.contains_key(labels_key) {
+                        self.edge_labels_build_state = None;
+                    } else {
+                        let mut state = self
+                            .edge_labels_build_state
+                            .take()
+                            .filter(|s| s.key == labels_key)
+                            .unwrap_or_else(|| {
+                                let render_edges: RenderData = self.collect_render_data(
+                                    &*cx.app,
+                                    &snapshot,
+                                    geom.clone(),
+                                    index.clone(),
+                                    Some(edges_cache_rect),
+                                    zoom,
+                                    None,
+                                    false,
+                                    false,
+                                    true,
+                                );
+                                EdgeLabelsBuildState {
+                                    key: labels_key,
+                                    ops: vec![
+                                        SceneOp::PushClipRect {
+                                            rect: edges_cache_rect,
+                                        },
+                                        SceneOp::PopClip,
+                                    ],
+                                    edges: render_edges.edges,
+                                    next_edge: 0,
+                                }
+                            });
+
+                        let budget_limit =
+                            Self::EDGE_LABEL_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+                        let mut budget = WorkBudget::new(budget_limit);
+
+                        let mut tmp = fret_core::Scene::default();
+                        let (next_edge, skipped) = self.paint_edge_labels_static_budgeted(
+                            &mut tmp,
+                            cx.services,
+                            cx.scale_factor,
+                            &state.edges,
+                            zoom,
+                            state.next_edge,
+                            &mut budget,
+                        );
+                        state.next_edge = next_edge;
+
+                        if skipped || state.next_edge < state.edges.len() {
+                            cx.request_redraw();
+                        }
+
+                        if tmp.ops_len() > 0 {
+                            match state.ops.pop() {
+                                Some(SceneOp::PopClip) => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                    state.ops.push(SceneOp::PopClip);
+                                }
+                                Some(other) => {
+                                    state.ops.push(other);
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                                None => {
+                                    state.ops.extend_from_slice(tmp.ops());
+                                }
+                            }
+                            if !matches!(state.ops.last(), Some(SceneOp::PopClip)) {
+                                state.ops.push(SceneOp::PopClip);
+                            }
+                        }
+
+                        if state.next_edge >= state.edges.len() {
+                            self.edge_labels_scene_cache
+                                .store_ops(labels_key, state.ops.clone());
+                            self.edge_labels_build_state = None;
+                        } else {
+                            self.edge_labels_build_state = Some(state);
+                        }
+                    }
+
+                    self.paint_edge_overlays_selected_hovered(cx, &snapshot, &geom, zoom);
+
+                    // Labels must remain on top of selected/hovered overlays.
+                    if self
+                        .edge_labels_scene_cache
+                        .try_replay(labels_key, cx.scene, replay_delta)
+                    {
+                        if let Some(ops) = self.edge_labels_scene_cache.ops_for_key(labels_key) {
+                            self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                        }
+                    } else if let Some(state) = self
+                        .edge_labels_build_state
+                        .as_ref()
+                        .filter(|s| s.key == labels_key)
+                    {
+                        cx.scene.replay_ops_translated(&state.ops, replay_delta);
+                        self.paint_cache.touch_text_blobs_in_scene_ops(&state.ops);
+                    }
+                }
+            } else {
+                self.edges_build_states.clear();
+                self.edge_labels_build_states.clear();
+                self.edge_labels_build_state = None;
+                let render_edges: RenderData = self.collect_render_data(
+                    &*cx.app,
+                    &snapshot,
+                    geom.clone(),
+                    index.clone(),
+                    render_cull_rect,
+                    zoom,
+                    hovered_edge,
+                    false,
+                    false,
+                    true,
+                );
+                self.paint_edges(cx, &snapshot, &render_edges, &geom, zoom, view_interacting);
+            }
+
+            // --- Nodes (static, cached) ---
+            let nodes_key = {
+                let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_nodes.v1");
+                b.add_u64(geom_key.graph_rev);
+                b.add_u32(geom_key.zoom_bits);
+                b.add_u64(geom_key.draw_order_hash);
+                b.add_u64(geom_key.presenter_rev);
+                b.add_u64(style_key);
+                b.add_f32_bits(nodes_cache_tile_size_canvas);
+                b.add_u32(cache_rect.origin.x.0.to_bits());
+                b.add_u32(cache_rect.origin.y.0.to_bits());
+                b.finish()
+            };
+
+            let nodes_hit = self
+                .nodes_scene_cache
+                .try_replay(nodes_key, cx.scene, replay_delta);
+            if nodes_hit {
+                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
+            } else {
+                let render_nodes: RenderData = self.collect_render_data(
+                    &*cx.app,
+                    &snapshot,
+                    geom.clone(),
+                    index.clone(),
+                    Some(cache_rect),
+                    zoom,
+                    None,
+                    false,
+                    true,
+                    false,
+                );
+
+                let mut tmp = fret_core::Scene::default();
+                tmp.push(SceneOp::PushClipRect { rect: cache_rect });
+                self.paint_nodes_static(
+                    &mut tmp,
+                    cx.services,
+                    cx.scale_factor,
+                    &render_nodes,
+                    zoom,
+                );
+                tmp.push(SceneOp::PopClip);
+                self.nodes_scene_cache
+                    .store_ops(nodes_key, tmp.ops().to_vec());
+                let _ = self
+                    .nodes_scene_cache
+                    .try_replay(nodes_key, cx.scene, replay_delta);
+                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
+                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                }
+            }
+
+            // --- Nodes (dynamic overlays) ---
+            self.paint_nodes_dynamic_from_geometry(cx, &snapshot, &geom, zoom);
+
+            self.paint_edge_focus_anchors(
+                cx,
+                &snapshot,
+                edge_anchor_target_id,
+                edge_anchor_target,
+                zoom,
+            );
+            self.paint_overlays(
+                cx,
+                &snapshot,
+                zoom,
+                viewport_origin_x,
+                viewport_origin_y,
+                viewport_w,
+                viewport_h,
+            );
+
+            let prune = snapshot.interaction.paint_cache_prune;
+            self.groups_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
+            self.nodes_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
+            self.edges_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
+            self.edge_labels_scene_cache.prune(
+                Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+                Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+            );
+            if prune.max_entries > 0 && prune.max_age_frames > 0 {
+                self.paint_cache
+                    .prune(cx.services, prune.max_age_frames, prune.max_entries);
+                let tile_budget = (prune.max_entries / 10).clamp(64, 2048);
+                self.grid_scene_cache
+                    .prune(prune.max_age_frames, tile_budget);
+            }
+
+            cx.scene.push(SceneOp::PopClip);
+            return;
+        }
+
+        // Fallback: immediate-mode paint (no static scene replay cache).
         let render: RenderData = self.collect_render_data(
             &*cx.app,
             &snapshot,
@@ -100,6 +1073,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             render_cull_rect,
             zoom,
             hovered_edge,
+            true,
+            true,
+            true,
         );
 
         let edge_anchor_target_id = self
@@ -127,9 +1103,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     .map(|e| (e.hint.route, e.from, e.to, e.color))
             });
 
-        self.paint_groups(cx, &render.groups, zoom);
-        self.paint_edges(cx, &snapshot, &render, zoom, view_interacting);
-        self.paint_nodes(cx, &render, zoom);
+        self.paint_groups_static(cx.scene, cx.services, cx.scale_factor, &render.groups, zoom);
+        self.paint_groups_selected_overlay(cx.scene, &render.groups, zoom);
+        self.paint_edges(cx, &snapshot, &render, &geom, zoom, view_interacting);
+        self.paint_nodes_static(cx.scene, cx.services, cx.scale_factor, &render, zoom);
+        self.paint_nodes_dynamic_from_geometry(cx, &snapshot, &geom, zoom);
         self.paint_edge_focus_anchors(
             cx,
             &snapshot,
@@ -146,6 +1124,31 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             viewport_w,
             viewport_h,
         );
+
+        let prune = snapshot.interaction.paint_cache_prune;
+        self.groups_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
+        self.nodes_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
+        self.edges_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
+        self.edge_labels_scene_cache.prune(
+            Self::STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES,
+            Self::STATIC_SCENE_TILE_CACHE_MAX_ENTRIES,
+        );
+        if prune.max_entries > 0 && prune.max_age_frames > 0 {
+            self.paint_cache
+                .prune(cx.services, prune.max_age_frames, prune.max_entries);
+            let tile_budget = (prune.max_entries / 10).clamp(64, 2048);
+            self.grid_scene_cache
+                .prune(prune.max_age_frames, tile_budget);
+        }
 
         cx.scene.push(SceneOp::PopClip);
     }

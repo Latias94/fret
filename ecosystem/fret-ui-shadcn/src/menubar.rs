@@ -35,6 +35,7 @@ use fret_ui_kit::{
 };
 
 use crate::overlay_motion;
+use crate::shortcut_display::command_shortcut_label;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -1476,7 +1477,7 @@ impl MenubarMenuEntries {
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        cx.pressable_dispatch_command_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
 
@@ -1504,6 +1505,19 @@ impl MenubarMenuEntries {
                                                                     } else {
                                                                         alpha_mul(fg_muted, 0.85)
                                                                     };
+
+                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                        command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(
+                                                                                cx,
+                                                                                cmd,
+                                                                                fret_runtime::Platform::current(),
+                                                                            )
+                                                                            .map(|text| {
+                                                                                MenubarShortcut::new(text).into_element(cx)
+                                                                            })
+                                                                        })
+                                                                    });
 
                                                                     let props = PressableProps {
                                                                         layout: {
@@ -1534,7 +1548,7 @@ impl MenubarMenuEntries {
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         Some(checked_now),
                                                                         false,
                                                                         bg,
@@ -1612,7 +1626,7 @@ impl MenubarMenuEntries {
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        cx.pressable_dispatch_command_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
 
@@ -1640,6 +1654,19 @@ impl MenubarMenuEntries {
                                                                     } else {
                                                                         alpha_mul(fg_muted, 0.85)
                                                                     };
+
+                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                        command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(
+                                                                                cx,
+                                                                                cmd,
+                                                                                fret_runtime::Platform::current(),
+                                                                            )
+                                                                            .map(|text| {
+                                                                                MenubarShortcut::new(text).into_element(cx)
+                                                                            })
+                                                                        })
+                                                                    });
 
                                                                     let props = PressableProps {
                                                                         layout: {
@@ -1670,7 +1697,7 @@ impl MenubarMenuEntries {
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         Some(is_selected),
                                                                         false,
                                                                         bg,
@@ -1794,7 +1821,7 @@ impl MenubarMenuEntries {
                                                                     );
 
                                                                      if !has_submenu {
-                                                                         cx.pressable_dispatch_command_opt(command);
+                                                                         cx.pressable_dispatch_command_opt(command.clone());
                                                                         if item_enabled && close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
 
@@ -1878,12 +1905,30 @@ impl MenubarMenuEntries {
                                                                         ..Default::default()
                                                                     };
 
+                                                                    let trailing = if has_submenu {
+                                                                        trailing.clone()
+                                                                    } else {
+                                                                        trailing.clone().or_else(|| {
+                                                                            command.as_ref().and_then(|cmd| {
+                                                                                command_shortcut_label(
+                                                                                    cx,
+                                                                                    cmd,
+                                                                                    fret_runtime::Platform::current(),
+                                                                                )
+                                                                                .map(|text| {
+                                                                                    MenubarShortcut::new(text)
+                                                                                        .into_element(cx)
+                                                                                })
+                                                                            })
+                                                                        })
+                                                                    };
+
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         None,
                                                                         has_submenu,
                                                                         bg,
@@ -2366,7 +2411,7 @@ impl MenubarMenuEntries {
                                                                                         checked.clone(),
                                                                                     );
                                                                                 }
-                                                                                cx.pressable_dispatch_command_opt(command);
+                                                                                cx.pressable_dispatch_command_opt(command.clone());
                                                                                 if item_enabled && close_on_select {
                                                                                     cx.pressable_set_bool(&open, false);
                                                                                     let group_active_for_activate = group_active.clone();
@@ -2391,6 +2436,19 @@ impl MenubarMenuEntries {
                                                                                 } else {
                                                                                     alpha_mul(fg_muted, 0.85)
                                                                                 };
+
+                                                                                let trailing = trailing.clone().or_else(|| {
+                                                                                    command.as_ref().and_then(|cmd| {
+                                                                                        command_shortcut_label(
+                                                                                            cx,
+                                                                                            cmd,
+                                                                                            fret_runtime::Platform::current(),
+                                                                                        )
+                                                                                        .map(|text| {
+                                                                                            MenubarShortcut::new(text).into_element(cx)
+                                                                                        })
+                                                                                    })
+                                                                                });
 
                                                                                 let props = PressableProps {
                                                                                     layout: {
@@ -2421,7 +2479,7 @@ impl MenubarMenuEntries {
                                                                                     label.clone(),
                                                                                     leading.clone(),
                                                                                     reserve_leading_slot,
-                                                                                    trailing.clone(),
+                                                                                    trailing,
                                                                                     Some(checked_now),
                                                                                     false,
                                                                                     bg,
@@ -2489,7 +2547,7 @@ impl MenubarMenuEntries {
                                                                                         value.clone(),
                                                                                     );
                                                                                 }
-                                                                                cx.pressable_dispatch_command_opt(command);
+                                                                                cx.pressable_dispatch_command_opt(command.clone());
                                                                                 if item_enabled && close_on_select {
                                                                                     cx.pressable_set_bool(&open, false);
                                                                                     let group_active_for_activate = group_active.clone();
@@ -2514,6 +2572,19 @@ impl MenubarMenuEntries {
                                                                                 } else {
                                                                                     alpha_mul(fg_muted, 0.85)
                                                                                 };
+
+                                                                                let trailing = trailing.clone().or_else(|| {
+                                                                                    command.as_ref().and_then(|cmd| {
+                                                                                        command_shortcut_label(
+                                                                                            cx,
+                                                                                            cmd,
+                                                                                            fret_runtime::Platform::current(),
+                                                                                        )
+                                                                                        .map(|text| {
+                                                                                            MenubarShortcut::new(text).into_element(cx)
+                                                                                        })
+                                                                                    })
+                                                                                });
 
                                                                                 let props = PressableProps {
                                                                                     layout: {
@@ -2544,7 +2615,7 @@ impl MenubarMenuEntries {
                                                                                     label.clone(),
                                                                                     leading.clone(),
                                                                                     reserve_leading_slot,
-                                                                                    trailing.clone(),
+                                                                                    trailing,
                                                                                     Some(is_selected),
                                                                                     false,
                                                                                     bg,
@@ -2600,7 +2671,7 @@ impl MenubarMenuEntries {
                                                                                     trigger_registry.clone(),
                                                                                 );
 
-                                                                                cx.pressable_dispatch_command_opt(command);
+                                                                                cx.pressable_dispatch_command_opt(command.clone());
                                                                                 if item_enabled && close_on_select {
                                                                                     cx.pressable_set_bool(&open, false);
 
@@ -2640,6 +2711,19 @@ impl MenubarMenuEntries {
                                                                                     alpha_mul(fg_muted, 0.85)
                                                                                 };
 
+                                                                                let trailing = trailing.clone().or_else(|| {
+                                                                                    command.as_ref().and_then(|cmd| {
+                                                                                        command_shortcut_label(
+                                                                                            cx,
+                                                                                            cmd,
+                                                                                            fret_runtime::Platform::current(),
+                                                                                        )
+                                                                                        .map(|text| {
+                                                                                            MenubarShortcut::new(text).into_element(cx)
+                                                                                        })
+                                                                                    })
+                                                                                });
+
                                                                                 let props = PressableProps {
                                                                                     layout: {
                                                                                         let mut layout =
@@ -2673,7 +2757,7 @@ impl MenubarMenuEntries {
                                                                                     label.clone(),
                                                                                     leading.clone(),
                                                                                     reserve_leading_slot,
-                                                                                    trailing.clone(),
+                                                                                    trailing,
                                                                                     None,
                                                                                     false,
                                                                                     bg,

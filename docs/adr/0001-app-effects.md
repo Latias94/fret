@@ -40,6 +40,8 @@ Examples of “non-minimal” effects already in use:
 
 - `Effect::Dock(DockOp)` (docking emits operations, app applies them)
 - `Effect::ViewportInput(ViewportInputEvent)` (engine viewport input forwarding)
+- `Effect::QuitApp` (request application exit; native runners may exit their event loop)
+- `Effect::HideApp` / `Effect::HideOtherApps` / `Effect::UnhideAllApps` (macOS app visibility controls)
 - `Effect::RequestAnimationFrame(AppWindowId)` / `Effect::SetTimer { .. }` / `Effect::CancelTimer { .. }` (scheduling)
 - `Effect::ImeAllow { .. }` / `Effect::ImeSetCursorArea { .. }` (IME enablement and candidate window positioning)
 - `Effect::CursorSetIcon { .. }` (system cursor feedback, e.g. resize handles)

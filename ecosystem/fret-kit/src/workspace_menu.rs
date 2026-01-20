@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_runtime::{CommandId, CommandRegistry, MenuBar, MenuItem, Platform, format_sequence};
+use fret_runtime::{
+    CommandId, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem, Platform,
+    PlatformCapabilities, WindowInputContextService, format_sequence,
+};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
@@ -37,7 +40,6 @@ impl MenubarFromRuntimeOptions {
 pub fn menubar_from_runtime<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     menu_bar: &MenuBar,
-    commands: Option<&CommandRegistry>,
     opts: MenubarFromRuntimeOptions,
 ) -> AnyElement {
     let menus: Vec<MenubarMenuEntries> = menu_bar
@@ -47,7 +49,7 @@ pub fn menubar_from_runtime<H: UiHost>(
             let entries = menu
                 .items
                 .iter()
-                .flat_map(|item| menu_entries(cx, item, commands, &opts))
+                .flat_map(|item| menu_entries(cx, item, &opts))
                 .collect();
             MenubarMenu::new(menu.title.clone()).entries(entries)
         })
@@ -59,15 +61,13 @@ pub fn menubar_from_runtime<H: UiHost>(
 fn menu_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     item: &MenuItem,
-    commands: Option<&CommandRegistry>,
     opts: &MenubarFromRuntimeOptions,
 ) -> Vec<MenubarEntry> {
     match item {
         MenuItem::Separator => vec![MenubarEntry::Separator],
+        MenuItem::SystemMenu { .. } => Vec::new(),
         MenuItem::Command { command, when: _ } => {
-            vec![MenubarEntry::Item(command_entry(
-                cx, command, commands, opts,
-            ))]
+            vec![MenubarEntry::Item(command_entry(cx, command, opts))]
         }
         MenuItem::Submenu {
             title,
@@ -77,7 +77,7 @@ fn menu_entries<H: UiHost>(
             let trigger = MenubarItem::new(title.clone());
             let mut out = Vec::new();
             for item in items {
-                out.extend(menu_entries(cx, item, commands, opts));
+                out.extend(menu_entries(cx, item, opts));
             }
             vec![MenubarEntry::Submenu(trigger.submenu(out))]
         }
@@ -87,17 +87,27 @@ fn menu_entries<H: UiHost>(
 fn command_entry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     command: &CommandId,
-    commands: Option<&CommandRegistry>,
     opts: &MenubarFromRuntimeOptions,
 ) -> MenubarItem {
-    let (label, shortcut) = match commands.and_then(|r| r.get(command.clone())) {
+    let base_ctx = menu_shortcut_input_context(cx, opts.platform);
+
+    let (label, shortcut) = match cx.app.commands().get(command.clone()) {
         Some(meta) => {
             let label = meta.title.clone();
             let shortcut = if opts.include_shortcuts {
-                meta.default_keybindings
-                    .iter()
-                    .find(|kb| kb.platform.matches(opts.platform))
-                    .map(|kb| Arc::<str>::from(format_sequence(opts.platform, &kb.sequence)))
+                cx.app
+                    .global::<KeymapService>()
+                    .and_then(|svc| {
+                        svc.keymap
+                            .display_shortcut_for_command_sequence(&base_ctx, command)
+                    })
+                    .or_else(|| {
+                        meta.default_keybindings
+                            .iter()
+                            .find(|kb| kb.platform.matches(opts.platform))
+                            .map(|kb| kb.sequence.clone())
+                    })
+                    .map(|seq| Arc::<str>::from(format_sequence(opts.platform, &seq)))
             } else {
                 None
             };
@@ -112,6 +122,39 @@ fn command_entry<H: UiHost>(
         item.trailing = Some(MenubarShortcut::new(shortcut).into_element(cx));
     }
     item
+}
+
+fn menu_shortcut_input_context<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    platform: Platform,
+) -> InputContext {
+    let caps = cx
+        .app
+        .global::<PlatformCapabilities>()
+        .cloned()
+        .unwrap_or_default();
+
+    let snapshot = cx
+        .app
+        .global::<WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(cx.window))
+        .cloned();
+
+    let mut ctx = snapshot.unwrap_or(InputContext {
+        platform,
+        caps,
+        ui_has_modal: false,
+        focus_is_text_input: false,
+        edit_can_undo: true,
+        edit_can_redo: true,
+        dispatch_phase: InputDispatchPhase::Normal,
+    });
+
+    // Menubar shortcut labels should be stable and platform-scoped; treat the snapshot as an input
+    // for enablement/gating, but keep platform formatting consistent with the caller's intent.
+    ctx.platform = platform;
+    ctx.dispatch_phase = InputDispatchPhase::Normal;
+    ctx
 }
 
 impl Default for MenubarFromRuntimeOptions {

@@ -61,6 +61,7 @@ pub mod select;
 pub mod separator;
 pub mod shadcn_themes;
 pub mod sheet;
+mod shortcut_display;
 pub mod sidebar;
 pub mod skeleton;
 pub mod slider;

@@ -1,4 +1,4 @@
-use crate::{CommandId, InputContext, KeyChord, Platform, WhenExpr};
+use crate::{CommandId, InputContext, InputDispatchPhase, KeyChord, Platform, WhenExpr};
 use fret_core::{KeyCode, Modifiers};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
@@ -515,6 +515,136 @@ impl Keymap {
                 .is_some_and(|c| c.as_ref() == Some(command))
         })
     }
+
+    /// Best-effort reverse lookup for UI display that is intentionally *stable* across focus
+    /// changes.
+    ///
+    /// This is intended for menu bar / command palette shortcut labels, where displaying different
+    /// shortcuts as focus moves is confusing. Instead of using the live focus state, we evaluate
+    /// bindings against a small set of "default" contexts derived from `base`:
+    ///
+    /// - non-modal + not text input
+    /// - non-modal + text input
+    /// - modal + not text input
+    /// - modal + text input
+    ///
+    /// Candidate sequences are ranked by:
+    ///
+    /// 1. first matching default context (earlier is preferred),
+    /// 2. shorter sequences (single-chord preferred),
+    /// 3. later-defined bindings (user/project overrides preferred).
+    pub fn display_shortcut_for_command(
+        &self,
+        base: &InputContext,
+        command: &CommandId,
+    ) -> Option<KeyChord> {
+        self.display_shortcut_for_command_sequence(base, command)
+            .filter(|seq| seq.len() == 1)
+            .and_then(|seq| seq.first().copied())
+    }
+
+    pub fn display_shortcut_for_command_sequence(
+        &self,
+        base: &InputContext,
+        command: &CommandId,
+    ) -> Option<Vec<KeyChord>> {
+        #[derive(Debug)]
+        struct Candidate {
+            ctx_index: usize,
+            seq_len: usize,
+            binding_index: usize,
+            seq: Vec<KeyChord>,
+        }
+
+        fn default_display_contexts(base: &InputContext) -> [InputContext; 4] {
+            let mut c0 = base.clone();
+            c0.dispatch_phase = InputDispatchPhase::Normal;
+            c0.ui_has_modal = false;
+            c0.focus_is_text_input = false;
+
+            let mut c1 = c0.clone();
+            c1.focus_is_text_input = true;
+
+            let mut c2 = c0.clone();
+            c2.ui_has_modal = true;
+            c2.focus_is_text_input = false;
+
+            let mut c3 = c2.clone();
+            c3.focus_is_text_input = true;
+
+            [c0, c1, c2, c3]
+        }
+
+        fn effective_command_for_sequence<'a>(
+            keymap: &'a Keymap,
+            ctx: &InputContext,
+            seq: &[KeyChord],
+        ) -> Option<(Option<&'a CommandId>, usize)> {
+            for (index, b) in keymap.bindings.iter().enumerate().rev() {
+                if b.sequence.as_slice() != seq {
+                    continue;
+                }
+                if !b.platform.matches(ctx.platform) {
+                    continue;
+                }
+                if let Some(expr) = b.when.as_ref()
+                    && !expr.eval(ctx)
+                {
+                    continue;
+                }
+                return Some((b.command.as_ref(), index));
+            }
+            None
+        }
+
+        let contexts = default_display_contexts(base);
+
+        let mut sequences: HashSet<Vec<KeyChord>> = HashSet::new();
+        for b in &self.bindings {
+            sequences.insert(b.sequence.clone());
+        }
+
+        let mut best: Option<Candidate> = None;
+        for seq in sequences.into_iter() {
+            for (ctx_index, ctx) in contexts.iter().enumerate() {
+                let Some((Some(cmd), binding_index)) =
+                    effective_command_for_sequence(self, ctx, &seq)
+                else {
+                    continue;
+                };
+                if cmd != command {
+                    continue;
+                }
+
+                let cand = Candidate {
+                    ctx_index,
+                    seq_len: seq.len(),
+                    binding_index,
+                    seq,
+                };
+
+                best = match best {
+                    None => Some(cand),
+                    Some(prev) => {
+                        let replace = (
+                            cand.ctx_index,
+                            cand.seq_len,
+                            std::cmp::Reverse(cand.binding_index),
+                        ) < (
+                            prev.ctx_index,
+                            prev.seq_len,
+                            std::cmp::Reverse(prev.binding_index),
+                        );
+                        if replace { Some(cand) } else { Some(prev) }
+                    }
+                };
+
+                break;
+            }
+        }
+
+        best.map(|c| c.seq)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -627,6 +757,7 @@ enum KeysAny {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::{KeyCode, Modifiers};
     use std::sync::Arc;
 
     #[test]
@@ -773,5 +904,173 @@ mod tests {
         let out = km.continuations(&ctx, &[ctrl_k]);
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].next, down_shift);
+    }
+
+    #[test]
+    fn keymap_display_shortcut_prefers_non_modal_non_text_context() {
+        let mut km = Keymap::empty();
+        let cmd = CommandId::new(Arc::<str>::from("test.cmd"));
+
+        let ctrl_p = KeyChord::new(
+            KeyCode::KeyP,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let ctrl_e = KeyChord::new(
+            KeyCode::KeyE,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_e],
+            when: Some(WhenExpr::parse("focus.is_text_input").unwrap()),
+            command: Some(cmd.clone()),
+        });
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_p],
+            when: None,
+            command: Some(cmd.clone()),
+        });
+
+        let base = InputContext {
+            platform: Platform::Windows,
+            ui_has_modal: true,
+            focus_is_text_input: true,
+            ..Default::default()
+        };
+
+        let out = km
+            .display_shortcut_for_command_sequence(&base, &cmd)
+            .unwrap();
+        assert_eq!(out, vec![ctrl_p]);
+    }
+
+    #[test]
+    fn keymap_display_shortcut_falls_back_to_modal_context_when_needed() {
+        let mut km = Keymap::empty();
+        let cmd = CommandId::new(Arc::<str>::from("test.modal_only"));
+
+        let esc = KeyChord::new(KeyCode::Escape, Modifiers::default());
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![esc],
+            when: Some(WhenExpr::parse("ui.has_modal").unwrap()),
+            command: Some(cmd.clone()),
+        });
+
+        let base = InputContext {
+            platform: Platform::Windows,
+            ui_has_modal: false,
+            focus_is_text_input: false,
+            ..Default::default()
+        };
+
+        let out = km
+            .display_shortcut_for_command_sequence(&base, &cmd)
+            .unwrap();
+        assert_eq!(out, vec![esc]);
+    }
+
+    #[test]
+    fn keymap_display_shortcut_prefers_later_overrides_for_the_same_command() {
+        let mut km = Keymap::empty();
+        let cmd = CommandId::new(Arc::<str>::from("test.cmd"));
+
+        let ctrl_p = KeyChord::new(
+            KeyCode::KeyP,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let ctrl_shift_p = KeyChord::new(
+            KeyCode::KeyP,
+            Modifiers {
+                ctrl: true,
+                shift: true,
+                ..Default::default()
+            },
+        );
+
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_p],
+            when: None,
+            command: Some(cmd.clone()),
+        });
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_shift_p],
+            when: None,
+            command: Some(cmd.clone()),
+        });
+
+        let base = InputContext {
+            platform: Platform::Windows,
+            ..Default::default()
+        };
+
+        let out = km
+            .display_shortcut_for_command_sequence(&base, &cmd)
+            .unwrap();
+        assert_eq!(out, vec![ctrl_shift_p]);
+    }
+
+    #[test]
+    fn keymap_display_shortcut_ignores_explicit_unbinds() {
+        let mut km = Keymap::empty();
+        let cmd = CommandId::new(Arc::<str>::from("test.cmd"));
+
+        let ctrl_p = KeyChord::new(
+            KeyCode::KeyP,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        let ctrl_shift_p = KeyChord::new(
+            KeyCode::KeyP,
+            Modifiers {
+                ctrl: true,
+                shift: true,
+                ..Default::default()
+            },
+        );
+
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_p],
+            when: None,
+            command: Some(cmd.clone()),
+        });
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_p],
+            when: None,
+            command: None,
+        });
+        km.push_binding(Binding {
+            platform: PlatformFilter::All,
+            sequence: vec![ctrl_shift_p],
+            when: None,
+            command: Some(cmd.clone()),
+        });
+
+        let base = InputContext {
+            platform: Platform::Windows,
+            ..Default::default()
+        };
+
+        let out = km
+            .display_shortcut_for_command_sequence(&base, &cmd)
+            .unwrap();
+        assert_eq!(out, vec![ctrl_shift_p]);
     }
 }

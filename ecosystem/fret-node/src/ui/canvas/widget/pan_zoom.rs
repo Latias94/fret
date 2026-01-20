@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use fret_canvas::view::PanZoom2D;
 use fret_core::{MouseButton, Point};
 use fret_runtime::Effect;
 use fret_ui::UiHost;
@@ -7,6 +8,80 @@ use fret_ui::UiHost;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
 use crate::core::CanvasPoint;
 use crate::runtime::callbacks::{ViewportMoveEndOutcome, ViewportMoveKind};
+
+impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(super) fn zoom_about_center_factor(&mut self, bounds: fret_core::Rect, factor: f32) {
+        let zoom = self.cached_zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+        if !factor.is_finite() || factor <= 0.0 {
+            return;
+        }
+
+        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
+        if (new_zoom - zoom).abs() <= 1.0e-6 {
+            return;
+        }
+
+        let mut view = PanZoom2D {
+            pan: Point::new(
+                fret_core::Px(self.cached_pan.x),
+                fret_core::Px(self.cached_pan.y),
+            ),
+            zoom,
+        };
+        let center = Point::new(
+            fret_core::Px(0.5 * bounds.size.width.0),
+            fret_core::Px(0.5 * bounds.size.height.0),
+        );
+        view.zoom_about_screen_point(bounds, center, new_zoom);
+        self.cached_pan = CanvasPoint {
+            x: view.pan.x.0,
+            y: view.pan.y.0,
+        };
+        self.cached_zoom = view.zoom;
+    }
+
+    pub(super) fn zoom_about_pointer_factor(&mut self, position: Point, factor: f32) {
+        let zoom = self.cached_zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+        if !factor.is_finite() || factor <= 0.0 {
+            return;
+        }
+        if !position.x.0.is_finite() || !position.y.0.is_finite() {
+            return;
+        }
+
+        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
+        if (new_zoom - zoom).abs() <= 1.0e-6 {
+            return;
+        }
+
+        let pan_x = self.cached_pan.x;
+        let pan_y = self.cached_pan.y;
+
+        // `position` is in the widget's local (canvas) coordinates.
+        // Compute the pivot in screen coordinates (relative to bounds origin) to keep the
+        // graph point under the cursor stable.
+        let pivot_screen_x = (position.x.0 + pan_x) * zoom;
+        let pivot_screen_y = (position.y.0 + pan_y) * zoom;
+
+        let g0_x = pivot_screen_x / zoom - pan_x;
+        let g0_y = pivot_screen_y / zoom - pan_y;
+
+        let new_pan_x = pivot_screen_x / new_zoom - g0_x;
+        let new_pan_y = pivot_screen_y / new_zoom - g0_y;
+
+        self.cached_pan = CanvasPoint {
+            x: new_pan_x,
+            y: new_pan_y,
+        };
+        self.cached_zoom = new_zoom;
+    }
+}
 
 pub(super) fn begin_panning<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

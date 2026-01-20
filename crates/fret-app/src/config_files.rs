@@ -9,6 +9,7 @@ use fret_runtime::Keymap;
 pub const PROJECT_CONFIG_DIR: &str = ".fret";
 pub const SETTINGS_JSON: &str = "settings.json";
 pub const KEYMAP_JSON: &str = "keymap.json";
+pub const MENUBAR_JSON: &str = "menubar.json";
 
 #[derive(Debug, Clone, Default)]
 pub struct LayeredConfigPaths {
@@ -39,6 +40,14 @@ impl LayeredConfigPaths {
     pub fn project_keymap_json(&self) -> PathBuf {
         self.project_dir.join(KEYMAP_JSON)
     }
+
+    pub fn user_menubar_json(&self) -> Option<PathBuf> {
+        self.user_dir.as_ref().map(|d| d.join(MENUBAR_JSON))
+    }
+
+    pub fn project_menubar_json(&self) -> PathBuf {
+        self.project_dir.join(MENUBAR_JSON)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -54,6 +63,12 @@ pub struct LayeredKeymapReport {
     pub conflicts: Vec<fret_runtime::keymap::KeymapConflict>,
     pub user_conflicts: Vec<fret_runtime::keymap::KeymapConflict>,
     pub project_conflicts: Vec<fret_runtime::keymap::KeymapConflict>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct LayeredMenuBarReport {
+    pub user: Option<PathBuf>,
+    pub project: Option<PathBuf>,
 }
 
 pub fn load_layered_settings(
@@ -109,6 +124,31 @@ pub fn load_layered_keymap(
 
     report.conflicts = keymap.conflicts();
     Ok((keymap, report))
+}
+
+pub fn load_layered_menu_bar(
+    paths: &LayeredConfigPaths,
+) -> Result<
+    (crate::menu_bar::LayeredMenuBarConfig, LayeredMenuBarReport),
+    crate::menu_bar::MenuBarFileError,
+> {
+    let mut out = crate::menu_bar::LayeredMenuBarConfig::default();
+    let mut report = LayeredMenuBarReport::default();
+
+    if let Some(path) = paths.user_menubar_json()
+        && let Some(menu_bar) = crate::menu_bar::menu_bar_from_file_if_exists(&path)?
+    {
+        out.user = Some((path.clone(), menu_bar));
+        report.user = Some(path);
+    }
+
+    let project_path = paths.project_menubar_json();
+    if let Some(menu_bar) = crate::menu_bar::menu_bar_from_file_if_exists(&project_path)? {
+        out.project = Some((project_path.clone(), menu_bar));
+        report.project = Some(project_path);
+    }
+
+    Ok((out, report))
 }
 
 fn merge_json(base: &mut Value, overlay: Value) {

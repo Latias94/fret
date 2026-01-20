@@ -440,6 +440,13 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
     content.size.width = Px(content.size.width.0.max(inputs.content_min_width.0));
     let selected_item = overlay::anchor_bounds_for_element(cx, inputs.selected_item)?;
     let selected_item_text = overlay::anchor_bounds_for_element(cx, inputs.selected_item_text)?;
+    // Our `listbox` element typically includes the shadcn `SelectViewport` padding (e.g. `p-1`).
+    // The solver expects `items_height` to represent the scrollable items height, excluding the
+    // viewport padding since it is passed separately.
+    let items_height = Px((listbox.size.height.0
+        - inputs.viewport_padding_top.0
+        - inputs.viewport_padding_bottom.0)
+        .max(0.0));
 
     if let Some(probe_id) = inputs.content_width_probe
         && let Some(probe) = cx.last_bounds_for_element(probe_id)
@@ -471,7 +478,7 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
         content_padding_bottom: inputs.content_padding_bottom,
         viewport_padding_top: inputs.viewport_padding_top,
         viewport_padding_bottom: inputs.viewport_padding_bottom,
-        items_height: listbox.size.height,
+        items_height,
     }))
 }
 

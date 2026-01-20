@@ -593,13 +593,31 @@ impl<H: UiHost> UiTree<H> {
             .global::<PlatformCapabilities>()
             .cloned()
             .unwrap_or_default();
-        let input_ctx = InputContext {
+        let mut input_ctx = InputContext {
             platform: Platform::current(),
             caps,
             ui_has_modal: barrier_root.is_some(),
             focus_is_text_input,
+            edit_can_undo: true,
+            edit_can_redo: true,
             dispatch_phase: InputDispatchPhase::Normal,
         };
+        if let Some(window) = self.window {
+            if let Some(availability) = app
+                .global::<fret_runtime::WindowCommandAvailabilityService>()
+                .and_then(|svc| svc.snapshot(window))
+                .copied()
+            {
+                input_ctx.edit_can_undo = availability.edit_can_undo;
+                input_ctx.edit_can_redo = availability.edit_can_redo;
+            }
+            app.with_global_mut(
+                fret_runtime::WindowInputContextService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, input_ctx.clone());
+                },
+            );
+        }
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
         let mut needs_redraw = false;

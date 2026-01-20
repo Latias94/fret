@@ -13,6 +13,9 @@ use fret_runtime::{
     ModelId, ModelStore,
 };
 
+use crate::SettingsFileV1;
+use crate::menu_bar::MenuBarBaselineService;
+
 #[derive(Debug)]
 struct GlobalLeaseMarker {
     type_name: &'static str,
@@ -366,6 +369,15 @@ impl App {
     pub fn push_effect(&mut self, effect: Effect) {
         match effect {
             Effect::Redraw(window) => self.request_redraw(window),
+            Effect::SetMenuBar {
+                window: None,
+                ref menu_bar,
+            } => {
+                self.with_global_mut_untracked(MenuBarBaselineService::default, |svc, _app| {
+                    svc.note_default_menu_bar(menu_bar);
+                });
+                self.effects.push(effect);
+            }
             effect => self.effects.push(effect),
         }
     }
@@ -375,7 +387,65 @@ impl App {
         for window in self.redraw_requests.drain() {
             effects.push(Effect::Redraw(window));
         }
+
+        let platform = fret_runtime::Platform::current();
+        let os_menu_enabled = self
+            .global::<SettingsFileV1>()
+            .map(|s| s.menu_bar_os_enabled(platform))
+            .unwrap_or_else(|| SettingsFileV1::default().menu_bar_os_enabled(platform));
+
+        if !os_menu_enabled {
+            effects.retain(|e| match e {
+                Effect::SetMenuBar { menu_bar, .. } => menu_bar.menus.is_empty(),
+                _ => true,
+            });
+        }
         effects
+    }
+}
+
+#[cfg(test)]
+mod menu_bar_effect_tests {
+    use super::*;
+    use fret_runtime::{Menu, MenuBar, MenuItem};
+
+    #[test]
+    fn flush_effects_filters_os_menubar_when_disabled_but_keeps_clear() {
+        let mut app = App::new();
+
+        let mut settings = SettingsFileV1::default();
+        settings.menu_bar.os = crate::MenuBarIntegrationModeV1::Off;
+        app.set_global(settings);
+
+        app.push_effect(Effect::SetMenuBar {
+            window: None,
+            menu_bar: MenuBar {
+                menus: vec![Menu {
+                    title: "File".into(),
+                    role: None,
+                    items: vec![MenuItem::Separator],
+                }],
+            },
+        });
+
+        app.push_effect(Effect::SetMenuBar {
+            window: None,
+            menu_bar: MenuBar::empty(),
+        });
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(
+                |e| matches!(e, Effect::SetMenuBar { menu_bar, .. } if menu_bar.menus.is_empty())
+            ),
+            "empty SetMenuBar should be retained so runners can clear a previously-published OS menubar"
+        );
+        assert!(
+            !effects.iter().any(
+                |e| matches!(e, Effect::SetMenuBar { menu_bar, .. } if !menu_bar.menus.is_empty())
+            ),
+            "non-empty SetMenuBar should be filtered when OS menubar is disabled"
+        );
     }
 }
 
@@ -559,7 +629,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.undo".into()),
                     platform: Some("windows".into()),
-                    when: None,
+                    when: Some("edit.can_undo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyZ".into(),
@@ -568,7 +638,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.redo".into()),
                     platform: Some("windows".into()),
-                    when: None,
+                    when: Some("edit.can_redo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyY".into(),
@@ -577,7 +647,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.redo".into()),
                     platform: Some("windows".into()),
-                    when: None,
+                    when: Some("edit.can_redo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into(), "shift".into()],
                         key: "KeyZ".into(),
@@ -586,7 +656,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.undo".into()),
                     platform: Some("linux".into()),
-                    when: None,
+                    when: Some("edit.can_undo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyZ".into(),
@@ -595,7 +665,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.redo".into()),
                     platform: Some("linux".into()),
-                    when: None,
+                    when: Some("edit.can_redo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyY".into(),
@@ -604,7 +674,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.redo".into()),
                     platform: Some("linux".into()),
-                    when: None,
+                    when: Some("edit.can_redo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into(), "shift".into()],
                         key: "KeyZ".into(),
@@ -613,7 +683,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.undo".into()),
                     platform: Some("web".into()),
-                    when: None,
+                    when: Some("edit.can_undo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyZ".into(),
@@ -622,7 +692,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.redo".into()),
                     platform: Some("web".into()),
-                    when: None,
+                    when: Some("edit.can_redo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into()],
                         key: "KeyY".into(),
@@ -631,7 +701,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.redo".into()),
                     platform: Some("web".into()),
-                    when: None,
+                    when: Some("edit.can_redo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["ctrl".into(), "shift".into()],
                         key: "KeyZ".into(),
@@ -640,7 +710,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.undo".into()),
                     platform: Some("macos".into()),
-                    when: None,
+                    when: Some("edit.can_undo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["cmd".into()],
                         key: "KeyZ".into(),
@@ -649,7 +719,7 @@ fn default_keymap_service() -> KeymapService {
                 BindingV1 {
                     command: Some("edit.redo".into()),
                     platform: Some("macos".into()),
-                    when: None,
+                    when: Some("edit.can_redo".into()),
                     keys: KeySpecV1 {
                         mods: vec!["cmd".into(), "shift".into()],
                         key: "KeyZ".into(),
@@ -766,6 +836,8 @@ mod tests {
             caps: Default::default(),
             ui_has_modal: false,
             focus_is_text_input: false,
+            edit_can_undo: true,
+            edit_can_redo: true,
             dispatch_phase: InputDispatchPhase::Normal,
         };
 

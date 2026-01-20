@@ -87,6 +87,7 @@ fn hash_path_commands(commands: &[PathCommand]) -> u64 {
 pub struct PathCache {
     frame: u64,
     entries: HashMap<PathCacheKey, PathCacheEntry>,
+    id_to_key: HashMap<PathId, PathCacheKey>,
     stats: CacheStats,
 }
 
@@ -116,9 +117,24 @@ impl PathCache {
             if let Some(path) = entry.path.take() {
                 services.path().release(path);
                 self.stats.release_clear = self.stats.release_clear.saturating_add(1);
+                self.id_to_key.remove(&path);
             }
         }
         self.entries.clear();
+        self.id_to_key.clear();
+    }
+
+    /// Touches an existing prepared `PathId` so it is not pruned.
+    pub fn touch_path(&mut self, path: PathId) -> bool {
+        let Some(key) = self.id_to_key.get(&path).copied() else {
+            return false;
+        };
+        let Some(entry) = self.entries.get_mut(&key) else {
+            self.id_to_key.remove(&path);
+            return false;
+        };
+        entry.last_used_frame = self.frame;
+        true
     }
 
     /// Returns a cached path for `(key, constraints.scale_factor)` if present.
@@ -181,6 +197,7 @@ impl PathCache {
             if let Some(path) = entry.path.take() {
                 services.path().release(path);
                 self.stats.release_replaced = self.stats.release_replaced.saturating_add(1);
+                self.id_to_key.remove(&path);
             }
             let (path, metrics) =
                 services
@@ -189,6 +206,7 @@ impl PathCache {
             entry.path = Some(path);
             entry.metrics = Some(metrics);
             entry.fingerprint = Some(fingerprint);
+            self.id_to_key.insert(path, cache_key);
             self.stats.prepare_misses = self.stats.prepare_misses.saturating_add(1);
         } else {
             self.stats.prepare_hits = self.stats.prepare_hits.saturating_add(1);
@@ -216,6 +234,7 @@ impl PathCache {
                 if let Some(path) = entry.path.take() {
                     services.path().release(path);
                     self.stats.release_prune_age = self.stats.release_prune_age.saturating_add(1);
+                    self.id_to_key.remove(&path);
                 }
             }
             keep
@@ -244,6 +263,7 @@ impl PathCache {
                     services.path().release(path);
                     self.stats.release_prune_budget =
                         self.stats.release_prune_budget.saturating_add(1);
+                    self.id_to_key.remove(&path);
                 }
             }
         }

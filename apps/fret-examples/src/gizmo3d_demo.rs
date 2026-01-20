@@ -28,7 +28,9 @@ use fret_render::viewport_overlay::{
     push_thick_line_quad, push_triangle,
 };
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{
+    PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
+};
 use fret_ui::UiTree;
 use fret_ui::{Theme, ThemeConfig};
 use fret_ui_kit::viewport_tooling::{
@@ -1981,6 +1983,45 @@ struct Gizmo3dDemoWindowState {
 struct Gizmo3dDemoDriver;
 
 impl Gizmo3dDemoDriver {
+    fn sync_window_command_availability(
+        app: &mut App,
+        window: AppWindowId,
+        doc: &DocumentId,
+    ) -> WindowCommandAvailability {
+        let mut edit_can_undo = false;
+        let mut edit_can_redo = false;
+
+        let _ = app.with_global_mut(
+            || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
+            |undo, _app| {
+                undo.set_active_document(window, doc.clone());
+                if let Some(history) = undo.history_mut_active(window) {
+                    edit_can_undo |= history.can_undo();
+                    edit_can_redo |= history.can_redo();
+                }
+            },
+        );
+        let _ = app.with_global_mut(
+            || UndoService::<ValueTx<HashMap<CustomScalarKey, f32>>>::with_limit(256),
+            |undo, _app| {
+                undo.set_active_document(window, doc.clone());
+                if let Some(history) = undo.history_mut_active(window) {
+                    edit_can_undo |= history.can_undo();
+                    edit_can_redo |= history.can_redo();
+                }
+            },
+        );
+
+        let availability = WindowCommandAvailability {
+            edit_can_undo,
+            edit_can_redo,
+        };
+        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+            svc.set_snapshot(window, availability);
+        });
+        availability
+    }
+
     fn build_ui(app: &mut App, window: AppWindowId) -> Gizmo3dDemoWindowState {
         let plot = app.models_mut().insert(Plot3dModel {
             viewport: Plot3dViewport {
@@ -3845,6 +3886,8 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
         _tick_id: fret_runtime::TickId,
         _frame_id: fret_runtime::FrameId,
     ) -> EngineFrameUpdate {
+        let _ = Self::sync_window_command_availability(app, window, &state.doc);
+
         let (target_id, color_view, depth_view, size) =
             Self::ensure_target(app, window, state, context, renderer);
 
