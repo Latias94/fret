@@ -13,6 +13,7 @@ use fret_launch::{
 };
 use fret_runtime::{
     PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
+    WindowCommandEnabledService,
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
@@ -623,6 +624,47 @@ impl UiGalleryDriver {
         command: &CommandId,
     ) -> bool {
         match command.as_str() {
+            CMD_APP_TOGGLE_PREFERENCES_ENABLED => {
+                let preferences = CommandId::new(fret_app::core_commands::APP_PREFERENCES);
+                let is_disabled = app
+                    .global::<WindowCommandEnabledService>()
+                    .and_then(|svc| svc.enabled(window, &preferences))
+                    == Some(false);
+
+                app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+                    if is_disabled {
+                        svc.clear_command(window, &preferences);
+                    } else {
+                        svc.set_enabled(window, preferences.clone(), false);
+                    }
+                });
+
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                if is_disabled {
+                    sonner.toast_success_message(
+                        &mut host,
+                        window,
+                        "Preferences enabled",
+                        shadcn::ToastMessageOptions::new()
+                            .description("Cleared WindowCommandEnabledService override."),
+                    );
+                    let _ = host.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("cmd.preferences_enabled");
+                    });
+                } else {
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Preferences disabled",
+                        shadcn::ToastMessageOptions::new()
+                            .description("Set WindowCommandEnabledService override: disabled."),
+                    );
+                    let _ = host.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("cmd.preferences_disabled");
+                    });
+                }
+            }
             CMD_PROGRESS_INC => {
                 let before = app.models().get_copied(&state.progress).unwrap_or(0.0);
                 let after = (before + 10.0).min(100.0);
@@ -1761,6 +1803,12 @@ pub fn build_app() -> App {
             .with_category("Settings")
             .with_keywords(["settings", "menu", "menubar", "write", "project"]),
     );
+    app.commands_mut().register(
+        CommandId::new(CMD_APP_TOGGLE_PREFERENCES_ENABLED),
+        CommandMeta::new("Toggle Preferences Enabled (debug)")
+            .with_category("Settings")
+            .with_keywords(["preferences", "menubar", "enabled", "disable", "debug"]),
+    );
 
     for group in PAGE_GROUPS {
         for page in group.items {
@@ -1830,6 +1878,10 @@ pub fn build_app() -> App {
         items: vec![
             MenuItem::Command {
                 command: CommandId::new(CMD_APP_SETTINGS),
+                when: None,
+            },
+            MenuItem::Command {
+                command: CommandId::new(CMD_APP_TOGGLE_PREFERENCES_ENABLED),
                 when: None,
             },
             MenuItem::Separator,
