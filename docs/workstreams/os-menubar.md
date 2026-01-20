@@ -55,6 +55,7 @@ Implemented (Windows-first baseline):
 - Windows native menu bar mapping (Win32 `HMENU` + `WM_COMMAND`).
 - macOS native menu bar mapping (`NSMenu`).
 - Window-scoped `InputContext` snapshots for runner-side gating.
+- Window-scoped per-command enable overrides (optional; `WindowCommandEnabledService`).
 - Window-scoped command availability snapshots for non-focus gating (v1: Undo/Redo).
 - Layered `menubar.json` loading + hot reload.
 - Patch-style customization ops (submenu paths + selectors for non-command items).
