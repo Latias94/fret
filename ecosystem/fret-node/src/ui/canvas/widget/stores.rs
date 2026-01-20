@@ -1,6 +1,22 @@
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    fn edge_center_canvas(route: EdgeRouteKind, from: Point, to: Point, zoom: f32) -> Point {
+        match route {
+            EdgeRouteKind::Bezier => {
+                let (c1, c2) = wire_ctrl_points(from, to, zoom);
+                cubic_bezier(from, c1, c2, to, 0.5)
+            }
+            EdgeRouteKind::Straight => {
+                Point::new(Px(0.5 * (from.x.0 + to.x.0)), Px(0.5 * (from.y.0 + to.y.0)))
+            }
+            EdgeRouteKind::Step => {
+                let mx = 0.5 * (from.x.0 + to.x.0);
+                Point::new(Px(mx), Px(0.5 * (from.y.0 + to.y.0)))
+            }
+        }
+    }
+
     pub(super) fn update_internals_store<H: UiHost>(
         &mut self,
         host: &H,
@@ -14,6 +30,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let graph_rev = self.graph.revision(host).unwrap_or(0);
         let presenter_rev = self.presenter.geometry_revision();
+        let edge_types_rev = self.edge_types.as_ref().map(|t| t.revision()).unwrap_or(0);
         let node_origin = snapshot.interaction.node_origin.normalized();
         let key = InternalsCacheKey {
             graph_rev,
@@ -22,6 +39,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             node_origin_y_bits: node_origin.y.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
             presenter_rev,
+            edge_types_rev,
             pan_x_bits: snapshot.pan.x.to_bits(),
             pan_y_bits: snapshot.pan.y.to_bits(),
             bounds_x_bits: bounds.origin.x.0.to_bits(),
@@ -58,12 +76,62 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .insert(port, transform.canvas_point_to_window(handle.center));
         }
 
+        let style = self.style.clone();
+        let zoom = snapshot.zoom;
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
+        let edge_types = self.edge_types.as_ref();
+        let presenter: &dyn NodeGraphPresenter = &*self.presenter;
+        let edge_centers: Vec<(crate::core::EdgeId, Point)> = self
+            .graph
+            .read_ref(host, |graph| {
+                graph
+                    .edges
+                    .iter()
+                    .filter_map(|(&edge_id, edge)| {
+                        let from = geom.port_center(edge.from)?;
+                        let to = geom.port_center(edge.to)?;
+
+                        let base = presenter.edge_render_hint(graph, edge_id, &style);
+                        let hint = if let Some(edge_types) = edge_types {
+                            edge_types.apply(graph, edge_id, &style, base).normalized()
+                        } else {
+                            base.normalized()
+                        };
+
+                        let center = if let Some(edge_types) = edge_types
+                            && edge_types.has_custom_paths()
+                            && let Some(custom) = edge_types.custom_path(
+                                graph,
+                                edge_id,
+                                &style,
+                                &hint,
+                                crate::ui::edge_types::EdgePathInput { from, to, zoom },
+                            ) {
+                            path_midpoint_and_normal(&custom.commands, bezier_steps)
+                                .map(|(p, _n)| p)
+                                .unwrap_or_else(|| {
+                                    Self::edge_center_canvas(hint.route, from, to, zoom)
+                                })
+                        } else {
+                            Self::edge_center_canvas(hint.route, from, to, zoom)
+                        };
+                        Some((edge_id, center))
+                    })
+                    .collect()
+            })
+            .ok()
+            .unwrap_or_default();
+
+        for (edge, center_canvas) in edge_centers {
+            next.edge_centers_window
+                .insert(edge, transform.canvas_point_to_window(center_canvas));
+        }
+
         next.focused_node = self.interaction.focused_node;
         next.focused_port = self.interaction.focused_port;
         next.focused_edge = self.interaction.focused_edge;
         next.connecting = self.interaction.wire_drag.is_some();
 
-        let style = self.style.clone();
         let focused_node = self.interaction.focused_node;
         let focused_port = self.interaction.focused_port;
         let focused_edge = self.interaction.focused_edge;
@@ -158,5 +226,41 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             },
             crate::ui::measured::MeasuredGeometryApplyOptions::default(),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn edge_center_canvas_matches_bezier_math() {
+        let from = Point::new(Px(0.0), Px(0.0));
+        let to = Point::new(Px(100.0), Px(0.0));
+        let zoom = 1.0;
+        let (c1, c2) = wire_ctrl_points(from, to, zoom);
+        let expected = cubic_bezier(from, c1, c2, to, 0.5);
+        let got = NodeGraphCanvasWith::<NoopNodeGraphCanvasMiddleware>::edge_center_canvas(
+            EdgeRouteKind::Bezier,
+            from,
+            to,
+            zoom,
+        );
+        assert!((got.x.0 - expected.x.0).abs() <= 1.0e-6);
+        assert!((got.y.0 - expected.y.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn edge_center_canvas_step_uses_mid_x_and_mid_y() {
+        let from = Point::new(Px(10.0), Px(20.0));
+        let to = Point::new(Px(30.0), Px(60.0));
+        let got = NodeGraphCanvasWith::<NoopNodeGraphCanvasMiddleware>::edge_center_canvas(
+            EdgeRouteKind::Step,
+            from,
+            to,
+            1.0,
+        );
+        assert_eq!(got.x.0, 20.0);
+        assert_eq!(got.y.0, 40.0);
     }
 }

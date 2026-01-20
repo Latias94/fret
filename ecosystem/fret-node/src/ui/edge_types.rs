@@ -8,14 +8,16 @@
 //! (routing, label, markers, widths, colors). This covers most ReactFlow/ShaderGraph use-cases
 //! and keeps hit-testing consistent by sharing the same hint source.
 //!
-//! Future (Stage 2): allow optional custom path builders / painters for more advanced visuals
-//! (ECharts-like styling), without changing the serialized graph model.
+//! Stage 2: optionally provide a **custom edge path** builder (and still keep the serialized
+//! graph model UI-free). The canvas widget uses the custom path for painting and hit-testing,
+//! and derives conservative AABBs for culling + spatial indexing.
 
 use std::collections::BTreeMap;
 
 use crate::core::{EdgeId, EdgeKind, Graph};
 use crate::ui::presenter::EdgeRenderHint;
 use crate::ui::style::NodeGraphStyle;
+use fret_core::{PathCommand, Point};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct EdgeTypeKey(pub String);
@@ -31,10 +33,38 @@ pub type EdgeTypeResolver = dyn Fn(&Graph, EdgeId) -> EdgeTypeKey + 'static;
 pub type EdgeTypeStyler =
     dyn Fn(&Graph, EdgeId, &NodeGraphStyle, EdgeRenderHint) -> EdgeRenderHint + 'static;
 
+#[derive(Debug, Clone, Copy)]
+pub struct EdgePathInput {
+    pub from: Point,
+    pub to: Point,
+    pub zoom: f32,
+}
+
+/// A custom edge path (Stage 2 `edgeTypes`).
+///
+/// Consumers are responsible for providing a stable `cache_key` so the canvas path cache can
+/// reuse tessellation results across frames.
+#[derive(Debug, Clone)]
+pub struct EdgeCustomPath {
+    pub cache_key: u64,
+    pub commands: Vec<PathCommand>,
+}
+
+pub type EdgeTypePathBuilder = dyn Fn(&Graph, EdgeId, &NodeGraphStyle, &EdgeRenderHint, EdgePathInput) -> Option<EdgeCustomPath>
+    + 'static;
+
+#[derive(Default)]
+struct EdgeTypeEntry {
+    styler: Option<Box<EdgeTypeStyler>>,
+    path: Option<Box<EdgeTypePathBuilder>>,
+}
+
 pub struct NodeGraphEdgeTypes {
+    rev: u64,
     resolver: Box<EdgeTypeResolver>,
-    edge_types: BTreeMap<EdgeTypeKey, Box<EdgeTypeStyler>>,
+    edge_types: BTreeMap<EdgeTypeKey, EdgeTypeEntry>,
     fallback: Option<Box<EdgeTypeStyler>>,
+    fallback_path: Option<Box<EdgeTypePathBuilder>>,
 }
 
 impl Default for NodeGraphEdgeTypes {
@@ -46,16 +76,27 @@ impl Default for NodeGraphEdgeTypes {
 impl NodeGraphEdgeTypes {
     pub fn new() -> Self {
         Self {
+            rev: 0,
             resolver: Box::new(default_edge_type_resolver),
             edge_types: BTreeMap::new(),
             fallback: None,
+            fallback_path: None,
         }
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.rev
+    }
+
+    pub fn has_custom_paths(&self) -> bool {
+        self.fallback_path.is_some() || self.edge_types.values().any(|e| e.path.is_some())
     }
 
     pub fn with_resolver(
         mut self,
         resolver: impl Fn(&Graph, EdgeId) -> EdgeTypeKey + 'static,
     ) -> Self {
+        self.rev = self.rev.wrapping_add(1);
         self.resolver = Box::new(resolver);
         self
     }
@@ -64,7 +105,24 @@ impl NodeGraphEdgeTypes {
         mut self,
         styler: impl Fn(&Graph, EdgeId, &NodeGraphStyle, EdgeRenderHint) -> EdgeRenderHint + 'static,
     ) -> Self {
+        self.rev = self.rev.wrapping_add(1);
         self.fallback = Some(Box::new(styler));
+        self
+    }
+
+    pub fn with_fallback_path(
+        mut self,
+        builder: impl Fn(
+            &Graph,
+            EdgeId,
+            &NodeGraphStyle,
+            &EdgeRenderHint,
+            EdgePathInput,
+        ) -> Option<EdgeCustomPath>
+        + 'static,
+    ) -> Self {
+        self.rev = self.rev.wrapping_add(1);
+        self.fallback_path = Some(Box::new(builder));
         self
     }
 
@@ -73,7 +131,25 @@ impl NodeGraphEdgeTypes {
         key: EdgeTypeKey,
         styler: impl Fn(&Graph, EdgeId, &NodeGraphStyle, EdgeRenderHint) -> EdgeRenderHint + 'static,
     ) -> Self {
-        self.edge_types.insert(key, Box::new(styler));
+        self.rev = self.rev.wrapping_add(1);
+        self.edge_types.entry(key).or_default().styler = Some(Box::new(styler));
+        self
+    }
+
+    pub fn register_path(
+        mut self,
+        key: EdgeTypeKey,
+        builder: impl Fn(
+            &Graph,
+            EdgeId,
+            &NodeGraphStyle,
+            &EdgeRenderHint,
+            EdgePathInput,
+        ) -> Option<EdgeCustomPath>
+        + 'static,
+    ) -> Self {
+        self.rev = self.rev.wrapping_add(1);
+        self.edge_types.entry(key).or_default().path = Some(Box::new(builder));
         self
     }
 
@@ -85,13 +161,31 @@ impl NodeGraphEdgeTypes {
         base: EdgeRenderHint,
     ) -> EdgeRenderHint {
         let key = (self.resolver)(graph, edge);
-        if let Some(styler) = self.edge_types.get(&key) {
+        if let Some(styler) = self.edge_types.get(&key).and_then(|e| e.styler.as_ref()) {
             return styler(graph, edge, style, base);
         }
         if let Some(fallback) = self.fallback.as_ref() {
             return fallback(graph, edge, style, base);
         }
         base
+    }
+
+    pub fn custom_path(
+        &self,
+        graph: &Graph,
+        edge: EdgeId,
+        style: &NodeGraphStyle,
+        hint: &EdgeRenderHint,
+        input: EdgePathInput,
+    ) -> Option<EdgeCustomPath> {
+        let key = (self.resolver)(graph, edge);
+        if let Some(builder) = self.edge_types.get(&key).and_then(|e| e.path.as_ref()) {
+            return builder(graph, edge, style, hint, input);
+        }
+        if let Some(builder) = self.fallback_path.as_ref() {
+            return builder(graph, edge, style, hint, input);
+        }
+        None
     }
 }
 
@@ -114,6 +208,7 @@ mod tests {
         CanvasPoint, Edge, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection,
         PortId, PortKey, PortKind,
     };
+    use fret_core::{PathCommand, Point};
 
     fn make_exec_graph() -> (Graph, EdgeId) {
         let mut g = Graph::new(GraphId::from_u128(1));
@@ -223,5 +318,38 @@ mod tests {
 
         let hint = edge_types.apply(&g, eid, &style, base);
         assert_eq!(hint.route, crate::ui::presenter::EdgeRouteKind::Step);
+    }
+
+    #[test]
+    fn edge_types_custom_path_can_be_registered() {
+        let (g, eid) = make_exec_graph();
+        let style = NodeGraphStyle::default();
+        let hint = EdgeRenderHint::default();
+
+        let edge_types = NodeGraphEdgeTypes::new().register_path(
+            EdgeTypeKey::new("exec"),
+            |_g, _e, _s, _h, input| {
+                Some(EdgeCustomPath {
+                    cache_key: 42,
+                    commands: vec![
+                        PathCommand::MoveTo(input.from),
+                        PathCommand::LineTo(input.to),
+                    ],
+                })
+            },
+        );
+
+        let path = edge_types.custom_path(
+            &g,
+            eid,
+            &style,
+            &hint,
+            EdgePathInput {
+                from: Point::default(),
+                to: Point::default(),
+                zoom: 1.0,
+            },
+        );
+        assert!(path.is_some());
     }
 }

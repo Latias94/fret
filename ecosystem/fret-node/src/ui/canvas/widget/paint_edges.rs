@@ -1,7 +1,43 @@
 use super::paint_render_data::{EdgeRender, RenderData};
 use super::*;
+use std::collections::HashMap;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(super) fn collect_custom_edge_paths<H: UiHost>(
+        &self,
+        host: &H,
+        edges: &[EdgeRender],
+        zoom: f32,
+    ) -> HashMap<EdgeId, crate::ui::edge_types::EdgeCustomPath> {
+        let Some(edge_types) = self.edge_types.as_ref().filter(|t| t.has_custom_paths()) else {
+            return HashMap::new();
+        };
+        let style = self.style.clone();
+        self.graph
+            .read_ref(host, |graph| {
+                let mut out: HashMap<EdgeId, crate::ui::edge_types::EdgeCustomPath> =
+                    HashMap::new();
+                for edge in edges {
+                    if let Some(custom) = edge_types.custom_path(
+                        graph,
+                        edge.id,
+                        &style,
+                        &edge.hint,
+                        crate::ui::edge_types::EdgePathInput {
+                            from: edge.from,
+                            to: edge.to,
+                            zoom,
+                        },
+                    ) {
+                        out.insert(edge.id, custom);
+                    }
+                }
+                out
+            })
+            .ok()
+            .unwrap_or_default()
+    }
+
     pub(super) fn push_edge_wire_and_markers_budgeted(
         &mut self,
         scene: &mut fret_core::Scene,
@@ -157,6 +193,170 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         (false, marker_skipped)
     }
 
+    pub(super) fn push_edge_custom_wire_and_markers_budgeted(
+        &mut self,
+        scene: &mut fret_core::Scene,
+        services: &mut dyn fret_core::UiServices,
+        cache_key: u64,
+        commands: &[fret_core::PathCommand],
+        start_tangent: Point,
+        end_tangent: Point,
+        zoom: f32,
+        scale_factor: f32,
+        from: Point,
+        to: Point,
+        color: Color,
+        width: f32,
+        start_marker: Option<&crate::ui::presenter::EdgeMarker>,
+        end_marker: Option<&crate::ui::presenter::EdgeMarker>,
+        wire_budget: &mut WorkBudget,
+        marker_budget: &mut WorkBudget,
+        stop_on_marker_skip: bool,
+    ) -> (bool, u32) {
+        if !wire_budget.try_consume(1) {
+            return (true, 0);
+        }
+
+        let mut marker_skipped: u32 = 0;
+
+        let end_path = if stop_on_marker_skip {
+            if let Some(marker) = end_marker {
+                let (path, skipped_by_budget) =
+                    self.paint_cache.edge_end_marker_path_budgeted_with_tangent(
+                        services,
+                        to,
+                        end_tangent,
+                        zoom,
+                        scale_factor,
+                        marker,
+                        self.style.pin_radius,
+                        marker_budget,
+                    );
+                if skipped_by_budget {
+                    return (true, 1);
+                }
+                path
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let start_path = if stop_on_marker_skip {
+            if let Some(marker) = start_marker {
+                let (path, skipped_by_budget) = self
+                    .paint_cache
+                    .edge_start_marker_path_budgeted_with_tangent(
+                        services,
+                        from,
+                        start_tangent,
+                        zoom,
+                        scale_factor,
+                        marker,
+                        self.style.pin_radius,
+                        marker_budget,
+                    );
+                if skipped_by_budget {
+                    return (true, 1);
+                }
+                path
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(path) = self.paint_cache.wire_path_from_commands(
+            services,
+            cache_key,
+            commands,
+            zoom,
+            scale_factor,
+            width,
+        ) {
+            scene.push(SceneOp::Path {
+                order: DrawOrder(2),
+                origin: Point::new(Px(0.0), Px(0.0)),
+                path,
+                color,
+            });
+        }
+
+        if stop_on_marker_skip {
+            if let Some(path) = end_path {
+                scene.push(SceneOp::Path {
+                    order: DrawOrder(2),
+                    origin: Point::new(Px(0.0), Px(0.0)),
+                    path,
+                    color,
+                });
+            }
+            if let Some(path) = start_path {
+                scene.push(SceneOp::Path {
+                    order: DrawOrder(2),
+                    origin: Point::new(Px(0.0), Px(0.0)),
+                    path,
+                    color,
+                });
+            }
+        } else {
+            if let Some(marker) = end_marker {
+                let (path, skipped_by_budget) =
+                    self.paint_cache.edge_end_marker_path_budgeted_with_tangent(
+                        services,
+                        to,
+                        end_tangent,
+                        zoom,
+                        scale_factor,
+                        marker,
+                        self.style.pin_radius,
+                        marker_budget,
+                    );
+                if skipped_by_budget {
+                    marker_skipped = marker_skipped.saturating_add(1);
+                }
+                if let Some(path) = path {
+                    scene.push(SceneOp::Path {
+                        order: DrawOrder(2),
+                        origin: Point::new(Px(0.0), Px(0.0)),
+                        path,
+                        color,
+                    });
+                }
+            }
+
+            if let Some(marker) = start_marker {
+                let (path, skipped_by_budget) = self
+                    .paint_cache
+                    .edge_start_marker_path_budgeted_with_tangent(
+                        services,
+                        from,
+                        start_tangent,
+                        zoom,
+                        scale_factor,
+                        marker,
+                        self.style.pin_radius,
+                        marker_budget,
+                    );
+                if skipped_by_budget {
+                    marker_skipped = marker_skipped.saturating_add(1);
+                }
+                if let Some(path) = path {
+                    scene.push(SceneOp::Path {
+                        order: DrawOrder(2),
+                        origin: Point::new(Px(0.0), Px(0.0)),
+                        path,
+                        color,
+                    });
+                }
+            }
+        }
+
+        (false, marker_skipped)
+    }
+
     pub(super) fn paint_edges<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
@@ -168,6 +368,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) {
         #[derive(Debug, Clone)]
         struct EdgePaint {
+            id: EdgeId,
             from: Point,
             to: Point,
             color: Color,
@@ -190,18 +391,26 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let elevate_edges_on_select = snapshot.interaction.elevate_edges_on_select;
 
         let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
+        let custom_paths = self.collect_custom_edge_paths(&*cx.app, &render.edges, zoom);
         let edge_insert_marker: Option<(Point, Color)> =
             edge_insert_marker_request.and_then(|(edge_id, pos)| {
                 render.edges.iter().find(|e| e.id == edge_id).map(|e| {
                     (
-                        closest_point_on_edge_route(
-                            e.hint.route,
-                            e.from,
-                            e.to,
-                            zoom,
-                            bezier_steps,
-                            pos,
-                        ),
+                        custom_paths
+                            .get(&edge_id)
+                            .map(|custom| {
+                                closest_point_on_path(&custom.commands, bezier_steps, pos)
+                            })
+                            .unwrap_or_else(|| {
+                                closest_point_on_edge_route(
+                                    e.hint.route,
+                                    e.from,
+                                    e.to,
+                                    zoom,
+                                    bezier_steps,
+                                    pos,
+                                )
+                            }),
                         e.color,
                     )
                 })
@@ -213,14 +422,21 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     && let Some(edge) = render.edges.iter().find(|e| e.id == edge_id)
                 {
                     (
-                        closest_point_on_edge_route(
-                            edge.hint.route,
-                            edge.from,
-                            edge.to,
-                            zoom,
-                            bezier_steps,
-                            p.pos,
-                        ),
+                        custom_paths
+                            .get(&edge_id)
+                            .map(|custom| {
+                                closest_point_on_path(&custom.commands, bezier_steps, p.pos)
+                            })
+                            .unwrap_or_else(|| {
+                                closest_point_on_edge_route(
+                                    edge.hint.route,
+                                    edge.from,
+                                    edge.to,
+                                    zoom,
+                                    bezier_steps,
+                                    p.pos,
+                                )
+                            }),
                         edge.color,
                     )
                 } else {
@@ -240,6 +456,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let route = edge.hint.route;
 
             let paint = EdgePaint {
+                id: edge.id,
                 from: edge.from,
                 to: edge.to,
                 color: edge.color,
@@ -268,22 +485,50 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .chain(edges_selected)
             .chain(edges_hovered)
         {
-            let (_stop, skipped) = self.push_edge_wire_and_markers_budgeted(
-                cx.scene,
-                cx.services,
-                zoom,
-                cx.scale_factor,
-                edge.route,
-                edge.from,
-                edge.to,
-                edge.color,
-                edge.width,
-                edge.start_marker.as_ref(),
-                edge.end_marker.as_ref(),
-                &mut wire_budget,
-                &mut marker_budget,
-                false,
-            );
+            let (_stop, skipped) = if let Some(custom) = custom_paths.get(&edge.id) {
+                let fallback = Point::new(
+                    Px(edge.to.x.0 - edge.from.x.0),
+                    Px(edge.to.y.0 - edge.from.y.0),
+                );
+                let (t0, t1) =
+                    path_start_end_tangents(&custom.commands).unwrap_or((fallback, fallback));
+                self.push_edge_custom_wire_and_markers_budgeted(
+                    cx.scene,
+                    cx.services,
+                    custom.cache_key,
+                    &custom.commands,
+                    t0,
+                    t1,
+                    zoom,
+                    cx.scale_factor,
+                    edge.from,
+                    edge.to,
+                    edge.color,
+                    edge.width,
+                    edge.start_marker.as_ref(),
+                    edge.end_marker.as_ref(),
+                    &mut wire_budget,
+                    &mut marker_budget,
+                    false,
+                )
+            } else {
+                self.push_edge_wire_and_markers_budgeted(
+                    cx.scene,
+                    cx.services,
+                    zoom,
+                    cx.scale_factor,
+                    edge.route,
+                    edge.from,
+                    edge.to,
+                    edge.color,
+                    edge.width,
+                    edge.start_marker.as_ref(),
+                    edge.end_marker.as_ref(),
+                    &mut wire_budget,
+                    &mut marker_budget,
+                    false,
+                )
+            };
             marker_budget_skipped = marker_budget_skipped.saturating_add(skipped);
         }
 
@@ -356,6 +601,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 cx.services,
                 cx.scale_factor,
                 &render.edges,
+                (!custom_paths.is_empty()).then_some(&custom_paths),
+                bezier_steps,
                 zoom,
                 0,
                 &mut label_budget,
@@ -662,6 +909,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         services: &mut dyn fret_core::UiServices,
         scale_factor: f32,
         edges: &[EdgeRender],
+        custom_paths: Option<&HashMap<EdgeId, crate::ui::edge_types::EdgeCustomPath>>,
+        bezier_steps: usize,
         zoom: f32,
         start_edge: usize,
         budget: &mut WorkBudget,
@@ -684,7 +933,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 continue;
             };
 
-            let (pos, normal) = match edge.hint.route {
+            let base_pos_normal = || match edge.hint.route {
                 EdgeRouteKind::Bezier => {
                     let (c1, c2) = wire_ctrl_points(edge.from, edge.to, zoom);
                     let p = cubic_bezier(edge.from, c1, c2, edge.to, 0.5);
@@ -708,6 +957,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     (p, Point::new(Px(0.0), Px(-1.0)))
                 }
             };
+
+            let (pos, normal) = custom_paths
+                .and_then(|m| m.get(&edge.id))
+                .and_then(|custom| path_midpoint_and_normal(&custom.commands, bezier_steps))
+                .unwrap_or_else(base_pos_normal);
 
             let z = zoom.max(1.0e-6);
             let off = offset_screen / z;

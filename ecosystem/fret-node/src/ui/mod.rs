@@ -31,7 +31,7 @@ pub use canvas::{
     NoopNodeGraphCanvasMiddleware,
 };
 pub use commands::register_node_graph_commands;
-pub use edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
+pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
 pub use editor::NodeGraphEditor;
 pub use editors::{
@@ -66,6 +66,7 @@ pub use view_queue::{
 pub use viewport_helper::NodeGraphViewportHelper;
 
 pub use overlays::{
-    GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphMiniMapOverlay, NodeGraphOverlayHost,
-    NodeGraphOverlayState,
+    GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphEdgeToolbar, NodeGraphMiniMapOverlay,
+    NodeGraphNodeToolbar, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphToolbarAlign,
+    NodeGraphToolbarPosition, NodeGraphToolbarSize, NodeGraphToolbarVisibility,
 };

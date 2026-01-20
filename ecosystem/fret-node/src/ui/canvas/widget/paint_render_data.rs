@@ -334,7 +334,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 .max(this.style.wire_width * this.style.wire_width_selected_mul)
                                 .max(this.style.wire_width * this.style.wire_width_hover_mul))
                                 / zoom;
-                            let bounds = edge_bounds_rect(hint.route, from, to, zoom, pad);
+                            let bounds = if let Some(custom) =
+                                this.edge_custom_path(graph, edge_id, &hint, from, to, zoom)
+                            {
+                                path_bounds_rect(&custom.commands)
+                                    .map(|r| inflate_rect(r, pad))
+                                    .unwrap_or_else(|| {
+                                        edge_bounds_rect(hint.route, from, to, zoom, pad)
+                                    })
+                            } else {
+                                edge_bounds_rect(hint.route, from, to, zoom, pad)
+                            };
                             if !rects_intersect(bounds, c) {
                                 continue;
                             }

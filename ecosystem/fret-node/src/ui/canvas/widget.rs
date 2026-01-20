@@ -165,9 +165,13 @@ use overlay_hit::{
     context_menu_rect_at, hit_context_menu_item, hit_searcher_row, searcher_rect_at,
     searcher_visible_rows,
 };
-use rect_math::{edge_bounds_rect, inflate_rect, rect_from_points, rect_union, rects_intersect};
+use rect_math::{
+    edge_bounds_rect, inflate_rect, path_bounds_rect, rect_from_points, rect_union, rects_intersect,
+};
 use wire_math::{
-    closest_point_on_edge_route, dist2_point_to_segment, step_wire_distance2, wire_distance2,
+    closest_point_on_edge_route, closest_point_on_path, dist2_point_to_segment,
+    path_midpoint_and_normal, path_start_end_tangents, step_wire_distance2, wire_distance2,
+    wire_distance2_path,
 };
 
 use super::conversion;
@@ -351,6 +355,24 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         } else {
             base
         }
+    }
+
+    fn edge_custom_path(
+        &self,
+        graph: &Graph,
+        edge_id: EdgeId,
+        hint: &EdgeRenderHint,
+        from: Point,
+        to: Point,
+        zoom: f32,
+    ) -> Option<crate::ui::edge_types::EdgeCustomPath> {
+        self.edge_types.as_ref()?.custom_path(
+            graph,
+            edge_id,
+            &self.style,
+            hint,
+            crate::ui::edge_types::EdgePathInput { from, to, zoom },
+        )
     }
 
     pub fn new_with_middleware(

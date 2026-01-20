@@ -9,6 +9,8 @@ It is intentionally practical and code-oriented: each item includes pointers to 
 files in `repo-ref/xyflow` and the current (or planned) module in `fret-node`.
 
 If you are looking for overall sequencing and milestones, see `docs/node-graph-roadmap.md`.
+If you are looking for an execution plan (milestones + deliverables), see
+`docs/workstreams/fret-node-xyflow-parity.md`.
 If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed-connections.md`.
 
 ## How to use this doc
@@ -156,6 +158,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - controlled mode building blocks (keep your own `Graph`/`NodeGraphViewState` as source of truth):
       - callbacks + apply: `ecosystem/fret-node/src/runtime/callbacks.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
       - conformance test: `ecosystem/fret-node/src/runtime/tests.rs` (`controlled_graph_can_apply_store_changes_via_callbacks`)
+      - guide: `docs/node-graph-controlled-mode.md`
+      - runnable example: `ecosystem/fret-node/examples/controlled_mode.rs`
   - Notes:
     - view-state remains separate (`NodeGraphViewState`); callbacks receive `ViewChange` for viewport/selection.
     - the exact "ReactFlow-like" contract is: `GraphTransaction` (undo unit) + `NodeGraphChanges` (diff) + `ViewChange` (viewport/selection).
@@ -179,7 +183,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - `edgeTypes` registry (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` (`NodeGraphEdgeTypes`)
   - Notes:
     - `NodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes` overrides are applied in `NodeGraphCanvas`.
-    - Custom edge painters/path builders are deferred (Stage 2).
+    - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
+      The canvas uses the custom path for painting, hit-testing, edge labels, and EdgeToolbar internals.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -209,7 +214,15 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [~] **Background**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
-  - fret-node: background grid exists; dot variants + configuration parity still TBD
+  - fret-node: grid patterns exist (lines/dots/cross); theming + configuration parity still TBD
+
+- [x] **NodeToolbar**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
+  - fret-node: `NodeGraphNodeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+
+- [x] **EdgeToolbar**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
+  - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
 
 - [~] **Panels / toolbars / overlays composition API**
   - XyFlow: `<Panel />` composition patterns
@@ -735,12 +748,18 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 8.3 Background patterns
 
-- [~] **Grid background**
+- [~] **Grid background patterns (lines/dots/cross)**
   - XyFlow: `additional-components/Background/Background.tsx` (dots/lines/cross patterns)
-  - fret-node: grid rendering in canvas (`grid_spacing`, major/minor colors)
+  - fret-node:
+    - renderer: `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+    - style surface:
+      - `NodeGraphStyle.grid_pattern` (`Lines` / `Dots` / `Cross`)
+      - `NodeGraphStyle.grid_line_width`
+      - `NodeGraphStyle.grid_dot_size`
+      - `NodeGraphStyle.grid_cross_size`
+      - see: `ecosystem/fret-node/src/ui/style.rs`
   - TODO:
-    - support dots/cross variants
-    - per-editor styling via theme tokens
+    - per-editor styling via theme tokens (plumb theme metrics/colors into the new fields)
 
 ## 8.4 Viewport portals and window-space overlays
 
@@ -839,7 +858,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: edge types (`edgeTypes`) + label renderer
   - fret-node:
     - Stage 1 (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` + `ecosystem/fret-node/src/ui/canvas/widget.rs`
-    - Stage 2 (custom painters/path builders): TODO
+    - Stage 2 (custom paths): implemented via `NodeGraphEdgeTypes::register_path(...)` and
+      `wire_math::path_midpoint_and_normal(...)` (label anchor + normal).
 
 - [~] **Plugin-like extension hooks**
   - XyFlow: store middleware maps for node/edge changes

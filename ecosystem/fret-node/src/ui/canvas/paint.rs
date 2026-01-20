@@ -56,6 +56,20 @@ struct MarkerPathKey {
     pin_radius_screen: i64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct MarkerTangentPathKey {
+    side: MarkerSide,
+    kind: u8,
+    endpoint_x: i64,
+    endpoint_y: i64,
+    dir_x: i64,
+    dir_y: i64,
+    zoom: i64,
+    scale: i64,
+    size_screen: i64,
+    pin_radius_screen: i64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct TextMetricsKey {
     text_hash: u64,
@@ -289,6 +303,45 @@ impl CanvasPaintCache {
         }
     }
 
+    pub(crate) fn wire_path_from_commands(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        cache_key: u64,
+        commands: &[PathCommand],
+        zoom: f32,
+        scale_factor: f32,
+        width_px: f32,
+    ) -> Option<PathId> {
+        if commands.is_empty() {
+            return None;
+        }
+
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+
+        let stroke_width = width_px / zoom;
+        if !stroke_width.is_finite() || stroke_width <= 0.0 {
+            return None;
+        }
+
+        let cache_key = stable_path_key(3, &cache_key);
+        let (id, _metrics) = self.paths.prepare(
+            services,
+            cache_key,
+            commands,
+            PathStyle::Stroke(StrokeStyle {
+                width: Px(width_px / zoom),
+            }),
+            PathConstraints {
+                scale_factor: scale_factor * zoom,
+            },
+        );
+        Some(id)
+    }
+
     pub(crate) fn edge_end_marker_path_budgeted(
         &mut self,
         services: &mut dyn fret_core::UiServices,
@@ -315,6 +368,30 @@ impl CanvasPaintCache {
         )
     }
 
+    pub(crate) fn edge_end_marker_path_budgeted_with_tangent(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        endpoint: Point,
+        tangent: Point,
+        zoom: f32,
+        scale_factor: f32,
+        marker: &EdgeMarker,
+        pin_radius_screen: f32,
+        budget: &mut WorkBudget,
+    ) -> (Option<PathId>, bool) {
+        self.marker_path_with_tangent_budgeted(
+            services,
+            MarkerSide::End,
+            endpoint,
+            tangent,
+            zoom,
+            scale_factor,
+            marker,
+            pin_radius_screen,
+            budget,
+        )
+    }
+
     pub(crate) fn edge_start_marker_path_budgeted(
         &mut self,
         services: &mut dyn fret_core::UiServices,
@@ -333,6 +410,30 @@ impl CanvasPaintCache {
             route,
             from,
             to,
+            zoom,
+            scale_factor,
+            marker,
+            pin_radius_screen,
+            budget,
+        )
+    }
+
+    pub(crate) fn edge_start_marker_path_budgeted_with_tangent(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        endpoint: Point,
+        tangent: Point,
+        zoom: f32,
+        scale_factor: f32,
+        marker: &EdgeMarker,
+        pin_radius_screen: f32,
+        budget: &mut WorkBudget,
+    ) -> (Option<PathId>, bool) {
+        self.marker_path_with_tangent_budgeted(
+            services,
+            MarkerSide::Start,
+            endpoint,
+            tangent,
             zoom,
             scale_factor,
             marker,
@@ -426,6 +527,121 @@ impl CanvasPaintCache {
         let tip = match side {
             MarkerSide::Start => Point::new(Px(from.x.0 + ux * pin_r), Px(from.y.0 + uy * pin_r)),
             MarkerSide::End => Point::new(Px(to.x.0 - ux * pin_r), Px(to.y.0 - uy * pin_r)),
+        };
+
+        match marker.kind {
+            EdgeMarkerKind::Arrow => {
+                let arrow_len = size;
+                let half_w = (0.65 * size).max(0.5 / zoom);
+                let base = match side {
+                    MarkerSide::Start => {
+                        Point::new(Px(tip.x.0 + ux * arrow_len), Px(tip.y.0 + uy * arrow_len))
+                    }
+                    MarkerSide::End => {
+                        Point::new(Px(tip.x.0 - ux * arrow_len), Px(tip.y.0 - uy * arrow_len))
+                    }
+                };
+                let p1 = Point::new(Px(base.x.0 + nx * half_w), Px(base.y.0 + ny * half_w));
+                let p2 = Point::new(Px(base.x.0 - nx * half_w), Px(base.y.0 - ny * half_w));
+
+                let commands = [
+                    PathCommand::MoveTo(tip),
+                    PathCommand::LineTo(p1),
+                    PathCommand::LineTo(p2),
+                    PathCommand::Close,
+                ];
+
+                let (id, _metrics) = self.paths.prepare(
+                    services,
+                    cache_key,
+                    &commands,
+                    PathStyle::Fill(FillStyle::default()),
+                    constraints,
+                );
+                (Some(id), false)
+            }
+        }
+    }
+
+    fn marker_path_with_tangent_budgeted(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        side: MarkerSide,
+        endpoint: Point,
+        tangent: Point,
+        zoom: f32,
+        scale_factor: f32,
+        marker: &EdgeMarker,
+        pin_radius_screen: f32,
+        budget: &mut WorkBudget,
+    ) -> (Option<PathId>, bool) {
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        if !endpoint.x.0.is_finite() || !endpoint.y.0.is_finite() {
+            return (None, false);
+        }
+
+        let q = |v: f32, step: f32| -> i64 {
+            if !v.is_finite() {
+                return 0;
+            }
+            (v / step).round() as i64
+        };
+
+        let kind = match marker.kind {
+            EdgeMarkerKind::Arrow => 1,
+        };
+
+        let len = (tangent.x.0 * tangent.x.0 + tangent.y.0 * tangent.y.0).sqrt();
+        let (ux, uy) = if len.is_finite() && len > 1.0e-6 {
+            (tangent.x.0 / len, tangent.y.0 / len)
+        } else {
+            (1.0, 0.0)
+        };
+
+        let key = MarkerTangentPathKey {
+            side,
+            kind,
+            endpoint_x: q(endpoint.x.0, 0.01),
+            endpoint_y: q(endpoint.y.0, 0.01),
+            dir_x: q(ux, 0.0001),
+            dir_y: q(uy, 0.0001),
+            zoom: q(zoom, 0.0001),
+            scale: q(scale_factor * zoom, 0.0001),
+            size_screen: q(marker.size.max(1.0), 0.01),
+            pin_radius_screen: q(pin_radius_screen.max(0.0), 0.01),
+        };
+
+        let cache_key = stable_path_key(4, &key);
+        let constraints = PathConstraints {
+            scale_factor: scale_factor * zoom,
+        };
+        if let Some((id, _metrics)) = self.paths.get(cache_key, constraints) {
+            return (Some(id), false);
+        }
+
+        if !budget.try_consume(1) {
+            return (None, true);
+        }
+
+        let nx = -uy;
+        let ny = ux;
+
+        let zoom = zoom.max(1.0e-6);
+        let size_screen = marker.size.max(1.0);
+        let size = size_screen / zoom;
+
+        let pin_r = pin_radius_screen.max(0.0) / zoom;
+        let tip = match side {
+            MarkerSide::Start => {
+                Point::new(Px(endpoint.x.0 + ux * pin_r), Px(endpoint.y.0 + uy * pin_r))
+            }
+            MarkerSide::End => {
+                Point::new(Px(endpoint.x.0 - ux * pin_r), Px(endpoint.y.0 - uy * pin_r))
+            }
         };
 
         match marker.kind {

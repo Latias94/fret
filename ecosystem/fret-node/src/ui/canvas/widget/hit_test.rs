@@ -277,11 +277,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 continue;
             };
 
-            let route = self.edge_render_hint(graph, edge_id).route;
-            let d2 = match route {
-                EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom, bezier_steps),
-                EdgeRouteKind::Straight => dist2_point_to_segment(pos, from, to),
-                EdgeRouteKind::Step => step_wire_distance2(pos, from, to),
+            let hint = self.edge_render_hint(graph, edge_id);
+            let d2 = if let Some(custom) =
+                self.edge_custom_path(graph, edge_id, &hint, from, to, zoom)
+            {
+                wire_distance2_path(pos, &custom.commands, bezier_steps)
+            } else {
+                match hint.route {
+                    EdgeRouteKind::Bezier => wire_distance2(pos, from, to, zoom, bezier_steps),
+                    EdgeRouteKind::Straight => dist2_point_to_segment(pos, from, to),
+                    EdgeRouteKind::Step => step_wire_distance2(pos, from, to),
+                }
             };
             if d2 <= threshold2 {
                 match best {
@@ -330,8 +336,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 continue;
             };
 
-            let route = self.edge_render_hint(graph, edge_id).route;
-            let (a0, a1) = Self::edge_focus_anchor_centers(route, from, to, zoom);
+            let hint = self.edge_render_hint(graph, edge_id);
+            let (a0, a1) = if let Some(custom) =
+                self.edge_custom_path(graph, edge_id, &hint, from, to, zoom)
+            {
+                if let Some((t0, t1)) = path_start_end_tangents(&custom.commands) {
+                    Self::edge_focus_anchor_centers_from_tangents(from, to, zoom, t0, t1)
+                } else {
+                    Self::edge_focus_anchor_centers(hint.route, from, to, zoom)
+                }
+            } else {
+                Self::edge_focus_anchor_centers(hint.route, from, to, zoom)
+            };
             let r0 = Self::edge_focus_anchor_rect(a0, zoom);
             let r1 = Self::edge_focus_anchor_rect(a1, zoom);
 

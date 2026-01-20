@@ -12,6 +12,7 @@ pub mod fit_view;
 pub mod lookups;
 pub mod middleware;
 pub mod store;
+pub mod utils;
 
 #[cfg(test)]
 mod tests;

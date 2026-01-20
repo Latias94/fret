@@ -237,6 +237,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             node_origin_y_bits: node_origin.y.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
             presenter_rev: self.presenter.geometry_revision(),
+            edge_types_rev: self.edge_types.as_ref().map(|t| t.revision()).unwrap_or(0),
         });
 
         if let Some(cache_rect) = nodes_cache_rect {
@@ -249,6 +250,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 b.add_u32(geom_key.node_origin_y_bits);
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
+                b.add_u64(geom_key.edge_types_rev);
                 b.add_u64(style_key);
                 b.add_f32_bits(nodes_cache_tile_size_canvas);
                 b.add_u32(cache_rect.origin.x.0.to_bits());
@@ -399,6 +401,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             b.add_u32(geom_key.node_origin_y_bits);
                             b.add_u64(geom_key.draw_order_hash);
                             b.add_u64(geom_key.presenter_rev);
+                            b.add_u64(geom_key.edge_types_rev);
                             b.add_u64(style_key);
                             b.add_f32_bits(edges_cache_tile_size_canvas);
                             b.finish()
@@ -482,27 +485,57 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 });
 
                             let mut tmp = fret_core::Scene::default();
+                            let custom_paths =
+                                self.collect_custom_edge_paths(&*cx.app, &state.edges, zoom);
                             let mut next_edge = state.next_edge.min(state.edges.len());
                             let mut tile_skipped = false;
                             for edge in state.edges.iter().skip(next_edge) {
                                 let width = self.style.wire_width * edge.hint.width_mul.max(0.0);
-                                let (stop, _marker_skipped) = self
-                                    .push_edge_wire_and_markers_budgeted(
-                                        &mut tmp,
-                                        cx.services,
-                                        zoom,
-                                        cx.scale_factor,
-                                        edge.hint.route,
-                                        edge.from,
-                                        edge.to,
-                                        edge.color,
-                                        width,
-                                        edge.hint.start_marker.as_ref(),
-                                        edge.hint.end_marker.as_ref(),
-                                        &mut wire_budget,
-                                        &mut marker_budget,
-                                        true,
-                                    );
+                                let (stop, _marker_skipped) =
+                                    if let Some(custom) = custom_paths.get(&edge.id) {
+                                        let fallback = Point::new(
+                                            Px(edge.to.x.0 - edge.from.x.0),
+                                            Px(edge.to.y.0 - edge.from.y.0),
+                                        );
+                                        let (t0, t1) = path_start_end_tangents(&custom.commands)
+                                            .unwrap_or((fallback, fallback));
+                                        self.push_edge_custom_wire_and_markers_budgeted(
+                                            &mut tmp,
+                                            cx.services,
+                                            custom.cache_key,
+                                            &custom.commands,
+                                            t0,
+                                            t1,
+                                            zoom,
+                                            cx.scale_factor,
+                                            edge.from,
+                                            edge.to,
+                                            edge.color,
+                                            width,
+                                            edge.hint.start_marker.as_ref(),
+                                            edge.hint.end_marker.as_ref(),
+                                            &mut wire_budget,
+                                            &mut marker_budget,
+                                            true,
+                                        )
+                                    } else {
+                                        self.push_edge_wire_and_markers_budgeted(
+                                            &mut tmp,
+                                            cx.services,
+                                            zoom,
+                                            cx.scale_factor,
+                                            edge.hint.route,
+                                            edge.from,
+                                            edge.to,
+                                            edge.color,
+                                            width,
+                                            edge.hint.start_marker.as_ref(),
+                                            edge.hint.end_marker.as_ref(),
+                                            &mut wire_budget,
+                                            &mut marker_budget,
+                                            true,
+                                        )
+                                    };
                                 if stop {
                                     tile_skipped = true;
                                     break;
@@ -595,6 +628,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
+                        b.add_u64(geom_key.edge_types_rev);
                         b.add_u64(style_key);
                         b.add_f32_bits(edges_cache_tile_size_canvas);
                         b.finish()
@@ -681,11 +715,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         }
 
                         let mut tmp = fret_core::Scene::default();
+                        let custom_paths =
+                            self.collect_custom_edge_paths(&*cx.app, &state.edges, zoom);
+                        let bezier_steps =
+                            usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
                         let (next_edge, tile_skipped) = self.paint_edge_labels_static_budgeted(
                             &mut tmp,
                             cx.services,
                             cx.scale_factor,
                             &state.edges,
+                            (!custom_paths.is_empty()).then_some(&custom_paths),
+                            bezier_steps,
                             zoom,
                             state.next_edge,
                             &mut label_budget,
@@ -747,6 +787,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
+                        b.add_u64(geom_key.edge_types_rev);
                         b.add_u64(style_key);
                         b.add_f32_bits(edges_cache_tile_size_canvas);
                         b.add_u32(edges_cache_rect.origin.x.0.to_bits());
@@ -787,6 +828,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
+                        b.add_u64(geom_key.edge_types_rev);
                         b.add_u64(style_key);
                         b.add_f32_bits(edges_cache_tile_size_canvas);
                         b.add_u32(edges_cache_rect.origin.x.0.to_bits());
@@ -842,28 +884,58 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let mut marker_budget = WorkBudget::new(marker_budget_limit);
 
                             let mut tmp = fret_core::Scene::default();
+                            let custom_paths =
+                                self.collect_custom_edge_paths(&*cx.app, &state.edges, zoom);
                             let mut next_edge = state.next_edge.min(state.edges.len());
                             let mut skipped = false;
 
                             for edge in state.edges.iter().skip(next_edge) {
                                 let width = self.style.wire_width * edge.hint.width_mul.max(0.0);
-                                let (stop, _marker_skipped) = self
-                                    .push_edge_wire_and_markers_budgeted(
-                                        &mut tmp,
-                                        cx.services,
-                                        zoom,
-                                        cx.scale_factor,
-                                        edge.hint.route,
-                                        edge.from,
-                                        edge.to,
-                                        edge.color,
-                                        width,
-                                        edge.hint.start_marker.as_ref(),
-                                        edge.hint.end_marker.as_ref(),
-                                        &mut wire_budget,
-                                        &mut marker_budget,
-                                        true,
-                                    );
+                                let (stop, _marker_skipped) =
+                                    if let Some(custom) = custom_paths.get(&edge.id) {
+                                        let fallback = Point::new(
+                                            Px(edge.to.x.0 - edge.from.x.0),
+                                            Px(edge.to.y.0 - edge.from.y.0),
+                                        );
+                                        let (t0, t1) = path_start_end_tangents(&custom.commands)
+                                            .unwrap_or((fallback, fallback));
+                                        self.push_edge_custom_wire_and_markers_budgeted(
+                                            &mut tmp,
+                                            cx.services,
+                                            custom.cache_key,
+                                            &custom.commands,
+                                            t0,
+                                            t1,
+                                            zoom,
+                                            cx.scale_factor,
+                                            edge.from,
+                                            edge.to,
+                                            edge.color,
+                                            width,
+                                            edge.hint.start_marker.as_ref(),
+                                            edge.hint.end_marker.as_ref(),
+                                            &mut wire_budget,
+                                            &mut marker_budget,
+                                            true,
+                                        )
+                                    } else {
+                                        self.push_edge_wire_and_markers_budgeted(
+                                            &mut tmp,
+                                            cx.services,
+                                            zoom,
+                                            cx.scale_factor,
+                                            edge.hint.route,
+                                            edge.from,
+                                            edge.to,
+                                            edge.color,
+                                            width,
+                                            edge.hint.start_marker.as_ref(),
+                                            edge.hint.end_marker.as_ref(),
+                                            &mut wire_budget,
+                                            &mut marker_budget,
+                                            true,
+                                        )
+                                    };
                                 if stop {
                                     skipped = true;
                                     break;
@@ -954,11 +1026,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let mut budget = WorkBudget::new(budget_limit);
 
                         let mut tmp = fret_core::Scene::default();
+                        let custom_paths =
+                            self.collect_custom_edge_paths(&*cx.app, &state.edges, zoom);
+                        let bezier_steps =
+                            usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
                         let (next_edge, skipped) = self.paint_edge_labels_static_budgeted(
                             &mut tmp,
                             cx.services,
                             cx.scale_factor,
                             &state.edges,
+                            (!custom_paths.is_empty()).then_some(&custom_paths),
+                            bezier_steps,
                             zoom,
                             state.next_edge,
                             &mut budget,
@@ -1065,6 +1143,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 b.add_u32(geom_key.node_origin_y_bits);
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
+                b.add_u64(geom_key.edge_types_rev);
                 b.add_u64(style_key);
                 b.add_f32_bits(nodes_cache_tile_size_canvas);
                 b.add_u32(cache_rect.origin.x.0.to_bits());
