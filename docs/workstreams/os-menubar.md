@@ -165,7 +165,7 @@ Evidence anchors:
 - Display policy implementation: `crates/fret-runtime/src/keymap.rs` (`display_shortcut_for_command_sequence`).
 - Windows OS menubar uses display policy: `crates/fret-launch/src/runner/desktop/windows_menu.rs`.
 - Command palette uses display policy: `ecosystem/fret-ui-shadcn/src/command.rs`.
-- In-window menubar bridge uses display policy: `ecosystem/fret-kit/src/workspace_menu.rs`.
+- In-window menubar bridge uses the same display policy and is shadcn-free (built from `fret-ui-kit` primitives): `ecosystem/fret-kit/src/workspace_menu.rs`.
 
 ### MVP 2.5: Menu Bar Presentation Modes (OS vs In-window) (Done)
 
@@ -184,6 +184,7 @@ Deliverables:
   - Windows/macOS: OS menubar on, in-window off
   - Linux/Web: OS menubar off, in-window on
 - [x] OS menubar can be disabled without leaving stale native menus (clear via empty menu bar).
+- [x] In-window menubar rendering no longer requires shadcn; it is an ecosystem-owned recipe surface that can be restyled/replaced without changing `MenuBar`.
 
 Evidence anchors:
 

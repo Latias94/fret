@@ -39,6 +39,7 @@ fret = { path = "../../crates/fret", optional = true }
 fret-bootstrap = { path = "../fret-bootstrap", default-features = false }
 fret-icons = { path = "../fret-icons" }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", features = ["app-integration"] }
+fret-ui-kit = { path = "../fret-ui-kit" }
 fret-workspace = { path = "../fret-workspace", optional = true }
 
 # Used by the public signatures and error types.
