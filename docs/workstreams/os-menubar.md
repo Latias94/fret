@@ -68,7 +68,7 @@ Known gaps:
     - `MenuRole` hooks exist (Window/App/Help), Services system menu is supported, and standard edit
       selectors can be hinted via `OsAction` (Cut/Copy/Paste/SelectAll/Undo/Redo).
     - A minimal App menu baseline can be authored as commands (About/Preferences/Services/Hide/Hide Others/Show All/Quit),
-      and the golden path (`fret-bootstrap`) handles `app.quit`/`app.hide*` by emitting platform effects.
+      and the golden path (`fret-bootstrap`) handles `app.about`/`app.quit`/`app.hide*` by emitting platform effects.
   - Remaining: finalize macOS App menu conventions (exact wording + ordering, and what stays command-driven vs runner-native).
 
 ## MVP Milestones
@@ -209,6 +209,7 @@ Deliverables:
 - [x] Standard menu hooks use `MenuRole` (no title-string hacks for Window).
 - [x] Minimal App menu baseline can be authored as commands (About/Preferences/Services/Hide/Hide Others/Show All/Quit).
   - Quit is implemented via `Effect::QuitApp` (see ADR 0001).
+  - About can be implemented via `Effect::ShowAboutPanel` on macOS (ADR 0186).
 
 Acceptance:
 
@@ -228,7 +229,9 @@ Evidence anchors:
 - Menu open refresh hook: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`validateMenuItem` / user event dispatch).
 - Core app commands: `crates/fret-app/src/core_commands.rs` (`app.about`, `app.preferences`, `app.quit`).
 - Quit effect: `crates/fret-runtime/src/effect.rs` (`Effect::QuitApp`).
+- About effect: `crates/fret-runtime/src/effect.rs` (`Effect::ShowAboutPanel`).
 - Golden-path default handling: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (handles `app.quit`/`app.hide*`).
+- ADR: `docs/adr/0186-macos-about-panel-effect.md`.
 - Workspace baseline supports App menu: `ecosystem/fret-workspace/src/menu.rs` (`WorkspaceMenuCommands`).
 - Golden-path in-window default: `ecosystem/fret-kit/src/workspace_shell.rs` (`workspace_shell_model_default_menu`).
 - Undo/Redo availability seam example: `apps/fret-examples/src/gizmo3d_demo.rs` (`sync_window_command_availability`).
