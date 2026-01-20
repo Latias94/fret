@@ -140,9 +140,10 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Diagnostics: export `removed_subtrees` records in bundles to make sweeping behavior explainable from a single run.
   - Evidence (pass):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+    - Latest run: `PASS (run_id=1768898489622)`
   - Follow-up: reintroduce declarative GC under cache-root reuse with explicit, GPUI-aligned liveness (dirty views + notify + cache key gates) rather than the global "skip sweep when reuse exists" stopgap.
 
-- [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
+- [!] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
   - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), plus cache-hit frame liveness bookkeeping.
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Notes: a naive "detached + stale" sweep is not sufficient on its own; cache-hit frames can still cause overlay/demo semantics to disappear if layer/overlay presence
@@ -155,20 +156,13 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Progress: introduce cache-root subtree bookkeeping for future liveness/GC work.
     - Touches: `crates/fret-ui/src/elements/runtime.rs` (`view_cache_elements_{rendered,next}`, `record_view_cache_subtree_elements`,
       `touch_view_cache_subtree_elements_if_recorded`).
-  - Current state: `ui-gallery-overlay-torture.json` can still get stuck when the outer content cache root becomes a cache hit
-    (bundle label `script-step-0010-click-no-semantics-match`).
-    - Symptom details: when the overlay page subtree is wrapped in `cached_subtree_with(...contained_layout(true))` (nested view-cache root),
-      the semantics snapshot drops 10 overlay demo test IDs once the outer content cache root becomes a cache hit:
-      `ui-gallery-overlay-reset`, `ui-gallery-dialog-trigger`, `ui-gallery-popover-trigger`, `ui-gallery-tooltip-trigger`,
-      `ui-gallery-dropdown-trigger`, `ui-gallery-context-trigger`, `ui-gallery-hovercard-trigger`,
-      plus transient overlay IDs like `ui-gallery-overlay-underlay`, `ui-gallery-popover-close`, `ui-gallery-overlay-last-action`.
-      This leaves the script stuck retrying the click until timeout (auto-dump captured at the first missing selector).
-    - We still sweep detached nodes for dismissible overlay roots via `render_dismissible_root_impl`.
-  - Evidence:
+  - Current state:
+    - The safety gate from MVP2-cache-004 remains in place: while any view-cache reuse roots exist, declarative GC sweeping is skipped.
+    - Attempting to re-enable sweeping under cache-root reuse still regresses `ui-gallery-overlay-torture.json` (step 10 missing semantics targets).
+      Treat the gate as a stopgap until we have explicit per-root liveness and replayable “effect outputs” on cache-hit frames.
+  - Evidence (regression before restoring the gate):
     - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
-    - Failure bundles (examples):
-      - `target/fret-diag/1768886076845-script-step-0010-click-no-semantics-match/bundle.json`
-      - `target/fret-diag/1768878276583-script-step-0010-click-no-semantics-match/bundle.json`
+    - Failure bundle (example): `target/fret-diag/1768898120790-script-step-0010-click-no-semantics-match/bundle.json`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
 
 - [x] GPUI-MVP2-cache-006 Add an explicit cache key gate for view-cache reuse (GPUI-aligned).
