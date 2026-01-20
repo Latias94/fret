@@ -58,7 +58,7 @@ Scope notes:
 | `nodesDraggable` | `NodeGraphInteractionState.nodes_draggable` (+ per-node override) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs` |
 | `nodesConnectable` | `NodeGraphInteractionState.nodes_connectable` (+ per-node/port override) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs` |
 | Node extent constraint (`nodeExtent`) | `NodeGraphInteractionState.node_extent` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` |
-| `nodeOrigin` | Node positions are stored as `Node.pos` (top-left mental model) | Missing (no configurable origin) | `ecosystem/fret-node/src/core/mod.rs`, `ecosystem/fret-node/src/ui/canvas/geometry.rs` |
+| `nodeOrigin` | `NodeGraphInteractionState.node_origin` (interprets `Node.pos` as an anchor) | Implemented (off-by-default; default remains `(0, 0)`) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/geometry.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs` |
 | Node resize handles (not a single xyflow prop; typically via custom nodes) | Built-in resize interactions | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` |
 | Grouping / parent containers (subflows) | Group model + group resize/drag | Implemented (different API surface) | `ecosystem/fret-node/src/core/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs` |
 
@@ -103,6 +103,6 @@ Scope notes:
 
 ## Recommended Next Steps (Top 3)
 
-1) **Node origin parity**: add a configurable node origin (center vs top-left) to match `nodeOrigin` behavior; keep it off-by-default to avoid breaking layout.
+1) **Rendering toggle parity**: consider an explicit `onlyRenderVisibleElements` switch (currently culling is always-on), so apps can trade overhead vs pop-in.
 2) **Viewport helper APIs**: add a public UI helper that animates from current viewport to a target (XyFlow `viewportHelper` mental model); keep runtime helpers headless-safe.
-3) **Rendering toggle parity**: consider an explicit `onlyRenderVisibleElements` switch (currently culling is always-on), so apps can trade overhead vs pop-in.
+3) **View-state shaping**: decide whether `nodeOrigin` should be moved from view-state tuning to a higher-level config surface for apps that want `Node.pos` in different coordinate conventions.
