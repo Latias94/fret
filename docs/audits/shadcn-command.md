@@ -58,9 +58,21 @@ Key upstream semantics:
 
 - `cargo test -p fret-ui-shadcn --lib command::tests`
 - shadcn-web golden + gates:
+  - Golden: `goldens/shadcn-web/v4/new-york-v4/command-demo.json`
+  - Layout gates:
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_input_height_matches`
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_listbox_height_matches`
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_listbox_option_height_matches`
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_listbox_option_insets_match`
   - Golden: `goldens/shadcn-web/v4/new-york-v4/command-dialog.open.json`
   - Chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome -- web_vs_fret_command_dialog_panel_chrome_matches`
   - Placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_overlay_center_matches`
+  - List metrics gates (v4 dialog surface overrides):
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_input_height_matches`
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_height_matches`
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_option_height_matches`
+    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_option_insets_match`
+    - Tiny viewport variants: `*_tiny_viewport` (ensures the web-style “centered even when overflowing” behavior stays aligned)
 
 ## Follow-ups (non-P0)
 

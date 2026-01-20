@@ -214,14 +214,14 @@ impl Dialog {
                     // Height remains content-driven; use last-frame bounds as a stable anchor for
                     // the open zoom transform origin and placement.
                     let desired_h = last_size.map(|s| s.height).unwrap_or(Px(320.0));
-                    let content_h = Px(desired_h.0.min(available_h.0).max(0.0));
+                    let content_h = Px(desired_h.0.max(0.0));
 
                     let left = Px(outer.origin.x.0
                         + window_padding_px.0
                         + ((available_w.0 - content_w.0) * 0.5).max(0.0));
                     let top = Px(outer.origin.y.0
                         + window_padding_px.0
-                        + ((available_h.0 - content_h.0) * 0.5).max(0.0));
+                        + (available_h.0 - content_h.0) * 0.5);
 
                     let origin = Point::new(
                         Px(left.0 + content_w.0 * 0.5),

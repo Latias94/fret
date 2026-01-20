@@ -246,6 +246,10 @@ menu sizing signals such as per-item heights, content insets, and Select metrics
 width/height, option row height, scroll buttons, and viewport insets), including constrained-viewport
 variants that force max-height/scroll behavior.
 
+NavigationMenu coverage includes both placement checks and content sizing gates (content
+width/height) so variant panels (e.g. `simple`, `with-icon`) can't silently drift from the upstream
+shadcn layout contract.
+
 It also includes geometry gates for cmdk-derived listboxes such as `combobox-demo` (option row
 height and option insets within the listbox).
 
@@ -282,6 +286,7 @@ Current layout gates include:
 - `data-table-demo.empty`: empty-state `td` spans full table width (colSpan) + `h-24` height.
 - `typography-table`: 2-column typography table geometry (row heights + cell rects) + `even:bg-muted` background (paint-backed) using the prose typography baseline (light+dark).
 - `progress-demo`: track + indicator geometry and background colors, including percent-translate parity for the indicator (light+dark).
+- `navigation-menu-demo`: trigger geometry + content sizing (width/height) across variants.
 - `scroll-area-demo` / `scroll-area-horizontal-demo`: thumb bounds + (paint-backed) thumb background/alpha in hover-visible states.
 
 ## Options

@@ -7,7 +7,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, GridProps, LayoutStyle, Length, MainAlign,
-    MarginEdge, TextProps,
+    MarginEdge, RowProps, TextProps,
 };
 use fret_ui::elements::{GlobalElementId, bounds_for_element};
 use fret_ui::tree::UiTree;
@@ -156,6 +156,21 @@ fn shadcn_text_with_layout<H: UiHost>(
         style: Some(style),
         color: None,
         wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+fn shadcn_text_line<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    style: TextStyle,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(style),
+        color: None,
+        wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     })
 }
@@ -313,6 +328,374 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
             align: CrossAlign::Stretch,
         },
         move |_cx| vec![tile, intro, install, typography],
+    )
+}
+
+fn shadcn_nav_menu_demo_simple_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::NavigationMenuLink;
+
+    let link_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::NORMAL); // text-sm
+
+    fn link<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        model: Model<Option<Arc<str>>>,
+        label: &'static str,
+        style: &TextStyle,
+    ) -> AnyElement {
+        let label_arc: Arc<str> = Arc::from(label);
+        let style = style.clone();
+        let body = cx.container(
+            ContainerProps {
+                layout: LayoutStyle::default(),
+                padding: Edges::all(Px(8.0)), // p-2
+                ..Default::default()
+            },
+            move |cx| vec![shadcn_text_line(cx, label_arc.clone(), style.clone())],
+        );
+
+        NavigationMenuLink::child(model, body)
+            .label(label)
+            .into_element(cx)
+    }
+
+    let links = cx.column(
+        ColumnProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(200.0)); // `w-[200px]`
+                layout
+            },
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        },
+        move |cx| {
+            vec![
+                link(cx, model.clone(), "Components", &link_style),
+                link(cx, model.clone(), "Documentation", &link_style),
+                link(cx, model.clone(), "Blocks", &link_style),
+            ]
+        },
+    );
+
+    links
+}
+
+fn shadcn_nav_menu_demo_with_icon_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::NavigationMenuLink;
+
+    let link_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::NORMAL); // text-sm
+
+    fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(16.0));
+                    layout.size.height = Length::Px(Px(16.0));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
+    }
+
+    fn link<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        model: Model<Option<Arc<str>>>,
+        label: &'static str,
+        style: &TextStyle,
+    ) -> AnyElement {
+        let label_arc: Arc<str> = Arc::from(label);
+        let style = style.clone();
+        let body = cx.container(
+            ContainerProps {
+                layout: LayoutStyle::default(),
+                padding: Edges::all(Px(8.0)), // p-2
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.row(
+                    RowProps {
+                        layout: LayoutStyle::default(),
+                        gap: Px(8.0), // gap-2
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                    },
+                    move |cx| {
+                        vec![
+                            icon_stub(cx),
+                            shadcn_text_line(cx, label_arc.clone(), style.clone()),
+                        ]
+                    },
+                )]
+            },
+        );
+
+        NavigationMenuLink::child(model, body)
+            .label(label)
+            .into_element(cx)
+    }
+
+    cx.column(
+        ColumnProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(200.0)); // `w-[200px]`
+                layout
+            },
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        },
+        move |cx| {
+            vec![
+                link(cx, model.clone(), "Alert Dialog", &link_style),
+                link(cx, model.clone(), "Hover Card", &link_style),
+                link(cx, model.clone(), "Progress", &link_style),
+            ]
+        },
+    )
+}
+
+fn shadcn_nav_menu_demo_list_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::NavigationMenuLink;
+
+    let title_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::MEDIUM); // text-sm font-medium
+    let desc_style = shadcn_text_style(Px(14.0), Px(20.0), FontWeight::NORMAL); // text-sm
+
+    fn link<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        model: Model<Option<Arc<str>>>,
+        title: &'static str,
+        desc: &'static str,
+        title_style: &TextStyle,
+        desc_style: &TextStyle,
+    ) -> AnyElement {
+        let title_style = title_style.clone();
+        let desc_style = desc_style.clone();
+        let title_arc: Arc<str> = Arc::from(title);
+        let desc_arc: Arc<str> = Arc::from(desc);
+
+        let body = cx.container(
+            ContainerProps {
+                layout: LayoutStyle::default(),
+                padding: Edges::all(Px(8.0)), // p-2
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.column(
+                    ColumnProps {
+                        layout: LayoutStyle::default(),
+                        gap: Px(4.0), // gap-1
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                    },
+                    move |cx| {
+                        vec![
+                            shadcn_text_line(cx, title_arc.clone(), title_style.clone()),
+                            shadcn_text_line(cx, desc_arc.clone(), desc_style.clone()),
+                        ]
+                    },
+                )]
+            },
+        );
+
+        NavigationMenuLink::child(model, body)
+            .label(title)
+            .into_element(cx)
+    }
+
+    cx.column(
+        ColumnProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(300.0)); // `w-[300px]`
+                layout
+            },
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        },
+        move |cx| {
+            vec![
+                link(
+                    cx,
+                    model.clone(),
+                    "Components",
+                    "Browse all components in the library.",
+                    &title_style,
+                    &desc_style,
+                ),
+                link(
+                    cx,
+                    model.clone(),
+                    "Documentation",
+                    "Learn how to use the library.",
+                    &title_style,
+                    &desc_style,
+                ),
+                link(
+                    cx,
+                    model.clone(),
+                    "Blog",
+                    "Read our latest blog posts.",
+                    &title_style,
+                    &desc_style,
+                ),
+            ]
+        },
+    )
+}
+
+fn shadcn_nav_menu_demo_components_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::NavigationMenuLink;
+
+    let title_style = shadcn_text_style(Px(14.0), Px(14.0), FontWeight::MEDIUM); // text-sm leading-none font-medium
+    let desc_style = shadcn_text_style(Px(14.0), Px(19.25), FontWeight::NORMAL); // text-sm leading-snug
+
+    fn link<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        model: Model<Option<Arc<str>>>,
+        title: &'static str,
+        desc: &'static str,
+        title_style: &TextStyle,
+        desc_style: &TextStyle,
+    ) -> AnyElement {
+        let title_style = title_style.clone();
+        let desc_style = desc_style.clone();
+        let title_arc: Arc<str> = Arc::from(title);
+        let desc_arc: Arc<str> = Arc::from(desc);
+
+        let body = cx.container(
+            ContainerProps {
+                layout: LayoutStyle::default(),
+                padding: Edges::all(Px(8.0)), // p-2
+                ..Default::default()
+            },
+            move |cx| {
+                let desc_style = desc_style.clone();
+                vec![cx.column(
+                    ColumnProps {
+                        layout: LayoutStyle::default(),
+                        gap: Px(4.0), // gap-1
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                    },
+                    move |cx| {
+                        let desc_box = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.height =
+                                        Length::Px(Px(desc_style.line_height.unwrap().0 * 2.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            move |cx| vec![shadcn_text(cx, desc_arc.clone(), desc_style.clone())],
+                        );
+
+                        vec![
+                            shadcn_text_line(cx, title_arc.clone(), title_style.clone()),
+                            desc_box,
+                        ]
+                    },
+                )]
+            },
+        );
+
+        NavigationMenuLink::child(model, body)
+            .label(title)
+            .into_element(cx)
+    }
+
+    let gap = Px(8.0); // gap-2
+    cx.grid(
+        GridProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(600.0)); // lg:w-[600px]
+                layout
+            },
+            cols: 2, // md:grid-cols-2
+            rows: None,
+            gap,
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        },
+        move |cx| {
+            vec![
+                link(
+                    cx,
+                    model.clone(),
+                    "Alert Dialog",
+                    "A modal dialog that interrupts the user with important content and expects a response.",
+                    &title_style,
+                    &desc_style,
+                ),
+                link(
+                    cx,
+                    model.clone(),
+                    "Hover Card",
+                    "For sighted users to preview content available behind a link.",
+                    &title_style,
+                    &desc_style,
+                ),
+                link(
+                    cx,
+                    model.clone(),
+                    "Progress",
+                    "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
+                    &title_style,
+                    &desc_style,
+                ),
+                link(
+                    cx,
+                    model.clone(),
+                    "Scroll Area",
+                    "Visually or semantically separates content.",
+                    &title_style,
+                    &desc_style,
+                ),
+                link(
+                    cx,
+                    model.clone(),
+                    "Tabs",
+                    "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
+                    &title_style,
+                    &desc_style,
+                ),
+                link(
+                    cx,
+                    model.clone(),
+                    "Tooltip",
+                    "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
+                    &title_style,
+                    &desc_style,
+                ),
+            ]
+        },
     )
 }
 
@@ -8113,18 +8496,22 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
                 fret_ui_shadcn::NavigationMenuItem::new(
                     "components",
                     "Components",
-                    vec![cx.text("Components")],
+                    vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new("list", "List", vec![cx.text("List")]),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "list",
+                    "List",
+                    vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
+                ),
                 fret_ui_shadcn::NavigationMenuItem::new(
                     "simple",
                     "Simple",
-                    vec![cx.text("Simple")],
+                    vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
                 ),
                 fret_ui_shadcn::NavigationMenuItem::new(
                     "with-icon",
                     "With Icon",
-                    vec![cx.text("With Icon")],
+                    vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
                 ),
             ];
 
@@ -8201,18 +8588,22 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
                     fret_ui_shadcn::NavigationMenuItem::new(
                         "components",
                         "Components",
-                        vec![cx.text("Components")],
+                        vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new("list", "List", vec![cx.text("List")]),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "list",
+                        "List",
+                        vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
+                    ),
                     fret_ui_shadcn::NavigationMenuItem::new(
                         "simple",
                         "Simple",
-                        vec![cx.text("Simple")],
+                        vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
                     ),
                     fret_ui_shadcn::NavigationMenuItem::new(
                         "with-icon",
                         "With Icon",
-                        vec![cx.text("With Icon")],
+                        vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
                     ),
                 ];
 
@@ -8272,6 +8663,10 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
     assert_close(&label, actual_cross, expected_cross, 1.5);
     let label = format!("{web_name} trigger_height");
     assert_close(&label, fret_trigger.h, web_trigger.rect.h, 1.0);
+    let label = format!("{web_name} content_width");
+    assert_close(&label, fret_content.w, web_content.rect.w, 2.0);
+    let label = format!("{web_name} content_height");
+    assert_close(&label, fret_content.h, web_content.rect.h, 2.0);
 }
 
 #[test]
@@ -10423,16 +10818,35 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
     let query: Model<String> = app.models_mut().insert(String::new());
     let open: Model<bool> = app.models_mut().insert(false);
 
-    let items = vec![
-        fret_ui_shadcn::CommandItem::new("Calendar"),
-        fret_ui_shadcn::CommandItem::new("Search Emoji"),
-        fret_ui_shadcn::CommandItem::new("Calculator"),
+    let entries = vec![
+        fret_ui_shadcn::CommandGroup::new(vec![
+            fret_ui_shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
+            fret_ui_shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
+            fret_ui_shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
+        ])
+        .heading("Suggestions")
+        .into(),
+        fret_ui_shadcn::CommandSeparator::new().into(),
+        fret_ui_shadcn::CommandGroup::new(vec![
+            fret_ui_shadcn::CommandItem::new("Profile")
+                .shortcut("⌘P")
+                .on_select("command.profile"),
+            fret_ui_shadcn::CommandItem::new("Billing")
+                .shortcut("⌘B")
+                .on_select("command.billing"),
+            fret_ui_shadcn::CommandItem::new("Settings")
+                .shortcut("⌘S")
+                .on_select("command.settings"),
+        ])
+        .heading("Settings")
+        .into(),
     ];
 
     let render = |cx: &mut ElementContext<'_, App>| {
         use fret_ui_shadcn::{Button, CommandDialog};
 
-        CommandDialog::new(open.clone(), query.clone(), items.clone())
+        CommandDialog::new(open.clone(), query.clone(), Vec::new())
+            .entries(entries.clone())
             .into_element(cx, |cx| Button::new("Open").into_element(cx))
     };
 

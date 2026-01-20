@@ -227,9 +227,16 @@ fn command_text_input<H: UiHost>(
 
     let fg = theme.color_required("foreground");
     let placeholder_fg = theme.color_required("muted-foreground");
+    let pad_y = MetricRef::space(Space::N3).resolve(&theme);
 
     let mut chrome = TextInputStyle::from_theme(theme.snapshot());
-    chrome.padding = Edges::all(Px(0.0));
+    // shadcn/ui v4: cmdk input uses `py-3` and relies on the wrapper for horizontal padding.
+    chrome.padding = Edges {
+        top: pad_y,
+        right: Px(0.0),
+        bottom: pad_y,
+        left: Px(0.0),
+    };
     chrome.corner_radii = Corners::all(Px(0.0));
     chrome.border = Edges::all(Px(0.0));
     chrome.background = Color::TRANSPARENT;
@@ -405,17 +412,13 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
 }
 
 fn heading_text_style(theme: &Theme) -> TextStyle {
-    let base_size = theme.metric_required("font.size");
-    let base_line_height = theme.metric_required("font.line_height");
-
+    // shadcn/ui v4: command group headings use `text-xs` / `leading-4`.
     let size = theme
         .metric_by_key("component.command.heading.text_px")
-        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
-        .unwrap_or_else(|| Px((base_size.0 - 2.0).max(10.0)));
+        .unwrap_or(Px(12.0));
     let line_height = theme
         .metric_by_key("component.command.heading.line_height")
-        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
-        .unwrap_or_else(|| Px((base_line_height.0 - 4.0).max(size.0)));
+        .unwrap_or(Px(16.0));
 
     TextStyle {
         font: FontId::default(),
@@ -612,6 +615,9 @@ impl CommandInput {
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
                 .unwrap_or(Px(36.0));
+            let input_h = theme
+                .metric_by_key("component.command.input.height")
+                .unwrap_or(Px(40.0));
             let icon_size = theme
                 .metric_by_key("component.command.input.icon_size")
                 .unwrap_or(Px(16.0));
@@ -691,7 +697,7 @@ impl CommandInput {
                     self.model.clone(),
                     a11y_label,
                     placeholder,
-                    None,
+                    Some(SemanticsRole::ComboBox),
                     None,
                     None,
                 );
@@ -701,7 +707,9 @@ impl CommandInput {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
+                            layout.size.height = Length::Px(input_h);
+                            layout.margin.top = fret_ui::element::MarginEdge::Auto;
+                            layout.margin.bottom = fret_ui::element::MarginEdge::Auto;
                             layout
                         },
                         gap,
@@ -1072,7 +1080,7 @@ impl CommandList {
             let row_h = MetricRef::space(Space::N8).resolve(&theme);
             let row_gap = MetricRef::space(Space::N2).resolve(&theme);
             let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            // new-york-v4: `py-1.5` for `CommandItem`.
+            // new-york-v4: `py-1.5` for `CommandItem` in the base `Command` surface.
             let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
@@ -1107,7 +1115,8 @@ impl CommandList {
                                     },
                                     direction: fret_core::Axis::Vertical,
                                     gap: Px(0.0),
-                                    // new-york-v4: `CommandList` uses `scroll-py-1`.
+                                    // new-york-v4: `CommandList` uses `scroll-py-1` and is typically
+                                    // wrapped in `CommandGroup` which uses `p-1`.
                                     padding: Edges::all(Px(4.0)),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
@@ -1224,6 +1233,13 @@ pub struct CommandPalette {
     placeholder: Option<Arc<str>>,
     input_role: Option<SemanticsRole>,
     input_expanded: Option<bool>,
+    input_wrapper_h: MetricRef,
+    input_h: MetricRef,
+    input_icon_size: MetricRef,
+    item_pad_y: MetricRef,
+    group_pad_x: MetricRef,
+    group_pad_y: MetricRef,
+    pad_group_separators: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     scroll: LayoutRefinement,
@@ -1232,13 +1248,23 @@ pub struct CommandPalette {
 #[derive(Clone)]
 enum CommandPaletteRenderRow {
     Heading(Arc<str>),
+    GroupPad,
     Separator,
     Item(usize),
 }
 
+#[cfg(test)]
 fn command_palette_render_rows_for_query(
     entries: Vec<CommandEntry>,
     query: &str,
+) -> (Vec<CommandPaletteRenderRow>, Vec<CommandItem>) {
+    command_palette_render_rows_for_query_with_options(entries, query, true)
+}
+
+fn command_palette_render_rows_for_query_with_options(
+    entries: Vec<CommandEntry>,
+    query: &str,
+    pad_group_separators: bool,
 ) -> (Vec<CommandPaletteRenderRow>, Vec<CommandItem>) {
     #[derive(Clone)]
     enum PendingRow {
@@ -1390,15 +1416,33 @@ fn command_palette_render_rows_for_query(
     }
 
     let mut items: Vec<CommandItem> = Vec::new();
+    let mut saw_heading = false;
     let render_rows: Vec<CommandPaletteRenderRow> = filtered_rows
         .into_iter()
-        .map(|row| match row {
-            PendingRow::Heading(h) => CommandPaletteRenderRow::Heading(h),
-            PendingRow::Separator => CommandPaletteRenderRow::Separator,
+        .flat_map(|row| match row {
+            PendingRow::Heading(h) => {
+                let mut out = Vec::new();
+                if saw_heading {
+                    out.push(CommandPaletteRenderRow::GroupPad);
+                }
+                out.push(CommandPaletteRenderRow::Heading(h));
+                saw_heading = true;
+                out
+            }
+            PendingRow::Separator => {
+                if pad_group_separators && saw_heading {
+                    vec![
+                        CommandPaletteRenderRow::GroupPad,
+                        CommandPaletteRenderRow::Separator,
+                    ]
+                } else {
+                    vec![CommandPaletteRenderRow::Separator]
+                }
+            }
             PendingRow::Item(item) => {
                 let idx = items.len();
                 items.push(item);
-                CommandPaletteRenderRow::Item(idx)
+                vec![CommandPaletteRenderRow::Item(idx)]
             }
         })
         .collect();
@@ -1433,8 +1477,15 @@ impl CommandPalette {
             empty_text: Arc::from("No results."),
             a11y_label: Arc::from("Command input"),
             placeholder: None,
-            input_role: None,
+            input_role: Some(SemanticsRole::ComboBox),
             input_expanded: None,
+            input_wrapper_h: MetricRef::Px(Px(36.0)),
+            input_h: MetricRef::Px(Px(40.0)),
+            input_icon_size: MetricRef::Px(Px(16.0)),
+            item_pad_y: MetricRef::space(Space::N1p5),
+            group_pad_x: MetricRef::space(Space::N1),
+            group_pad_y: MetricRef::space(Space::N1),
+            pad_group_separators: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
@@ -1456,6 +1507,24 @@ impl CommandPalette {
     ) -> Self {
         let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
         Self::new(query, items)
+    }
+
+    /// Applies the shadcn/ui v4 `CommandDialog`-specific overrides used by the new-york theme.
+    ///
+    /// On the web these come from selector-based rules on the command root:
+    /// - `**:data-[slot=command-input-wrapper]:h-12`
+    /// - `[&_[cmdk-input-wrapper]_svg]:h-5` / `w-5`
+    /// - `[&_[cmdk-item]]:py-3`
+    /// - `[&_[cmdk-group]]:px-2`
+    pub fn command_dialog_defaults(mut self) -> Self {
+        self.input_wrapper_h = MetricRef::Px(Px(48.0));
+        self.input_h = MetricRef::Px(Px(48.0));
+        self.input_icon_size = MetricRef::Px(Px(20.0));
+        self.item_pad_y = MetricRef::space(Space::N3);
+        self.group_pad_x = MetricRef::space(Space::N2);
+        self.group_pad_y = MetricRef::space(Space::N1);
+        self.pad_group_separators = false;
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -1542,6 +1611,12 @@ impl CommandPalette {
 
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
+            let input_wrapper_h_fallback = self.input_wrapper_h.resolve(&theme);
+            let input_h_fallback = self.input_h.resolve(&theme);
+            let input_icon_size_fallback = self.input_icon_size.resolve(&theme);
+            let item_pad_y = self.item_pad_y.resolve(&theme);
+            let group_pad_x = self.group_pad_x.resolve(&theme);
+            let group_pad_y = self.group_pad_y.resolve(&theme);
 
             let disabled = self.disabled;
             let wrap = self.wrap;
@@ -1552,8 +1627,11 @@ impl CommandPalette {
                 .unwrap_or_default();
             let query_for_render: Arc<str> = Arc::from(query.as_str());
 
-            let (render_rows, items) =
-                command_palette_render_rows_for_query(self.entries, query.as_str());
+            let (render_rows, items) = command_palette_render_rows_for_query_with_options(
+                self.entries,
+                query.as_str(),
+                self.pad_group_separators,
+            );
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
@@ -1564,6 +1642,9 @@ impl CommandPalette {
                         CommandPaletteRenderRow::Heading(h) => {
                             "heading".hash(&mut hasher);
                             h.as_ref().hash(&mut hasher);
+                        }
+                        CommandPaletteRenderRow::GroupPad => {
+                            "group_pad".hash(&mut hasher);
                         }
                         CommandPaletteRenderRow::Separator => {
                             "separator".hash(&mut hasher);
@@ -1669,8 +1750,7 @@ impl CommandPalette {
             let row_h = MetricRef::space(Space::N8).resolve(&theme);
             let row_gap = MetricRef::space(Space::N2).resolve(&theme);
             let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            // new-york-v4: `py-1.5` for `CommandItem`.
-            let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
+            let pad_y = item_pad_y;
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
 
             let bg_hover = item_bg_hover(&theme);
@@ -1733,6 +1813,18 @@ impl CommandPalette {
                             },
                         )
                     }
+                    CommandPaletteRenderRow::GroupPad => cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(group_pad_y);
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::new(),
+                    ),
                     CommandPaletteRenderRow::Separator => {
                         let border = border(&theme);
                         cx.container(
@@ -1949,10 +2041,13 @@ impl CommandPalette {
             let border = border(&theme);
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
-                .unwrap_or(Px(36.0));
+                .unwrap_or(input_wrapper_h_fallback);
+            let input_h = theme
+                .metric_by_key("component.command.input.height")
+                .unwrap_or(input_h_fallback);
             let icon_size = theme
                 .metric_by_key("component.command.input.icon_size")
-                .unwrap_or(Px(16.0));
+                .unwrap_or(input_icon_size_fallback);
             let pad_x = theme
                 .metric_by_key("component.command.input.padding_x")
                 .unwrap_or(Px(12.0));
@@ -2008,7 +2103,9 @@ impl CommandPalette {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
+                        layout.size.height = Length::Px(input_h);
+                        layout.margin.top = fret_ui::element::MarginEdge::Auto;
+                        layout.margin.bottom = fret_ui::element::MarginEdge::Auto;
                         layout
                     },
                     gap,
@@ -2208,8 +2305,12 @@ impl CommandPalette {
                             },
                             direction: fret_core::Axis::Vertical,
                             gap: Px(0.0),
-                            // new-york-v4: `CommandList` uses `scroll-py-1`.
-                            padding: Edges::all(Px(4.0)),
+                            padding: Edges {
+                                top: group_pad_y,
+                                right: group_pad_x,
+                                bottom: group_pad_y,
+                                left: group_pad_x,
+                            },
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
@@ -2372,16 +2473,9 @@ impl CommandDialog {
         let empty_text = self.empty_text;
 
         Dialog::new(open).into_element(cx, trigger, move |cx| {
-            let theme = Theme::global(&*cx.app).clone();
-            // shadcn/ui: list panels default to `max-h-[300px]` but should still fit into the
-            // current viewport. Clamp the scroll area height to the dialog's available height
-            // budget (accounting for the dialog window padding and the command input row).
-            let window_padding_px = MetricRef::space(Space::N4).resolve(&theme);
-            let available_h = Px((cx.bounds.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
-            let input_h = theme
-                .metric_by_key("component.command.input.wrapper_height")
-                .unwrap_or(Px(36.0));
-            let max_list_h = Px((available_h.0 - input_h.0).max(0.0).min(300.0));
+            // shadcn/ui v4: command dialog list is `max-h-[300px]` and is allowed to overflow the
+            // viewport (the web implementation does not clamp it to the viewport height).
+            let list_h = Px(300.0);
 
             let entries = if close_on_select {
                 let close_action: fret_ui::action::OnActivate = Arc::new({
@@ -2438,12 +2532,17 @@ impl CommandDialog {
             };
 
             let palette = CommandPalette::new(query, Vec::new())
+                .command_dialog_defaults()
                 .entries(entries)
                 .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
                 .disabled(disabled)
                 .wrap(wrap)
                 .empty_text(empty_text)
-                .refine_scroll_layout(LayoutRefinement::default().max_h(MetricRef::Px(max_list_h)))
+                .refine_scroll_layout(
+                    LayoutRefinement::default()
+                        .h_px(MetricRef::Px(list_h))
+                        .max_h(MetricRef::Px(list_h)),
+                )
                 .into_element(cx);
 
             DialogContent::new(vec![palette])
@@ -2859,7 +2958,7 @@ mod tests {
     }
 
     #[test]
-    fn command_dialog_list_clamps_to_viewport_in_tight_heights() {
+    fn command_dialog_list_can_overflow_viewport_in_tight_heights() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -2924,8 +3023,12 @@ mod tests {
         let list_bottom = list_bounds.origin.y.0 + list_bounds.size.height.0;
 
         assert!(
-            list_bottom <= bounds.size.height.0 + 0.01,
-            "expected listbox to fit within viewport; list={list_bounds:?} viewport={bounds:?}"
+            list_bounds.size.height.0 >= 299.0,
+            "expected fixed 300px listbox height; list={list_bounds:?}"
+        );
+        assert!(
+            list_bounds.origin.y.0 < 0.0 || list_bottom > bounds.size.height.0 + 0.01,
+            "expected listbox to overflow tight viewports; list={list_bounds:?} viewport={bounds:?}"
         );
     }
 
@@ -2956,6 +3059,7 @@ mod tests {
         rows.iter()
             .map(|row| match row {
                 CommandPaletteRenderRow::Heading(h) => format!("H:{h}"),
+                CommandPaletteRenderRow::GroupPad => "P".to_string(),
                 CommandPaletteRenderRow::Separator => "S".to_string(),
                 CommandPaletteRenderRow::Item(idx) => {
                     let label = items
@@ -3030,8 +3134,8 @@ mod tests {
         let input = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::TextField && n.id == focus)
-            .expect("focused text field node");
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
 
         let active = input
             .active_descendant
@@ -3197,8 +3301,8 @@ mod tests {
         let input = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::TextField && n.id == focus)
-            .expect("focused text field node");
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
 
         let active = input
             .active_descendant
@@ -3294,8 +3398,8 @@ mod tests {
         let input = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::TextField && n.id == focus)
-            .expect("focused text field node");
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
 
         let active = input
             .active_descendant
@@ -3394,8 +3498,8 @@ mod tests {
         let input = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::TextField && n.id == focus)
-            .expect("focused text field node");
+            .find(|n| n.role == SemanticsRole::ComboBox && n.id == focus)
+            .expect("focused combobox node");
         let active = input
             .active_descendant
             .expect("active_descendant should be set");
@@ -3471,6 +3575,7 @@ mod tests {
                 "H:Basics".to_string(),
                 "I:Alpha".to_string(),
                 "I:Beta".to_string(),
+                "P".to_string(),
                 "S".to_string(),
                 "I:Gamma".to_string()
             ]
@@ -3529,6 +3634,7 @@ mod tests {
             vec![
                 "H:g2".to_string(),
                 "I:alpha".to_string(),
+                "P".to_string(),
                 "H:g1".to_string(),
                 "I:pal".to_string()
             ]

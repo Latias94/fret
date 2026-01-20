@@ -109,6 +109,7 @@ patterns:
 - `breadcrumb-responsive` (desktop dropdown placement + panel width; mobile truncation + drawer insets via `vp375x812` gates)
 - `context-menu-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
 - `menubar-demo` (overlay placement + max-height/scrolling; `vp1440x320` gates menu panel height)
+- `navigation-menu-demo` (overlay placement + content sizing across variants; small-viewport variants gate max-height/scrolling)
 - `select-scrollable` (available-height clamping + scrolling + scroll buttons / top inset outcome)
 - `scroll-area-demo` (scroll range via viewport `scrollHeight/clientHeight`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect; `.hover-out-*` gates `scrollHideDelay`)
 - `scroll-area-horizontal-demo` (scroll range via viewport `scrollWidth/clientWidth`; `.hover` gates scrollbar track rect; `.scrolled` gates thumb rect; `.hover-out-*` gates `scrollHideDelay`)
