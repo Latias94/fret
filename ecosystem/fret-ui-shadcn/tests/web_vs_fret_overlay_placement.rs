@@ -5907,12 +5907,7 @@ fn web_portal_first_node_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> &
     panic!("missing web portal node with role={role}")
 }
 
-fn assert_combobox_demo_listbox_height_matches(web_name: &str) {
-    let web = read_web_golden_open(web_name);
-    let theme = web_theme(&web);
-    let web_listbox = web_portal_first_node_by_role(theme, "listbox");
-    let expected_h = web_listbox.rect.h;
-
+fn combobox_demo_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot {
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
@@ -5977,7 +5972,16 @@ fn assert_combobox_demo_listbox_height_matches(web_name: &str) {
         );
     }
 
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    ui.semantics_snapshot().expect("semantics snapshot").clone()
+}
+
+fn assert_combobox_demo_listbox_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_portal_first_node_by_role(theme, "listbox");
+    let expected_h = web_listbox.rect.h;
+
+    let snap = combobox_demo_open_snapshot(theme);
     let listbox = snap
         .nodes
         .iter()
@@ -5990,6 +5994,51 @@ fn assert_combobox_demo_listbox_height_matches(web_name: &str) {
         expected_h,
         2.0,
     );
+}
+
+fn assert_combobox_demo_listbox_option_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_portal_first_node_by_role(theme, "listbox");
+
+    let expected: std::collections::BTreeSet<i32> = web_select_listbox_option_heights(web_listbox)
+        .into_iter()
+        .map(round_i32)
+        .collect();
+    assert!(
+        expected.len() == 1,
+        "{web_name} expected uniform web combobox option height; got {expected:?}"
+    );
+
+    let snap = combobox_demo_open_snapshot(theme);
+    let actual: std::collections::BTreeSet<i32> = fret_listbox_option_heights_in_listbox(&snap)
+        .into_iter()
+        .map(round_i32)
+        .collect();
+    assert!(
+        actual.len() == 1,
+        "{web_name} expected uniform fret combobox option height; got {actual:?}"
+    );
+
+    let expected_h = expected.iter().next().copied().unwrap_or_default() as f32;
+    let actual_h = actual.iter().next().copied().unwrap_or_default() as f32;
+    assert_close(
+        &format!("{web_name} combobox_option_h"),
+        actual_h,
+        expected_h,
+        1.0,
+    );
+}
+
+fn assert_combobox_demo_listbox_option_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_portal_first_node_by_role(theme, "listbox");
+    let expected_inset = web_select_content_option_inset(web_listbox);
+
+    let snap = combobox_demo_open_snapshot(theme);
+    let actual_inset = fret_select_content_option_inset(&snap);
+    assert_select_inset_match(web_name, actual_inset, expected_inset);
 }
 
 #[test]
@@ -6010,6 +6059,46 @@ fn web_vs_fret_combobox_demo_small_viewport_listbox_height_matches() {
 #[test]
 fn web_vs_fret_combobox_demo_tiny_viewport_listbox_height_matches() {
     assert_combobox_demo_listbox_height_matches("combobox-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_listbox_option_height_matches() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-demo");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_constrained_viewport_listbox_option_height_matches() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_small_viewport_listbox_option_height_matches() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-demo.vp375x320");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_tiny_viewport_listbox_option_height_matches() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_listbox_option_insets_match() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-demo");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_constrained_viewport_listbox_option_insets_match() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-demo.vp1440x320");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_small_viewport_listbox_option_insets_match() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-demo.vp375x320");
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_tiny_viewport_listbox_option_insets_match() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-demo.vp1440x240");
 }
 
 fn assert_point_anchored_overlay_placement_matches(
