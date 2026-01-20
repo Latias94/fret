@@ -10,6 +10,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         modifiers: fret_core::Modifiers,
         zoom: f32,
     ) {
+        if self.interaction.viewport_animation.is_some() {
+            self.stop_viewport_animation_timer(cx.app);
+        }
         if self.interaction.pan_inertia.is_some() {
             self.stop_pan_inertia_timer(cx.app);
             self.emit_move_end(

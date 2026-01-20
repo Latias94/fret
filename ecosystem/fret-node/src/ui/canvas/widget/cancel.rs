@@ -93,6 +93,10 @@ fn cancel_active_gestures_inner<H: UiHost, M: NodeGraphCanvasMiddleware>(
         );
         canceled = true;
     }
+    if canvas.interaction.viewport_animation.is_some() {
+        canvas.stop_viewport_animation_timer(cx.app);
+        canceled = true;
+    }
     if let Some(state) = canvas.interaction.viewport_move_debounce.take() {
         cx.app
             .push_effect(Effect::CancelTimer { token: state.timer });

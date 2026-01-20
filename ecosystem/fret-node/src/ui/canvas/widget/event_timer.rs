@@ -1,3 +1,4 @@
+use super::super::state::ViewportAnimationInterpolate;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -107,6 +108,70 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     ViewportMoveEndOutcome::Ended,
                 );
             }
+            return;
+        }
+
+        if self
+            .interaction
+            .viewport_animation
+            .as_ref()
+            .is_some_and(|a| a.timer == token)
+        {
+            let Some(mut anim) = self.interaction.viewport_animation.take() else {
+                return;
+            };
+
+            if anim.duration.is_zero() {
+                cx.app
+                    .push_effect(Effect::CancelTimer { token: anim.timer });
+                return;
+            }
+
+            let now = std::time::Instant::now();
+            let mut dt = now
+                .checked_duration_since(anim.last_tick_at)
+                .unwrap_or_default();
+            if dt < Self::PAN_INERTIA_TICK_INTERVAL {
+                dt = Self::PAN_INERTIA_TICK_INTERVAL;
+            }
+            if dt > std::time::Duration::from_millis(200) {
+                dt = std::time::Duration::from_millis(200);
+            }
+            anim.last_tick_at = now;
+            anim.elapsed = (anim.elapsed + dt).min(anim.duration);
+
+            let denom = anim.duration.as_secs_f32();
+            let t = if denom > 0.0 {
+                (anim.elapsed.as_secs_f32() / denom).clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+            let u = match anim.interpolate {
+                ViewportAnimationInterpolate::Linear => t,
+                ViewportAnimationInterpolate::Smooth => t * t * (3.0 - 2.0 * t),
+            };
+
+            let pan = CanvasPoint {
+                x: anim.from_pan.x + (anim.to_pan.x - anim.from_pan.x) * u,
+                y: anim.from_pan.y + (anim.to_pan.y - anim.from_pan.y) * u,
+            };
+            let zoom = anim.from_zoom + (anim.to_zoom - anim.from_zoom) * u;
+
+            self.update_view_state(cx.app, |s| {
+                s.pan = pan;
+                s.zoom = zoom;
+            });
+
+            let done = t >= 1.0 - 1.0e-6;
+            if done {
+                cx.app
+                    .push_effect(Effect::CancelTimer { token: anim.timer });
+            } else {
+                self.interaction.viewport_animation = Some(anim);
+            }
+
+            cx.request_redraw();
+            cx.invalidate_self(Invalidation::Paint);
             return;
         }
 

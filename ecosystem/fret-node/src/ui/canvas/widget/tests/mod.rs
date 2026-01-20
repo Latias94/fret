@@ -24,6 +24,7 @@ use crate::core::{
 mod callbacks_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
+mod focus_auto_pan_conformance;
 mod hit_testing_conformance;
 mod insert_node_drag_conformance;
 mod interaction_conformance;
@@ -35,6 +36,7 @@ mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
 mod portal_pointer_passthrough_conformance;
+mod viewport_animation_conformance;
 mod z_order_conformance;
 
 #[test]
@@ -1400,6 +1402,7 @@ fn event_cx<'a>(
         requested_focus: None,
         requested_capture: None,
         requested_cursor: None,
+        notify_requested: false,
         stop_propagation: false,
     }
 }

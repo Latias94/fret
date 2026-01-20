@@ -460,6 +460,14 @@ pub enum NodeGraphPanOnScrollMode {
     Vertical,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphViewportInterpolate {
+    Linear,
+    #[default]
+    Smooth,
+}
+
 /// Optional interaction tuning persisted as part of editor view state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphInteractionState {
@@ -660,6 +668,18 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_zoom_on_double_click")]
     pub zoom_on_double_click: bool,
 
+    /// Duration (ms) for view framing / fit-view style commands.
+    ///
+    /// Lightweight parity knob for XyFlow's `fitViewOptions.duration`.
+    #[serde(default = "default_frame_view_duration_ms")]
+    pub frame_view_duration_ms: u32,
+
+    /// Interpolation style for view framing / fit-view style commands.
+    ///
+    /// Lightweight parity knob for XyFlow's `fitViewOptions.interpolate`.
+    #[serde(default)]
+    pub frame_view_interpolate: NodeGraphViewportInterpolate,
+
     /// Whether double-clicking a wire inserts a reroute node (ShaderGraph-style).
     ///
     /// This is separate from `zoom_on_double_click`: zoom only applies when the double click hits
@@ -772,6 +792,8 @@ impl Default for NodeGraphInteractionState {
             zoom_on_pinch: default_zoom_on_pinch(),
             zoom_on_pinch_speed: default_zoom_on_pinch_speed(),
             zoom_on_double_click: default_zoom_on_double_click(),
+            frame_view_duration_ms: default_frame_view_duration_ms(),
+            frame_view_interpolate: NodeGraphViewportInterpolate::default(),
             reroute_on_edge_double_click: default_reroute_on_edge_double_click(),
             edge_insert_on_alt_drag: default_edge_insert_on_alt_drag(),
             zoom_activation_key: NodeGraphZoomActivationKey::default(),
@@ -915,6 +937,10 @@ fn default_zoom_on_pinch_speed() -> f32 {
 
 fn default_zoom_on_double_click() -> bool {
     true
+}
+
+fn default_frame_view_duration_ms() -> u32 {
+    200
 }
 
 fn default_reroute_on_edge_double_click() -> bool {

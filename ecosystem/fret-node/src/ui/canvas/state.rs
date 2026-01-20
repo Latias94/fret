@@ -46,6 +46,7 @@ pub(crate) struct InteractionState {
     pub(crate) pan_last_sample_at: Option<Instant>,
     pub(crate) pan_velocity: CanvasPoint,
     pub(crate) pan_inertia: Option<PanInertiaState>,
+    pub(crate) viewport_animation: Option<ViewportAnimationState>,
     pub(crate) viewport_move_debounce: Option<ViewportMoveDebounceState>,
     /// Whether the current `wire_drag` session was initiated via click-to-connect.
     ///
@@ -189,6 +190,25 @@ mod tests {
 pub(crate) struct PanInertiaState {
     pub(crate) timer: TimerToken,
     pub(crate) velocity: CanvasPoint,
+    pub(crate) last_tick_at: Instant,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ViewportAnimationInterpolate {
+    Linear,
+    Smooth,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ViewportAnimationState {
+    pub(crate) timer: TimerToken,
+    pub(crate) from_pan: CanvasPoint,
+    pub(crate) from_zoom: f32,
+    pub(crate) to_pan: CanvasPoint,
+    pub(crate) to_zoom: f32,
+    pub(crate) interpolate: ViewportAnimationInterpolate,
+    pub(crate) duration: std::time::Duration,
+    pub(crate) elapsed: std::time::Duration,
     pub(crate) last_tick_at: Instant,
 }
 

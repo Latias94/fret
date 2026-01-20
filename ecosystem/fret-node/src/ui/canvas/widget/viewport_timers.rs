@@ -1,6 +1,54 @@
+use super::super::state::{ViewportAnimationInterpolate, ViewportAnimationState};
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(super) fn stop_viewport_animation_timer<H: UiHost>(&mut self, host: &mut H) {
+        let Some(anim) = self.interaction.viewport_animation.take() else {
+            return;
+        };
+        host.push_effect(Effect::CancelTimer { token: anim.timer });
+    }
+
+    pub(super) fn start_viewport_animation_to<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        from_pan: CanvasPoint,
+        from_zoom: f32,
+        to_pan: CanvasPoint,
+        to_zoom: f32,
+        duration: std::time::Duration,
+        interpolate: ViewportAnimationInterpolate,
+    ) -> bool {
+        self.stop_viewport_animation_timer(host);
+
+        if duration.is_zero() {
+            return false;
+        }
+
+        let timer = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window,
+            token: timer,
+            after: Self::PAN_INERTIA_TICK_INTERVAL,
+            repeat: Some(Self::PAN_INERTIA_TICK_INTERVAL),
+        });
+
+        let now = std::time::Instant::now();
+        self.interaction.viewport_animation = Some(ViewportAnimationState {
+            timer,
+            from_pan,
+            from_zoom,
+            to_pan,
+            to_zoom,
+            interpolate,
+            duration,
+            elapsed: std::time::Duration::ZERO,
+            last_tick_at: now,
+        });
+        true
+    }
+
     pub(super) fn auto_pan_delta(snapshot: &ViewSnapshot, pos: Point, bounds: Rect) -> CanvasPoint {
         let zoom = snapshot.zoom;
         if !zoom.is_finite() || zoom <= 0.0 {

@@ -314,6 +314,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.interaction.viewport_move_debounce.is_some()
             || self.interaction.panning
             || self.interaction.pan_inertia.is_some()
+            || self.interaction.viewport_animation.is_some()
             || self.interaction.pending_marquee.is_some()
             || self.interaction.marquee.is_some()
             || self.interaction.pending_node_drag.is_some()

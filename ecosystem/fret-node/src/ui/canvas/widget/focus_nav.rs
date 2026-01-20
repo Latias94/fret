@@ -137,6 +137,20 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             s.draw_order.retain(|id| *id != next);
             s.draw_order.push(next);
         });
+
+        let snapshot = self.sync_view_state(host);
+        if snapshot.interaction.auto_pan.on_node_focus {
+            self.stop_viewport_animation_timer(host);
+            let (geom, _index) = self.canvas_derived(&*host, &snapshot);
+            if let Some(ng) = geom.nodes.get(&next) {
+                let rect = ng.rect;
+                let center = CanvasPoint {
+                    x: rect.origin.x.0 + 0.5 * rect.size.width.0,
+                    y: rect.origin.y.0 + 0.5 * rect.size.height.0,
+                };
+                self.ensure_canvas_point_visible(host, &snapshot, center);
+            }
+        }
         true
     }
 

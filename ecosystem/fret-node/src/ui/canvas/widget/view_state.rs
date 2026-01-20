@@ -1,3 +1,4 @@
+use super::super::state::ViewportAnimationInterpolate;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -350,10 +351,37 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             y: target_center_y - center_y,
         };
 
-        self.update_view_state(host, |s| {
-            s.zoom = zoom;
-            s.pan = new_pan;
-        });
+        let snapshot = self.sync_view_state(host);
+        let duration_ms = snapshot.interaction.frame_view_duration_ms;
+        let duration = std::time::Duration::from_millis(duration_ms as u64);
+        let interpolate = match snapshot.interaction.frame_view_interpolate {
+            crate::io::NodeGraphViewportInterpolate::Linear => ViewportAnimationInterpolate::Linear,
+            crate::io::NodeGraphViewportInterpolate::Smooth => ViewportAnimationInterpolate::Smooth,
+        };
+
+        let dx = new_pan.x - snapshot.pan.x;
+        let dy = new_pan.y - snapshot.pan.y;
+        let dzoom = zoom - snapshot.zoom;
+        let needs_move = dx * dx + dy * dy > 1.0e-6 || dzoom.abs() > 1.0e-6;
+
+        if duration.is_zero() || !needs_move {
+            self.stop_viewport_animation_timer(host);
+            self.update_view_state(host, |s| {
+                s.zoom = zoom;
+                s.pan = new_pan;
+            });
+        } else {
+            self.start_viewport_animation_to(
+                host,
+                window,
+                snapshot.pan,
+                snapshot.zoom,
+                new_pan,
+                zoom,
+                duration,
+                interpolate,
+            );
+        }
 
         true
     }
