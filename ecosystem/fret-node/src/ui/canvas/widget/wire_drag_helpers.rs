@@ -19,6 +19,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.interaction.hover_port = None;
         self.interaction.hover_port_valid = false;
         self.interaction.hover_port_convertible = false;
+        self.interaction.hover_port_diagnostic = None;
         cx.capture_pointer(cx.node);
         cx.request_redraw();
         cx.invalidate_self(Invalidation::Paint);
@@ -37,6 +38,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.interaction.hover_port = None;
             self.interaction.hover_port_valid = false;
             self.interaction.hover_port_convertible = false;
+            self.interaction.hover_port_diagnostic = None;
             cx.capture_pointer(cx.node);
             cx.request_redraw();
             cx.invalidate_self(Invalidation::Paint);

@@ -609,6 +609,19 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_only_render_visible_elements")]
     pub only_render_visible_elements: bool,
 
+    /// Whether selected nodes should be drawn on top of non-selected nodes (XyFlow
+    /// `elevateNodesOnSelect`).
+    #[serde(default = "default_elevate_nodes_on_select")]
+    pub elevate_nodes_on_select: bool,
+
+    /// Whether selected edges should be drawn on top of non-selected edges (XyFlow
+    /// `elevateEdgesOnSelect`).
+    ///
+    /// Note: when disabled, the canvas may choose to forego static edge caches so that selection
+    /// styling can still be applied without changing the edge z-order.
+    #[serde(default = "default_elevate_edges_on_select")]
+    pub elevate_edges_on_select: bool,
+
     /// Paint-cache pruning tuning for long-lived graphs.
     #[serde(default = "default_paint_cache_prune_tuning")]
     pub paint_cache_prune: NodeGraphPaintCachePruneTuning,
@@ -864,6 +877,8 @@ impl Default for NodeGraphInteractionState {
             bezier_hit_test_steps: default_bezier_hit_test_steps(),
             spatial_index: NodeGraphSpatialIndexTuning::default(),
             only_render_visible_elements: default_only_render_visible_elements(),
+            elevate_nodes_on_select: default_elevate_nodes_on_select(),
+            elevate_edges_on_select: default_elevate_edges_on_select(),
             paint_cache_prune: NodeGraphPaintCachePruneTuning::default(),
             snap_to_grid: false,
             snap_grid: default_snap_grid(),
@@ -907,6 +922,14 @@ impl Default for NodeGraphInteractionState {
             node_origin: NodeGraphNodeOrigin::default(),
         }
     }
+}
+
+fn default_elevate_nodes_on_select() -> bool {
+    false
+}
+
+fn default_elevate_edges_on_select() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

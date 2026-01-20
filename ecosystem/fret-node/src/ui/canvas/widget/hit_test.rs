@@ -165,6 +165,87 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
     }
 
+    pub(super) fn pick_wire_hover_port(
+        &self,
+        graph: &Graph,
+        snapshot: &ViewSnapshot,
+        geom: &CanvasGeometry,
+        index: &CanvasSpatialIndex,
+        from: PortId,
+        require_from_connectable_start: bool,
+        pos: Point,
+        zoom: f32,
+        scratch: &mut Vec<PortId>,
+    ) -> Option<PortId> {
+        if require_from_connectable_start
+            && !Self::port_is_connectable_start(graph, &snapshot.interaction, from)
+        {
+            return None;
+        }
+
+        let from_port = graph.ports.get(&from)?;
+        let desired_dir = match from_port.dir {
+            PortDirection::In => PortDirection::Out,
+            PortDirection::Out => PortDirection::In,
+        };
+
+        match snapshot.interaction.connection_mode {
+            NodeGraphConnectionMode::Strict => {
+                let candidate = self.hit_port(geom, index, pos, zoom, scratch)?;
+                (candidate != from).then_some(candidate)
+            }
+            NodeGraphConnectionMode::Loose => {
+                let radius_screen = snapshot.interaction.connection_radius;
+                if !radius_screen.is_finite() || radius_screen <= 0.0 {
+                    let candidate = self.hit_port(geom, index, pos, zoom, scratch)?;
+                    return (candidate != from).then_some(candidate);
+                }
+                let r = canvas_units_from_screen_px(radius_screen, zoom);
+                let r2 = r * r;
+                let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
+
+                let mut best: Option<(PortId, f32, bool, u32)> = None;
+                index.query_ports(pos, r, scratch);
+                scratch.sort_unstable();
+                scratch.dedup();
+                for &port_id in scratch.iter() {
+                    if port_id == from {
+                        continue;
+                    }
+                    let Some(handle) = geom.ports.get(&port_id) else {
+                        continue;
+                    };
+                    let d2 = Self::distance_sq_point_to_rect(pos, handle.bounds);
+                    if d2 > r2 {
+                        continue;
+                    }
+                    let prefers_opposite = handle.dir == desired_dir;
+                    let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
+                    match best {
+                        Some((best_id, best_d2, best_prefers_opposite, best_rank)) => {
+                            if d2 + eps < best_d2 {
+                                best = Some((port_id, d2, prefers_opposite, rank));
+                            } else if (d2 - best_d2).abs() <= eps {
+                                if prefers_opposite != best_prefers_opposite {
+                                    if prefers_opposite {
+                                        best = Some((port_id, d2, prefers_opposite, rank));
+                                    }
+                                } else if rank > best_rank {
+                                    best = Some((port_id, d2, prefers_opposite, rank));
+                                } else if rank == best_rank && port_id < best_id {
+                                    best = Some((port_id, d2, prefers_opposite, rank));
+                                }
+                            }
+                        }
+                        None => best = Some((port_id, d2, prefers_opposite, rank)),
+                    }
+                }
+
+                best.map(|(id, _, _, _)| id)
+            }
+        }
+    }
+
     pub(super) fn hit_edge(
         &self,
         graph: &Graph,

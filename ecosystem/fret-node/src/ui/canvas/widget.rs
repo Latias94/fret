@@ -16,7 +16,7 @@ use fret_core::{
     Size, TextConstraints, TextOverflow, TextWrap, Transform2D,
 };
 use fret_runtime::{CommandId, Effect, Model};
-use fret_ui::{UiHost, retained_bridge::*};
+use fret_ui::{Theme, UiHost, retained_bridge::*};
 use slotmap::Key;
 
 use crate::REROUTE_KIND;
@@ -65,7 +65,7 @@ use crate::ui::presenter::{
     NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
     PortAnchorHint,
 };
-use crate::ui::style::NodeGraphStyle;
+use crate::ui::style::{NodeGraphColorMode, NodeGraphStyle};
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
@@ -227,6 +227,9 @@ pub struct NodeGraphCanvasWith<M> {
     callbacks: Option<Box<dyn NodeGraphCallbacks>>,
     middleware: M,
     style: NodeGraphStyle,
+    color_mode: Option<NodeGraphColorMode>,
+    color_mode_last: Option<NodeGraphColorMode>,
+    color_mode_theme_rev: Option<u64>,
     close_command: Option<CommandId>,
 
     auto_measured: Arc<MeasuredGeometryStore>,
@@ -369,6 +372,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             callbacks: None,
             middleware,
             style: NodeGraphStyle::default(),
+            color_mode: None,
+            color_mode_last: None,
+            color_mode_theme_rev: None,
             close_command: None,
             auto_measured,
             auto_measured_key: None,
@@ -441,6 +447,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             callbacks: self.callbacks,
             middleware,
             style: self.style,
+            color_mode: self.color_mode,
+            color_mode_last: self.color_mode_last,
+            color_mode_theme_rev: self.color_mode_theme_rev,
             close_command: self.close_command,
             auto_measured: self.auto_measured,
             auto_measured_key: self.auto_measured_key,
@@ -495,8 +504,64 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub fn with_style(mut self, style: NodeGraphStyle) -> Self {
         self.style = style;
+        self.color_mode = None;
+        self.color_mode_last = None;
+        self.color_mode_theme_rev = None;
         self.geometry.key = None;
         self
+    }
+
+    pub fn with_color_mode(mut self, mode: NodeGraphColorMode) -> Self {
+        self.color_mode = Some(mode);
+        self.color_mode_last = None;
+        self.color_mode_theme_rev = None;
+        self.geometry.key = None;
+        self
+    }
+
+    fn sync_style_from_color_mode(
+        &mut self,
+        theme: fret_ui::ThemeSnapshot,
+        services: Option<&mut dyn fret_core::UiServices>,
+    ) {
+        let Some(mode) = self.color_mode else {
+            return;
+        };
+
+        let needs_update = match mode {
+            NodeGraphColorMode::System => {
+                let rev = theme.revision;
+                self.color_mode_last != Some(mode) || self.color_mode_theme_rev != Some(rev)
+            }
+            NodeGraphColorMode::Light | NodeGraphColorMode::Dark => {
+                self.color_mode_last != Some(mode)
+            }
+        };
+
+        if !needs_update {
+            return;
+        }
+
+        self.color_mode_last = Some(mode);
+        self.color_mode_theme_rev = match mode {
+            NodeGraphColorMode::System => Some(theme.revision),
+            NodeGraphColorMode::Light | NodeGraphColorMode::Dark => None,
+        };
+
+        self.style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
+        self.geometry.key = None;
+
+        if let Some(services) = services {
+            self.paint_cache.clear(services);
+        }
+
+        self.groups_scene_cache.clear();
+        self.nodes_scene_cache.clear();
+        self.edges_scene_cache.clear();
+        self.edge_labels_scene_cache.clear();
+        self.edges_build_states.clear();
+        self.edge_labels_build_states.clear();
+        self.edge_labels_build_state = None;
     }
 
     /// Adds a screen-space close button overlay that dispatches a command when clicked.
@@ -616,6 +681,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     }
 
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
+        let theme = cx.theme().snapshot();
+        self.sync_style_from_color_mode(theme, Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         if cx.input_ctx.focus_is_text_input && command.as_str().starts_with("node_graph.") {
             return false;
@@ -643,6 +710,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     }
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        let theme = Theme::global(&*cx.app).snapshot();
+        self.sync_style_from_color_mode(theme, None);
         self.interaction.last_bounds = Some(cx.bounds);
         let snapshot = self.sync_view_state(cx.app);
 
@@ -726,6 +795,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let theme = cx.theme().snapshot();
+        self.sync_style_from_color_mode(theme, Some(cx.services));
         cx.observe_model(&self.graph, Invalidation::Layout);
         cx.observe_model(&self.view_state, Invalidation::Layout);
         if let Some(queue) = self.edit_queue.as_ref() {
@@ -751,6 +822,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        let theme = cx.theme().snapshot();
+        self.sync_style_from_color_mode(theme, Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         self.interaction.last_bounds = Some(cx.bounds);
 
@@ -776,6 +849,8 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        let theme = cx.theme().snapshot();
+        self.sync_style_from_color_mode(theme, Some(cx.services));
         self.paint_root(cx);
     }
 }

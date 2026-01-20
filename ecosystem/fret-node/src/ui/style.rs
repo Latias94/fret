@@ -1,6 +1,23 @@
 use fret_core::{Color, Px, TextStyle};
 use fret_ui::{Theme, ThemeSnapshot};
 
+/// Color mode override for the node graph canvas (XyFlow `colorMode`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NodeGraphColorMode {
+    /// Use the host UI theme (default).
+    System,
+    /// Force a light palette regardless of the host theme.
+    Light,
+    /// Force a dark palette regardless of the host theme.
+    Dark,
+}
+
+impl Default for NodeGraphColorMode {
+    fn default() -> Self {
+        Self::System
+    }
+}
+
 /// Visual tuning for the node graph canvas.
 #[derive(Debug, Clone)]
 pub struct NodeGraphStyle {
@@ -14,6 +31,7 @@ pub struct NodeGraphStyle {
     pub node_width: f32,
     pub node_header_height: f32,
     pub node_padding: f32,
+    pub node_corner_radius: f32,
     pub pin_row_height: f32,
     pub pin_radius: f32,
 
@@ -122,6 +140,7 @@ impl Default for NodeGraphStyle {
             node_width: 220.0,
             node_header_height: 28.0,
             node_padding: 10.0,
+            node_corner_radius: 8.0,
             pin_row_height: 22.0,
             pin_radius: 6.0,
 
@@ -310,6 +329,150 @@ impl Default for NodeGraphStyle {
 }
 
 impl NodeGraphStyle {
+    pub fn from_color_mode(theme: &Theme, mode: NodeGraphColorMode) -> Self {
+        Self::from_snapshot_with_color_mode(theme.snapshot(), mode)
+    }
+
+    pub fn from_snapshot_with_color_mode(theme: ThemeSnapshot, mode: NodeGraphColorMode) -> Self {
+        match mode {
+            NodeGraphColorMode::System => Self::from_snapshot(theme),
+            NodeGraphColorMode::Light => Self::xyflow_light_defaults(),
+            NodeGraphColorMode::Dark => Self::default(),
+        }
+    }
+
+    pub fn xyflow_light_defaults() -> Self {
+        let mut s = Self::default();
+
+        s.background = Color {
+            r: 0.98,
+            g: 0.98,
+            b: 0.98,
+            a: 1.0,
+        };
+
+        s.grid_minor_color = Color {
+            r: 0.90,
+            g: 0.90,
+            b: 0.90,
+            a: 1.0,
+        };
+        s.grid_major_color = Color {
+            r: 0.84,
+            g: 0.84,
+            b: 0.84,
+            a: 1.0,
+        };
+
+        s.node_background = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        };
+        s.node_border = Color {
+            r: 0.78,
+            g: 0.78,
+            b: 0.78,
+            a: 1.0,
+        };
+
+        s.group_background = Color {
+            r: 0.90,
+            g: 0.90,
+            b: 0.90,
+            a: 0.45,
+        };
+        s.group_border = Color {
+            r: 0.78,
+            g: 0.78,
+            b: 0.78,
+            a: 0.90,
+        };
+
+        s.resize_handle_background = Color {
+            r: 0.96,
+            g: 0.96,
+            b: 0.96,
+            a: 0.98,
+        };
+        s.resize_handle_border = Color {
+            r: 0.70,
+            g: 0.70,
+            b: 0.70,
+            a: 0.90,
+        };
+
+        s.wire_color_preview = Color {
+            r: 0.10,
+            g: 0.10,
+            b: 0.10,
+            a: 0.60,
+        };
+
+        s.context_menu_background = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 0.98,
+        };
+        s.context_menu_border = Color {
+            r: 0.78,
+            g: 0.78,
+            b: 0.78,
+            a: 1.0,
+        };
+        s.context_menu_hover_background = Color {
+            r: 0.92,
+            g: 0.95,
+            b: 1.0,
+            a: 1.0,
+        };
+        s.context_menu_text = Color {
+            r: 0.12,
+            g: 0.12,
+            b: 0.12,
+            a: 1.0,
+        };
+        s.context_menu_text_disabled = Color {
+            r: 0.45,
+            g: 0.45,
+            b: 0.45,
+            a: 1.0,
+        };
+
+        s.controls_text = s.context_menu_text;
+        s.controls_hover_background = s.context_menu_hover_background;
+        s.controls_active_background = Color {
+            r: 0.20,
+            g: 0.55,
+            b: 0.95,
+            a: 0.22,
+        };
+
+        s
+    }
+
+    /// Applies XyFlow default node style tokens (width/padding/radius/handle size/font size).
+    ///
+    /// This only touches node-related sizing/chrome fields. Colors remain unchanged so callers
+    /// can combine it with theme-driven palettes or `colorMode` overrides.
+    pub fn apply_xyflow_default_node_style(&mut self) {
+        // From `@xyflow/system` style defaults (adapted to fret-node's retained rendering):
+        // - node: width 150, padding 10, border radius 3, font-size 12
+        // - handle: 6x6 circle
+        self.node_width = 150.0;
+        self.node_padding = 10.0;
+        self.node_corner_radius = 3.0;
+        self.pin_radius = 3.0;
+        self.context_menu_text_style.size = Px(12.0);
+    }
+
+    pub fn with_xyflow_default_node_style(mut self) -> Self {
+        self.apply_xyflow_default_node_style();
+        self
+    }
+
     pub fn from_theme(theme: &Theme) -> Self {
         Self::from_snapshot(theme.snapshot())
     }
@@ -349,6 +512,7 @@ impl NodeGraphStyle {
             node_width: 220.0,
             node_header_height: 28.0,
             node_padding: padding_md,
+            node_corner_radius: radius_sm.max(8.0),
             pin_row_height: 22.0,
             pin_radius: radius_sm,
 

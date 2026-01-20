@@ -9,7 +9,7 @@ use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollProps,
-    SizeStyle, StackProps, TextProps,
+    SemanticsProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -277,6 +277,20 @@ fn select_scroll_with_buttons<H: UiHost>(
                         },
                     );
                     viewport_id_out.set(Some(scroll.id));
+
+                    let scroll = cx.semantics(
+                        SemanticsProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            test_id: Some(Arc::from("select-scroll-viewport")),
+                            ..Default::default()
+                        },
+                        |_cx| vec![scroll],
+                    );
 
                     if let Some(active_element) = active_element_ref.get() {
                         if has_scroll && !did_initial_scroll && should_align_active_to_top() {
@@ -1144,9 +1158,9 @@ fn select_impl<H: UiHost>(
 
                     let (
                         item_aligned_inputs,
-                        did_item_aligned_scroll_initial,
-                        did_item_aligned_scroll_reposition,
-                        item_aligned_scroll_up_visible,
+                        _did_item_aligned_scroll_initial,
+                        _did_item_aligned_scroll_reposition,
+                        _item_aligned_scroll_up_visible,
                     ) = if position == SelectPosition::ItemAligned {
                         let (
                             value_node,
@@ -3610,6 +3624,14 @@ mod tests {
             .iter()
             .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
             .expect("scroll down node");
+        assert_eq!(scroll_down.role, SemanticsRole::Generic);
+
+        let scroll_up = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+            .expect("scroll up node");
+        assert_eq!(scroll_up.role, SemanticsRole::Generic);
 
         let down_bounds = ui
             .debug_node_bounds(scroll_down.id)

@@ -176,3 +176,4 @@ Cons:
 
 - Zed/GPUI system menus and OS actions:
   - `repo-ref/zed/crates/gpui/src/platform/app_menu.rs` (`SystemMenuType`, `OsAction`)
+- Follow-up: ADR 0186 (`Effect::ShowAboutPanel`) to provide a native About baseline on macOS while keeping About command-driven.

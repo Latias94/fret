@@ -189,6 +189,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
         canvas.interaction.hover_port = None;
         canvas.interaction.hover_port_valid = false;
         canvas.interaction.hover_port_convertible = false;
+        canvas.interaction.hover_port_diagnostic = None;
 
         super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers, false);
         return true;
@@ -281,6 +282,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_port_diagnostic = None;
             let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                 canvas.yank_reconnectable_edges_from_port(cx.app, &snapshot.interaction, port)
             });
@@ -395,6 +397,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_port_diagnostic = None;
 
             if snapshot.interaction.elements_selectable {
                 canvas.update_view_state(cx.app, |s| {
@@ -458,6 +461,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_port_diagnostic = None;
             let offset = Point::new(
                 Px(position.x.0 - rect.origin.x.0),
                 Px(position.y.0 - rect.origin.y.0),
@@ -559,6 +563,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_port_diagnostic = None;
             let multi = multi_selection_pressed;
             let edge_selectable = canvas
                 .graph
@@ -624,6 +629,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_port_diagnostic = None;
 
             if snapshot.interaction.elements_selectable {
                 canvas.update_view_state(cx.app, |s| {
@@ -672,6 +678,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_port_diagnostic = None;
 
             if snapshot.interaction.elements_selectable {
                 canvas.update_view_state(cx.app, |s| {
@@ -726,6 +733,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+            canvas.interaction.hover_port_diagnostic = None;
             if snapshot.interaction.elements_selectable {
                 // XyFlow semantics: background drags pan by default, and selection boxes are
                 // activated by Shift unless `selection_on_drag` is enabled.

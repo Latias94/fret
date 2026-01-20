@@ -1079,12 +1079,7 @@ impl CommandList {
                                     direction: fret_core::Axis::Vertical,
                                     gap: Px(0.0),
                                     // new-york-v4: `CommandList` uses `scroll-py-1`.
-                                    padding: Edges {
-                                        top: Px(4.0),
-                                        right: Px(0.0),
-                                        bottom: Px(4.0),
-                                        left: Px(0.0),
-                                    },
+                                    padding: Edges::all(Px(4.0)),
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     wrap: false,
@@ -2178,12 +2173,7 @@ impl CommandPalette {
                             direction: fret_core::Axis::Vertical,
                             gap: Px(0.0),
                             // new-york-v4: `CommandList` uses `scroll-py-1`.
-                            padding: Edges {
-                                top: Px(4.0),
-                                right: Px(0.0),
-                                bottom: Px(4.0),
-                                left: Px(0.0),
-                            },
+                            padding: Edges::all(Px(4.0)),
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,

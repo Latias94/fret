@@ -1,11 +1,9 @@
+use super::super::geometry::node_size_default_px;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn node_default_size_for_ports(&self, inputs: usize, outputs: usize) -> (f32, f32) {
-        let rows = inputs.max(outputs) as f32;
-        let base = self.style.node_header_height + 2.0 * self.style.node_padding;
-        let pin_area = rows * self.style.pin_row_height;
-        (self.style.node_width, base + pin_area)
+        node_size_default_px(inputs, outputs, &self.style)
     }
 
     pub(super) fn reroute_pos_for_invoked_at(&self, invoked_at: Point) -> CanvasPoint {

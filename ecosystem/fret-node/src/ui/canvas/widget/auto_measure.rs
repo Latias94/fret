@@ -1,3 +1,4 @@
+use super::super::geometry::node_size_default_px;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -104,9 +105,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let w_by_labels = max_in.max(max_out) + label_overhead;
             let w = self.style.node_width.max(w_by_title).max(w_by_labels);
 
-            let rows = node.inputs.len().max(node.outputs.len()) as f32;
-            let base = self.style.node_header_height + 2.0 * node_pad;
-            let h = base + rows * self.style.pin_row_height;
+            let (_default_w, h) =
+                node_size_default_px(node.inputs.len(), node.outputs.len(), &self.style);
 
             measured.push((node.node, (w, h)));
         }

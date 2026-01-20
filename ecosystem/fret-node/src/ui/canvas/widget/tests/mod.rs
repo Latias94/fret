@@ -22,8 +22,10 @@ use crate::core::{
 };
 
 mod callbacks_conformance;
+mod color_mode_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
+mod elevate_on_select_conformance;
 mod fit_view_nodes_conformance;
 mod fit_view_on_mount_conformance;
 mod fit_view_options_conformance;
@@ -34,8 +36,10 @@ mod insert_node_drag_conformance;
 mod interaction_conformance;
 mod internals_conformance;
 mod invalidation_ordering_conformance;
+mod is_valid_connection_conformance;
 mod middleware_conformance;
 mod node_origin_conformance;
+mod node_sizing_conformance;
 mod only_render_visible_elements_conformance;
 mod perf_cache;
 mod portal_conformance;
@@ -45,6 +49,8 @@ mod portal_pointer_passthrough_conformance;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod viewport_animation_conformance;
+mod viewport_helper_conformance;
+mod xyflow_style_conformance;
 mod z_order_conformance;
 
 #[test]

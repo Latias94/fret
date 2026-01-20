@@ -16,6 +16,14 @@ use super::super::state::{
 };
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
+fn severity_rank(sev: DiagnosticSeverity) -> u8 {
+    match sev {
+        DiagnosticSeverity::Info => 0,
+        DiagnosticSeverity::Warning => 1,
+        DiagnosticSeverity::Error => 2,
+    }
+}
+
 pub(super) trait WireCommitCx<H: UiHost> {
     fn host(&mut self) -> &mut H;
     fn window(&self) -> Option<AppWindowId>;
@@ -149,7 +157,7 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         this.graph
             .read_ref(cx.app, |graph| {
                 let mut scratch_ports: Vec<PortId> = Vec::new();
-                this.pick_target_port(
+                this.pick_wire_hover_port(
                     graph,
                     snapshot,
                     geom.as_ref(),
@@ -194,65 +202,107 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         let presenter = &mut *canvas.presenter;
         canvas
             .graph
-            .read_ref(cx.app, |graph| match &w.kind {
-                WireDragKind::New { from, bundle } => {
-                    let sources = if bundle.is_empty() {
-                        std::slice::from_ref(from)
-                    } else {
-                        bundle.as_slice()
-                    };
-                    let mut any_accept = false;
-                    for src in sources {
-                        let plan = presenter.plan_connect(
-                            graph,
-                            *src,
-                            target,
-                            snapshot.interaction.connection_mode,
-                        );
-                        if plan.decision != ConnectDecision::Accept {
-                            continue;
-                        }
-                        any_accept = true;
-                        break;
-                    }
-                    any_accept
+            .read_ref(cx.app, |graph| {
+                if !NodeGraphCanvasWith::<M>::port_is_connectable_end(
+                    graph,
+                    &snapshot.interaction,
+                    target,
+                ) {
+                    return (
+                        false,
+                        Some((
+                            DiagnosticSeverity::Error,
+                            Arc::<str>::from("Port is not connectable"),
+                        )),
+                    );
                 }
-                WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
-                    presenter
-                        .plan_reconnect_edge(
-                            graph,
-                            *edge,
-                            *endpoint,
-                            target,
-                            snapshot.interaction.connection_mode,
-                        )
-                        .decision,
-                    ConnectDecision::Accept
-                ),
-                WireDragKind::ReconnectMany { edges } => {
-                    let mut any_accept = false;
-                    for (edge, endpoint, _fixed) in edges {
-                        let plan = presenter.plan_reconnect_edge(
+
+                let mut best_diag: Option<(DiagnosticSeverity, Arc<str>)> = None;
+                let mut accept = false;
+
+                let mut consider_diag = |plan: &crate::rules::ConnectPlan| {
+                    for d in plan.diagnostics.iter() {
+                        let next = (d.severity, Arc::<str>::from(d.message.clone()));
+                        match &best_diag {
+                            Some((best_sev, _))
+                                if severity_rank(*best_sev) > severity_rank(next.0) => {}
+                            _ => best_diag = Some(next),
+                        }
+                    }
+                };
+
+                match &w.kind {
+                    WireDragKind::New { from, bundle } => {
+                        let sources = if bundle.is_empty() {
+                            std::slice::from_ref(from)
+                        } else {
+                            bundle.as_slice()
+                        };
+                        for src in sources {
+                            let plan = presenter.can_connect(
+                                graph,
+                                *src,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
+                            if plan.decision == ConnectDecision::Accept {
+                                accept = true;
+                                break;
+                            }
+                            consider_diag(&plan);
+                        }
+                    }
+                    WireDragKind::Reconnect { edge, endpoint, .. } => {
+                        let plan = presenter.can_reconnect_edge(
                             graph,
                             *edge,
                             *endpoint,
                             target,
                             snapshot.interaction.connection_mode,
                         );
-                        if plan.decision != ConnectDecision::Accept {
-                            continue;
+                        if plan.decision == ConnectDecision::Accept {
+                            accept = true;
+                        } else {
+                            consider_diag(&plan);
                         }
-                        any_accept = true;
-                        break;
                     }
-                    any_accept
+                    WireDragKind::ReconnectMany { edges } => {
+                        for (edge, endpoint, _fixed) in edges {
+                            let plan = presenter.can_reconnect_edge(
+                                graph,
+                                *edge,
+                                *endpoint,
+                                target,
+                                snapshot.interaction.connection_mode,
+                            );
+                            if plan.decision == ConnectDecision::Accept {
+                                accept = true;
+                                break;
+                            }
+                            consider_diag(&plan);
+                        }
+                    }
+                }
+
+                if accept {
+                    (true, None)
+                } else {
+                    let diag = best_diag.or_else(|| {
+                        Some((
+                            DiagnosticSeverity::Error,
+                            Arc::<str>::from("Invalid connection"),
+                        ))
+                    });
+                    (false, diag)
                 }
             })
             .ok()
-            .unwrap_or(false)
+            .unwrap_or((false, None))
     } else {
-        false
+        (false, None)
     };
+
+    let (new_hover_valid, new_hover_diag) = new_hover_valid;
 
     let new_hover_convertible = if !new_hover_valid {
         if let Some(target) = new_hover {
@@ -262,6 +312,13 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     canvas
                         .graph
                         .read_ref(cx.app, |graph| {
+                            if !NodeGraphCanvasWith::<M>::port_is_connectable_end(
+                                graph,
+                                &snapshot.interaction,
+                                target,
+                            ) {
+                                return false;
+                            }
                             conversion::is_convertible(presenter, graph, *from, target)
                         })
                         .ok()
@@ -279,10 +336,12 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if canvas.interaction.hover_port != new_hover
         || canvas.interaction.hover_port_valid != new_hover_valid
         || canvas.interaction.hover_port_convertible != new_hover_convertible
+        || canvas.interaction.hover_port_diagnostic != new_hover_diag
     {
         canvas.interaction.hover_port = new_hover;
         canvas.interaction.hover_port_valid = new_hover_valid;
         canvas.interaction.hover_port_convertible = new_hover_convertible;
+        canvas.interaction.hover_port_diagnostic = new_hover_diag;
     }
 
     canvas.interaction.hover_edge = new_hover_edge;
@@ -383,6 +442,7 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost, M: NodeGraphCanv
     canvas.interaction.hover_port = None;
     canvas.interaction.hover_port_valid = false;
     canvas.interaction.hover_port_convertible = false;
+    canvas.interaction.hover_port_diagnostic = None;
 
     let mut connect_end_outcome = ConnectEndOutcome::NoOp;
     let mut connect_end_target = target;

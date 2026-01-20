@@ -121,7 +121,7 @@ Legend:
 | `dropdown_menu` | `DropdownMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
 | `context_menu` | `ContextMenu` | Patch-only | `ui().into_element(cx, trigger, entries)` (extra args) |
 | `menubar` | `Menubar` | Chrome+Layout |  |
-| `select` | `Select` | Chrome+Layout |  |
+| `select` | `Select` | Chrome+Layout | Layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (select-scrollable listbox width/height + option row height + scroll buttons). |
 | `slider` | `Slider` | Chrome+Layout |  |
 | `accordion` | `AccordionTrigger` | Chrome+Layout (Patch-only) | `into_element` requires root/value args |
 | `accordion` | `AccordionContent` | Chrome+Layout (Patch-only) | Rendered via `Accordion` |
@@ -201,7 +201,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |
 | checkbox | `checkbox` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`checkbox-demo`) |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
-| command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` |
+| command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` + `web_vs_fret_combobox_demo_*` |
 | context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; anchors to click position for web/Radix parity; audit: `docs/audits/shadcn-context-menu.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`, `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` |
 | dialog | `dialog` | Present | In review | Audit: `docs/audits/shadcn-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
@@ -225,7 +225,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | radio-group | `radio_group` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`radio-group-demo`) |
 | resizable | `resizable` | Present | Unreviewed | Runtime-owned drag + layout; multi-panel group; a11y TBD |
 | scroll-area | `scroll_area` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`scroll-area-*`) |
-| select | `select` | Present | In review | Item-aligned + popper placement (side/align/offsets); scroll buttons; item-aligned scroll-button reposition + post-position “scroll selected into view” behavior for Radix parity; shadcn-web gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_demo_overlay_placement_matches`, `web_vs_fret_select_demo_open_option_metrics_match`, `web_vs_fret_select_scrollable_listbox_option_insets_match`, plus small/tiny viewport variants); audit: `docs/audits/shadcn-select.md` |
+| select | `select` | Present | In review | Item-aligned + popper placement (side/align/offsets); scroll buttons; item-aligned scroll-button reposition + post-position “scroll selected into view” behavior for Radix parity; shadcn-web gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_demo_overlay_placement_matches`, `web_vs_fret_select_demo_open_option_metrics_match`, `web_vs_fret_select_scrollable_listbox_width_matches`, `web_vs_fret_select_scrollable_listbox_option_insets_match`, `web_vs_fret_select_scrollable_listbox_option_height_matches`, `web_vs_fret_select_scrollable_scroll_button_height_matches`, `web_vs_fret_select_scrollable_viewport_insets_match`, plus small/tiny viewport variants); audit: `docs/audits/shadcn-select.md` |
 | separator | `separator` | Present | In review | shadcn-web gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`separator-demo`) |
 | sheet | `sheet` | Present | In review | Audit: `docs/audits/shadcn-sheet.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
 | sidebar | `sidebar` | Present | Unreviewed |  |

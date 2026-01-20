@@ -2,6 +2,7 @@
 
 use crate::core::{CanvasPoint, EdgeId, Graph, PortDirection, PortId};
 use crate::rules::{ConnectPlan, InsertNodeTemplate, plan_connect_by_inserting_node};
+use crate::ui::canvas::geometry::node_size_default_px;
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
 
@@ -60,10 +61,9 @@ pub(crate) fn plan_insert_conversion(
         .iter()
         .filter(|p| p.dir == PortDirection::Out)
         .count();
-    let rows = inputs.max(outputs) as f32;
-    let base = style.node_header_height + 2.0 * style.node_padding;
-    let h = (base + rows * style.pin_row_height) / zoom;
-    let w = style.node_width / zoom;
+    let (w_px, h_px) = node_size_default_px(inputs, outputs, style);
+    let h = h_px / zoom;
+    let w = w_px / zoom;
     let default_at = CanvasPoint {
         x: at.x - 0.5 * w,
         y: at.y - 0.5 * h,
