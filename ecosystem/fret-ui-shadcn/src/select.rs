@@ -9,7 +9,7 @@ use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollProps,
-    SizeStyle, StackProps, TextProps,
+    SemanticsProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -277,6 +277,20 @@ fn select_scroll_with_buttons<H: UiHost>(
                         },
                     );
                     viewport_id_out.set(Some(scroll.id));
+
+                    let scroll = cx.semantics(
+                        SemanticsProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            test_id: Some(Arc::from("select-scroll-viewport")),
+                            ..Default::default()
+                        },
+                        |_cx| vec![scroll],
+                    );
 
                     if let Some(active_element) = active_element_ref.get() {
                         if has_scroll && !did_initial_scroll && should_align_active_to_top() {

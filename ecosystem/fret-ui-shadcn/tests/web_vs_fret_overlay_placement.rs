@@ -792,6 +792,51 @@ fn web_portal_slot_rect_within(theme: &WebGoldenTheme, slot: &str, container: We
         .unwrap_or_else(|| panic!("web slot {slot} had no rect within {container:?}"))
 }
 
+fn web_portal_role_rects(theme: &WebGoldenTheme, role: &str) -> Vec<WebRect> {
+    let mut rects = Vec::new();
+
+    let mut walk = |root: &WebNode| {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if node.attrs.get("role").is_some_and(|s| s == role) {
+                rects.push(node.rect);
+            }
+            for child in &node.children {
+                stack.push(child);
+            }
+        }
+    };
+
+    for portal in &theme.portals {
+        walk(portal);
+    }
+    for portal in &theme.portal_wrappers {
+        walk(portal);
+    }
+
+    rects
+}
+
+fn web_portal_role_rect_largest_within(
+    theme: &WebGoldenTheme,
+    role: &str,
+    container: WebRect,
+) -> WebRect {
+    let eps = 1.0;
+    let within = |r: WebRect| {
+        r.x + eps >= container.x
+            && rect_right(r) <= rect_right(container) + eps
+            && r.y + eps >= container.y
+            && rect_bottom(r) <= rect_bottom(container) + eps
+    };
+
+    web_portal_role_rects(theme, role)
+        .into_iter()
+        .filter(|&r| within(r))
+        .max_by(|a, b| (a.w * a.h).total_cmp(&(b.w * b.h)))
+        .unwrap_or_else(|| panic!("web role={role} had no rect within {container:?}"))
+}
+
 fn fret_menu_item_heights_in_menus(snap: &fret_core::SemanticsSnapshot) -> Vec<f32> {
     let debug = std::env::var("FRET_DEBUG_MENU_SEMANTICS")
         .ok()
@@ -5465,6 +5510,225 @@ fn web_vs_fret_select_scrollable_small_viewport_scroll_button_height_matches() {
 #[test]
 fn web_vs_fret_select_scrollable_tiny_viewport_scroll_button_height_matches() {
     assert_select_scrollable_scroll_button_height_matches("select-scrollable.vp1440x240");
+}
+
+fn assert_select_scrollable_viewport_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_select_listbox(theme);
+
+    let web_up = web_portal_slot_rect_within(theme, "select-scroll-up-button", web_listbox.rect);
+    let web_down =
+        web_portal_slot_rect_within(theme, "select-scroll-down-button", web_listbox.rect);
+    let web_viewport = web_portal_role_rect_largest_within(theme, "presentation", web_listbox.rect);
+
+    let expected_left = web_viewport.x - web_listbox.rect.x;
+    let expected_right = rect_right(web_listbox.rect) - rect_right(web_viewport);
+    let expected_top = web_viewport.y - web_listbox.rect.y;
+    let expected_bottom = rect_bottom(web_listbox.rect) - rect_bottom(web_viewport);
+
+    let expected_up_gap = web_viewport.y - rect_bottom(web_up);
+    let expected_down_gap = web_down.y - rect_bottom(web_viewport);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        let value = value.clone();
+        let open = open.clone();
+
+        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        let entries: Vec<SelectEntry> = vec![
+            SelectGroup::new(vec![
+                SelectLabel::new("North America").into(),
+                SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+                SelectItem::new("cst", "Central Standard Time (CST)").into(),
+                SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+                SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+                SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+                SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Europe & Africa").into(),
+                SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+                SelectItem::new("cet", "Central European Time (CET)").into(),
+                SelectItem::new("eet", "Eastern European Time (EET)").into(),
+                SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+                SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+                SelectItem::new("eat", "East Africa Time (EAT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Asia").into(),
+                SelectItem::new("msk", "Moscow Time (MSK)").into(),
+                SelectItem::new("ist", "India Standard Time (IST)").into(),
+                SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+                SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+                SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+                SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Australia & Pacific").into(),
+                SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+                SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+                SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+                SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+                SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("South America").into(),
+                SelectItem::new("art", "Argentina Time (ART)").into(),
+                SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+                SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+                SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+            ])
+            .into(),
+        ];
+
+        fret_ui_shadcn::Select::new(value, open)
+            .a11y_label("Select")
+            .placeholder("Select a timezone")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
+            )
+            .entries(entries)
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox for {web_name}"));
+
+    let viewport = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+        .unwrap_or_else(|| panic!("missing fret select viewport for {web_name}"));
+
+    let up = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+        .unwrap_or_else(|| panic!("missing fret scroll-up node for {web_name}"));
+    let down = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
+        .unwrap_or_else(|| panic!("missing fret scroll-down node for {web_name}"));
+
+    let actual_left = viewport.bounds.origin.x.0 - listbox.bounds.origin.x.0;
+    let actual_right = (listbox.bounds.origin.x.0 + listbox.bounds.size.width.0)
+        - (viewport.bounds.origin.x.0 + viewport.bounds.size.width.0);
+    let actual_top = viewport.bounds.origin.y.0 - listbox.bounds.origin.y.0;
+    let actual_bottom = (listbox.bounds.origin.y.0 + listbox.bounds.size.height.0)
+        - (viewport.bounds.origin.y.0 + viewport.bounds.size.height.0);
+
+    assert_close(
+        &format!("{web_name} viewport_left"),
+        actual_left,
+        expected_left,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} viewport_right"),
+        actual_right,
+        expected_right,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} viewport_top"),
+        actual_top,
+        expected_top,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} viewport_bottom"),
+        actual_bottom,
+        expected_bottom,
+        1.0,
+    );
+
+    let actual_up_gap =
+        viewport.bounds.origin.y.0 - (up.bounds.origin.y.0 + up.bounds.size.height.0);
+    let actual_down_gap =
+        down.bounds.origin.y.0 - (viewport.bounds.origin.y.0 + viewport.bounds.size.height.0);
+    assert_close(
+        &format!("{web_name} viewport_up_gap"),
+        actual_up_gap,
+        expected_up_gap,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} viewport_down_gap"),
+        actual_down_gap,
+        expected_down_gap,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_viewport_insets_match() {
+    assert_select_scrollable_viewport_insets_match("select-scrollable");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_small_viewport_viewport_insets_match() {
+    assert_select_scrollable_viewport_insets_match("select-scrollable.vp1440x450");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_tiny_viewport_viewport_insets_match() {
+    assert_select_scrollable_viewport_insets_match("select-scrollable.vp1440x240");
 }
 
 fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
