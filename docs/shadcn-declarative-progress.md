@@ -84,6 +84,74 @@ Implementation anchors:
 - Dev note (Windows worktrees): if incremental builds pick up stale artifacts from another worktree,
   run `cargo clean -p fret-ui-kit -p fret-ui-shadcn` (or set a per-worktree `CARGO_TARGET_DIR`).
 
+### Authoring Golden Path
+
+Recommended imports for app code:
+
+```rust
+use fret_ui_shadcn::prelude::*;
+```
+
+Guidelines:
+
+- Prefer `ui()` for all authoring (chrome + layout + debug helpers).
+- Prefer composing shadcn components over introducing new wrapper nodes.
+- `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
+  ecosystem into competing patterns.
+
+Before (low density; props structs + wrappers):
+
+```rust
+let ok = Button::new("OK").into_element(cx);
+let root = cx.container(Default::default(), move |_cx| vec![ok]);
+```
+
+After (golden path; fluent patch chain):
+
+```rust
+let ok = Button::new("OK")
+    .ui()
+    .paddings(Edges4::symmetric(Space::N3, Space::N2))
+    .shadow_md()
+    .focused_border()
+    .into_element(cx);
+```
+
+### Layout-Only Cookbook (Stack / Flex)
+
+Layout-only code should prefer `fret-ui-kit::declarative::stack` helpers to avoid leaking runtime props types.
+This is the current “layout constructors” story while `ui::h_flex/v_flex`-style helpers are still pending.
+
+Horizontal row:
+
+```rust
+let row = stack::hstack(
+    cx,
+    stack::HStackProps::default()
+        .gap(Space::N2)
+        .layout(LayoutRefinement::default().w_full()),
+    move |cx| {
+        vec![
+            Button::new("Cancel").ui().into_element(cx),
+            Button::new("OK").ui().into_element(cx),
+        ]
+    },
+);
+```
+
+Vertical column:
+
+```rust
+let col = stack::vstack(
+    cx,
+    stack::VStackProps::default().gap(Space::N2),
+    move |cx| vec![
+        Input::new().ui().w_full().into_element(cx),
+        Textarea::new().ui().w_full().into_element(cx),
+    ],
+);
+```
+
 ### Coverage Tracker (Update as we proceed)
 
 Legend:

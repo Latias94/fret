@@ -57,8 +57,10 @@ Related:
 
 ## E. Documentation / Adoption
 
-- [ ] AUE-docs-040 Add an “Authoring Golden Path” section with before/after examples in `docs/shadcn-declarative-progress.md`.
-- [ ] AUE-docs-041 Add a short cookbook for layout-only authoring (flex/grid/stack) using the new constructors.
+- [x] AUE-docs-040 Add an “Authoring Golden Path” section with before/after examples in `docs/shadcn-declarative-progress.md`.
+  - Evidence: `docs/shadcn-declarative-progress.md`
+- [x] AUE-docs-041 Add a short cookbook for layout-only authoring (flex/grid/stack) using the new constructors.
+  - Evidence: `docs/shadcn-declarative-progress.md`
 
 ## F. (Future) Proc-macro / Derive
 
