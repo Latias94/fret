@@ -2379,6 +2379,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub invalidation_walks: Vec<UiInvalidationWalkV1>,
     #[serde(default)]
+    pub hover_declarative_invalidation_hotspots: Vec<UiHoverDeclarativeInvalidationHotspotV1>,
+    #[serde(default)]
     pub dirty_views: Vec<UiDirtyViewV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
@@ -2416,6 +2418,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_invalidation_walks()
                 .iter()
                 .map(UiInvalidationWalkV1::from_walk)
+                .collect(),
+            hover_declarative_invalidation_hotspots: ui
+                .debug_hover_declarative_invalidation_hotspots(20)
+                .into_iter()
+                .map(UiHoverDeclarativeInvalidationHotspotV1::from_hotspot)
                 .collect(),
             dirty_views: ui
                 .debug_dirty_views()
@@ -2473,6 +2480,31 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHoverDeclarativeInvalidationHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub hit_test: u32,
+    #[serde(default)]
+    pub layout: u32,
+    #[serde(default)]
+    pub paint: u32,
+}
+
+impl UiHoverDeclarativeInvalidationHotspotV1 {
+    fn from_hotspot(h: fret_ui::tree::UiDebugHoverDeclarativeInvalidationHotspot) -> Self {
+        Self {
+            node: key_to_u64(h.node),
+            element: h.element.map(|e| e.0),
+            hit_test: h.hit_test,
+            layout: h.layout,
+            paint: h.paint,
         }
     }
 }
@@ -3204,6 +3236,18 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub invalidation_walk_calls_other: u32,
     #[serde(default)]
+    pub hover_pressable_target_changes: u32,
+    #[serde(default)]
+    pub hover_hover_region_target_changes: u32,
+    #[serde(default)]
+    pub hover_declarative_instance_changes: u32,
+    #[serde(default)]
+    pub hover_declarative_hit_test_invalidations: u32,
+    #[serde(default)]
+    pub hover_declarative_layout_invalidations: u32,
+    #[serde(default)]
+    pub hover_declarative_paint_invalidations: u32,
+    #[serde(default)]
     pub view_cache_active: bool,
     #[serde(default)]
     pub view_cache_invalidation_truncations: u32,
@@ -3254,6 +3298,13 @@ impl UiFrameStatsV1 {
             invalidation_walk_calls_focus: stats.invalidation_walk_calls_focus,
             invalidation_walk_nodes_other: stats.invalidation_walk_nodes_other,
             invalidation_walk_calls_other: stats.invalidation_walk_calls_other,
+            hover_pressable_target_changes: stats.hover_pressable_target_changes,
+            hover_hover_region_target_changes: stats.hover_hover_region_target_changes,
+            hover_declarative_instance_changes: stats.hover_declarative_instance_changes,
+            hover_declarative_hit_test_invalidations: stats
+                .hover_declarative_hit_test_invalidations,
+            hover_declarative_layout_invalidations: stats.hover_declarative_layout_invalidations,
+            hover_declarative_paint_invalidations: stats.hover_declarative_paint_invalidations,
             view_cache_active: stats.view_cache_active,
             view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
             view_cache_contained_relayouts: stats.view_cache_contained_relayouts,

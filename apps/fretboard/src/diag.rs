@@ -52,6 +52,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut warmup_frames: u64 = 0;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
+    let mut check_hover_layout_max: Option<u32> = None;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
 
@@ -248,6 +249,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_stale_paint_eps = v
                     .parse::<f32>()
                     .map_err(|_| "invalid value for --check-stale-paint-eps".to_string())?;
+                i += 1;
+            }
+            "--check-hover-layout" => {
+                check_hover_layout_max = Some(0);
+                i += 1;
+            }
+            "--check-hover-layout-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-hover-layout-max".to_string());
+                };
+                check_hover_layout_max = Some(
+                    v.parse::<u32>()
+                        .map_err(|_| "invalid value for --check-hover-layout-max".to_string())?,
+                );
                 i += 1;
             }
             "--json" => {
@@ -913,6 +929,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if let Some(test_id) = check_stale_paint_test_id.as_deref() {
                 check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
             }
+            if let Some(max_allowed) = check_hover_layout_max {
+                check_report_for_hover_layout_invalidations(&report, max_allowed)?;
+            }
             Ok(())
         }
         "inspect" => {
@@ -1291,6 +1310,7 @@ struct BundleStatsReport {
     snapshots_with_global_changes: u32,
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
+    snapshots_with_hover_layout_invalidations: u32,
     sum_layout_time_us: u64,
     sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
@@ -1302,6 +1322,7 @@ struct BundleStatsReport {
     sum_invalidation_walk_nodes: u64,
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
+    sum_hover_layout_invalidations: u64,
     max_layout_time_us: u64,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
@@ -1310,6 +1331,8 @@ struct BundleStatsReport {
     max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
     max_global_change_invalidation_roots: u32,
+    max_hover_layout_invalidations: u32,
+    worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
     top: Vec<BundleStatsSnapshotRow>,
@@ -1354,6 +1377,13 @@ struct BundleStatsSnapshotRow {
     invalidation_walk_calls_other: u32,
     invalidation_walk_nodes_other: u32,
     top_invalidation_walks: Vec<BundleStatsInvalidationWalk>,
+    hover_pressable_target_changes: u32,
+    hover_hover_region_target_changes: u32,
+    hover_declarative_instance_changes: u32,
+    hover_declarative_hit_test_invalidations: u32,
+    hover_declarative_layout_invalidations: u32,
+    hover_declarative_paint_invalidations: u32,
+    top_hover_declarative_invalidations: Vec<BundleStatsHoverDeclarativeInvalidationHotspot>,
     cache_roots: u32,
     cache_roots_reused: u32,
     cache_replayed_ops: u64,
@@ -1363,6 +1393,26 @@ struct BundleStatsSnapshotRow {
     model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsHoverDeclarativeInvalidationHotspot {
+    node: u64,
+    element: Option<u64>,
+    hit_test: u32,
+    layout: u32,
+    paint: u32,
+    role: Option<String>,
+    test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct BundleStatsWorstHoverLayout {
+    window: u64,
+    tick_id: u64,
+    frame_id: u64,
+    hover_declarative_layout_invalidations: u32,
+    hotspots: Vec<BundleStatsHoverDeclarativeInvalidationHotspot>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1518,6 +1568,14 @@ impl BundleStatsReport {
             "roots max: model={} global={}",
             self.max_model_change_invalidation_roots, self.max_global_change_invalidation_roots
         );
+        if self.sum_hover_layout_invalidations > 0 || self.max_hover_layout_invalidations > 0 {
+            println!(
+                "hover decl layout invalidations: sum={} max_per_frame={} frames_with_hover_layout={}",
+                self.sum_hover_layout_invalidations,
+                self.max_hover_layout_invalidations,
+                self.snapshots_with_hover_layout_invalidations
+            );
+        }
 
         if !self.global_type_hotspots.is_empty() {
             let items: Vec<String> = self
@@ -1547,7 +1605,7 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
@@ -1571,6 +1629,9 @@ impl BundleStatsReport {
                 row.invalidation_walk_nodes_hover,
                 row.invalidation_walk_nodes_focus,
                 row.invalidation_walk_nodes_other,
+                row.hover_declarative_layout_invalidations,
+                row.hover_declarative_hit_test_invalidations,
+                row.hover_declarative_paint_invalidations,
                 row.model_change_invalidation_roots,
                 row.global_change_invalidation_roots,
                 row.changed_models,
@@ -1651,6 +1712,36 @@ impl BundleStatsReport {
                     })
                     .collect();
                 println!("    top_cache_roots: {}", items.join(" | "));
+            }
+            if row.hover_declarative_layout_invalidations > 0
+                && !row.top_hover_declarative_invalidations.is_empty()
+            {
+                let items: Vec<String> = row
+                    .top_hover_declarative_invalidations
+                    .iter()
+                    .take(3)
+                    .map(|h| {
+                        let mut s = format!(
+                            "layout={} hit={} paint={} node={}",
+                            h.layout, h.hit_test, h.paint, h.node
+                        );
+                        if let Some(test_id) = h.test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            s.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = h.role.as_deref()
+                            && !role.is_empty()
+                        {
+                            s.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(el) = h.element {
+                            s.push_str(&format!(" element={el}"));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    hover_layout_hotspots: {}", items.join(" | "));
             }
             if !row.top_layout_engine_solves.is_empty() {
                 let items: Vec<String> = row
@@ -1841,6 +1932,10 @@ impl BundleStatsReport {
             "snapshots_with_propagated_global_changes".to_string(),
             Value::from(self.snapshots_with_propagated_global_changes),
         );
+        root.insert(
+            "snapshots_with_hover_layout_invalidations".to_string(),
+            Value::from(self.snapshots_with_hover_layout_invalidations),
+        );
 
         let mut sum = Map::new();
         sum.insert(
@@ -1884,6 +1979,10 @@ impl BundleStatsReport {
             "global_change_invalidation_roots".to_string(),
             Value::from(self.sum_global_change_invalidation_roots),
         );
+        sum.insert(
+            "hover_layout_invalidations".to_string(),
+            Value::from(self.sum_hover_layout_invalidations),
+        );
         root.insert("sum".to_string(), Value::Object(sum));
 
         let mut max = Map::new();
@@ -1918,6 +2017,10 @@ impl BundleStatsReport {
         max.insert(
             "global_change_invalidation_roots".to_string(),
             Value::from(self.max_global_change_invalidation_roots),
+        );
+        max.insert(
+            "hover_layout_invalidations".to_string(),
+            Value::from(self.max_hover_layout_invalidations),
         );
         root.insert("max".to_string(), Value::Object(max));
 
@@ -2101,6 +2204,30 @@ impl BundleStatsReport {
                     "invalidation_walk_nodes_other".to_string(),
                     Value::from(row.invalidation_walk_nodes_other),
                 );
+                obj.insert(
+                    "hover_pressable_target_changes".to_string(),
+                    Value::from(row.hover_pressable_target_changes),
+                );
+                obj.insert(
+                    "hover_hover_region_target_changes".to_string(),
+                    Value::from(row.hover_hover_region_target_changes),
+                );
+                obj.insert(
+                    "hover_declarative_instance_changes".to_string(),
+                    Value::from(row.hover_declarative_instance_changes),
+                );
+                obj.insert(
+                    "hover_declarative_hit_test_invalidations".to_string(),
+                    Value::from(row.hover_declarative_hit_test_invalidations),
+                );
+                obj.insert(
+                    "hover_declarative_layout_invalidations".to_string(),
+                    Value::from(row.hover_declarative_layout_invalidations),
+                );
+                obj.insert(
+                    "hover_declarative_paint_invalidations".to_string(),
+                    Value::from(row.hover_declarative_paint_invalidations),
+                );
 
                 let top_invalidation_walks = row
                     .top_invalidation_walks
@@ -2146,6 +2273,35 @@ impl BundleStatsReport {
                 obj.insert(
                     "top_invalidation_walks".to_string(),
                     Value::Array(top_invalidation_walks),
+                );
+
+                let top_hover_declarative_invalidations = row
+                    .top_hover_declarative_invalidations
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("node".to_string(), Value::from(h.node));
+                        h_obj.insert(
+                            "element".to_string(),
+                            h.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert("hit_test".to_string(), Value::from(h.hit_test));
+                        h_obj.insert("layout".to_string(), Value::from(h.layout));
+                        h_obj.insert("paint".to_string(), Value::from(h.paint));
+                        h_obj.insert(
+                            "role".to_string(),
+                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "test_id".to_string(),
+                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "top_hover_declarative_invalidations".to_string(),
+                    Value::Array(top_hover_declarative_invalidations),
                 );
 
                 let top_cache_roots = row
@@ -2780,6 +2936,41 @@ fn bundle_stats_from_json_with_options(
                 .min(u32::MAX as u64) as u32;
 
             let top_invalidation_walks = snapshot_top_invalidation_walks(s, 3);
+            let hover_pressable_target_changes = stats
+                .and_then(|m| m.get("hover_pressable_target_changes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hover_hover_region_target_changes = stats
+                .and_then(|m| m.get("hover_hover_region_target_changes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hover_declarative_instance_changes = stats
+                .and_then(|m| m.get("hover_declarative_instance_changes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hover_declarative_hit_test_invalidations = stats
+                .and_then(|m| m.get("hover_declarative_hit_test_invalidations"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let hover_declarative_layout_invalidations = stats
+                .and_then(|m| m.get("hover_declarative_layout_invalidations"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let hover_declarative_paint_invalidations = stats
+                .and_then(|m| m.get("hover_declarative_paint_invalidations"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let top_hover_declarative_invalidations =
+                snapshot_top_hover_declarative_invalidations(s, 3);
             let (cache_roots, cache_roots_reused, cache_replayed_ops, top_cache_roots) =
                 snapshot_cache_root_stats(s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
@@ -2811,6 +3002,14 @@ fn bundle_stats_from_json_with_options(
             out.sum_global_change_invalidation_roots = out
                 .sum_global_change_invalidation_roots
                 .saturating_add(global_change_invalidation_roots as u64);
+            if hover_declarative_layout_invalidations > 0 {
+                out.snapshots_with_hover_layout_invalidations = out
+                    .snapshots_with_hover_layout_invalidations
+                    .saturating_add(1);
+            }
+            out.sum_hover_layout_invalidations = out
+                .sum_hover_layout_invalidations
+                .saturating_add(hover_declarative_layout_invalidations as u64);
 
             out.max_invalidation_walk_calls =
                 out.max_invalidation_walk_calls.max(invalidation_walk_calls);
@@ -2822,6 +3021,18 @@ fn bundle_stats_from_json_with_options(
             out.max_global_change_invalidation_roots = out
                 .max_global_change_invalidation_roots
                 .max(global_change_invalidation_roots);
+            if hover_declarative_layout_invalidations > out.max_hover_layout_invalidations {
+                out.worst_hover_layout = Some(BundleStatsWorstHoverLayout {
+                    window: window_id,
+                    tick_id: s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                    frame_id: s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                    hover_declarative_layout_invalidations,
+                    hotspots: snapshot_top_hover_declarative_invalidations(s, 8),
+                });
+            }
+            out.max_hover_layout_invalidations = out
+                .max_hover_layout_invalidations
+                .max(hover_declarative_layout_invalidations);
             out.max_layout_time_us = out.max_layout_time_us.max(layout_time_us);
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
@@ -2865,6 +3076,13 @@ fn bundle_stats_from_json_with_options(
                 invalidation_walk_calls_other,
                 invalidation_walk_nodes_other,
                 top_invalidation_walks,
+                hover_pressable_target_changes,
+                hover_hover_region_target_changes,
+                hover_declarative_instance_changes,
+                hover_declarative_hit_test_invalidations,
+                hover_declarative_layout_invalidations,
+                hover_declarative_paint_invalidations,
+                top_hover_declarative_invalidations,
                 cache_roots,
                 cache_roots_reused,
                 cache_replayed_ops,
@@ -3045,6 +3263,112 @@ fn snapshot_cache_root_stats(
         replayed_ops_sum,
         out,
     )
+}
+
+fn snapshot_top_hover_declarative_invalidations(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsHoverDeclarativeInvalidationHotspot> {
+    let items = snapshot
+        .get("debug")
+        .and_then(|v| v.get("hover_declarative_invalidation_hotspots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+    if items.is_empty() || max == 0 {
+        return Vec::new();
+    }
+
+    let mut out: Vec<BundleStatsHoverDeclarativeInvalidationHotspot> = items
+        .iter()
+        .map(|h| BundleStatsHoverDeclarativeInvalidationHotspot {
+            node: h.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+            element: h.get("element").and_then(|v| v.as_u64()),
+            hit_test: h
+                .get("hit_test")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            layout: h
+                .get("layout")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            paint: h
+                .get("paint")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            role: None,
+            test_id: None,
+        })
+        .collect();
+
+    out.sort_by(|a, b| {
+        b.layout
+            .cmp(&a.layout)
+            .then_with(|| b.hit_test.cmp(&a.hit_test))
+            .then_with(|| b.paint.cmp(&a.paint))
+    });
+    out.truncate(max);
+
+    for item in &mut out {
+        let (role, test_id) = snapshot_lookup_semantics(snapshot, item.node);
+        item.role = role;
+        item.test_id = test_id;
+    }
+
+    out
+}
+
+fn check_report_for_hover_layout_invalidations(
+    report: &BundleStatsReport,
+    max_allowed: u32,
+) -> Result<(), String> {
+    if report.max_hover_layout_invalidations <= max_allowed {
+        return Ok(());
+    }
+
+    let mut extra = String::new();
+    if let Some(worst) = report.worst_hover_layout.as_ref() {
+        extra.push_str(&format!(
+            " worst(window={} tick={} frame={} hover_layout={})",
+            worst.window,
+            worst.tick_id,
+            worst.frame_id,
+            worst.hover_declarative_layout_invalidations
+        ));
+        if !worst.hotspots.is_empty() {
+            let items: Vec<String> = worst
+                .hotspots
+                .iter()
+                .take(3)
+                .map(|h| {
+                    let mut s = format!(
+                        "layout={} hit={} paint={} node={}",
+                        h.layout, h.hit_test, h.paint, h.node
+                    );
+                    if let Some(test_id) = h.test_id.as_deref()
+                        && !test_id.is_empty()
+                    {
+                        s.push_str(&format!(" test_id={test_id}"));
+                    }
+                    if let Some(role) = h.role.as_deref()
+                        && !role.is_empty()
+                    {
+                        s.push_str(&format!(" role={role}"));
+                    }
+                    s
+                })
+                .collect();
+            extra.push_str(&format!(" hotspots=[{}]", items.join(" | ")));
+        }
+    }
+
+    Err(format!(
+        "hover-attributed declarative layout invalidations detected (max_per_frame={} allowed={max_allowed}).{}",
+        report.max_hover_layout_invalidations, extra
+    ))
 }
 
 fn snapshot_layout_engine_solves(
@@ -3881,6 +4205,84 @@ mod tests {
         assert_eq!(
             report.top[0].top_invalidation_walks[0].root_element,
             Some(9)
+        );
+    }
+
+    #[test]
+    fn bundle_stats_tracks_hover_declarative_layout_invalidations() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 1,
+                                    "invalidation_walk_nodes": 1,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0,
+                                    "hover_declarative_layout_invalidations": 0
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 2,
+                                    "invalidation_walk_nodes": 10,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0,
+                                    "hover_declarative_layout_invalidations": 2
+                                },
+                                "hover_declarative_invalidation_hotspots": [
+                                    { "node": 43, "layout": 2, "hit_test": 0, "paint": 0 }
+                                ],
+                                "semantics": {
+                                    "nodes": [
+                                        { "id": 43, "role": "button", "test_id": "hover-offender" }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Invalidation,
+            BundleStatsOptions::default(),
+        )
+        .unwrap();
+
+        assert_eq!(report.sum_hover_layout_invalidations, 2);
+        assert_eq!(report.max_hover_layout_invalidations, 2);
+        assert_eq!(report.snapshots_with_hover_layout_invalidations, 1);
+        assert_eq!(report.top.len(), 1);
+        assert_eq!(report.top[0].tick_id, 2);
+        assert_eq!(report.top[0].hover_declarative_layout_invalidations, 2);
+        assert_eq!(report.top[0].top_hover_declarative_invalidations.len(), 1);
+        assert_eq!(
+            report.top[0].top_hover_declarative_invalidations[0].node,
+            43
+        );
+        assert_eq!(
+            report.top[0].top_hover_declarative_invalidations[0]
+                .test_id
+                .as_deref(),
+            Some("hover-offender")
         );
     }
 
