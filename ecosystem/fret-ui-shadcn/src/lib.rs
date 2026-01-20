@@ -246,8 +246,8 @@ pub use ::fret_ui_kit::declarative::style as decl_style;
 /// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
 pub use ::fret_ui_kit::declarative::{icon, stack};
 pub use ::fret_ui_kit::{
-    ChromeRefinement, ColorRef, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
-    SignedMetricRef, Size, Space, StyledExt, UiExt,
+    ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
+    ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
 };
 pub use ui_builder_ext::*;
 
@@ -263,8 +263,8 @@ pub mod prelude {
         DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt,
     };
     pub use crate::{
-        ChromeRefinement, ColorRef, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
-        SignedMetricRef, Size, Space, StyledExt, UiExt,
+        ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
+        Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
     };
     pub use crate::{decl_style, icon, stack};
 
