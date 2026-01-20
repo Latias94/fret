@@ -12,6 +12,7 @@ compile_error!("`fret-kit` features `icons-lucide` and `icons-radix` are mutuall
 use fret_app::App;
 
 /// Re-export the default shadcn/ui surface as `shadcn`.
+#[cfg(feature = "shadcn")]
 pub use fret_ui_shadcn as shadcn;
 
 /// Re-export workspace-shell building blocks (editor-grade chrome) as `workspace`.
@@ -35,7 +36,9 @@ pub use fret;
 ///
 /// Recommended: `use fret_kit::prelude::*;`
 pub mod prelude {
+    #[cfg(feature = "shadcn")]
     pub use crate::shadcn;
+    #[cfg(feature = "shadcn")]
     pub use crate::shadcn::prelude::*;
     pub use crate::workspace_menu::{MenubarFromRuntimeOptions, menubar_from_runtime};
 
@@ -341,7 +344,7 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
 /// Defaults (when the corresponding features are enabled):
 /// - diagnostics (`diagnostics`)
 /// - layered config files (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`)
-/// - shadcn app integration
+/// - shadcn app integration (`shadcn`)
 /// - icon pack installation + optional SVG preloading
 /// - UI assets caches with default budgets (`ui-assets`)
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -365,6 +368,7 @@ pub fn app_with_hooks<S: 'static>(
         .with_default_config_files()
         .map_err(BootstrapError::from)?;
 
+    #[cfg(feature = "shadcn")]
     let builder = builder.install_app(fret_ui_shadcn::install_app);
 
     #[cfg(feature = "ui-assets")]

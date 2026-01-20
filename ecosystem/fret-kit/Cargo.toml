@@ -12,7 +12,14 @@ readme = "README.md"
 
 [features]
 # Desktop-first, batteries-included defaults.
-default = ["desktop", "diagnostics", "ui-assets", "icons-lucide", "preload-icon-svgs"]
+default = [
+    "desktop",
+    "diagnostics",
+    "ui-assets",
+    "icons-lucide",
+    "preload-icon-svgs",
+    "shadcn",
+]
 
 # Compile the native desktop runner stack (winit + wgpu) via the `fret` facade bundles.
 desktop = ["dep:fret", "fret/native-wgpu", "fret-bootstrap/ui-app-driver"]
@@ -22,12 +29,13 @@ diagnostics = ["fret-bootstrap/diagnostics"]
 tracing = ["fret-bootstrap/tracing"]
 
 # Ecosystem integrations.
+shadcn = ["dep:fret-ui-shadcn"]
 ui-assets = ["fret-bootstrap/ui-assets"]
 icons-lucide = ["fret-bootstrap/icons-lucide"]
 icons-radix = ["fret-bootstrap/icons-radix"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
-workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu"]
+workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu", "shadcn"]
 
 [dependencies]
 thiserror.workspace = true
@@ -38,7 +46,7 @@ fret = { path = "../../crates/fret", optional = true }
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { path = "../fret-bootstrap", default-features = false }
 fret-icons = { path = "../fret-icons" }
-fret-ui-shadcn = { path = "../fret-ui-shadcn", features = ["app-integration"] }
+fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-workspace = { path = "../fret-workspace", optional = true }
 
