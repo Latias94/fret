@@ -5085,10 +5085,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         key = Self::hash_u64(key, self.x_scale.key());
                         key = Self::hash_u64(key, self.y_scale.key());
 
-                        if self
-                            .quads_scene_cache
-                            .try_replay(key, cx.scene, layout.plot.origin)
-                        {
+                        if self.quads_scene_cache.try_replay_with(
+                            key,
+                            cx.scene,
+                            layout.plot.origin,
+                            |_ops| {},
+                        ) {
                             // Cache hit.
                         } else {
                             let quads = self.rebuild_quads_if_needed(
@@ -5296,10 +5298,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             gradient_key = Self::hash_f32_bits(gradient_key, bar_w);
                             gradient_key = Self::hash_f32_bits(gradient_key, bar_h);
 
-                            self.heatmap_colorbar_gradient_cache.replay_or_record(
+                            self.heatmap_colorbar_gradient_cache.replay_or_record_with(
                                 gradient_key,
                                 scene,
                                 Point::new(Px(0.0), Px(0.0)),
+                                |_ops| {},
                                 |scene| {
                                     #[cfg(debug_assertions)]
                                     let start = scene.ops_len();
