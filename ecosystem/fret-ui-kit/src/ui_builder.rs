@@ -130,6 +130,26 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
         })
     }
 
+    pub fn focused_border(self) -> Self {
+        self.style_with(ChromeRefinement::focused_border)
+    }
+
+    pub fn debug_border(self, color: ColorRef) -> Self {
+        self.style_with(|c| c.debug_border(color))
+    }
+
+    pub fn debug_border_primary(self) -> Self {
+        self.style_with(ChromeRefinement::debug_border_primary)
+    }
+
+    pub fn debug_border_destructive(self) -> Self {
+        self.style_with(ChromeRefinement::debug_border_destructive)
+    }
+
+    pub fn debug_border_ring(self) -> Self {
+        self.style_with(ChromeRefinement::debug_border_ring)
+    }
+
     pub fn px(self, space: Space) -> Self {
         self.style_with(|c| c.px(space))
     }
@@ -591,6 +611,9 @@ mod tests {
                 Space::N4.into(),
             ))
             .insets(Edges4::all(Space::N1).neg())
+            .focused_border()
+            .debug_border_primary()
+            .debug_border_destructive()
             .build();
 
         let padding = dummy.chrome.padding.expect("expected padding refinement");
@@ -629,6 +652,11 @@ mod tests {
                 assert_eq!(key, Space::N1.token_key())
             }
             other => panic!("expected left inset negative token, got {other:?}"),
+        }
+
+        match dummy.chrome.border_color {
+            Some(ColorRef::Token { key, .. }) => assert_eq!(key, "destructive"),
+            other => panic!("expected debug_border_destructive to set border_color, got {other:?}"),
         }
     }
 

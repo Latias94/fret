@@ -1,7 +1,7 @@
 use fret_core::Px;
 use fret_ui::Theme;
 
-use super::{ColorRef, MetricRef, Radius, SignedMetricRef, Space};
+use super::{ColorFallback, ColorRef, MetricRef, Radius, SignedMetricRef, Space};
 
 #[derive(Debug, Clone, Default)]
 pub struct PaddingRefinement {
@@ -318,5 +318,46 @@ impl ChromeRefinement {
     pub fn text_color(mut self, color: ColorRef) -> Self {
         self.text_color = Some(color);
         self
+    }
+
+    pub fn focused_border(self) -> Self {
+        self.border_1().border_color(ColorRef::Token {
+            key: "ring",
+            fallback: ColorFallback::ThemeFocusRing,
+        })
+    }
+
+    pub fn debug_border(self, color: ColorRef) -> Self {
+        if cfg!(debug_assertions) {
+            self.border_1().border_color(color)
+        } else {
+            self
+        }
+    }
+
+    pub fn debug_border_primary(self) -> Self {
+        self.debug_border(ColorRef::Token {
+            key: "primary",
+            fallback: ColorFallback::ThemeAccent,
+        })
+    }
+
+    pub fn debug_border_destructive(self) -> Self {
+        self.debug_border(ColorRef::Token {
+            key: "destructive",
+            fallback: ColorFallback::Color(fret_core::Color {
+                r: 0.937,
+                g: 0.267,
+                b: 0.267,
+                a: 1.0,
+            }),
+        })
+    }
+
+    pub fn debug_border_ring(self) -> Self {
+        self.debug_border(ColorRef::Token {
+            key: "ring",
+            fallback: ColorFallback::ThemeFocusRing,
+        })
     }
 }
