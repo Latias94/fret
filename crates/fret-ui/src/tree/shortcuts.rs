@@ -42,6 +42,19 @@ pub(super) struct KeydownShortcutParams<'a> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn command_is_enabled(
+        app: &H,
+        window: Option<fret_core::AppWindowId>,
+        command: &CommandId,
+    ) -> bool {
+        let Some(window) = window else {
+            return true;
+        };
+        app.global::<fret_runtime::WindowCommandEnabledService>()
+            .and_then(|svc| svc.enabled(window, command))
+            != Some(false)
+    }
+
     pub(super) fn sync_pending_shortcut_overlay_state(
         &mut self,
         app: &mut H,
@@ -163,10 +176,12 @@ impl<H: UiHost> UiTree<H> {
                         .is_some_and(|m| m.repeatable)
                 {
                     self.suppress_text_input_until_key_up = Some(params.key);
-                    app.push_effect(Effect::Command {
-                        window: self.window,
-                        command,
-                    });
+                    if Self::command_is_enabled(app, self.window, &command) {
+                        app.push_effect(Effect::Command {
+                            window: self.window,
+                            command,
+                        });
+                    }
                     return true;
                 }
             }
@@ -209,10 +224,12 @@ impl<H: UiHost> UiTree<H> {
             if let Some(Some(command)) = matched.exact {
                 self.clear_pending_shortcut(app);
                 self.suppress_text_input_until_key_up = Some(params.key);
-                app.push_effect(Effect::Command {
-                    window: self.window,
-                    command,
-                });
+                if Self::command_is_enabled(app, self.window, &command) {
+                    app.push_effect(Effect::Command {
+                        window: self.window,
+                        command,
+                    });
+                }
                 return true;
             }
 
@@ -244,10 +261,12 @@ impl<H: UiHost> UiTree<H> {
 
         if let Some(command) = service.keymap.resolve(params.input_ctx, chord) {
             self.suppress_text_input_until_key_up = Some(params.key);
-            app.push_effect(Effect::Command {
-                window: self.window,
-                command,
-            });
+            if Self::command_is_enabled(app, self.window, &command) {
+                app.push_effect(Effect::Command {
+                    window: self.window,
+                    command,
+                });
+            }
             return true;
         }
 
@@ -294,10 +313,12 @@ impl<H: UiHost> UiTree<H> {
             if let Some(service) = app.global::<KeymapService>()
                 && let Some(command) = service.keymap.resolve(ctx, stroke.chord)
             {
-                app.push_effect(Effect::Command {
-                    window: self.window,
-                    command,
-                });
+                if Self::command_is_enabled(app, self.window, &command) {
+                    app.push_effect(Effect::Command {
+                        window: self.window,
+                        command,
+                    });
+                }
                 continue;
             }
 
