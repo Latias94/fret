@@ -13,7 +13,7 @@ use fret_canvas::scale::{canvas_units_from_screen_px, effective_scale_factor};
 use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, Point, Px, Rect, SceneOp,
-    Size, TextBlobId, TextConstraints, TextOverflow, TextWrap, Transform2D,
+    Size, TextConstraints, TextOverflow, TextWrap, Transform2D,
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::{UiHost, retained_bridge::*};
@@ -260,7 +260,6 @@ pub struct NodeGraphCanvasWith<M> {
     edges_build_states: HashMap<u64, EdgesBuildState>,
     edge_labels_build_states: HashMap<u64, EdgeLabelsBuildState>,
     edge_labels_build_state: Option<EdgeLabelsBuildState>,
-    text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
 }
 
@@ -392,7 +391,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             edges_build_states: HashMap::new(),
             edge_labels_build_states: HashMap::new(),
             edge_labels_build_state: None,
-            text_blobs: Vec::new(),
             interaction: InteractionState::default(),
         }
     }
@@ -461,7 +459,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             edges_build_states: self.edges_build_states,
             edge_labels_build_states: self.edge_labels_build_states,
             edge_labels_build_state: self.edge_labels_build_state,
-            text_blobs: self.text_blobs,
             interaction: self.interaction,
         }
     }
@@ -535,9 +532,6 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         self.edges_build_states.clear();
         self.edge_labels_build_states.clear();
         self.edge_labels_build_state = None;
-        for id in self.text_blobs.drain(..) {
-            services.text().release(id);
-        }
     }
 
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {

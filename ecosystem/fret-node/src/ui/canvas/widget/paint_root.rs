@@ -37,9 +37,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     registry.record_path_cache(key, frame_id, entries, stats);
                 });
         }
-        for id in self.text_blobs.drain(..) {
-            cx.services.text().release(id);
-        }
 
         let zoom = snapshot.zoom;
         let pan = snapshot.pan;
