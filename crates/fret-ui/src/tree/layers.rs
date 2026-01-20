@@ -21,6 +21,11 @@ pub(super) struct UiLayer {
 }
 
 impl<H: UiHost> UiTree<H> {
+    pub fn base_root(&self) -> Option<NodeId> {
+        self.base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+    }
+
     pub fn set_base_root(&mut self, root: NodeId) -> UiLayerId {
         if let Some(id) = self.base_layer {
             self.update_layer_root(id, root);
