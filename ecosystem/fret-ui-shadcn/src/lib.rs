@@ -264,7 +264,7 @@ pub mod prelude {
     };
     pub use crate::{
         ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
-        Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+        Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
     };
     pub use crate::{decl_style, icon, stack};
 
