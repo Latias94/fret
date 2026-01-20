@@ -10401,6 +10401,198 @@ fn web_vs_fret_command_dialog_overlay_center_matches() {
     );
 }
 
+fn web_command_dialog_input<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
+    web_portal_node_by_data_slot(theme, "command-input")
+}
+
+fn web_command_dialog_listbox<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
+    web_portal_node_by_data_slot(theme, "command-list")
+}
+
+fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+
+    let query: Model<String> = app.models_mut().insert(String::new());
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let items = vec![
+        fret_ui_shadcn::CommandItem::new("Calendar"),
+        fret_ui_shadcn::CommandItem::new("Search Emoji"),
+        fret_ui_shadcn::CommandItem::new("Calculator"),
+    ];
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Button, CommandDialog};
+
+        CommandDialog::new(open.clone(), query.clone(), items.clone())
+            .into_element(cx, |cx| Button::new("Open").into_element(cx))
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![pad_root(cx, Px(0.0), render(cx))],
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![pad_root(cx, Px(0.0), render(cx))],
+        );
+    }
+
+    ui.semantics_snapshot().expect("semantics snapshot").clone()
+}
+
+fn assert_command_dialog_input_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_input = web_command_dialog_input(theme);
+    let expected_h = web_input.rect.h;
+
+    let snap = command_dialog_open_snapshot(theme);
+    let combobox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox)
+        .unwrap_or_else(|| panic!("missing fret command dialog input for {web_name}"));
+
+    assert_close(
+        &format!("{web_name} command_dialog_input_h"),
+        combobox.bounds.size.height.0,
+        expected_h,
+        2.0,
+    );
+}
+
+fn assert_command_dialog_listbox_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_command_dialog_listbox(theme);
+    let expected_h = web_listbox.rect.h;
+
+    let snap = command_dialog_open_snapshot(theme);
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret command dialog listbox for {web_name}"));
+
+    assert_close(
+        &format!("{web_name} command_dialog_listbox_h"),
+        listbox.bounds.size.height.0,
+        expected_h,
+        2.0,
+    );
+}
+
+fn assert_command_dialog_listbox_option_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_command_dialog_listbox(theme);
+
+    let expected: std::collections::BTreeSet<i32> = web_select_listbox_option_heights(web_listbox)
+        .into_iter()
+        .map(round_i32)
+        .collect();
+    assert!(
+        expected.len() == 1,
+        "{web_name} expected uniform web command item height; got {expected:?}"
+    );
+
+    let snap = command_dialog_open_snapshot(theme);
+    let actual: std::collections::BTreeSet<i32> = fret_listbox_option_heights_in_listbox(&snap)
+        .into_iter()
+        .map(round_i32)
+        .collect();
+    assert!(
+        actual.len() == 1,
+        "{web_name} expected uniform fret command item height; got {actual:?}"
+    );
+
+    let expected_h = expected.iter().next().copied().unwrap_or_default() as f32;
+    let actual_h = actual.iter().next().copied().unwrap_or_default() as f32;
+    assert_close(
+        &format!("{web_name} command_dialog_item_h"),
+        actual_h,
+        expected_h,
+        1.0,
+    );
+}
+
+fn assert_command_dialog_listbox_option_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_command_dialog_listbox(theme);
+    let expected_inset = web_select_content_option_inset(web_listbox);
+
+    let snap = command_dialog_open_snapshot(theme);
+    let actual_inset = fret_select_content_option_inset(&snap);
+    assert_select_inset_match(web_name, actual_inset, expected_inset);
+}
+
+#[test]
+fn web_vs_fret_command_dialog_input_height_matches() {
+    assert_command_dialog_input_height_matches("command-dialog");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_input_height_matches_tiny_viewport() {
+    assert_command_dialog_input_height_matches("command-dialog.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_listbox_height_matches() {
+    assert_command_dialog_listbox_height_matches("command-dialog");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_listbox_height_matches_tiny_viewport() {
+    assert_command_dialog_listbox_height_matches("command-dialog.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_listbox_option_height_matches() {
+    assert_command_dialog_listbox_option_height_matches("command-dialog");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_listbox_option_height_matches_tiny_viewport() {
+    assert_command_dialog_listbox_option_height_matches("command-dialog.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_listbox_option_insets_match() {
+    assert_command_dialog_listbox_option_insets_match("command-dialog");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_listbox_option_insets_match_tiny_viewport() {
+    assert_command_dialog_listbox_option_insets_match("command-dialog.vp1440x240");
+}
+
 #[test]
 fn web_vs_fret_command_dialog_overlay_center_matches_tiny_viewport() {
     use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
