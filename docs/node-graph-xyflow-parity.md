@@ -158,6 +158,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - controlled mode building blocks (keep your own `Graph`/`NodeGraphViewState` as source of truth):
       - callbacks + apply: `ecosystem/fret-node/src/runtime/callbacks.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
       - conformance test: `ecosystem/fret-node/src/runtime/tests.rs` (`controlled_graph_can_apply_store_changes_via_callbacks`)
+      - guide: `docs/node-graph-controlled-mode.md`
+      - runnable example: `ecosystem/fret-node/examples/controlled_mode.rs`
   - Notes:
     - view-state remains separate (`NodeGraphViewState`); callbacks receive `ViewChange` for viewport/selection.
     - the exact "ReactFlow-like" contract is: `GraphTransaction` (undo unit) + `NodeGraphChanges` (diff) + `ViewChange` (viewport/selection).

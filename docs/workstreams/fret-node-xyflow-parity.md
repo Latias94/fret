@@ -67,7 +67,7 @@ fret-node (target):
 
 Headless / substrate ergonomics:
 - [x] Public “system utils” equivalents (e.g. outgoers/incomers/nodes-inside/bounds) on top of lookups.
-- [ ] A crisp “controlled mode” cookbook (store-driven vs external Graph/ViewState) with examples.
+- [x] A crisp “controlled mode” cookbook (store-driven vs external Graph/ViewState) with examples.
 
 Built-in add-ons:
 - [~] Background variants parity (dots / cross) + per-editor theming.
@@ -100,9 +100,11 @@ Work items:
     - connected edges for a node / port
     - nodes bounds / nodes inside rect (headless geometry; uses `Node.pos` + semantic size)
   - fret-node implementation: `ecosystem/fret-node/src/runtime/utils.rs` (unit tests included)
-- [ ] Add a “controlled mode” guide and a minimal example:
+- [x] Add a “controlled mode” guide and a minimal example:
   - XyFlow mental model: `applyNodeChanges` / `applyEdgeChanges`
   - fret-node building blocks: `ecosystem/fret-node/src/runtime/changes.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
+  - guide: `docs/node-graph-controlled-mode.md`
+  - runnable example: `ecosystem/fret-node/examples/controlled_mode.rs`
 - [ ] Add conformance tests for the new helpers (deterministic outputs, stable ordering rules).
 
 ### M2 — Built-in add-ons parity (B-layer components)
