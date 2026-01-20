@@ -246,6 +246,9 @@ menu sizing signals such as per-item heights, content insets, and Select metrics
 width/height, option row height, scroll buttons, and viewport insets), including constrained-viewport
 variants that force max-height/scroll behavior.
 
+It also includes geometry gates for cmdk-derived listboxes such as `combobox-demo` (option row
+height and option insets within the listbox).
+
 Overlay chrome conformance (border, radii, and selected colors):
 
 `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
