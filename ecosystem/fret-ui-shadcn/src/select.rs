@@ -65,6 +65,7 @@ fn select_scroll_with_buttons<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
+    scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
@@ -91,7 +92,7 @@ fn select_scroll_with_buttons<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let handle = scroll_handle.clone();
             let did_initial_scroll = initial_scroll_to_y.is_some();
             if let Some(y) = initial_scroll_to_y {
                 let prev = handle.offset();
@@ -853,6 +854,7 @@ fn select_impl<H: UiHost>(
             pointer: radix_select::SelectTriggerPointerState,
             content: radix_select::SelectContentKeyState,
             was_open: bool,
+            scroll_handle: fret_ui::scroll::ScrollHandle,
             value_node: Option<GlobalElementId>,
             viewport: Option<GlobalElementId>,
             listbox: Option<GlobalElementId>,
@@ -863,6 +865,8 @@ fn select_impl<H: UiHost>(
             alignment_item_has_leading_non_item: bool,
             width_probe: Option<GlobalElementId>,
             pending_item_aligned_scroll_to_y: Option<Px>,
+            last_item_aligned_scroll_to_y: Option<Px>,
+            item_aligned_user_scrolled: bool,
             did_item_aligned_scroll_initial: bool,
             did_item_aligned_scroll_reposition: bool,
             did_item_aligned_focus_scroll: bool,
@@ -877,6 +881,7 @@ fn select_impl<H: UiHost>(
                     pointer: radix_select::SelectTriggerPointerState::default(),
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
+                    scroll_handle: fret_ui::scroll::ScrollHandle::default(),
                     value_node: None,
                     viewport: None,
                     listbox: None,
@@ -887,6 +892,8 @@ fn select_impl<H: UiHost>(
                     alignment_item_has_leading_non_item: false,
                     width_probe: None,
                     pending_item_aligned_scroll_to_y: None,
+                    last_item_aligned_scroll_to_y: None,
+                    item_aligned_user_scrolled: false,
                     did_item_aligned_scroll_initial: false,
                     did_item_aligned_scroll_reposition: false,
                     did_item_aligned_focus_scroll: false,
@@ -1339,10 +1346,26 @@ fn select_impl<H: UiHost>(
                         // Radix repositions once after the scroll-up button mounts (it shifts the
                         // viewport down in the normal flow). Model this as an initial scroll plus
                         // a single follow-up scroll if the viewport became scrollable at the top.
-                        let should_scroll_initial = !did_item_aligned_scroll_initial;
-                        let should_scroll_reposition = did_item_aligned_scroll_initial
-                            && !did_item_aligned_scroll_reposition
-                            && item_aligned_scroll_up_visible;
+                        let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                        if !state.item_aligned_user_scrolled {
+                            if let Some(last) = state.last_item_aligned_scroll_to_y
+                                && state.did_item_aligned_scroll_initial
+                            {
+                                let offset = state.scroll_handle.offset();
+                                let drift = (offset.y.0 - last.0).abs();
+                                let drift_threshold = item_h.0 * 2.0;
+                                if drift > drift_threshold {
+                                    state.item_aligned_user_scrolled = true;
+                                }
+                            }
+                        }
+
+                        let should_scroll_initial =
+                            !state.did_item_aligned_scroll_initial && !state.item_aligned_user_scrolled;
+                        let should_scroll_reposition = state.did_item_aligned_scroll_initial
+                            && !state.did_item_aligned_scroll_reposition
+                            && state.item_aligned_scroll_up_visible
+                            && !state.item_aligned_user_scrolled;
                         if should_scroll_initial || should_scroll_reposition {
                             if std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
                                 .ok()
@@ -1353,8 +1376,8 @@ fn select_impl<H: UiHost>(
                                     scroll_to.0, should_scroll_initial, should_scroll_reposition
                                 );
                             }
-                            let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
                             state.pending_item_aligned_scroll_to_y = Some(scroll_to);
+                            state.last_item_aligned_scroll_to_y = Some(scroll_to);
                             if should_scroll_initial {
                                 state.did_item_aligned_scroll_initial = true;
                             }
@@ -1499,12 +1522,18 @@ fn select_impl<H: UiHost>(
                             .color_by_key("border")
                             .unwrap_or_else(|| theme_for_overlay.color_required("border"));
                         let arrow_border = overlay_border;
-                        let initial_scroll_to_y = {
-                            let mut state = trigger_state_for_overlay
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            state.pending_item_aligned_scroll_to_y.take()
-                        };
+                                        let initial_scroll_to_y = {
+                                            let mut state = trigger_state_for_overlay
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            state.pending_item_aligned_scroll_to_y.take()
+                                        };
+                                        let scroll_handle = {
+                                            let state = trigger_state_for_overlay
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            state.scroll_handle.clone()
+                                        };
 
                         let probe = cx.container(
                             ContainerProps {
@@ -1636,6 +1665,7 @@ fn select_impl<H: UiHost>(
                                             cx,
                                             theme_for_overlay.clone(),
                                             item_h,
+                                            scroll_handle,
                                             initial_scroll_to_y,
                                             viewport_id_out,
                                             active_element_id_out,
@@ -2183,6 +2213,8 @@ fn select_impl<H: UiHost>(
                                 state.did_item_aligned_scroll_reposition = false;
                                 state.did_item_aligned_focus_scroll = false;
                                 state.item_aligned_scroll_up_visible = false;
+                                state.last_item_aligned_scroll_to_y = None;
+                                state.item_aligned_user_scrolled = false;
                             }
                         }
 

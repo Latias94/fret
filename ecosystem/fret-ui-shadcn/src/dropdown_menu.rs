@@ -3380,7 +3380,10 @@ mod tests {
             "dropdown-menu-trigger",
             move |cx| {
                 let trigger_id_out = trigger_id_out_for_render.clone();
-                vec![DropdownMenu::new(open).into_element(
+                // Radix `DropdownMenu` defaults to `modal=true`, which hides underlay content from
+                // the accessibility tree via `hideOthers(MenuContent)`. These tests assert trigger
+                // semantics while the menu is open, so we run with `modal=false`.
+                vec![DropdownMenu::new(open).modal(false).into_element(
                     cx,
                     move |cx| {
                         cx.pressable_with_id_props(move |cx, _st, id| {
@@ -3459,38 +3462,48 @@ mod tests {
                         },
                         move |cx| {
                             let trigger_id_out = trigger_id_out_for_render.clone();
-                            vec![DropdownMenu::new(open).arrow(false).into_element(
-                                cx,
-                                move |cx| {
-                                    cx.pressable_with_id_props(move |cx, _st, id| {
-                                        let _ = cx
-                                            .app
-                                            .models_mut()
-                                            .update(&trigger_id_out, |v| *v = Some(id));
-                                        (
-                                            PressableProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Px(Px(120.0));
-                                                    layout.size.height = Length::Px(Px(40.0));
-                                                    layout
-                                                },
-                                                enabled: true,
-                                                focusable: true,
-                                                a11y: PressableA11y {
-                                                    label: Some(Arc::from("Trigger")),
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
-                                            },
-                                            vec![cx.container(ContainerProps::default(), |_cx| {
-                                                Vec::new()
-                                            })],
-                                        )
-                                    })
-                                },
-                                move |_cx| entries.clone(),
-                            )]
+                            // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
+                            // menu so trigger semantics remain visible while open.
+                            vec![
+                                DropdownMenu::new(open)
+                                    .modal(false)
+                                    .arrow(false)
+                                    .into_element(
+                                        cx,
+                                        move |cx| {
+                                            cx.pressable_with_id_props(move |cx, _st, id| {
+                                                let _ = cx
+                                                    .app
+                                                    .models_mut()
+                                                    .update(&trigger_id_out, |v| *v = Some(id));
+                                                (
+                                                    PressableProps {
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.width =
+                                                                Length::Px(Px(120.0));
+                                                            layout.size.height =
+                                                                Length::Px(Px(40.0));
+                                                            layout
+                                                        },
+                                                        enabled: true,
+                                                        focusable: true,
+                                                        a11y: PressableA11y {
+                                                            label: Some(Arc::from("Trigger")),
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    vec![cx.container(
+                                                        ContainerProps::default(),
+                                                        |_cx| Vec::new(),
+                                                    )],
+                                                )
+                                            })
+                                        },
+                                        move |_cx| entries.clone(),
+                                    ),
+                            ]
                         },
                     )]
                 })
@@ -4115,7 +4128,7 @@ mod tests {
         let _ = app.models_mut().update(&open, |v| *v = true);
 
         // Second frame: menu content is mounted.
-        let _ = render_frame_focusable_trigger_capture_id(
+        let (_, trigger_element_2) = render_frame_focusable_trigger_capture_id(
             &mut ui,
             &mut app,
             &mut services,
@@ -4124,6 +4137,10 @@ mod tests {
             open,
             trigger_id_out,
             entries,
+        );
+        assert_eq!(
+            trigger_element_2, trigger_element,
+            "expected trigger element id to be stable across open state"
         );
 
         let trigger_node = fret_ui::elements::with_element_cx(
@@ -4136,11 +4153,68 @@ mod tests {
         .expect("expected trigger element node");
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let trigger_sem = snap
-            .nodes
-            .iter()
-            .find(|n| n.id == trigger_node)
-            .expect("trigger semantics node");
+        let trigger_sem = snap.nodes.iter().find(|n| n.id == trigger_node).unwrap_or_else(|| {
+            use std::collections::BTreeMap;
+
+            fn role_name(role: SemanticsRole) -> &'static str {
+                match role {
+                    SemanticsRole::Generic => "Generic",
+                    SemanticsRole::Window => "Window",
+                    SemanticsRole::Panel => "Panel",
+                    SemanticsRole::Group => "Group",
+                    SemanticsRole::Dialog => "Dialog",
+                    SemanticsRole::AlertDialog => "AlertDialog",
+                    SemanticsRole::Alert => "Alert",
+                    SemanticsRole::Button => "Button",
+                    SemanticsRole::Checkbox => "Checkbox",
+                    SemanticsRole::Switch => "Switch",
+                    SemanticsRole::Slider => "Slider",
+                    SemanticsRole::ComboBox => "ComboBox",
+                    SemanticsRole::RadioGroup => "RadioGroup",
+                    SemanticsRole::RadioButton => "RadioButton",
+                    SemanticsRole::TabList => "TabList",
+                    SemanticsRole::Tab => "Tab",
+                    SemanticsRole::TabPanel => "TabPanel",
+                    SemanticsRole::MenuBar => "MenuBar",
+                    SemanticsRole::Menu => "Menu",
+                    SemanticsRole::MenuItem => "MenuItem",
+                    SemanticsRole::MenuItemCheckbox => "MenuItemCheckbox",
+                    SemanticsRole::MenuItemRadio => "MenuItemRadio",
+                    SemanticsRole::Tooltip => "Tooltip",
+                    SemanticsRole::Text => "Text",
+                    SemanticsRole::TextField => "TextField",
+                    SemanticsRole::List => "List",
+                    SemanticsRole::ListItem => "ListItem",
+                    SemanticsRole::ListBox => "ListBox",
+                    SemanticsRole::ListBoxOption => "ListBoxOption",
+                    SemanticsRole::TreeItem => "TreeItem",
+                    SemanticsRole::Viewport => "Viewport",
+                    _ => "Unknown",
+                }
+            }
+
+            let roots: Vec<_> = snap
+                .roots
+                .iter()
+                .map(|r| (r.root, r.z_index, r.blocks_underlay_input, r.hit_testable))
+                .collect();
+
+            let mut role_counts: BTreeMap<&'static str, usize> = BTreeMap::new();
+            for n in &snap.nodes {
+                *role_counts.entry(role_name(n.role)).or_insert(0) += 1;
+            }
+
+            let sample: Vec<_> = snap
+                .nodes
+                .iter()
+                .take(30)
+                .map(|n| (n.id, n.role, n.label.as_deref(), n.test_id.as_deref()))
+                .collect();
+
+            panic!(
+                "trigger semantics node; trigger_node={trigger_node:?} roots={roots:?} role_counts={role_counts:?} sample(id,role,label,test_id)={sample:?}"
+            );
+        });
 
         assert!(
             trigger_sem.flags.expanded,
