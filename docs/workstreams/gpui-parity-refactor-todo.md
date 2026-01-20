@@ -129,16 +129,18 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/elements/runtime.rs`,
     `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots`).
 
-- [x] GPUI-MVP2-cache-004 Stabilize overlay interactions under `ViewCache` shell reuse.
+- [~] GPUI-MVP2-cache-004 Stabilize overlay interactions under `ViewCache` shell reuse.
   - Touches: `crates/fret-ui/src/declarative/mount.rs`
   - Goal: `tools/diag-scripts/ui-gallery-overlay-torture.json` completes with `FRET_UI_GALLERY_VIEW_CACHE=1` and `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
   - Root cause: the declarative element GC ("stale nodes after gc lag frames") is keyed off `last_seen_frame`, but view-cache reuse intentionally skips re-mounting cached subtrees.
     This caused live overlay subtree nodes (e.g. `ui-gallery-overlay-reset`, `ui-gallery-dialog-trigger`) to be swept as soon as shell caching started reusing roots.
-  - Fix (temporary liveness rule): skip stale-node sweeping when `UiTree::view_cache_enabled()` is on, to prevent deleting live cached subtrees.
+  - Fix direction: keep cache-hit declarative subtrees alive by marking retained nodes/elements as seen (cache-root liveness bookkeeping), and ensure cache-hit subtree walks use
+    `UiTree::children` as the source of truth when mounts are skipped.
   - Hardening: replay cached tooltip/hover-overlay requests when a cache-hit frame skips the subtree that emits them (prevents transient unmounts under shell reuse).
     - Touches: `ecosystem/fret-ui-kit/src/window_overlays/frame.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
   - Evidence (pass): `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 120000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
   - Evidence (perf): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+  - Current failure: script can still get stuck at step 10 (`click ui-gallery-dialog-trigger`) and auto-dump `script-step-0010-click-no-semantics-match`.
   - Follow-up: reintroduce GC with GPUI-aligned "cache root liveness" (dirty views + notify) so cached subtrees can be skipped without leaking detached nodes.
 
 - [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
@@ -152,10 +154,10 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Progress: make cache-hit subtree walks use `UiTree::children` (avoid stale/partial `window_frame.children` tables).
     - Touches: `crates/fret-ui/src/declarative/mount.rs` (cache-hit helpers).
   - Progress: introduce cache-root subtree bookkeeping for future liveness/GC work.
-    - Touches: `crates/fret-ui/src/elements/runtime.rs` (`view_cache_subtree_elements`).
-  - Current state: keep stale sweeping disabled for the main window root when `UiTree::view_cache_enabled()` is on.
-    - Rationale: enabling sweeping for the main root still causes `ui-gallery-overlay-torture.json` to get stuck at step 10
-      (`ui-gallery-dialog-trigger` disappears from the captured semantics snapshot; bundle label `script-step-0010-click-no-semantics-match`).
+    - Touches: `crates/fret-ui/src/elements/runtime.rs` (`view_cache_elements_{rendered,next}`, `record_view_cache_subtree_elements`,
+      `touch_view_cache_subtree_elements_if_recorded`).
+  - Current state: `ui-gallery-overlay-torture.json` can still get stuck when the outer content cache root becomes a cache hit
+    (bundle label `script-step-0010-click-no-semantics-match`).
     - Symptom details: when the overlay page subtree is wrapped in `cached_subtree_with(...contained_layout(true))` (nested view-cache root),
       the semantics snapshot drops 10 overlay demo test IDs once the outer content cache root becomes a cache hit:
       `ui-gallery-overlay-reset`, `ui-gallery-dialog-trigger`, `ui-gallery-popover-trigger`, `ui-gallery-tooltip-trigger`,
@@ -165,7 +167,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - We still sweep detached nodes for dismissible overlay roots via `render_dismissible_root_impl`.
   - Evidence:
     - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
-    - Failure bundles (when main-root sweeping is enabled):
+    - Failure bundles (example):
       - `target/fret-diag/1768831095473-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag/1768828347887-script-step-0010-click-no-semantics-match/bundle.json`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
