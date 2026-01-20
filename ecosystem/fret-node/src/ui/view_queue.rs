@@ -4,6 +4,7 @@
 //! request viewport actions (e.g. fit-view over a specific node set) without taking a direct
 //! dependency on a particular canvas/editor widget instance.
 
+use crate::core::CanvasPoint;
 use crate::core::NodeId;
 use crate::io::{NodeGraphViewportEase, NodeGraphViewportInterpolate};
 
@@ -13,6 +14,12 @@ pub enum NodeGraphViewRequest {
     FrameNodes {
         nodes: Vec<NodeId>,
         options: NodeGraphFitViewOptions,
+    },
+    /// Sets the viewport pan/zoom (XyFlow `setViewport` mental model).
+    SetViewport {
+        pan: CanvasPoint,
+        zoom: f32,
+        options: NodeGraphSetViewportOptions,
     },
 }
 
@@ -32,6 +39,20 @@ pub struct NodeGraphFitViewOptions {
     pub ease: Option<NodeGraphViewportEase>,
     /// Optional per-call padding override (XyFlow `fitViewOptions.padding`).
     pub padding: Option<f32>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct NodeGraphSetViewportOptions {
+    /// Optional per-call zoom clamp override (XyFlow `setViewport({ zoom }, { duration })`).
+    pub min_zoom: Option<f32>,
+    /// Optional per-call zoom clamp override (XyFlow `setViewport({ zoom }, { duration })`).
+    pub max_zoom: Option<f32>,
+    /// Optional per-call animation duration override (XyFlow `setViewport(..., { duration })`).
+    pub duration_ms: Option<u32>,
+    /// Optional per-call interpolate override.
+    pub interpolate: Option<NodeGraphViewportInterpolate>,
+    /// Optional per-call ease override.
+    pub ease: Option<NodeGraphViewportEase>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -57,6 +78,23 @@ impl NodeGraphViewQueue {
         options: NodeGraphFitViewOptions,
     ) {
         self.push(NodeGraphViewRequest::FrameNodes { nodes, options });
+    }
+
+    pub fn push_set_viewport(&mut self, pan: CanvasPoint, zoom: f32) {
+        self.push(NodeGraphViewRequest::SetViewport {
+            pan,
+            zoom,
+            options: NodeGraphSetViewportOptions::default(),
+        });
+    }
+
+    pub fn push_set_viewport_with_options(
+        &mut self,
+        pan: CanvasPoint,
+        zoom: f32,
+        options: NodeGraphSetViewportOptions,
+    ) {
+        self.push(NodeGraphViewRequest::SetViewport { pan, zoom, options });
     }
 
     pub fn drain(&mut self) -> Vec<NodeGraphViewRequest> {

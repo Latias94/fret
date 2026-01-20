@@ -41,6 +41,7 @@ mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
 mod portal_pointer_passthrough_conformance;
 mod selection_mode_conformance;
+mod set_viewport_conformance;
 mod viewport_animation_conformance;
 mod z_order_conformance;
 
