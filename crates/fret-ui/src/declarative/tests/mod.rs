@@ -112,6 +112,7 @@ fn build_keyed_rows(
 
 mod anchored;
 mod canvas;
+mod command_hooks;
 mod core;
 mod identity;
 mod interactions;

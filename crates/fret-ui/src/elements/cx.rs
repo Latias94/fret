@@ -9,11 +9,12 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
 use crate::action::{
-    DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnDismissiblePointerMove,
-    OnKeyDown, OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
-    OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate,
-    OnRovingTypeahead, OnTimer, OnWheel, PointerActionHooks, PressableActionHooks,
-    PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks, TimerActionHooks,
+    CommandActionHooks, DismissibleActionHooks, KeyActionHooks, OnActivate, OnCommand,
+    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerDown,
+    OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
+    OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer,
+    OnWheel, PointerActionHooks, PressableActionHooks, PressableHoverActionHooks,
+    PressablePointerUpResult, RovingActionHooks, TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -1442,6 +1443,46 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn key_clear_on_key_down_for(&mut self, element: GlobalElementId) {
         self.with_state_for(element, KeyActionHooks::default, |hooks| {
             hooks.on_key_down = None;
+        });
+    }
+
+    pub fn command_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
+        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+            hooks.on_command = Some(handler);
+        });
+    }
+
+    pub fn command_add_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
+        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+            hooks.on_command = match hooks.on_command.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        prev(host, cx, command.clone()) || next(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_prepend_on_command_for(&mut self, element: GlobalElementId, handler: OnCommand) {
+        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+            hooks.on_command = match hooks.on_command.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        next(host, cx, command.clone()) || prev(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_clear_on_command_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, CommandActionHooks::default, |hooks| {
+            hooks.on_command = None;
         });
     }
 
