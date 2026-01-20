@@ -66,12 +66,12 @@ fret-node (target):
 ## Current gap summary (top items)
 
 Headless / substrate ergonomics:
-- [ ] Public “system utils” equivalents (e.g. outgoers/incomers/nodes-inside/bounds) on top of lookups.
+- [x] Public “system utils” equivalents (e.g. outgoers/incomers/nodes-inside/bounds) on top of lookups.
 - [ ] A crisp “controlled mode” cookbook (store-driven vs external Graph/ViewState) with examples.
 
 Built-in add-ons:
 - [~] Background variants parity (dots / cross) + per-editor theming.
-- [ ] First-class NodeToolbar / EdgeToolbar primitives (overlay positioning + hit-testing discipline).
+- [~] First-class NodeToolbar / EdgeToolbar primitives (overlay positioning + hit-testing discipline).
 - [ ] “Custom edge” Stage 2 (custom path builders / painters) with a stable contract.
 
 ## Milestones
@@ -92,13 +92,14 @@ Deliverables:
 - “Controlled mode” helper APIs and documentation that mirror XyFlow’s apply-change workflow.
 
 Work items:
-- [ ] Add headless query helpers built on `NodeGraphLookups`:
+- [x] Add headless query helpers built on `NodeGraphLookups`:
   - XyFlow reference: `repo-ref/xyflow/packages/system/src/utils/graph.ts`
   - fret-node base: `ecosystem/fret-node/src/runtime/lookups.rs`
   - Expected helpers (naming TBD):
     - outgoers / incomers (node-level, derived from port-level edges)
     - connected edges for a node / port
     - nodes bounds / nodes inside rect (headless geometry; uses `Node.pos` + semantic size)
+  - fret-node implementation: `ecosystem/fret-node/src/runtime/utils.rs` (unit tests included)
 - [ ] Add a “controlled mode” guide and a minimal example:
   - XyFlow mental model: `applyNodeChanges` / `applyEdgeChanges`
   - fret-node building blocks: `ecosystem/fret-node/src/runtime/changes.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
@@ -119,10 +120,11 @@ Work items:
   - Current fret-node: grid rendering (major/minor) in `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
   - Done: dot + cross variants (`NodeGraphStyle.grid_pattern` + sizes)
   - TODO: per-editor theme token plumbing.
-- [ ] NodeToolbar primitive:
+- [x] NodeToolbar primitive:
   - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
   - Implementation direction: window-space overlay positioned from derived geometry
     (`NodeGraphInternalsStore`), composed via `NodeGraphPanel` (or a dedicated overlay host).
+  - fret-node implementation: `ecosystem/fret-node/src/ui/overlays.rs` (`NodeGraphNodeToolbar`)
 - [ ] EdgeToolbar primitive:
   - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
   - Implementation direction: window-space overlay positioned from edge center/label anchors

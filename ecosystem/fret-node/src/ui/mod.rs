@@ -59,13 +59,14 @@ pub use presenter::{
     NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
-pub use style::{NodeGraphBackgroundPattern, NodeGraphColorMode, NodeGraphStyle};
+pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use view_queue::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };
 pub use viewport_helper::NodeGraphViewportHelper;
 
 pub use overlays::{
-    GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphMiniMapOverlay, NodeGraphOverlayHost,
-    NodeGraphOverlayState,
+    GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
+    NodeGraphToolbarSize, NodeGraphToolbarVisibility,
 };
