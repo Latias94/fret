@@ -297,20 +297,6 @@ impl WindowElementState {
         }
     }
 
-    pub(super) fn record_view_cache_element_access(&mut self, element: GlobalElementId) {
-        if self.view_cache_stack.is_empty() {
-            return;
-        };
-        // Like `record_state_key_access`, record elements in all active cache roots so outer cache
-        // roots can keep nested subtree nodes alive when reusing.
-        for &root in &self.view_cache_stack {
-            self.view_cache_elements_next
-                .entry(root)
-                .or_default()
-                .push(element);
-        }
-    }
-
     pub(super) fn begin_view_cache_scope(&mut self, root: GlobalElementId) {
         self.view_cache_stack.push(root);
         self.view_cache_state_keys_next.remove(&root);
