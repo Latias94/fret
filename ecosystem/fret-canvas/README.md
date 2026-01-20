@@ -51,6 +51,18 @@ should be converted to canvas units before comparison:
     `UiServices`.
   - `SvgCache`: a keyed cache for registered `SvgId`s that unregisters SVGs via `UiServices`.
 
+## Replay caches and resource liveness
+
+`SceneOpCache` / `SceneOpTileCache` intentionally store only recorded `SceneOp`s and do **not**
+manage the lifetimes of renderer-owned resources referenced by ops (`TextBlobId`, `PathId`, `SvgId`).
+
+When you replay cached ops on a cache hit, make sure the corresponding retained caches are also
+"touched" so entries are not pruned while still referenced by replay caches:
+
+- `TextCache::touch_blobs_in_scene_ops(&ops)`
+- `PathCache::touch_paths_in_scene_ops(&ops)`
+- `SvgCache::touch_svgs_in_scene_ops(&ops)`
+
 ## Future: declarative surface
 
 Fret now provides a declarative canvas element in `crates/fret-ui` (ADR 0156).
