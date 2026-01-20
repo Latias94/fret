@@ -187,6 +187,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let mut edges_normal: Vec<EdgePaint> = Vec::new();
         let mut edges_selected: Vec<EdgePaint> = Vec::new();
         let mut edges_hovered: Vec<EdgePaint> = Vec::new();
+        let elevate_edges_on_select = snapshot.interaction.elevate_edges_on_select;
 
         let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
         let edge_insert_marker: Option<(Point, Color)> =
@@ -250,7 +251,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             if edge.hovered {
                 edges_hovered.push(paint);
-            } else if edge.selected {
+            } else if edge.selected && elevate_edges_on_select {
                 edges_selected.push(paint);
             } else {
                 edges_normal.push(paint);

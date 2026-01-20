@@ -87,6 +87,8 @@ pub enum RunnerUserEvent {
         window: Option<fret_core::AppWindowId>,
         command: fret_runtime::CommandId,
     },
+    #[cfg(target_os = "macos")]
+    MacosMenuWillOpen,
 }
 
 #[cfg(feature = "hotpatch-subsecond")]
@@ -2969,6 +2971,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
                         event_loop.exit();
                         return;
+                    }
+                    Effect::ShowAboutPanel => {
+                        #[cfg(target_os = "macos")]
+                        {
+                            macos_menu::show_about_panel();
+                        }
                     }
                     Effect::HideApp => {
                         #[cfg(target_os = "macos")]

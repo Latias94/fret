@@ -1170,6 +1170,7 @@ dependencies = [
  "fret-launch",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-workspace",
  "thiserror 2.0.17",

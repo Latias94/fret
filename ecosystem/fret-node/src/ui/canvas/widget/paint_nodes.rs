@@ -1,3 +1,4 @@
+use super::super::geometry::node_size_default_px;
 use super::paint_render_data::RenderData;
 use super::*;
 
@@ -42,8 +43,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         if let Some(preview) = insert_node_drag_preview.as_ref() {
             let z = zoom.max(1.0e-6);
-            let w = self.style.node_width / z;
-            let h = (self.style.node_header_height + 2.0 * self.style.pin_row_height) / z;
+            let (w_px, h_px) = node_size_default_px(1, 1, &self.style);
+            let w = w_px / z;
+            let h = h_px / z;
             let rect = Rect::new(
                 Point::new(Px(preview.pos.x.0 - 0.5 * w), Px(preview.pos.y.0 - 0.5 * h)),
                 Size::new(Px(w), Px(h)),
@@ -528,8 +530,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         if let Some(preview) = insert_node_drag_preview.as_ref() {
             let z = zoom.max(1.0e-6);
-            let w = self.style.node_width / z;
-            let h = (self.style.node_header_height + 2.0 * self.style.pin_row_height) / z;
+            let (w_px, h_px) = node_size_default_px(1, 1, &self.style);
+            let w = w_px / z;
+            let h = h_px / z;
             let rect = Rect::new(
                 Point::new(Px(preview.pos.x.0 - 0.5 * w), Px(preview.pos.y.0 - 0.5 * h)),
                 Size::new(Px(w), Px(h)),

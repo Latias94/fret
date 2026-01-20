@@ -18,6 +18,7 @@ pub mod presenter;
 pub mod registry;
 pub mod style;
 pub mod view_queue;
+pub mod viewport_helper;
 
 pub use a11y::NodeGraphA11yActiveDescendant;
 pub use a11y::{NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort};
@@ -58,10 +59,11 @@ pub use presenter::{
     NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
 };
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
-pub use style::NodeGraphStyle;
+pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use view_queue::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };
+pub use viewport_helper::NodeGraphViewportHelper;
 
 pub use overlays::{
     GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphMiniMapOverlay, NodeGraphOverlayHost,
