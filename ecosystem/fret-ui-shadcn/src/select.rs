@@ -354,23 +354,27 @@ fn select_scroll_with_buttons<H: UiHost>(
                 },
             );
 
-            vec![
-                scroll_button(
-                    cx,
-                    ids::ui::CHEVRON_UP,
-                    "select-scroll-up-button",
-                    -1.0,
-                    show_up,
-                ),
-                stack,
-                scroll_button(
-                    cx,
-                    ids::ui::CHEVRON_DOWN,
-                    "select-scroll-down-button",
-                    1.0,
-                    show_down,
-                ),
-            ]
+            if has_scroll {
+                vec![
+                    scroll_button(
+                        cx,
+                        ids::ui::CHEVRON_UP,
+                        "select-scroll-up-button",
+                        -1.0,
+                        show_up,
+                    ),
+                    stack,
+                    scroll_button(
+                        cx,
+                        ids::ui::CHEVRON_DOWN,
+                        "select-scroll-down-button",
+                        1.0,
+                        show_down,
+                    ),
+                ]
+            } else {
+                vec![stack]
+            }
         },
     )
 }
