@@ -407,8 +407,14 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub root: NodeId,
     pub root_element: Option<GlobalElementId>,
     pub root_parent: Option<NodeId>,
+    pub root_parent_element: Option<GlobalElementId>,
     pub root_root: Option<NodeId>,
     pub root_layer: Option<UiLayerId>,
+    pub root_children_len: u32,
+    pub root_parent_children_len: Option<u32>,
+    pub root_path_len: u8,
+    pub root_path: [u64; 16],
+    pub root_path_truncated: bool,
     pub removed_nodes: u32,
     pub removed_head_len: u8,
     pub removed_head: [u64; 16],
@@ -1815,8 +1821,33 @@ impl<H: UiHost> UiTree<H> {
             let pre_exists = self.nodes.contains_key(root);
             let root_element = self.nodes.get(root).and_then(|n| n.element);
             let root_parent = self.nodes.get(root).and_then(|n| n.parent);
+            let root_parent_element =
+                root_parent.and_then(|p| self.nodes.get(p).and_then(|n| n.element));
             let root_root = self.node_root(root);
             let root_layer = self.node_layer(root);
+            let root_children_len = self
+                .nodes
+                .get(root)
+                .map(|n| n.children.len().min(u32::MAX as usize) as u32)
+                .unwrap_or(0);
+            let root_parent_children_len = root_parent.and_then(|p| {
+                self.nodes
+                    .get(p)
+                    .map(|n| n.children.len().min(u32::MAX as usize) as u32)
+            });
+            let mut root_path: [u64; 16] = [0u64; 16];
+            let mut root_path_len: u8 = 0;
+            let mut root_path_truncated = false;
+            let mut current = Some(root);
+            while let Some(id) = current {
+                if (root_path_len as usize) >= root_path.len() {
+                    root_path_truncated = true;
+                    break;
+                }
+                root_path[root_path_len as usize] = id.data().as_ffi();
+                root_path_len = root_path_len.saturating_add(1);
+                current = self.nodes.get(id).and_then(|n| n.parent);
+            }
             Some((
                 location.file(),
                 location.line(),
@@ -1824,8 +1855,14 @@ impl<H: UiHost> UiTree<H> {
                 pre_exists,
                 root_element,
                 root_parent,
+                root_parent_element,
                 root_root,
                 root_layer,
+                root_children_len,
+                root_parent_children_len,
+                root_path_len,
+                root_path,
+                root_path_truncated,
             ))
         } else {
             None
@@ -1840,8 +1877,14 @@ impl<H: UiHost> UiTree<H> {
                 _pre_exists,
                 root_element,
                 root_parent,
+                root_parent_element,
                 root_root,
                 root_layer,
+                root_children_len,
+                root_parent_children_len,
+                root_path_len,
+                root_path,
+                root_path_truncated,
             )) = remove_record
             {
                 self.debug_removed_subtrees
@@ -1851,8 +1894,14 @@ impl<H: UiHost> UiTree<H> {
                         root,
                         root_element,
                         root_parent,
+                        root_parent_element,
                         root_root,
                         root_layer,
+                        root_children_len,
+                        root_parent_children_len,
+                        root_path_len,
+                        root_path,
+                        root_path_truncated,
                         removed_nodes: 0,
                         removed_head_len: 0,
                         removed_head: [0u64; 16],
@@ -1876,8 +1925,14 @@ impl<H: UiHost> UiTree<H> {
             pre_exists,
             root_element,
             root_parent,
+            root_parent_element,
             root_root,
             root_layer,
+            root_children_len,
+            root_parent_children_len,
+            root_path_len,
+            root_path,
+            root_path_truncated,
         )) = remove_record
         {
             let outcome = if pre_exists {
@@ -1907,8 +1962,14 @@ impl<H: UiHost> UiTree<H> {
                     root,
                     root_element,
                     root_parent,
+                    root_parent_element,
                     root_root,
                     root_layer,
+                    root_children_len,
+                    root_parent_children_len,
+                    root_path_len,
+                    root_path,
+                    root_path_truncated,
                     removed_nodes: removed.len().min(u32::MAX as usize) as u32,
                     removed_head_len,
                     removed_head,
@@ -1967,6 +2028,53 @@ impl<H: UiHost> UiTree<H> {
             .get(parent)
             .map(|n| n.children.clone())
             .unwrap_or_default()
+    }
+
+    /// Best-effort repair pass for parent pointers based on child edges from layer roots.
+    ///
+    /// Parent pointers are used for cache-root discovery (`nearest_view_cache_root`) and for
+    /// determining whether nodes are attached to any layer (`node_layer`). If a bug or GC edge
+    /// case leaves a reachable node with a missing/incorrect `parent`, this can cascade into
+    /// incorrect invalidation truncation and overly-aggressive subtree sweeping.
+    ///
+    /// This intentionally only walks nodes reachable from the installed layer roots; it does not
+    /// attempt to "rescue" detached islands.
+    pub(crate) fn repair_parent_pointers_from_layer_roots(&mut self) -> u32 {
+        let roots = self.all_layer_roots();
+        if roots.is_empty() {
+            return 0;
+        }
+
+        let mut repaired: u32 = 0;
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<(Option<NodeId>, NodeId)> = Vec::with_capacity(roots.len());
+        for root in roots {
+            stack.push((None, root));
+        }
+
+        while let Some((expected_parent, node)) = stack.pop() {
+            if !visited.insert(node) {
+                continue;
+            }
+
+            let (current_parent, children) = match self.nodes.get(node) {
+                Some(n) => (n.parent, n.children.clone()),
+                None => continue,
+            };
+
+            if current_parent != expected_parent {
+                if let Some(n) = self.nodes.get_mut(node) {
+                    n.parent = expected_parent;
+                    repaired = repaired.saturating_add(1);
+                }
+            }
+
+            for child in children {
+                stack.push((Some(node), child));
+            }
+        }
+
+        repaired
     }
 
     pub fn node_parent(&self, node: NodeId) -> Option<NodeId> {

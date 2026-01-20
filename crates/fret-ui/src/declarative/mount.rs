@@ -228,6 +228,12 @@ pub fn render_root<H: UiHost>(
             apply_pending_invalidations(ui, pending_invalidations);
         });
 
+        // View-cache experiments rely on parent pointers for correct cache-root discovery and GC
+        // detachment checks. Repair any reachable inconsistencies before processing notifies/GC.
+        if ui.view_cache_enabled() {
+            let _ = ui.repair_parent_pointers_from_layer_roots();
+        }
+
         for element in window_state.take_notify_for_animation_frame() {
             if let Some(node) = window_state.node_entry(element).map(|e| e.node) {
                 ui.invalidate_with_source_and_detail(
@@ -472,6 +478,11 @@ fn render_dismissible_root_impl<
 
             apply_pending_invalidations(ui, pending_invalidations);
         });
+
+        // See `render_root`.
+        if ui.view_cache_enabled() {
+            let _ = ui.repair_parent_pointers_from_layer_roots();
+        }
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
             app,

@@ -198,6 +198,13 @@ impl<H: UiHost> UiTree<H> {
         self.layers.get(layer).map(|l| l.root)
     }
 
+    pub(crate) fn all_layer_roots(&self) -> Vec<NodeId> {
+        self.layer_order
+            .iter()
+            .filter_map(|layer| self.layers.get(*layer).map(|l| l.root))
+            .collect()
+    }
+
     pub fn set_layer_wants_pointer_move_events(&mut self, layer: UiLayerId, wants: bool) {
         let Some(l) = self.layers.get_mut(layer) else {
             return;

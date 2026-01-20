@@ -2458,7 +2458,7 @@ impl UiTreeDebugSnapshotV1 {
             removed_subtrees: ui
                 .debug_removed_subtrees()
                 .iter()
-                .map(UiRemovedSubtreeV1::from_record)
+                .map(|r| UiRemovedSubtreeV1::from_record(window, ui, element_runtime_state, r))
                 .collect(),
             layout_engine_solves: ui
                 .debug_layout_engine_solves()
@@ -2483,11 +2483,31 @@ pub struct UiRemovedSubtreeV1 {
     #[serde(default)]
     pub root_element: Option<u64>,
     #[serde(default)]
+    pub root_parent_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_element_path: Option<String>,
+    #[serde(default)]
     pub root_parent: Option<u64>,
     #[serde(default)]
     pub root_root: Option<u64>,
     #[serde(default)]
     pub root_layer: Option<u64>,
+    #[serde(default)]
+    pub root_children_len: u32,
+    #[serde(default)]
+    pub root_parent_children_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_path: Vec<u64>,
+    #[serde(default)]
+    pub root_path_truncated: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_children_last_set_location: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_children_last_set_old_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_children_last_set_new_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_children_last_set_frame_id: Option<u64>,
     #[serde(default)]
     pub removed_nodes: u32,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -2503,19 +2523,59 @@ pub struct UiRemovedSubtreeV1 {
 }
 
 impl UiRemovedSubtreeV1 {
-    fn from_record(r: &fret_ui::tree::UiDebugRemoveSubtreeRecord) -> Self {
+    fn from_record(
+        window: AppWindowId,
+        ui: &UiTree<App>,
+        element_runtime_state: Option<&ElementRuntime>,
+        r: &fret_ui::tree::UiDebugRemoveSubtreeRecord,
+    ) -> Self {
         let outcome = match r.outcome {
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::SkippedLayerRoot => "skipped_layer_root",
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::RootMissing => "root_missing",
             fret_ui::tree::UiDebugRemoveSubtreeOutcome::Removed => "removed",
         };
 
+        let root_element_path = r.root_element.and_then(|element| {
+            element_runtime_state
+                .and_then(|runtime| runtime.debug_path_for_element(window, element))
+        });
+
+        let root_path = r.root_path[..(r.root_path_len as usize).min(r.root_path.len())].to_vec();
+
+        let (
+            root_parent_children_last_set_location,
+            root_parent_children_last_set_old_len,
+            root_parent_children_last_set_new_len,
+            root_parent_children_last_set_frame_id,
+        ) = r
+            .root_parent
+            .and_then(|parent| ui.debug_set_children_write_for(parent))
+            .map(|w| {
+                (
+                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    Some(w.old_len),
+                    Some(w.new_len),
+                    Some(w.frame_id.0),
+                )
+            })
+            .unwrap_or((None, None, None, None));
+
         Self {
             root: key_to_u64(r.root),
             root_element: r.root_element.map(|e| e.0),
+            root_parent_element: r.root_parent_element.map(|e| e.0),
+            root_element_path,
             root_parent: r.root_parent.map(key_to_u64),
             root_root: r.root_root.map(key_to_u64),
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
+            root_children_len: r.root_children_len,
+            root_parent_children_len: r.root_parent_children_len,
+            root_path,
+            root_path_truncated: r.root_path_truncated,
+            root_parent_children_last_set_location,
+            root_parent_children_last_set_old_len,
+            root_parent_children_last_set_new_len,
+            root_parent_children_last_set_frame_id,
             removed_nodes: r.removed_nodes,
             removed_head: r.removed_head[..(r.removed_head_len as usize).min(r.removed_head.len())]
                 .to_vec(),

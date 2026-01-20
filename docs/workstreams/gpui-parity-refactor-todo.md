@@ -138,34 +138,24 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     On the first cache-hit frame, stale-but-live overlay nodes (e.g. `ui-gallery-dialog-trigger`) could be swept, which then removed overlay semantics roots and broke scripted clicks.
   - Fix (v1):
     - When a cache root transitions into reuse, touch the existing retained subtree (`last_seen_frame`) and (re-)record subtree elements so cache-hit frames keep liveness/identity consistent.
-    - While any view-cache reuse roots exist, skip declarative GC sweeping (temporary safety until cache-root liveness + sweeping is fully GPUI-aligned).
+    - Note: early iterations used a global "skip sweep while reuse exists" safety gate; MVP2-cache-005 replaces this with re-enabled sweeping under reuse.
   - Diagnostics: export `removed_subtrees` records in bundles to make sweeping behavior explainable from a single run.
   - Evidence (pass):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
-    - Latest run: `PASS (run_id=1768898489622)`
   - Follow-up: reintroduce declarative GC under cache-root reuse with explicit, GPUI-aligned liveness (dirty views + notify + cache key gates) rather than the global "skip sweep when reuse exists" stopgap.
 
-- [!] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
-  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), plus cache-hit frame liveness bookkeeping.
+- [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
+  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
-  - Notes: a naive "detached + stale" sweep is not sufficient on its own; cache-hit frames can still cause overlay/demo semantics to disappear if layer/overlay presence
-    depends on rerendered outputs. We likely need a GPUI-style "effect output replay" (or equivalent) for cache-hit frames (layers/overlays/semantics roots).
-  - Progress: make selector misses + missing semantics snapshots “fail fast” with an immediate bundle dump.
-    - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (script runner: `click_no_semantics_match`, `no_semantics_snapshot`).
-    - Motivation: cache-hit correctness regressions can present as “step N stuck” without producing a per-step bundle; this ensures we always capture a bundle at the first missing target and stop the run deterministically.
-  - Progress: make cache-hit subtree walks use `UiTree::children` (avoid stale/partial `window_frame.children` tables).
-    - Touches: `crates/fret-ui/src/declarative/mount.rs` (cache-hit helpers).
-  - Progress: introduce cache-root subtree bookkeeping for future liveness/GC work.
-    - Touches: `crates/fret-ui/src/elements/runtime.rs` (`view_cache_elements_{rendered,next}`, `record_view_cache_subtree_elements`,
-      `touch_view_cache_subtree_elements_if_recorded`).
-  - Current state:
-    - The safety gate from MVP2-cache-004 remains in place: while any view-cache reuse roots exist, declarative GC sweeping is skipped.
-    - Attempting to re-enable sweeping under cache-root reuse still regresses `ui-gallery-overlay-torture.json` (step 10 missing semantics targets).
-      Treat the gate as a stopgap until we have explicit per-root liveness and replayable “effect outputs” on cache-hit frames.
-  - Evidence (regression before restoring the gate):
-    - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --warmup-frames 5 --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
-    - Failure bundle (example): `target/fret-diag/1768898120790-script-step-0010-click-no-semantics-match/bundle.json`
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --dir target/fret-diag-sidebar-scroll --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+  - Root cause: `node_layer` (and cache-root discovery) relies on parent pointers; a reachable subtree can retain correct child edges but have a broken parent chain,
+    causing GC to mis-classify it as detached and sweep it on a cache-hit frame.
+  - Fix (v1):
+    - Repair parent pointers for nodes reachable from layer roots before running the declarative GC sweep (`UiTree::repair_parent_pointers_from_layer_roots`).
+    - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness), rather than a global "skip sweep when reuse exists" gate.
+  - Diagnostics: `removed_subtrees` now include `root_parent_element`, a `root_path` sample, and `root_parent_children_last_set_location` (when available), plus `root_element_path` when resolvable.
+  - Evidence (pass under reuse + shell):
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
 
 - [x] GPUI-MVP2-cache-006 Add an explicit cache key gate for view-cache reuse (GPUI-aligned).
   - Touches: `crates/fret-ui/src/element.rs` (`ViewCacheProps.cache_key`), `crates/fret-ui/src/elements/cx.rs` (reuse gating),
