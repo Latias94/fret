@@ -1,7 +1,11 @@
 use fret_app::App;
 use fret_app::CommandId;
 use fret_app::Effect;
-use fret_core::{AppWindowId, Event, NodeId, UiServices, ViewportInputEvent};
+use fret_app::Model;
+use fret_core::{
+    AppWindowId, Color, Corners, Edges, Event, NodeId, Px, TextOverflow, TextWrap, UiServices,
+    ViewportInputEvent,
+};
 use fret_launch::{
     FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitGlobalContext,
     WinitHotReloadContext, WinitRenderContext, WinitWindowContext,
@@ -9,11 +13,11 @@ use fret_launch::{
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::AnyElement;
 use fret_ui::overlay_placement::LayoutDirection;
-use fret_ui::{ElementContext, UiFrameCx, UiTree};
+use fret_ui::{ElementContext, Invalidation, Theme, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::primitives::dialog as dialog_prim;
 use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
-#[cfg(feature = "ui-app-command-palette")]
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::OnceLock;
@@ -319,6 +323,461 @@ impl CommandPaletteService {
         self.by_window.insert(window, models.clone());
         models
     }
+}
+
+#[derive(Debug, Clone)]
+struct PreferencesOverlayModels {
+    open: Model<bool>,
+}
+
+#[derive(Debug, Default)]
+struct PreferencesOverlayService {
+    by_window: HashMap<AppWindowId, PreferencesOverlayModels>,
+}
+
+impl PreferencesOverlayService {
+    fn models(&self, window: AppWindowId) -> Option<PreferencesOverlayModels> {
+        self.by_window.get(&window).cloned()
+    }
+
+    fn ensure_window(&mut self, app: &mut App, window: AppWindowId) -> PreferencesOverlayModels {
+        if let Some(existing) = self.by_window.get(&window) {
+            return existing.clone();
+        }
+
+        let models = PreferencesOverlayModels {
+            open: app.models_mut().insert(false),
+        };
+        self.by_window.insert(window, models.clone());
+        models
+    }
+}
+
+pub fn default_on_preferences<S>(
+    app: &mut App,
+    _services: &mut dyn UiServices,
+    window: AppWindowId,
+    _ui: &mut UiTree<App>,
+    _state: &mut S,
+) {
+    app.with_global_mut(PreferencesOverlayService::default, |svc, app| {
+        let models = svc.ensure_window(app, window);
+        let _ = app.models_mut().update(&models.open, |v| *v = true);
+    });
+    app.request_redraw(window);
+}
+
+fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
+    let Some(models) = cx
+        .app
+        .global::<PreferencesOverlayService>()
+        .and_then(|svc| svc.models(cx.window))
+    else {
+        return;
+    };
+
+    cx.observe_model(&models.open, Invalidation::Layout);
+    let open_now = cx.app.models().get_copied(&models.open).unwrap_or(false);
+    if !open_now {
+        return;
+    }
+
+    let theme = Theme::global(&*cx.app).clone();
+    let pad = theme.metric_required("metric.padding.md");
+    let pad_sm = theme.metric_required("metric.padding.sm");
+    let radius = theme.metric_required("metric.radius.md");
+    let radius_sm = theme.metric_required("metric.radius.sm");
+
+    let card = theme.color_required("card");
+    let border = theme.color_required("border");
+    let fg = theme.color_required("foreground");
+    let muted_fg = theme.color_required("muted-foreground");
+    let muted = theme.color_required("muted");
+
+    let config_paths = fret_app::config_files::LayeredConfigPaths::for_project_root(".");
+
+    let file_rows = [
+        (
+            "Project settings.json",
+            Some(config_paths.project_settings_json().display().to_string()),
+        ),
+        (
+            "User settings.json",
+            config_paths
+                .user_settings_json()
+                .map(|p| p.display().to_string()),
+        ),
+        (
+            "Project keymap.json",
+            Some(config_paths.project_keymap_json().display().to_string()),
+        ),
+        (
+            "User keymap.json",
+            config_paths
+                .user_keymap_json()
+                .map(|p| p.display().to_string()),
+        ),
+        (
+            "Project menubar.json",
+            Some(config_paths.project_menubar_json().display().to_string()),
+        ),
+        (
+            "User menubar.json",
+            config_paths
+                .user_menubar_json()
+                .map(|p| p.display().to_string()),
+        ),
+    ];
+
+    let close_button = {
+        let open = models.open.clone();
+        cx.pressable(
+            fret_ui::element::PressableProps {
+                focusable: true,
+                a11y: fret_ui::element::PressableA11y {
+                    label: Some(std::sync::Arc::from("Close preferences")),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |cx, _st| {
+                cx.pressable_add_on_activate(std::sync::Arc::new(move |host, action_cx, _| {
+                    let _ = host.models_mut().update(&open, |v| *v = false);
+                    host.request_redraw(action_cx.window);
+                }));
+
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        padding: Edges::all(pad_sm),
+                        background: Some(muted),
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(border),
+                        corner_radii: Corners::all(radius_sm),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.text_props(fret_ui::element::TextProps {
+                            layout: Default::default(),
+                            text: std::sync::Arc::from("Close"),
+                            style: None,
+                            color: Some(fg),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                        })]
+                    },
+                )]
+            },
+        )
+    };
+
+    let watcher_status = cx
+        .app
+        .global::<fret_app::ConfigFilesWatcherStatus>()
+        .cloned();
+    let watcher_text = watcher_status
+        .as_ref()
+        .and_then(|s| s.last_tick().map(|t| (s.seq(), t)))
+        .map(|(seq, tick)| {
+            format!(
+                "Watcher seq={} reloaded: settings={} keymap={} menubar={}",
+                seq, tick.reloaded_settings, tick.reloaded_keymap, tick.reloaded_menu_bar
+            )
+        })
+        .unwrap_or_else(|| "Watcher not installed (or no ticks yet).".to_string());
+
+    let barrier_bg = cx.container(
+        fret_ui::element::ContainerProps {
+            layout: dialog_prim::modal_barrier_layout(),
+            background: Some(Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.35,
+            }),
+            ..Default::default()
+        },
+        |_cx| Vec::new(),
+    );
+
+    let content = cx.flex(
+        fret_ui::element::FlexProps {
+            layout: dialog_prim::modal_barrier_layout(),
+            direction: fret_core::Axis::Vertical,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: fret_ui::element::MainAlign::Center,
+            align: fret_ui::element::CrossAlign::Center,
+            wrap: false,
+        },
+        |cx| {
+            vec![cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(640.0));
+                        layout.size.height = fret_ui::element::Length::Auto;
+                        layout
+                    },
+                    padding: Edges::all(pad),
+                    background: Some(card),
+                    border: Edges::all(Px(1.0)),
+                    border_color: Some(border),
+                    corner_radii: Corners::all(radius),
+                    ..Default::default()
+                },
+                |cx| {
+                    let header = cx.flex(
+                        fret_ui::element::FlexProps {
+                            layout: fret_ui::element::LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(12.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: fret_ui::element::MainAlign::SpaceBetween,
+                            align: fret_ui::element::CrossAlign::Center,
+                            wrap: false,
+                        },
+                        |cx| {
+                            vec![
+                                cx.text_props(fret_ui::element::TextProps {
+                                    layout: Default::default(),
+                                    text: std::sync::Arc::from("Preferences"),
+                                    style: None,
+                                    color: Some(fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                                close_button,
+                            ]
+                        },
+                    );
+
+                    let project_dir = config_paths.project_dir.display().to_string();
+                    let user_dir = config_paths
+                        .user_dir
+                        .as_ref()
+                        .map(|p| p.display().to_string())
+                        .unwrap_or_else(|| "<none>".to_string());
+
+                    let dirs = cx.flex(
+                        fret_ui::element::FlexProps {
+                            layout: fret_ui::element::LayoutStyle::default(),
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(6.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: fret_ui::element::MainAlign::Start,
+                            align: fret_ui::element::CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        |cx| {
+                            vec![
+                                cx.text_props(fret_ui::element::TextProps {
+                                    layout: Default::default(),
+                                    text: std::sync::Arc::from(format!(
+                                        "Project config dir: {project_dir}"
+                                    )),
+                                    style: None,
+                                    color: Some(muted_fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                                cx.text_props(fret_ui::element::TextProps {
+                                    layout: Default::default(),
+                                    text: std::sync::Arc::from(format!(
+                                        "User config dir: {user_dir}"
+                                    )),
+                                    style: None,
+                                    color: Some(muted_fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                            ]
+                        },
+                    );
+
+                    let files = cx.flex(
+                        fret_ui::element::FlexProps {
+                            layout: fret_ui::element::LayoutStyle::default(),
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(10.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: fret_ui::element::MainAlign::Start,
+                            align: fret_ui::element::CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        |cx| {
+                            let mut out = Vec::new();
+                            for (label, path) in file_rows {
+                                let Some(path) = path else {
+                                    continue;
+                                };
+                                let text_for_copy = path.clone();
+                                let row = cx.flex(
+                                    fret_ui::element::FlexProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: Px(12.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: fret_ui::element::MainAlign::SpaceBetween,
+                                        align: fret_ui::element::CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    |cx| {
+                                        let left = cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: {
+                                                    let mut layout =
+                                                        fret_ui::element::LayoutStyle::default();
+                                                    layout.flex.grow = 1.0;
+                                                    layout.flex.shrink = 1.0;
+                                                    layout.flex.basis =
+                                                        fret_ui::element::Length::Px(Px(0.0));
+                                                    layout
+                                                },
+                                                direction: fret_core::Axis::Vertical,
+                                                gap: Px(2.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: fret_ui::element::MainAlign::Start,
+                                                align: fret_ui::element::CrossAlign::Stretch,
+                                                wrap: false,
+                                            },
+                                            |cx| {
+                                                vec![
+                                                    cx.text_props(fret_ui::element::TextProps {
+                                                        layout: Default::default(),
+                                                        text: std::sync::Arc::from(label),
+                                                        style: None,
+                                                        color: Some(fg),
+                                                        wrap: TextWrap::None,
+                                                        overflow: TextOverflow::Clip,
+                                                    }),
+                                                    cx.text_props(fret_ui::element::TextProps {
+                                                        layout: Default::default(),
+                                                        text: std::sync::Arc::from(path),
+                                                        style: None,
+                                                        color: Some(muted_fg),
+                                                        wrap: TextWrap::None,
+                                                        overflow: TextOverflow::Clip,
+                                                    }),
+                                                ]
+                                            },
+                                        );
+                                        let copy = cx.pressable(
+                                            fret_ui::element::PressableProps {
+                                                focusable: true,
+                                                a11y: fret_ui::element::PressableA11y {
+                                                    label: Some(std::sync::Arc::from(
+                                                        "Copy config path",
+                                                    )),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            move |cx, _st| {
+                                                cx.pressable_add_on_activate(std::sync::Arc::new(
+                                                    move |host, _action_cx, _| {
+                                                        host.push_effect(
+                                                            Effect::ClipboardSetText {
+                                                                text: text_for_copy.clone(),
+                                                            },
+                                                        );
+                                                    },
+                                                ));
+                                                vec![cx.container(
+                                                    fret_ui::element::ContainerProps {
+                                                        padding: Edges::all(pad_sm),
+                                                        background: Some(muted),
+                                                        border: Edges::all(Px(1.0)),
+                                                        border_color: Some(border),
+                                                        corner_radii: Corners::all(radius_sm),
+                                                        ..Default::default()
+                                                    },
+                                                    move |cx| {
+                                                        vec![cx.text_props(
+                                                            fret_ui::element::TextProps {
+                                                                layout: Default::default(),
+                                                                text: std::sync::Arc::from("Copy"),
+                                                                style: None,
+                                                                color: Some(fg),
+                                                                wrap: TextWrap::None,
+                                                                overflow: TextOverflow::Clip,
+                                                            },
+                                                        )]
+                                                    },
+                                                )]
+                                            },
+                                        );
+
+                                        vec![left, copy]
+                                    },
+                                );
+                                out.push(row);
+                            }
+                            out
+                        },
+                    );
+
+                    let watcher = cx.container(
+                        fret_ui::element::ContainerProps {
+                            padding: Edges::all(pad_sm),
+                            background: Some(muted),
+                            border: Edges::all(Px(1.0)),
+                            border_color: Some(border),
+                            corner_radii: Corners::all(radius_sm),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.text_props(fret_ui::element::TextProps {
+                                layout: Default::default(),
+                                text: std::sync::Arc::from(watcher_text.clone()),
+                                style: None,
+                                color: Some(muted_fg),
+                                wrap: TextWrap::Word,
+                                overflow: TextOverflow::Clip,
+                            })]
+                        },
+                    );
+
+                    vec![
+                        header,
+                        cx.spacer(fret_ui::element::SpacerProps {
+                            min: Px(12.0),
+                            ..Default::default()
+                        }),
+                        dirs,
+                        cx.spacer(fret_ui::element::SpacerProps {
+                            min: Px(12.0),
+                            ..Default::default()
+                        }),
+                        files,
+                        cx.spacer(fret_ui::element::SpacerProps {
+                            min: Px(12.0),
+                            ..Default::default()
+                        }),
+                        watcher,
+                    ]
+                },
+            )]
+        },
+    );
+
+    let open = models.open.clone();
+    let children = dialog_prim::modal_dialog_layer_children(
+        cx,
+        open.clone(),
+        dialog_prim::DialogOptions::default(),
+        vec![barrier_bg],
+        content,
+    );
+
+    let mut req = fret_ui_kit::OverlayRequest::modal(
+        fret_ui::elements::GlobalElementId(0x8f31_7a1f_4b27_1d01),
+        None,
+        open,
+        fret_ui_kit::OverlayPresence::instant(true),
+        children,
+    );
+    req.root_name = Some("bootstrap.preferences".to_string());
+    OverlayController::request(cx, req);
 }
 
 fn hotpatch_trace_enabled() -> bool {
@@ -1074,6 +1533,7 @@ fn ui_app_render<S>(
                         out.push(dialog);
                     }
 
+                    drive_preferences_overlay(cx);
                     out
                 });
                 hotpatch_trace_log(&format!(
@@ -1117,6 +1577,7 @@ fn ui_app_render<S>(
                         out.push(dialog);
                     }
 
+                    drive_preferences_overlay(cx);
                     out
                 });
                 hotpatch_trace_log(&format!(
