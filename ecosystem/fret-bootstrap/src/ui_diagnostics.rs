@@ -2518,6 +2518,14 @@ pub struct UiCacheRootStatsV1 {
     pub subtree_nodes_truncated_at: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub root_in_semantics: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub children_last_set_location: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub children_last_set_old_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub children_last_set_new_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub children_last_set_frame_id: Option<u64>,
     #[serde(default)]
     pub reuse_reason: Option<String>,
 }
@@ -2559,6 +2567,22 @@ impl UiCacheRootStatsV1 {
             snap.nodes.iter().any(|n| n.id == id)
         });
 
+        let (
+            children_last_set_location,
+            children_last_set_old_len,
+            children_last_set_new_len,
+            children_last_set_frame_id,
+        ) = ui
+            .debug_set_children_write_for(stats.root)
+            .map(|w| {
+                (
+                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    Some(w.old_len),
+                    Some(w.new_len),
+                    Some(w.frame_id.0),
+                )
+            })
+            .unwrap_or((None, None, None, None));
         Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),
@@ -2570,6 +2594,10 @@ impl UiCacheRootStatsV1 {
             subtree_nodes: Some(seen.len().min(u32::MAX as usize) as u32),
             subtree_nodes_truncated_at,
             root_in_semantics,
+            children_last_set_location,
+            children_last_set_old_len,
+            children_last_set_new_len,
+            children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
         }
     }
