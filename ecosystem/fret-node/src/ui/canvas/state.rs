@@ -140,7 +140,7 @@ impl PasteSeries {
 
 #[cfg(test)]
 mod tests {
-    use super::{CanvasPoint, PasteSeries};
+    use super::{CanvasPoint, PasteSeries, ViewportAnimationEase};
 
     #[test]
     fn paste_series_increments_when_anchor_is_stable() {
@@ -184,6 +184,19 @@ mod tests {
         assert_eq!(at1, anchor);
         assert_eq!(at2, CanvasPoint { x: 12.0, y: 12.0 });
     }
+
+    #[test]
+    fn viewport_ease_preserves_endpoints_and_midpoint() {
+        for ease in [
+            ViewportAnimationEase::Linear,
+            ViewportAnimationEase::Smoothstep,
+            ViewportAnimationEase::CubicInOut,
+        ] {
+            assert!((ease.apply(0.0) - 0.0).abs() <= 1.0e-6);
+            assert!((ease.apply(1.0) - 1.0).abs() <= 1.0e-6);
+            assert!((ease.apply(0.5) - 0.5).abs() <= 1.0e-6);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -199,6 +212,34 @@ pub(crate) enum ViewportAnimationInterpolate {
     Smooth,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ViewportAnimationEase {
+    Linear,
+    Smoothstep,
+    CubicInOut,
+}
+
+impl ViewportAnimationEase {
+    pub(crate) fn apply(self, t: f32) -> f32 {
+        let t = if t.is_finite() {
+            t.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        match self {
+            Self::Linear => t,
+            Self::Smoothstep => t * t * (3.0 - 2.0 * t),
+            Self::CubicInOut => {
+                if t < 0.5 {
+                    4.0 * t * t * t
+                } else {
+                    1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct ViewportAnimationState {
     pub(crate) timer: TimerToken,
@@ -207,6 +248,7 @@ pub(crate) struct ViewportAnimationState {
     pub(crate) to_pan: CanvasPoint,
     pub(crate) to_zoom: f32,
     pub(crate) interpolate: ViewportAnimationInterpolate,
+    pub(crate) ease: Option<ViewportAnimationEase>,
     pub(crate) duration: std::time::Duration,
     pub(crate) elapsed: std::time::Duration,
     pub(crate) last_tick_at: Instant,

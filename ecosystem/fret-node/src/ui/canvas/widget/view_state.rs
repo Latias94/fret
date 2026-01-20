@@ -1,4 +1,4 @@
-use super::super::state::ViewportAnimationInterpolate;
+use super::super::state::{ViewportAnimationEase, ViewportAnimationInterpolate};
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -87,6 +87,41 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         for tx in txs {
             let _ = self.commit_transaction(host, window, &tx);
         }
+    }
+
+    pub(super) fn drain_view_queue<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+    ) -> bool {
+        let Some(queue) = self.view_queue.as_ref() else {
+            return false;
+        };
+        let Some(rev) = queue.revision(host) else {
+            return false;
+        };
+        if self.view_queue_key == Some(rev) {
+            return false;
+        }
+        self.view_queue_key = Some(rev);
+
+        let Ok(reqs) = queue.update(host, |q, _cx| q.drain()) else {
+            return false;
+        };
+        if reqs.is_empty() {
+            return false;
+        }
+
+        let bounds = self.interaction.last_bounds.unwrap_or_default();
+        let mut did = false;
+        for req in reqs {
+            match req {
+                crate::ui::NodeGraphViewRequest::FrameNodes { nodes } => {
+                    did |= self.frame_nodes_in_view(host, window, bounds, &nodes);
+                }
+            }
+        }
+        did
     }
 
     pub(super) fn update_view_state<H: UiHost>(
@@ -369,6 +404,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             crate::io::NodeGraphViewportInterpolate::Linear => ViewportAnimationInterpolate::Linear,
             crate::io::NodeGraphViewportInterpolate::Smooth => ViewportAnimationInterpolate::Smooth,
         };
+        let ease = snapshot.interaction.frame_view_ease.map(|ease| match ease {
+            crate::io::NodeGraphViewportEase::Linear => ViewportAnimationEase::Linear,
+            crate::io::NodeGraphViewportEase::Smoothstep => ViewportAnimationEase::Smoothstep,
+            crate::io::NodeGraphViewportEase::CubicInOut => ViewportAnimationEase::CubicInOut,
+        });
 
         let dx = new_pan.x - snapshot.pan.x;
         let dy = new_pan.y - snapshot.pan.y;
@@ -391,6 +431,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 zoom,
                 duration,
                 interpolate,
+                ease,
             );
         }
 

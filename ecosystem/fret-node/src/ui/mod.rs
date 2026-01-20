@@ -17,6 +17,7 @@ pub mod portal;
 pub mod presenter;
 pub mod registry;
 pub mod style;
+pub mod view_queue;
 
 pub use a11y::NodeGraphA11yActiveDescendant;
 pub use a11y::{NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort};
@@ -58,6 +59,7 @@ pub use presenter::{
 };
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
 pub use style::NodeGraphStyle;
+pub use view_queue::{NodeGraphViewQueue, NodeGraphViewRequest};
 
 pub use overlays::{
     GroupRenameOverlay, NodeGraphControlsOverlay, NodeGraphMiniMapOverlay, NodeGraphOverlayHost,

@@ -24,6 +24,7 @@ use crate::core::{
 mod callbacks_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
+mod fit_view_nodes_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
 mod hit_testing_conformance;

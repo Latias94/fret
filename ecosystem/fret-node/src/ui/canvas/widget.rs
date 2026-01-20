@@ -69,7 +69,7 @@ use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphInternalsSnapshot,
-    NodeGraphInternalsStore, NodeGraphOverlayState,
+    NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -234,6 +234,8 @@ pub struct NodeGraphCanvasWith<M> {
 
     edit_queue: Option<Model<NodeGraphEditQueue>>,
     edit_queue_key: Option<u64>,
+    view_queue: Option<Model<NodeGraphViewQueue>>,
+    view_queue_key: Option<u64>,
     overlays: Option<Model<NodeGraphOverlayState>>,
 
     measured_output: Option<Arc<MeasuredGeometryStore>>,
@@ -369,6 +371,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             auto_measured_key: None,
             edit_queue: None,
             edit_queue_key: None,
+            view_queue: None,
+            view_queue_key: None,
             overlays: None,
             measured_output: None,
             measured_output_key: None,
@@ -437,6 +441,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             auto_measured_key: self.auto_measured_key,
             edit_queue: self.edit_queue,
             edit_queue_key: self.edit_queue_key,
+            view_queue: self.view_queue,
+            view_queue_key: self.view_queue_key,
             overlays: self.overlays,
             measured_output: self.measured_output,
             measured_output_key: self.measured_output_key,
@@ -502,6 +508,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub fn with_edit_queue(mut self, queue: Model<NodeGraphEditQueue>) -> Self {
         self.edit_queue = Some(queue);
         self.edit_queue_key = None;
+        self
+    }
+
+    /// Attaches a UI-side view queue (`Model<NodeGraphViewQueue>`).
+    ///
+    /// This is a message-passing surface for viewport commands that need arguments (e.g. framing a
+    /// specific node set).
+    pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
+        self.view_queue = Some(queue);
+        self.view_queue_key = None;
         self
     }
 
@@ -650,6 +666,9 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         if let Some(queue) = self.edit_queue.as_ref() {
             cx.observe_model(queue, Invalidation::Layout);
         }
+        if let Some(queue) = self.view_queue.as_ref() {
+            cx.observe_model(queue, Invalidation::Layout);
+        }
         for &child in cx.children {
             cx.layout_in(child, cx.bounds);
         }
@@ -657,6 +676,9 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         self.sync_view_state(cx.app);
         self.drain_edit_queue(cx.app, cx.window);
         self.update_auto_measured_node_sizes(cx);
+        if self.drain_view_queue(cx.app, cx.window) {
+            cx.request_redraw();
+        }
         cx.available
     }
 

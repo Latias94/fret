@@ -483,6 +483,20 @@ pub enum NodeGraphViewportInterpolate {
     Smooth,
 }
 
+/// Easing curve for animated viewport changes (XyFlow `fitViewOptions.ease`).
+///
+/// Note: this is an optional override. When unset, the legacy behavior is derived from
+/// `frame_view_interpolate` for backward compatibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphViewportEase {
+    Linear,
+    /// Smoothstep `t*t*(3-2*t)` (close to common editor defaults).
+    Smoothstep,
+    /// Cubic ease-in-out.
+    CubicInOut,
+}
+
 /// Optional interaction tuning persisted as part of editor view state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphInteractionState {
@@ -699,6 +713,12 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub frame_view_interpolate: NodeGraphViewportInterpolate,
 
+    /// Optional easing curve for view framing / fit-view style commands.
+    ///
+    /// Parity knob for XyFlow's `fitViewOptions.ease`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_view_ease: Option<NodeGraphViewportEase>,
+
     /// Optional extra padding when framing nodes (XyFlow `fitViewOptions.padding`).
     ///
     /// This is a fraction of the current viewport size (0.0 .. 0.45 recommended). When set to
@@ -821,6 +841,7 @@ impl Default for NodeGraphInteractionState {
             zoom_on_double_click: default_zoom_on_double_click(),
             frame_view_duration_ms: default_frame_view_duration_ms(),
             frame_view_interpolate: NodeGraphViewportInterpolate::default(),
+            frame_view_ease: None,
             frame_view_padding: default_frame_view_padding(),
             reroute_on_edge_double_click: default_reroute_on_edge_double_click(),
             edge_insert_on_alt_drag: default_edge_insert_on_alt_drag(),

@@ -1,4 +1,6 @@
-use super::super::state::{ViewportAnimationInterpolate, ViewportAnimationState};
+use super::super::state::{
+    ViewportAnimationEase, ViewportAnimationInterpolate, ViewportAnimationState,
+};
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -19,6 +21,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         to_zoom: f32,
         duration: std::time::Duration,
         interpolate: ViewportAnimationInterpolate,
+        ease: Option<ViewportAnimationEase>,
     ) -> bool {
         self.stop_viewport_animation_timer(host);
 
@@ -42,6 +45,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             to_pan,
             to_zoom,
             interpolate,
+            ease,
             duration,
             elapsed: std::time::Duration::ZERO,
             last_tick_at: now,

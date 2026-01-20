@@ -1,4 +1,4 @@
-use super::super::state::ViewportAnimationInterpolate;
+use super::super::state::{ViewportAnimationEase, ViewportAnimationInterpolate};
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -146,9 +146,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             } else {
                 1.0
             };
-            let u = match anim.interpolate {
-                ViewportAnimationInterpolate::Linear => t,
-                ViewportAnimationInterpolate::Smooth => t * t * (3.0 - 2.0 * t),
+            let u = match anim.ease {
+                Some(ease) => ease.apply(t),
+                None => match anim.interpolate {
+                    ViewportAnimationInterpolate::Linear => t,
+                    ViewportAnimationInterpolate::Smooth => {
+                        ViewportAnimationEase::Smoothstep.apply(t)
+                    }
+                },
             };
 
             let pan = CanvasPoint {
