@@ -81,7 +81,7 @@ Scope notes:
 | xyflow prop / behavior | fret-node equivalent | Status | Evidence |
 |---|---|---|---|
 | `onlyRenderVisibleElements` | `NodeGraphInteractionState.only_render_visible_elements` (default `true`) | Implemented (different default; preserves current behavior) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs` |
-| Z-index modes, elevate-on-select (`elevateNodesOnSelect`, `elevateEdgesOnSelect`) | Explicit draw order + edge draw order derived from endpoints | Partial (no “elevate on select” policy toggle) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/z_order_conformance.rs` |
+| Z-index modes, elevate-on-select (`elevateNodesOnSelect`, `elevateEdgesOnSelect`) | `NodeGraphInteractionState.elevate_nodes_on_select` / `.elevate_edges_on_select` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/elevate_on_select_conformance.rs` |
 | Cache stability under large graphs | Scene op tile caches + per-frame warmup budgets | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs` |
 
 ### UX Plugin Components
@@ -103,6 +103,6 @@ Scope notes:
 
 ## Recommended Next Steps (Top 3)
 
-1) **Elevate-on-select policy toggles**: add `elevateNodesOnSelect` / `elevateEdgesOnSelect` style toggles (or equivalent) and make the draw ordering deterministic under selection-heavy workflows.
+1) **Connection validation UX**: add drag-time validity feedback (`isValidConnection` mental model) beyond commit-time validation hooks.
 2) **View-state shaping**: decide whether `nodeOrigin` should be moved from view-state tuning to a higher-level config surface for apps that want `Node.pos` in different coordinate conventions.
 3) **Node sizing parity**: consider port-driven auto-sizing and handle/label layout parity with upstream defaults (depends on UX direction).
