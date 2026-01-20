@@ -38,13 +38,29 @@ impl Default for Platform {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct InputContext {
     pub platform: Platform,
     pub caps: PlatformCapabilities,
     pub ui_has_modal: bool,
     pub focus_is_text_input: bool,
+    pub edit_can_undo: bool,
+    pub edit_can_redo: bool,
     pub dispatch_phase: InputDispatchPhase,
+}
+
+impl Default for InputContext {
+    fn default() -> Self {
+        Self {
+            platform: Platform::current(),
+            caps: PlatformCapabilities::default(),
+            ui_has_modal: false,
+            focus_is_text_input: false,
+            edit_can_undo: true,
+            edit_can_redo: true,
+            dispatch_phase: InputDispatchPhase::Normal,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

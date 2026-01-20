@@ -1,6 +1,7 @@
 #![cfg_attr(test, allow(clippy::arc_with_non_send_sync))]
 
 pub mod action;
+pub mod cache_key;
 pub mod canvas;
 pub mod declarative;
 mod drag_route;

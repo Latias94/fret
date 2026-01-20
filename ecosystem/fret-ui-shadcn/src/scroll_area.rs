@@ -249,8 +249,11 @@ impl ScrollAreaRoot {
                 (false, false) => viewport.axis,
             };
 
-            let show_scrollbar_x = wants_x && visible && max_offset.x.0 > 0.01;
-            let show_scrollbar_y = wants_y && visible && max_offset.y.0 > 0.01;
+            let overflow_x = wants_x && max_offset.x.0 > 0.01;
+            let overflow_y = wants_y && max_offset.y.0 > 0.01;
+
+            let show_scrollbar_x = overflow_x && visible;
+            let show_scrollbar_y = overflow_y && visible;
 
             let mut layout = decl_style::layout_style(&theme, layout);
             if matches!(layout.size.width, Length::Auto) {
@@ -277,32 +280,54 @@ impl ScrollAreaRoot {
 
                 let thumb = shadcn_scrollbar_thumb(&theme);
                 let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);
+                let scrollbar_width = theme.metric_required("metric.scrollbar.width");
 
-                if show_scrollbar_y {
+                if wants_y {
                     if let Some(spec) = scrollbars
                         .iter()
                         .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Vertical)
                     {
-                        let scrollbar_layout = LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: Some(Px(0.0)),
-                                bottom: Some(if show_scrollbar_x {
-                                    theme.metric_required("metric.scrollbar.width")
-                                } else {
-                                    Px(0.0)
-                                }),
-                                left: None,
-                            },
-                            size: SizeStyle {
-                                width: Length::Px(theme.metric_required("metric.scrollbar.width")),
+                        let gate_layout = if overflow_y {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    top: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    bottom: Some(if overflow_x {
+                                        scrollbar_width
+                                    } else {
+                                        Px(0.0)
+                                    }),
+                                    left: None,
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(scrollbar_width),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
-                            },
-                            ..Default::default()
+                            }
+                        } else {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    top: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(0.0)),
+                                    height: Length::Px(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
                         };
 
-                        children.push(cx.scrollbar(ScrollbarProps {
+                        let mut scrollbar_layout = LayoutStyle::default();
+                        scrollbar_layout.size.width = Length::Fill;
+                        scrollbar_layout.size.height = Length::Fill;
+
+                        let scrollbar = cx.scrollbar(ScrollbarProps {
                             layout: scrollbar_layout,
                             axis: ScrollbarAxis::Vertical,
                             scroll_target: Some(scroll_id),
@@ -313,35 +338,65 @@ impl ScrollAreaRoot {
                                 thumb_idle_alpha: spec.thumb_idle_alpha,
                                 track_padding: spec.track_padding,
                             },
-                        }));
+                        });
+
+                        children.push(cx.interactivity_gate_props(
+                            fret_ui::element::InteractivityGateProps {
+                                layout: gate_layout,
+                                present: overflow_y,
+                                interactive: show_scrollbar_y,
+                            },
+                            move |cx| {
+                                vec![cx.opacity(if show_scrollbar_y { 1.0 } else { 0.0 }, |_cx| {
+                                    vec![scrollbar]
+                                })]
+                            },
+                        ));
                     }
                 }
 
-                if show_scrollbar_x {
+                if wants_x {
                     if let Some(spec) = scrollbars
                         .iter()
                         .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Horizontal)
                     {
-                        let scrollbar_layout = LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                top: None,
-                                right: Some(if show_scrollbar_y {
-                                    theme.metric_required("metric.scrollbar.width")
-                                } else {
-                                    Px(0.0)
-                                }),
-                                bottom: Some(Px(0.0)),
-                                left: Some(Px(0.0)),
-                            },
-                            size: SizeStyle {
-                                height: Length::Px(theme.metric_required("metric.scrollbar.width")),
+                        let gate_layout = if overflow_x {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    top: None,
+                                    right: Some(if overflow_y { scrollbar_width } else { Px(0.0) }),
+                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)),
+                                },
+                                size: SizeStyle {
+                                    height: Length::Px(scrollbar_width),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
-                            },
-                            ..Default::default()
+                            }
+                        } else {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(0.0)),
+                                    height: Length::Px(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
                         };
 
-                        children.push(cx.scrollbar(ScrollbarProps {
+                        let mut scrollbar_layout = LayoutStyle::default();
+                        scrollbar_layout.size.width = Length::Fill;
+                        scrollbar_layout.size.height = Length::Fill;
+
+                        let scrollbar = cx.scrollbar(ScrollbarProps {
                             layout: scrollbar_layout,
                             axis: ScrollbarAxis::Horizontal,
                             scroll_target: Some(scroll_id),
@@ -352,33 +407,86 @@ impl ScrollAreaRoot {
                                 thumb_idle_alpha: spec.thumb_idle_alpha,
                                 track_padding: spec.track_padding,
                             },
-                        }));
+                        });
+
+                        children.push(cx.interactivity_gate_props(
+                            fret_ui::element::InteractivityGateProps {
+                                layout: gate_layout,
+                                present: overflow_x,
+                                interactive: show_scrollbar_x,
+                            },
+                            move |cx| {
+                                vec![cx.opacity(if show_scrollbar_x { 1.0 } else { 0.0 }, |_cx| {
+                                    vec![scrollbar]
+                                })]
+                            },
+                        ));
                     }
                 }
 
-                if corner && show_scrollbar_x && show_scrollbar_y {
-                    let corner_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
+                if corner && wants_x && wants_y {
+                    let gate_layout = if overflow_x && overflow_y {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                right: Some(Px(0.0)),
+                                bottom: Some(Px(0.0)),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(scrollbar_width),
+                                height: Length::Px(scrollbar_width),
+                                ..Default::default()
+                            },
                             ..Default::default()
-                        },
-                        size: SizeStyle {
-                            width: Length::Px(theme.metric_required("metric.scrollbar.width")),
-                            height: Length::Px(theme.metric_required("metric.scrollbar.width")),
+                        }
+                    } else {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                right: Some(Px(0.0)),
+                                bottom: Some(Px(0.0)),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(0.0)),
+                                height: Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
                             ..Default::default()
-                        },
-                        ..Default::default()
+                        }
                     };
 
-                    children.push(cx.container(
+                    let corner = cx.container(
                         ContainerProps {
-                            layout: corner_layout,
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
                             background: Some(shadcn_scrollbar_corner_bg(&theme)),
                             ..Default::default()
                         },
                         |_cx| vec![],
+                    );
+
+                    children.push(cx.interactivity_gate_props(
+                        fret_ui::element::InteractivityGateProps {
+                            layout: gate_layout,
+                            present: overflow_x && overflow_y,
+                            interactive: false,
+                        },
+                        move |cx| {
+                            vec![cx.opacity(
+                                if show_scrollbar_x && show_scrollbar_y {
+                                    1.0
+                                } else {
+                                    0.0
+                                },
+                                |_cx| vec![corner],
+                            )]
+                        },
                     ));
                 }
 
@@ -593,6 +701,48 @@ mod tests {
         })
     }
 
+    fn point_on_vertical_scrollbar(bounds: Rect) -> Point {
+        Point::new(
+            Px(bounds.origin.x.0 + bounds.size.width.0 - 1.0),
+            Px(bounds.origin.y.0 + 10.0),
+        )
+    }
+
+    fn point_on_horizontal_scrollbar(bounds: Rect) -> Point {
+        Point::new(
+            Px(bounds.origin.x.0 + 10.0),
+            Px(bounds.origin.y.0 + bounds.size.height.0 - 1.0),
+        )
+    }
+
+    fn point_in_content(bounds: Rect) -> Point {
+        Point::new(Px(bounds.origin.x.0 + 10.0), Px(bounds.origin.y.0 + 10.0))
+    }
+
+    fn assert_hit_matches(ui: &UiTree<App>, p: Point, expected: fret_core::NodeId, msg: &str) {
+        let hit = ui.debug_hit_test(p).hit;
+        assert_eq!(
+            hit,
+            Some(expected),
+            "{msg} (hit={hit:?} expected={expected:?} p={p:?})"
+        );
+    }
+
+    fn assert_hit_differs(ui: &UiTree<App>, p: Point, baseline: fret_core::NodeId, msg: &str) {
+        let hit = ui.debug_hit_test(p).hit;
+        assert_ne!(
+            hit,
+            Some(baseline),
+            "{msg} (hit={hit:?} baseline={baseline:?} p={p:?})"
+        );
+        let hit = hit.expect(msg);
+        let hit_bounds = ui.debug_node_bounds(hit).expect("hit bounds");
+        assert!(
+            hit_bounds.contains(p),
+            "{msg} (hit={hit:?} hit_bounds={hit_bounds:?} p={p:?})"
+        );
+    }
+
     #[test]
     fn scroll_area_hover_type_shows_scrollbar_only_when_hovered() {
         let window = AppWindowId::default();
@@ -609,13 +759,19 @@ mod tests {
             window,
             ScrollAreaType::Hover,
         );
-        // Root -> HoverRegion -> Stack -> (Scroll) when not hovered.
+        // Root -> HoverRegion -> Stack -> Scroll (+ structurally stable scrollbar chrome).
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            1,
-            "expected no scrollbar before hover"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_matches(
+            &ui,
+            point_on_vertical_scrollbar(stack_bounds),
+            baseline,
+            "expected scrollbar region to hit the same target before hover",
         );
 
         ui.dispatch_event(
@@ -639,10 +795,16 @@ mod tests {
         );
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            2,
-            "expected scrollbar to mount on hover"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_differs(
+            &ui,
+            point_on_vertical_scrollbar(stack_bounds),
+            baseline,
+            "expected scrollbar hit target on hover",
         );
     }
 
@@ -671,13 +833,19 @@ mod tests {
             ScrollAreaType::Auto,
         );
 
-        // Root -> HoverRegion -> Stack -> Scroll + Scrollbar (overflowing content).
+        // Auto type: scrollbar should be interactive when overflowing (without requiring hover).
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            2,
-            "expected auto scrollbar to mount for overflow"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_differs(
+            &ui,
+            point_on_vertical_scrollbar(stack_bounds),
+            baseline,
+            "expected auto scrollbar hit target for overflow",
         );
     }
 
@@ -715,10 +883,16 @@ mod tests {
 
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            1,
-            "expected no scrollbar before any scrolling"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_matches(
+            &ui,
+            point_on_vertical_scrollbar(stack_bounds),
+            baseline,
+            "expected scrollbar region to hit the same target before any scrolling",
         );
 
         // Simulate a scroll delta by mutating the shared handle between frames.
@@ -749,10 +923,16 @@ mod tests {
 
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            2,
-            "expected scrollbar while scrolling"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_differs(
+            &ui,
+            point_on_vertical_scrollbar(stack_bounds),
+            baseline,
+            "expected scrollbar hit target while scrolling",
         );
 
         // Keep rendering without scroll input; after debounce + hide delay it should disappear.
@@ -805,10 +985,16 @@ mod tests {
 
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            1,
-            "expected scrollbar to hide after scroll ends"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_matches(
+            &ui,
+            point_on_vertical_scrollbar(stack_bounds),
+            baseline,
+            "expected scrollbar region to hit the same target after scroll ends",
         );
     }
 
@@ -853,13 +1039,19 @@ mod tests {
             wide,
         );
 
-        // Root -> HoverRegion -> Stack -> Scroll + Horizontal Scrollbar.
+        // Auto type: horizontal scrollbar should be interactive when overflowing in X.
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            2,
-            "expected horizontal scrollbar to mount for overflow-x"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_differs(
+            &ui,
+            point_on_horizontal_scrollbar(stack_bounds),
+            baseline,
+            "expected horizontal scrollbar hit target",
         );
     }
 
@@ -904,13 +1096,25 @@ mod tests {
             large,
         );
 
-        // Root -> HoverRegion -> Stack -> Scroll + Vertical Scrollbar + Horizontal Scrollbar + Corner.
+        // Auto type: both scrollbars should be interactive when overflowing in both axes.
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(
-            ui.children(stack).len(),
-            4,
-            "expected both scrollbars and a corner element"
+        let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let baseline = ui
+            .debug_hit_test(point_in_content(stack_bounds))
+            .hit
+            .expect("baseline hit");
+        assert_hit_differs(
+            &ui,
+            point_on_vertical_scrollbar(stack_bounds),
+            baseline,
+            "expected vertical scrollbar hit target for overflow-both",
+        );
+        assert_hit_differs(
+            &ui,
+            point_on_horizontal_scrollbar(stack_bounds),
+            baseline,
+            "expected horizontal scrollbar hit target for overflow-both",
         );
     }
 

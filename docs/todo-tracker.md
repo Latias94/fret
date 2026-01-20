@@ -118,11 +118,42 @@ It complements (but does not replace) ADRs:
 
 - **Enforce token-only reads in shadcn-aligned surfaces**
   - Problem: theme drift occurs when some components read typed fields (`theme.colors.*` / `theme.metrics.*`) while others read semantic tokens (`theme.color_by_key("border")`).
-  - ADRs: `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`, `docs/adr/0102-semantic-theme-keys-and-extensible-token-registry.md`
-  - Current: `ecosystem/fret-ui-shadcn` is now token-only and fails fast when required tokens are missing.
-  - Current: `ecosystem/fret-ui-kit` is also token-based (no direct `theme.colors.*` / `theme.metrics.*` reads in the UI-kit surface).
-  - TODO: add a CI guard (e.g. grep-based test) that rejects new `theme.colors.*` / `theme.metrics.*` reads in shadcn-aligned crates (at least `fret-ui-shadcn` + `fret-ui-kit`).
-  - Note: non-shadcn crates may still read typed theme fields (e.g. as a fallback); decide whether to treat those as acceptable or expand the token-only rule.
+
+## P1 - Menubar / Commands / Keymap UX
+
+- **Zed-aligned shortcut display policy for menus** (done)
+  - Problem: shortcut labels in menus should be stable and understandable; they should not flicker based on live focus, and should remain consistent with command palette display.
+  - ADRs: `docs/adr/0183-os-menubar-effect-setmenubar.md`, `docs/adr/0023-command-metadata-and-menus.md`, `docs/adr/0021-keymap-file-format-and-merge.md`, `docs/adr/0022-when-expressions.md`
+  - Workstream: `docs/workstreams/os-menubar.md` (MVP 2)
+  - Reference: Zed/GPUI `repo-ref/zed/crates/gpui/src/platform/mac/platform.rs` (`bindings_for_action` selection comment)
+  - Evidence: `crates/fret-runtime/src/keymap.rs` (`display_shortcut_for_command_sequence`), used by OS menubar + command palette + in-window menu surfaces.
+
+- **Menu bar presentation modes (OS vs in-window)** (done)
+  - Goal: let apps choose native OS menubar vs client-side in-window menubar while sharing one data-only `MenuBar` and one keymap/when model.
+  - Workstream: `docs/workstreams/os-menubar.md` (MVP 2.5)
+  - Evidence: `crates/fret-app/src/settings.rs` (`SettingsFileV1.menu_bar`), `crates/fret-app/src/menu_bar.rs` (`sync_os_menu_bar`), `apps/fret-ui-gallery/src/driver.rs` (in-window fallback decision).
+  - Current: `fret-ui-gallery` exposes a basic Settings sheet to toggle `menu_bar.os` / `menu_bar.in_window` and write `.fret/settings.json` (`apps/fret-ui-gallery/src/driver.rs`).
+
+- **Standard menu roles and system menus (macOS-first)**
+  - Problem: macOS expects standard menus (App/Window/Services) and native edit actions; relying on menu titles is fragile and blocks localization/customization.
+  - ADR: `docs/adr/0185-menu-roles-system-menus-and-os-actions.md`
+  - Current:
+    - Roles/system menus are modeled (`MenuRole`, `SystemMenuType`) and `menubar.json` v2 can express them.
+    - macOS runner honors roles (Window/App/Help) and Services system menu, and uses `OsAction` for standard edit selectors.
+    - Workspace baseline and `fret-kit` default workspace shell can inject an App menu (About/Preferences/Services/Hide/Hide Others/Show All/Quit) via commands.
+    - `fret-bootstrap` handles `app.quit`/`app.hide*` by emitting platform effects (`QuitApp`/`HideApp`/`HideOtherApps`/`UnhideAllApps`), so these commands work by default in the golden path.
+  - Remaining TODO:
+    - define the remaining macOS App menu conventions (e.g. Hide Others/Show All wording, and standard “Hide Others” placement vs Services) and decide which are command-driven vs runner-native;
+    - decide how the App menu title should be derived by default (bundle/app title vs explicit config).
+      - Current: `fret-bootstrap` seeds `AppDisplayName` from `WinitRunnerConfig.main_window_title`, and `fret-kit`
+        uses it as the default `MenuRole::App` title (fallback `"App"`).
+
+- **Define quit semantics for menu + window close** (done)
+  - Problem: `Effect::QuitApp` exits the native event loop immediately; we need a clear policy for "Quit" vs closing windows (and unsaved changes prompts) in the golden path.
+  - ADRs: `docs/adr/0001-app-effects.md`, `docs/adr/0094-window-close-and-web-runner-destroy.md`
+  - Workstream: `docs/workstreams/os-menubar.md` (MVP 3 gap)
+  - Current: native `QuitApp` requests are mediated by `before_close_window` (prompt gate) and then force-close all windows before exiting, so quit works with "unsaved changes" prompts without re-entrancy.
+  - Evidence: `crates/fret-launch/src/runner/desktop/mod.rs` (`Effect::QuitApp`, `WindowRequest::Close` + `exit_on_main_window_close`), `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (global `app.quit` handling).
 
 - **Apply shadcn theme presets in shadcn demos by default**
   - Problem: shadcn-aligned components look "off" if the global theme does not provide the expected semantic tokens (or is tuned for a different palette).

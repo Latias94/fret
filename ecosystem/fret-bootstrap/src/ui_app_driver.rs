@@ -521,18 +521,28 @@ fn ui_app_handle_event<S>(
     if let Event::Timer { token } = event
         && let Some(tick) = fret_app::handle_config_files_watcher_timer(app, window, *token)
     {
-        if tick.reloaded_settings
+        let actionable = tick.reloaded_settings
             || tick.reloaded_keymap
+            || tick.reloaded_menu_bar
             || tick.settings_error.is_some()
             || tick.keymap_error.is_some()
-            || tick.actionable_keymap_conflicts > 0
-        {
+            || tick.menu_bar_error.is_some()
+            || tick.actionable_keymap_conflicts > 0;
+
+        if actionable {
+            app.with_global_mut(fret_app::ConfigFilesWatcherStatus::default, |svc, _app| {
+                svc.note(tick.clone());
+            });
+            app.request_redraw(window);
+
             hotpatch_trace_log(&format!(
-                "config_watcher: window={window:?} settings_reload={} keymap_reload={} settings_err={:?} keymap_err={:?} conflicts={} samples={:?}",
+                "config_watcher: window={window:?} settings_reload={} keymap_reload={} menubar_reload={} settings_err={:?} keymap_err={:?} menubar_err={:?} conflicts={} samples={:?}",
                 tick.reloaded_settings,
                 tick.reloaded_keymap,
+                tick.reloaded_menu_bar,
                 tick.settings_error,
                 tick.keymap_error,
+                tick.menu_bar_error,
                 tick.actionable_keymap_conflicts,
                 tick.keymap_conflict_samples,
             ));
@@ -631,6 +641,26 @@ fn ui_app_handle_command<S>(
         return;
     }
 
+    match command.as_str() {
+        fret_app::core_commands::APP_QUIT => {
+            app.push_effect(Effect::QuitApp);
+            return;
+        }
+        fret_app::core_commands::APP_HIDE => {
+            app.push_effect(Effect::HideApp);
+            return;
+        }
+        fret_app::core_commands::APP_HIDE_OTHERS => {
+            app.push_effect(Effect::HideOtherApps);
+            return;
+        }
+        fret_app::core_commands::APP_SHOW_ALL => {
+            app.push_effect(Effect::UnhideAllApps);
+            return;
+        }
+        _ => {}
+    }
+
     if fret_ui_kit::try_handle_window_overlays_command(&mut state.ui, app, window, &command) {
         return;
     }
@@ -669,6 +699,27 @@ fn ui_app_handle_global_command<S>(
     command: CommandId,
 ) {
     let WinitGlobalContext { app, services } = context;
+
+    match command.as_str() {
+        fret_app::core_commands::APP_QUIT => {
+            app.push_effect(Effect::QuitApp);
+            return;
+        }
+        fret_app::core_commands::APP_HIDE => {
+            app.push_effect(Effect::HideApp);
+            return;
+        }
+        fret_app::core_commands::APP_HIDE_OTHERS => {
+            app.push_effect(Effect::HideOtherApps);
+            return;
+        }
+        fret_app::core_commands::APP_SHOW_ALL => {
+            app.push_effect(Effect::UnhideAllApps);
+            return;
+        }
+        _ => {}
+    }
+
     if let Some(f) = driver.handle_global_command {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
@@ -1002,7 +1053,7 @@ fn ui_app_render<S>(
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let out = (driver.view)(cx, &mut state.state);
+                    let mut out = (driver.view)(cx, &mut state.state);
 
                     #[cfg(feature = "ui-app-command-palette")]
                     let mut out = out;
@@ -1111,7 +1162,7 @@ fn ui_app_render<S>(
         let _diag_guard = diag_span.enter();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.drive_script_for_window(window, semantics_snapshot, element_runtime)
+            svc.drive_script_for_window(app, window, semantics_snapshot, element_runtime)
         });
         if drive.request_redraw {
             app.request_redraw(window);

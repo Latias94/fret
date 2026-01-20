@@ -27,6 +27,8 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
+    pub view_cache_reuse_roots: Vec<GlobalElementId>,
+    pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
 }
 
 #[derive(Default)]
@@ -53,6 +55,10 @@ impl ElementRuntime {
 
     pub fn for_window_mut(&mut self, window: AppWindowId) -> &mut WindowElementState {
         self.windows.entry(window).or_default()
+    }
+
+    pub(crate) fn for_window(&self, window: AppWindowId) -> Option<&WindowElementState> {
+        self.windows.get(&window)
     }
 
     pub fn prepare_window_for_frame(&mut self, window: AppWindowId, frame_id: FrameId) {
@@ -104,8 +110,14 @@ pub struct WindowElementState {
     pub(super) view_cache_state_keys_rendered:
         HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
     pub(super) view_cache_state_keys_next: HashMap<GlobalElementId, Vec<(GlobalElementId, TypeId)>>,
+    view_cache_keys_rendered: HashMap<GlobalElementId, u64>,
+    view_cache_keys_next: HashMap<GlobalElementId, u64>,
+    view_cache_key_mismatch_roots: HashSet<GlobalElementId>,
+    pub(super) view_cache_elements_rendered: HashMap<GlobalElementId, Vec<GlobalElementId>>,
+    pub(super) view_cache_elements_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
+    raf_notify_roots: HashSet<GlobalElementId>,
     prepared_frame: FrameId,
     pub(super) prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
@@ -152,11 +164,27 @@ impl WindowElementState {
 
         self.advance_element_state_buffers(lag_frames);
 
+        self.raf_notify_roots.clear();
+        self.view_cache_key_mismatch_roots.clear();
+
+        std::mem::swap(
+            &mut self.view_cache_keys_rendered,
+            &mut self.view_cache_keys_next,
+        );
+        self.view_cache_keys_next.clear();
+
         std::mem::swap(
             &mut self.view_cache_state_keys_rendered,
             &mut self.view_cache_state_keys_next,
         );
         self.view_cache_state_keys_next.clear();
+
+        std::mem::swap(
+            &mut self.view_cache_elements_rendered,
+            &mut self.view_cache_elements_next,
+        );
+        self.view_cache_elements_next.clear();
+
         self.view_cache_reuse_roots.clear();
         self.view_cache_stack.clear();
 
@@ -252,18 +280,38 @@ impl WindowElementState {
     }
 
     pub(super) fn record_state_key_access(&mut self, key: (GlobalElementId, TypeId)) {
-        let Some(root) = self.view_cache_stack.last().copied() else {
+        if self.view_cache_stack.is_empty() {
             return;
         };
-        self.view_cache_state_keys_next
-            .entry(root)
-            .or_default()
-            .push(key);
+        // Nested view-cache correctness: when entering a child view-cache scope, parent cache
+        // roots still need to keep the child's state alive if the parent reuses without
+        // re-rendering that subtree.
+        for &root in &self.view_cache_stack {
+            self.view_cache_state_keys_next
+                .entry(root)
+                .or_default()
+                .push(key);
+        }
+    }
+
+    pub(super) fn record_view_cache_element_access(&mut self, element: GlobalElementId) {
+        if self.view_cache_stack.is_empty() {
+            return;
+        };
+        // Like `record_state_key_access`, record elements in all active cache roots so outer cache
+        // roots can keep nested subtree nodes alive when reusing.
+        for &root in &self.view_cache_stack {
+            self.view_cache_elements_next
+                .entry(root)
+                .or_default()
+                .push(element);
+        }
     }
 
     pub(super) fn begin_view_cache_scope(&mut self, root: GlobalElementId) {
         self.view_cache_stack.push(root);
         self.view_cache_state_keys_next.remove(&root);
+        self.view_cache_elements_next.remove(&root);
     }
 
     pub(super) fn end_view_cache_scope(&mut self, root: GlobalElementId) {
@@ -272,6 +320,10 @@ impl WindowElementState {
         if let Some(keys) = self.view_cache_state_keys_next.get_mut(&root) {
             let mut seen: HashSet<(GlobalElementId, TypeId)> = HashSet::with_capacity(keys.len());
             keys.retain(|&key| seen.insert(key));
+        }
+        if let Some(elements) = self.view_cache_elements_next.get_mut(&root) {
+            let mut seen: HashSet<GlobalElementId> = HashSet::with_capacity(elements.len());
+            elements.retain(|&id| seen.insert(id));
         }
     }
 
@@ -309,8 +361,55 @@ impl WindowElementState {
         self.view_cache_reuse_roots.contains(&root)
     }
 
+    pub(crate) fn view_cache_reuse_roots(&self) -> impl Iterator<Item = GlobalElementId> + '_ {
+        self.view_cache_reuse_roots.iter().copied()
+    }
+
     pub(crate) fn current_view_cache_root(&self) -> Option<GlobalElementId> {
         self.view_cache_stack.last().copied()
+    }
+
+    pub(crate) fn request_notify_for_animation_frame(&mut self, root: GlobalElementId) {
+        self.raf_notify_roots.insert(root);
+    }
+
+    pub(crate) fn take_notify_for_animation_frame(&mut self) -> Vec<GlobalElementId> {
+        if self.raf_notify_roots.is_empty() {
+            return Vec::new();
+        }
+        let out: Vec<GlobalElementId> = self.raf_notify_roots.iter().copied().collect();
+        self.raf_notify_roots.clear();
+        out
+    }
+
+    pub(crate) fn view_cache_key_matches_and_touch(
+        &mut self,
+        root: GlobalElementId,
+        key: u64,
+    ) -> bool {
+        if self.view_cache_keys_next.contains_key(&root) {
+            return self.view_cache_keys_next.get(&root).copied() == Some(key);
+        }
+        let Some(prev) = self.view_cache_keys_rendered.get(&root).copied() else {
+            return false;
+        };
+        if prev != key {
+            return false;
+        }
+        self.view_cache_keys_next.insert(root, key);
+        true
+    }
+
+    pub(crate) fn set_view_cache_key(&mut self, root: GlobalElementId, key: u64) {
+        self.view_cache_keys_next.insert(root, key);
+    }
+
+    pub(crate) fn record_view_cache_key_mismatch(&mut self, root: GlobalElementId) {
+        self.view_cache_key_mismatch_roots.insert(root);
+    }
+
+    pub(crate) fn view_cache_key_mismatch(&self, root: GlobalElementId) -> bool {
+        self.view_cache_key_mismatch_roots.contains(&root)
     }
 
     pub(super) fn touch_state_key(&mut self, key: (GlobalElementId, TypeId)) {
@@ -330,6 +429,58 @@ impl WindowElementState {
         self.view_cache_state_keys_next.insert(root, keys);
     }
 
+    pub(crate) fn record_view_cache_subtree_elements(
+        &mut self,
+        root: GlobalElementId,
+        elements: Vec<GlobalElementId>,
+    ) {
+        self.view_cache_elements_next.insert(root, elements);
+    }
+
+    pub(crate) fn forget_view_cache_subtree_elements(&mut self, root: GlobalElementId) {
+        self.view_cache_elements_rendered.remove(&root);
+        self.view_cache_elements_next.remove(&root);
+    }
+
+    pub(crate) fn touch_view_cache_subtree_elements_if_recorded(
+        &mut self,
+        root: GlobalElementId,
+        frame_id: FrameId,
+        root_id: GlobalElementId,
+    ) -> bool {
+        if self.view_cache_elements_next.contains_key(&root) {
+            return true;
+        }
+
+        let Some(elements) = self.view_cache_elements_rendered.get(&root).cloned() else {
+            return false;
+        };
+
+        self.view_cache_elements_next.insert(root, elements.clone());
+
+        for element in elements {
+            let Some(entry) = self.nodes.get_mut(&element) else {
+                continue;
+            };
+            entry.last_seen_frame = frame_id;
+            entry.root = root_id;
+
+            #[cfg(feature = "diagnostics")]
+            self.touch_debug_identity_for_element(frame_id, element);
+        }
+
+        true
+    }
+
+    pub(crate) fn view_cache_elements_for_root(
+        &self,
+        root: GlobalElementId,
+    ) -> Option<&[GlobalElementId]> {
+        self.view_cache_elements_rendered
+            .get(&root)
+            .map(|v| v.as_slice())
+    }
+
     pub(crate) fn active_text_selection(&self) -> Option<ActiveTextSelection> {
         self.active_text_selection
     }
@@ -340,6 +491,52 @@ impl WindowElementState {
 
     pub(crate) fn node_entry(&self, id: GlobalElementId) -> Option<NodeEntry> {
         self.nodes.get(&id).copied()
+    }
+
+    pub(crate) fn for_each_observed_model_for_invalidation(
+        &self,
+        frame_id: FrameId,
+        mut f: impl FnMut(GlobalElementId, &Vec<(ModelId, Invalidation)>),
+    ) {
+        if self.prepared_frame != frame_id {
+            for (&element, observations) in &self.observed_models_next {
+                f(element, observations);
+            }
+            return;
+        }
+
+        for (&element, observations) in &self.observed_models_rendered {
+            if self.observed_models_next.contains_key(&element) {
+                continue;
+            }
+            f(element, observations);
+        }
+        for (&element, observations) in &self.observed_models_next {
+            f(element, observations);
+        }
+    }
+
+    pub(crate) fn for_each_observed_global_for_invalidation(
+        &self,
+        frame_id: FrameId,
+        mut f: impl FnMut(GlobalElementId, &Vec<(TypeId, Invalidation)>),
+    ) {
+        if self.prepared_frame != frame_id {
+            for (&element, observations) in &self.observed_globals_next {
+                f(element, observations);
+            }
+            return;
+        }
+
+        for (&element, observations) in &self.observed_globals_rendered {
+            if self.observed_globals_next.contains_key(&element) {
+                continue;
+            }
+            f(element, observations);
+        }
+        for (&element, observations) in &self.observed_globals_next {
+            f(element, observations);
+        }
     }
 
     pub(crate) fn element_for_node(&self, node: NodeId) -> Option<GlobalElementId> {
@@ -406,6 +603,23 @@ impl WindowElementState {
 
     #[cfg(feature = "diagnostics")]
     fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        let mut view_cache_reuse_roots: Vec<GlobalElementId> =
+            self.view_cache_reuse_roots.iter().copied().collect();
+        view_cache_reuse_roots.sort_by_key(|id| id.0);
+
+        let view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)> =
+            view_cache_reuse_roots
+                .iter()
+                .map(|root| {
+                    let count = self
+                        .view_cache_elements_rendered
+                        .get(root)
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+                    (*root, count.min(u32::MAX as usize) as u32)
+                })
+                .collect();
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
             active_text_selection: self
@@ -439,6 +653,8 @@ impl WindowElementState {
                     )
                 })
                 .collect(),
+            view_cache_reuse_roots,
+            view_cache_reuse_root_element_counts,
         }
     }
 

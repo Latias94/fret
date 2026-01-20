@@ -340,7 +340,7 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
 ///
 /// Defaults (when the corresponding features are enabled):
 /// - diagnostics (`diagnostics`)
-/// - layered config files (`.fret/settings.json`, `.fret/keymap.json`)
+/// - layered config files (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`)
 /// - shadcn app integration
 /// - icon pack installation + optional SVG preloading
 /// - UI assets caches with default budgets (`ui-assets`)

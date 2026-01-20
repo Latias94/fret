@@ -87,6 +87,9 @@ pub(crate) fn sidebar_view(
                         .on_click(item.command)
                         .refine_layout(LayoutRefinement::default().w_full());
 
+                    button =
+                        button.test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")));
+
                     if item.id == PAGE_VIRTUAL_LIST_TORTURE {
                         let on_activate: fret_ui::action::OnActivate =
                             Arc::new(move |host, action_cx, _reason| {
@@ -106,7 +109,6 @@ pub(crate) fn sidebar_view(
                                 host.request_redraw(action_cx.window);
                             });
                         button = button.on_activate(on_activate);
-                        button = button.test_id("ui-gallery-nav-virtual-list-torture");
                     }
 
                     button.into_element(cx)
@@ -1720,12 +1722,14 @@ fn preview_combobox(
         .ok()
         .flatten()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
-    let query = cx.app.models().get_cloned(&query).unwrap_or_default();
+    let query_text = cx
+        .get_model_cloned(&query, Invalidation::Layout)
+        .unwrap_or_default();
 
     vec![
         combo,
         cx.text(format!("Selected: {selected}")),
-        cx.text(format!("Query: {query}")),
+        cx.text(format!("Query: {query_text}")),
     ]
 }
 
@@ -2625,7 +2629,9 @@ fn preview_overlay(
         });
 
     let dialog_open_flag = {
-        let open = cx.app.models().get_copied(&dialog_open).unwrap_or(false);
+        let open = cx
+            .get_model_copied(&dialog_open, Invalidation::Layout)
+            .unwrap_or(false);
         if open {
             Some(cx.semantics(
                 fret_ui::element::SemanticsProps {
@@ -2641,9 +2647,7 @@ fn preview_overlay(
 
     let popover_dismissed_flag = {
         let last = cx
-            .app
-            .models()
-            .get_cloned(&last_action)
+            .get_model_cloned(&last_action, Invalidation::Layout)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         if last.as_ref() == "popover:dismissed" {
             Some(cx.semantics(

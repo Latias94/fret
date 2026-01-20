@@ -17,13 +17,15 @@ pub mod platform_completion;
 pub mod time;
 pub mod ui_host;
 pub mod when_expr;
+pub mod window_command_availability;
+pub mod window_input_context;
 pub mod window_metrics;
 
 pub use capabilities::{
     ExternalDragPayloadKind, ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
 };
 pub use command::CommandId;
-pub use commands::{CommandMeta, CommandRegistry, CommandScope};
+pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
 pub use docking_settings::{
     DockDragInversionModifier, DockDragInversionPolicy, DockDragInversionSettings,
     DockingInteractionSettings,
@@ -46,7 +48,11 @@ pub use input::{
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
-pub use menu::{Menu, MenuBar, MenuItem};
+pub use menu::{
+    ItemAnchor, ItemSelector, ItemSelectorTyped, Menu, MenuBar, MenuBarConfig, MenuBarError,
+    MenuBarFileV1, MenuBarFileV2, MenuBarPatch, MenuBarPatchOp, MenuFileV1, MenuFileV2, MenuItem,
+    MenuItemFileV1, MenuItemFileV2, MenuRole, MenuTarget, SystemMenuType,
+};
 pub use model::{
     Model, ModelChangedDebugInfo, ModelCreatedDebugInfo, ModelCx, ModelHost, ModelId, ModelStore,
     ModelUpdateError, WeakModel,
@@ -55,4 +61,8 @@ pub use platform_completion::PlatformCompletion;
 pub use time::TickId;
 pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};
 pub use when_expr::WhenExpr;
+pub use window_command_availability::{
+    WindowCommandAvailability, WindowCommandAvailabilityService,
+};
+pub use window_input_context::WindowInputContextService;
 pub use window_metrics::apply_window_metrics_event;

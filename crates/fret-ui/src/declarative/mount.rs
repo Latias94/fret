@@ -4,7 +4,9 @@ use super::frame::{
 };
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
 pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
@@ -132,6 +134,7 @@ pub fn render_root<H: UiHost>(
     let ui_ref: &UiTree<H> = &*ui;
     let children =
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
+            runtime.prepare_window_for_frame(window, frame_id);
             let mut should_reuse_view_cache =
                 |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
             let mut cx = crate::elements::ElementContext::new_for_root_name(
@@ -181,6 +184,15 @@ pub fn render_root<H: UiHost>(
             },
         );
 
+        // Declarative GC uses `UiTree::node_layer` to detect whether nodes are detached from any UI
+        // layer. The base layer is typically registered by the app after `render_root` returns
+        // (e.g. `ui.set_root(root_node)`), which is too late for the GC pass below.
+        //
+        // Register the base root early so node-layer queries are meaningful inside this function.
+        if ui.node_layer(root_node).is_none() {
+            ui.set_root(root_node);
+        }
+
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
@@ -214,6 +226,17 @@ pub fn render_root<H: UiHost>(
             apply_pending_invalidations(ui, pending_invalidations);
         });
 
+        for element in window_state.take_notify_for_animation_frame() {
+            if let Some(node) = window_state.node_entry(element).map(|e| e.node) {
+                ui.invalidate_with_source_and_detail(
+                    node,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Notify,
+                    UiDebugInvalidationDetail::AnimationFrameRequest,
+                );
+            }
+        }
+
         crate::declarative::frame::register_scroll_handle_bindings_batch(
             app,
             window,
@@ -224,8 +247,37 @@ pub fn render_root<H: UiHost>(
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        // Sweep nodes that are not seen for `gc_lag_frames`.
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
+            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+
+            while let Some(root) = stack.pop() {
+                if !visited_roots.insert(root) {
+                    continue;
+                }
+                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                    continue;
+                };
+                for &element in elements {
+                    keep_alive.insert(element);
+                    if !visited_roots.contains(&element)
+                        && window_state.view_cache_elements_for_root(element).is_some()
+                    {
+                        stack.push(element);
+                    }
+                }
+            }
+
+            keep_alive
+        };
+
+        // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
+        // re-mounting cached subtrees, so cache roots must keep the retained subtree alive.
+        //
+        // We only sweep nodes that are both stale and detached from any UI layer.
         let mut stale_nodes: Vec<NodeId> = Vec::new();
+        let mut stale_elements: Vec<GlobalElementId> = Vec::new();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -233,12 +285,26 @@ pub fn render_root<H: UiHost>(
             if entry.root != root_id {
                 return true;
             }
+            if !keep_alive_view_cache_elements.is_empty()
+                && keep_alive_view_cache_elements.contains(id)
+            {
+                entry.last_seen_frame = frame_id;
+                return true;
+            }
             if entry.last_seen_frame.0 >= cutoff {
                 return true;
             }
+            if ui.node_layer(entry.node).is_some() {
+                return true;
+            }
             stale_nodes.push(entry.node);
+            stale_elements.push(*id);
             false
         });
+
+        for element in stale_elements {
+            window_state.forget_view_cache_subtree_elements(element);
+        }
 
         for node in stale_nodes {
             let removed = ui.remove_subtree(services, node);
@@ -297,6 +363,7 @@ fn render_dismissible_root_impl<
     let ui_ref: &UiTree<H> = &*ui;
     let children =
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
+            runtime.prepare_window_for_frame(window, frame_id);
             let mut should_reuse_view_cache =
                 |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
             let mut cx = crate::elements::ElementContext::new_for_root_name(
@@ -388,8 +455,35 @@ fn render_dismissible_root_impl<
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        // Sweep nodes that are not seen for `gc_lag_frames`.
+        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
+            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+
+            while let Some(root) = stack.pop() {
+                if !visited_roots.insert(root) {
+                    continue;
+                }
+                let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                    continue;
+                };
+                for &element in elements {
+                    keep_alive.insert(element);
+                    if !visited_roots.contains(&element)
+                        && window_state.view_cache_elements_for_root(element).is_some()
+                    {
+                        stack.push(element);
+                    }
+                }
+            }
+
+            keep_alive
+        };
+
+        // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
+        // only detached nodes that have been stale beyond the configured lag window.
         let mut stale_nodes: Vec<NodeId> = Vec::new();
+        let mut stale_elements: Vec<GlobalElementId> = Vec::new();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -397,12 +491,28 @@ fn render_dismissible_root_impl<
             if entry.root != root_id {
                 return true;
             }
+
+            if !keep_alive_view_cache_elements.is_empty()
+                && keep_alive_view_cache_elements.contains(id)
+            {
+                entry.last_seen_frame = frame_id;
+                return true;
+            }
+
             if entry.last_seen_frame.0 >= cutoff {
                 return true;
             }
+            if ui.node_layer(entry.node).is_some() {
+                return true;
+            }
             stale_nodes.push(entry.node);
+            stale_elements.push(*id);
             false
         });
+
+        for element in stale_elements {
+            window_state.forget_view_cache_subtree_elements(element);
+        }
 
         for node in stale_nodes {
             let removed = ui.remove_subtree(services, node);
@@ -445,7 +555,7 @@ fn mount_element<H: UiHost>(
         ElementKind::ViewCache(props) => Some(*props),
         _ => None,
     };
-    let mut reuse_view_cache =
+    let reuse_view_cache =
         view_cache_props.is_some() && window_state.should_reuse_view_cache_root(id);
 
     let span = if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
@@ -493,9 +603,14 @@ fn mount_element<H: UiHost>(
     );
 
     if reuse_view_cache
-        && view_cache_root_needs_layout_for_deferred_scroll_requests(window_frame, node)
+        && view_cache_root_needs_layout_for_deferred_scroll_requests(ui, window_frame, node)
     {
-        reuse_view_cache = false;
+        // A deferred scroll request means we must run a contained relayout for this cache root,
+        // even when the child render closure was skipped (cache hit).
+        //
+        // Importantly, do *not* disable reuse here: when the render closure is skipped the
+        // declarative element list is intentionally empty, and treating that as authoritative would
+        // detach the retained subtree (breaking semantics + scripted interactions).
         ui.invalidate(node, Invalidation::Layout);
     }
 
@@ -515,6 +630,8 @@ fn mount_element<H: UiHost>(
                 crate::tree::UiDebugCacheRootReuseReason::NodeRecreated
             } else if reuse_view_cache {
                 crate::tree::UiDebugCacheRootReuseReason::MarkedReuseRoot
+            } else if window_state.view_cache_key_mismatch(id) {
+                crate::tree::UiDebugCacheRootReuseReason::CacheKeyMismatch
             } else {
                 crate::tree::UiDebugCacheRootReuseReason::NotMarkedReuseRoot
             };
@@ -632,12 +749,30 @@ fn mount_element<H: UiHost>(
         };
         let _reuse_guard = reuse_span.enter();
 
-        let children = ui.children(node);
-        window_frame.children.insert(node, children);
+        window_frame
+            .children
+            .entry(node)
+            .or_insert_with(|| ui.children(node));
 
-        mark_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, node);
-        inherit_observations_for_existing_subtree(window_state, window_frame, node);
-        collect_scroll_handle_bindings_for_existing_subtree(window_frame, scroll_bindings, node);
+        let touched =
+            window_state.touch_view_cache_subtree_elements_if_recorded(id, frame_id, root_id);
+        if !touched {
+            mark_existing_declarative_subtree_seen(
+                ui,
+                window_state,
+                window_frame,
+                root_id,
+                frame_id,
+                node,
+            );
+        }
+        inherit_observations_for_existing_subtree(ui, window_state, window_frame, node);
+        collect_scroll_handle_bindings_for_existing_subtree(
+            ui,
+            window_frame,
+            scroll_bindings,
+            node,
+        );
         return node;
     }
 
@@ -675,6 +810,11 @@ fn mount_element<H: UiHost>(
         }
         ui.set_children(node, child_nodes.clone());
         window_frame.children.insert(node, child_nodes);
+
+        window_state.record_view_cache_subtree_elements(
+            id,
+            collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
+        );
     } else {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
         for child in element.children {
@@ -827,13 +967,22 @@ fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: HashMap<N
 fn mark_existing_declarative_subtree_seen<H: UiHost>(
     ui: &UiTree<H>,
     window_state: &mut crate::elements::WindowElementState,
+    window_frame: &WindowFrame,
     root_id: GlobalElementId,
     frame_id: FrameId,
     root: NodeId,
 ) {
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
-        if let Some(element) = ui.node_element(node) {
+        if !ui.node_exists(node) {
+            continue;
+        }
+        if let Some(element) = window_frame
+            .instances
+            .get(&node)
+            .map(|r| r.element)
+            .or_else(|| ui.node_element(node))
+        {
             window_state.set_node_entry(
                 element,
                 NodeEntry {
@@ -847,13 +996,46 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
             window_state.touch_debug_identity_for_element(frame_id, element);
         }
 
+        // Do not rely on `window_frame.children` here: when view-cache reuses skip mounts, the
+        // per-frame child table can become stale/partial. The `UiTree` is the source of truth for
+        // the retained subtree we want to keep alive across frames.
         for child in ui.children(node) {
             stack.push(child);
         }
     }
 }
 
-fn collect_scroll_handle_bindings_for_existing_subtree(
+fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
+    ui: &UiTree<H>,
+    window_frame: &WindowFrame,
+    root: NodeId,
+) -> Vec<GlobalElementId> {
+    let mut out: Vec<GlobalElementId> = Vec::new();
+    let mut seen: HashSet<GlobalElementId> = HashSet::new();
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if !ui.node_exists(node) {
+            continue;
+        }
+        if let Some(element) = window_frame
+            .instances
+            .get(&node)
+            .map(|r| r.element)
+            .or_else(|| ui.node_element(node))
+        {
+            if seen.insert(element) {
+                out.push(element);
+            }
+        }
+
+        for child in ui.children(node) {
+            stack.push(child);
+        }
+    }
+    out
+}
+fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
+    ui: &UiTree<H>,
     window_frame: &WindowFrame,
     out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     root: NodeId,
@@ -864,15 +1046,14 @@ fn collect_scroll_handle_bindings_for_existing_subtree(
             collect_scroll_handle_bindings(record.element, &record.instance, out);
         }
 
-        if let Some(children) = window_frame.children.get(&node) {
-            for &child in children {
-                stack.push(child);
-            }
+        for child in ui.children(node) {
+            stack.push(child);
         }
     }
 }
 
-fn view_cache_root_needs_layout_for_deferred_scroll_requests(
+fn view_cache_root_needs_layout_for_deferred_scroll_requests<H: UiHost>(
+    ui: &UiTree<H>,
     window_frame: &WindowFrame,
     root: NodeId,
 ) -> bool {
@@ -885,16 +1066,15 @@ fn view_cache_root_needs_layout_for_deferred_scroll_requests(
             return true;
         }
 
-        if let Some(children) = window_frame.children.get(&node) {
-            for &child in children {
-                stack.push(child);
-            }
+        for child in ui.children(node) {
+            stack.push(child);
         }
     }
     false
 }
 
-fn inherit_observations_for_existing_subtree(
+fn inherit_observations_for_existing_subtree<H: UiHost>(
+    ui: &UiTree<H>,
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &WindowFrame,
     root: NodeId,
@@ -905,12 +1085,13 @@ fn inherit_observations_for_existing_subtree(
             let element = record.element;
             window_state.touch_observed_models_for_element_if_recorded(element);
             window_state.touch_observed_globals_for_element_if_recorded(element);
+            if matches!(record.instance, ElementInstance::ViewCache(_)) {
+                window_state.touch_view_cache_state_keys_if_recorded(element);
+            }
         }
 
-        if let Some(children) = window_frame.children.get(&node) {
-            for &child in children {
-                stack.push(child);
-            }
+        for child in ui.children(node) {
+            stack.push(child);
         }
     }
 }

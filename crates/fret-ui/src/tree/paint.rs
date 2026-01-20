@@ -29,6 +29,37 @@ impl<H: UiHost> UiTree<H> {
         // has been dispatched yet (ADR 0012).
         let focus_is_text_input = self.focus_is_text_input();
         self.set_ime_allowed(app, focus_is_text_input);
+        let (active_layers, barrier_root) = self.active_input_layers();
+        let _ = active_layers;
+        if let Some(window) = self.window {
+            let caps = app
+                .global::<PlatformCapabilities>()
+                .cloned()
+                .unwrap_or_default();
+            let input_ctx = InputContext {
+                platform: Platform::current(),
+                caps,
+                ui_has_modal: barrier_root.is_some(),
+                focus_is_text_input,
+                edit_can_undo: app
+                    .global::<fret_runtime::WindowCommandAvailabilityService>()
+                    .and_then(|svc| svc.snapshot(window))
+                    .map(|s| s.edit_can_undo)
+                    .unwrap_or(true),
+                edit_can_redo: app
+                    .global::<fret_runtime::WindowCommandAvailabilityService>()
+                    .and_then(|svc| svc.snapshot(window))
+                    .map(|s| s.edit_can_redo)
+                    .unwrap_or(true),
+                dispatch_phase: InputDispatchPhase::Normal,
+            };
+            app.with_global_mut(
+                fret_runtime::WindowInputContextService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, input_ctx);
+                },
+            );
+        }
 
         let cache_enabled = self.paint_cache_enabled();
         if cache_enabled {

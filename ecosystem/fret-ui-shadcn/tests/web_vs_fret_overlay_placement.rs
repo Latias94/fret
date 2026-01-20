@@ -1089,6 +1089,42 @@ fn web_select_content_option_inset(listbox: &WebNode) -> InsetQuad {
     }
 }
 
+fn web_select_listbox_option_heights(listbox: &WebNode) -> Vec<f32> {
+    let eps = 0.5;
+    let panel_left = listbox.rect.x;
+    let panel_right = rect_right(listbox.rect);
+    let panel_top = listbox.rect.y;
+    let panel_bottom = rect_bottom(listbox.rect);
+
+    let mut heights = Vec::new();
+    let mut stack = vec![listbox];
+    while let Some(node) = stack.pop() {
+        if node
+            .attrs
+            .get("role")
+            .is_some_and(|v| v.as_str() == "option")
+        {
+            let option_left = node.rect.x;
+            let option_right = rect_right(node.rect);
+            let option_top = node.rect.y;
+            let option_bottom = rect_bottom(node.rect);
+
+            let within_panel = option_left + eps >= panel_left
+                && option_right <= panel_right + eps
+                && option_top + eps >= panel_top
+                && option_bottom <= panel_bottom + eps;
+            if within_panel {
+                heights.push(node.rect.h);
+            }
+        }
+        for child in &node.children {
+            stack.push(child);
+        }
+    }
+
+    heights
+}
+
 fn fret_menu_content_insets(snap: &fret_core::SemanticsSnapshot) -> Vec<InsetTriplet> {
     let debug = std::env::var("FRET_DEBUG_MENU_SEMANTICS")
         .ok()
@@ -1239,6 +1275,21 @@ fn fret_select_content_option_inset(snap: &fret_core::SemanticsSnapshot) -> Inse
         right: panel_right - max_right,
         bottom_from_last_option: panel_bottom - max_bottom,
     }
+}
+
+fn fret_listbox_option_heights_in_listbox(snap: &fret_core::SemanticsSnapshot) -> Vec<f32> {
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox"));
+
+    snap.nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBoxOption)
+        .filter(|n| fret_rect_contains(listbox.bounds, n.bounds))
+        .map(|n| n.bounds.size.height.0)
+        .collect()
 }
 
 fn assert_select_inset_match(web_name: &str, actual: InsetQuad, expected: InsetQuad) {

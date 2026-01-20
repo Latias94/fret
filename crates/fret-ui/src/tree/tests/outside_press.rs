@@ -233,6 +233,178 @@ fn outside_press_observer_respects_overlay_render_transform() {
 }
 
 #[test]
+fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
+            let center = Point::new(Px(5.0), Px(5.0));
+            let rotate = Transform2D::rotation_about_degrees(90.0, center);
+            let translate = Transform2D::translation(Point::new(Px(40.0), Px(0.0)));
+            Some(translate * rotate)
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let Some(&child) = cx.children.first() else {
+                return cx.available;
+            };
+            let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+            let _ = cx.layout_in(child, child_bounds);
+            cx.available
+        }
+
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            let Some(&child) = cx.children.first() else {
+                return;
+            };
+            let child_bounds = Rect::new(cx.bounds.origin, Size::new(Px(10.0), Px(10.0)));
+            cx.paint(child, child_bounds);
+        }
+    }
+
+    struct CountNormalDown {
+        normal: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountNormalDown {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.normal, |v: &mut u32| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_down = app.models_mut().insert(0u32);
+    let overlay_down = app.models_mut().insert(0u32);
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let base = ui.create_node(CountNormalDown {
+        normal: underlay_down.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay_root = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    ui.set_node_view_cache_flags(overlay_root, true, false);
+
+    let overlay_leaf = ui.create_node(CountNormalDown {
+        normal: overlay_down.clone(),
+    });
+    ui.add_child(overlay_root, overlay_leaf);
+
+    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    // Frame 0: establish interaction recording for the view-cache overlay root.
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    // Frame 1: should be able to reuse the cached interaction range for the overlay root.
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert!(
+        ui.debug_stats().interaction_cache_hits >= 1,
+        "expected prepaint interaction cache to hit for clean view-cache roots"
+    );
+
+    // This window-space point maps to local (6, 5) inside the overlay leaf after rotation+translation.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(45.0), Px(6.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(0),
+        "expected inside click to not trigger observer outside-press dispatch"
+    );
+    assert_eq!(
+        app.models().get_copied(&overlay_down),
+        Some(1),
+        "expected overlay leaf to receive normal pointer down"
+    );
+    assert_eq!(
+        app.models().get_copied(&underlay_down),
+        Some(0),
+        "expected underlay to not receive pointer down when overlay handles it"
+    );
+
+    // Clicking outside the overlay should trigger observer dispatch, but still reach the underlay (click-through).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(1),
+        "expected outside click to trigger observer outside-press dispatch"
+    );
+    assert_eq!(app.models().get_copied(&underlay_down), Some(1));
+}
+
+#[test]
 fn outside_press_observer_dispatch_sets_input_context_phase() {
     struct RecordObserverPhase {
         phase: fret_runtime::Model<fret_runtime::InputDispatchPhase>,

@@ -26,6 +26,7 @@ use crate::element::{
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
+use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
@@ -218,6 +219,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a one-shot request. Prefer `begin_continuous_frames()` when driving animations from
     /// declarative UI code.
     pub fn request_animation_frame(&mut self) {
+        // Match GPUI: requesting an animation frame implies the current view's output may change
+        // on the next tick, so view-cache reuse must be disabled for the nearest cache root.
+        let root = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.stack[0]);
+        self.window_state.request_notify_for_animation_frame(root);
         self.app
             .push_effect(Effect::RequestAnimationFrame(self.window));
     }
@@ -571,12 +579,38 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            let reuse = cx
+            let should_reuse = cx
                 .window_state
                 .node_entry(id)
                 .map(|e| e.node)
                 .and_then(|node| cx.view_cache_should_reuse.as_mut().map(|f| f(node)))
                 .unwrap_or(false);
+
+            let theme_revision = Theme::global(&*cx.app).revision();
+            let scale_factor = cx
+                .app
+                .global::<WindowMetricsService>()
+                .and_then(|svc| svc.scale_factor(cx.window))
+                .unwrap_or(1.0);
+            let key = stable_hash(&(
+                theme_revision,
+                scale_factor.to_bits(),
+                cx.bounds.size.width.0.to_bits(),
+                cx.bounds.size.height.0.to_bits(),
+                props.cache_key,
+            ));
+
+            let key_matches = if should_reuse {
+                let matches = cx.window_state.view_cache_key_matches_and_touch(id, key);
+                if !matches {
+                    cx.window_state.record_view_cache_key_mismatch(id);
+                }
+                matches
+            } else {
+                false
+            };
+
+            let reuse = should_reuse && key_matches;
 
             let children = if reuse {
                 cx.window_state.mark_view_cache_reuse_root(id);
@@ -587,6 +621,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .touch_observed_globals_for_element_if_recorded(id);
                 Vec::new()
             } else {
+                cx.window_state.set_view_cache_key(id, key);
                 cx.window_state.begin_view_cache_scope(id);
                 let children = f(cx);
                 cx.window_state.end_view_cache_scope(id);

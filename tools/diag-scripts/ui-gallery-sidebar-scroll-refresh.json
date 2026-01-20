@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-intro" } },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-intro" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-intro" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-nav-intro" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "capture_bundle", "label": "ui-gallery-sidebar-scroll-refresh" }
+  ]
+}

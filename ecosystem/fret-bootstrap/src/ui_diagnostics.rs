@@ -507,6 +507,7 @@ impl UiDiagnosticsService {
 
     pub fn drive_script_for_window(
         &mut self,
+        app: &App,
         window: AppWindowId,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
@@ -531,6 +532,8 @@ impl UiDiagnosticsService {
                     next_step: 0,
                     wait_frames_remaining: 0,
                     wait_until: None,
+                    last_reported_step: Some(0),
+                    missing_target_dumped_step: None,
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -554,6 +557,23 @@ impl UiDiagnosticsService {
 
         if active.next_step >= active.script.steps.len() {
             return UiScriptFrameOutput::default();
+        }
+
+        if active.last_reported_step != Some(active.next_step) {
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Running,
+                step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                reason: None,
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+            });
+            active.last_reported_step = Some(active.next_step);
         }
 
         if active.wait_frames_remaining > 0 {
@@ -695,6 +715,14 @@ impl UiDiagnosticsService {
                 };
                 let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
                 else {
+                    if self.cfg.script_auto_dump
+                        && active.missing_target_dumped_step != Some(step_index)
+                    {
+                        self.request_force_dump(format!(
+                            "script-step-{step_index:04}-click-no-semantics-match"
+                        ));
+                        active.missing_target_dumped_step = Some(step_index);
+                    }
                     self.active_scripts.insert(window, active);
                     output.request_redraw = true;
                     return output;
@@ -733,6 +761,39 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-move_pointer"));
                 }
             }
+            UiActionStepV1::Wheel {
+                target,
+                delta_x,
+                delta_y,
+            } => {
+                let Some(snapshot) = semantics_snapshot else {
+                    self.active_scripts.insert(window, active);
+                    output.request_redraw = true;
+                    return output;
+                };
+                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
+                else {
+                    self.active_scripts.insert(window, active);
+                    output.request_redraw = true;
+                    return output;
+                };
+
+                let pos = center_of_rect(node.bounds);
+                output.events.push(wheel_event(pos, delta_x, delta_y));
+
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if self.cfg.script_auto_dump {
+                    force_dump_label = Some(format!("script-step-{step_index:04}-wheel"));
+                }
+            }
+        }
+
+        if !output.events.is_empty() {
+            for event in &output.events {
+                self.record_script_event(app, window, event);
+            }
         }
 
         if let Some(label) = force_dump_label {
@@ -770,6 +831,15 @@ impl UiDiagnosticsService {
             self.active_scripts.insert(window, active);
         }
         output
+    }
+
+    fn record_script_event(&mut self, app: &App, window: AppWindowId, event: &Event) {
+        let ring = self.per_window.entry(window).or_default();
+        ring.update_pointer_position(event);
+
+        let mut recorded = RecordedUiEventV1::from_event(app, window, event, self.cfg.redact_text);
+        truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
+        ring.push_event(&self.cfg, recorded);
     }
 
     fn ensure_ready_file(&mut self) {
@@ -1237,6 +1307,7 @@ impl UiDiagnosticsService {
             scale_factor,
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
+            scene_fingerprint: scene.fingerprint(),
             debug: UiTreeDebugSnapshotV1::from_tree(app, ui, hit_test, element_diag, semantics),
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
@@ -1726,6 +1797,8 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub scale_factor: f32,
     pub window_bounds: RectV1,
     pub scene_ops: u64,
+    #[serde(default)]
+    pub scene_fingerprint: u64,
 
     pub changed_models: Vec<u64>,
     pub changed_globals: Vec<String>,
@@ -1993,6 +2066,13 @@ pub enum UiActionStepV1 {
     MovePointer {
         target: UiSelectorV1,
     },
+    Wheel {
+        target: UiSelectorV1,
+        #[serde(default)]
+        delta_x: f32,
+        #[serde(default)]
+        delta_y: f32,
+    },
     PressKey {
         key: String,
         #[serde(default)]
@@ -2177,6 +2257,8 @@ struct ActiveScript {
     next_step: usize,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
+    last_reported_step: Option<usize>,
+    missing_target_dumped_step: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -2190,6 +2272,8 @@ pub struct UiTreeDebugSnapshotV1 {
     pub stats: UiFrameStatsV1,
     #[serde(default)]
     pub invalidation_walks: Vec<UiInvalidationWalkV1>,
+    #[serde(default)]
+    pub dirty_views: Vec<UiDirtyViewV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
@@ -2222,6 +2306,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_invalidation_walks()
                 .iter()
                 .map(UiInvalidationWalkV1::from_walk)
+                .collect(),
+            dirty_views: ui
+                .debug_dirty_views()
+                .iter()
+                .map(UiDirtyViewV1::from_dirty_view)
                 .collect(),
             model_change_hotspots: ui
                 .debug_model_change_hotspots()
@@ -2261,6 +2350,37 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDirtyViewV1 {
+    pub root_node: u64,
+    #[serde(default)]
+    pub root_element: Option<u64>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub detail: Option<String>,
+}
+
+impl UiDirtyViewV1 {
+    fn from_dirty_view(dirty: &fret_ui::tree::UiDebugDirtyView) -> Self {
+        let source = match dirty.source {
+            fret_ui::tree::UiDebugInvalidationSource::ModelChange => "model_change",
+            fret_ui::tree::UiDebugInvalidationSource::GlobalChange => "global_change",
+            fret_ui::tree::UiDebugInvalidationSource::Notify => "notify",
+            fret_ui::tree::UiDebugInvalidationSource::Hover => "hover",
+            fret_ui::tree::UiDebugInvalidationSource::Focus => "focus",
+            fret_ui::tree::UiDebugInvalidationSource::Other => "other",
+        };
+
+        Self {
+            root_node: key_to_u64(dirty.root),
+            root_element: dirty.element.map(|e| e.0),
+            source: Some(source.to_string()),
+            detail: dirty.detail.as_str().map(|s| s.to_string()),
         }
     }
 }
@@ -2539,6 +2659,7 @@ impl UiInvalidationWalkV1 {
             fret_ui::tree::UiDebugInvalidationSource::GlobalChange => {
                 UiInvalidationSourceV1::GlobalChange
             }
+            fret_ui::tree::UiDebugInvalidationSource::Notify => UiInvalidationSourceV1::Other,
             fret_ui::tree::UiDebugInvalidationSource::Hover => UiInvalidationSourceV1::Hover,
             fret_ui::tree::UiDebugInvalidationSource::Focus => UiInvalidationSourceV1::Focus,
             fret_ui::tree::UiDebugInvalidationSource::Other => UiInvalidationSourceV1::Other,
@@ -2707,14 +2828,26 @@ impl UiSemanticsNodeV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiFrameStatsV1 {
     pub layout_time_us: u64,
+    #[serde(default)]
+    pub prepaint_time_us: u64,
     pub paint_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
+    #[serde(default)]
+    pub prepaint_nodes_visited: u32,
     pub paint_nodes: u32,
     pub paint_nodes_performed: u32,
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    #[serde(default)]
+    pub interaction_cache_hits: u32,
+    #[serde(default)]
+    pub interaction_cache_misses: u32,
+    #[serde(default)]
+    pub interaction_cache_replayed_records: u32,
+    #[serde(default)]
+    pub interaction_records: u32,
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
@@ -2772,14 +2905,20 @@ impl UiFrameStatsV1 {
     fn from_stats(stats: UiDebugFrameStats) -> Self {
         Self {
             layout_time_us: stats.layout_time.as_micros() as u64,
+            prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
+            prepaint_nodes_visited: stats.prepaint_nodes_visited,
             paint_nodes: stats.paint_nodes,
             paint_nodes_performed: stats.paint_nodes_performed,
             paint_cache_hits: stats.paint_cache_hits,
             paint_cache_misses: stats.paint_cache_misses,
             paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            interaction_cache_hits: stats.interaction_cache_hits,
+            interaction_cache_misses: stats.interaction_cache_misses,
+            interaction_cache_replayed_records: stats.interaction_cache_replayed_records,
+            interaction_records: stats.interaction_records,
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
@@ -2882,6 +3021,10 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<ElementObservedModelsV1>,
     pub observed_globals: Vec<ElementObservedGlobalsV1>,
+    #[serde(default)]
+    pub view_cache_reuse_roots: Vec<u64>,
+    #[serde(default)]
+    pub view_cache_reuse_root_element_counts: Vec<(u64, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2953,6 +3096,16 @@ impl ElementDiagnosticsSnapshotV1 {
                         .map(|(id, inv)| (id, invalidation_label(inv).to_string()))
                         .collect(),
                 })
+                .collect(),
+            view_cache_reuse_roots: snapshot
+                .view_cache_reuse_roots
+                .into_iter()
+                .map(|id| id.0)
+                .collect(),
+            view_cache_reuse_root_element_counts: snapshot
+                .view_cache_reuse_root_element_counts
+                .into_iter()
+                .map(|(id, count)| (id.0, count))
                 .collect(),
         }
     }
@@ -3613,6 +3766,20 @@ fn move_pointer_event(position: Point) -> Event {
         pointer_id,
         position,
         buttons: MouseButtons::default(),
+        modifiers,
+        pointer_type,
+    })
+}
+
+fn wheel_event(position: Point, delta_x: f32, delta_y: f32) -> Event {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    Event::Pointer(PointerEvent::Wheel {
+        pointer_id,
+        position,
+        delta: Point::new(fret_core::Px(delta_x), fret_core::Px(delta_y)),
         modifiers,
         pointer_type,
     })

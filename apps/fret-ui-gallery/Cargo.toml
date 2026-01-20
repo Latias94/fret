@@ -23,11 +23,14 @@ fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
+fret-kit = { path = "../../ecosystem/fret-kit" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "diagnostics", "ui-app-driver"] }
+fret-undo = { path = "../../ecosystem/fret-undo" }
 time.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+serde_json.workspace = true
 winit.workspace = true
 
 [dev-dependencies]

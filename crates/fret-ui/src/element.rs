@@ -457,6 +457,11 @@ pub struct ViewCacheProps {
     pub layout: LayoutStyle,
     /// Whether the subtree should be treated as layout-contained by the runtime when view caching is enabled.
     pub contained_layout: bool,
+    /// Explicit cache key for view-cache reuse (experimental).
+    ///
+    /// The runtime will reuse cached output for this view-cache root only when the computed key is
+    /// unchanged. This mirrors GPUI's `ViewCacheKey` gating behavior.
+    pub cache_key: u64,
 }
 
 impl Default for ViewCacheProps {
@@ -464,6 +469,7 @@ impl Default for ViewCacheProps {
         Self {
             layout: LayoutStyle::default(),
             contained_layout: true,
+            cache_key: 0,
         }
     }
 }

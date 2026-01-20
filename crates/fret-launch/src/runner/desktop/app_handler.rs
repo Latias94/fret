@@ -298,6 +298,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 RunnerUserEvent::PlatformCompletion { window, completion } => {
                     self.deliver_platform_completion_now(window, completion);
                 }
+                #[cfg(windows)]
+                RunnerUserEvent::WindowsMenuCommand { window, command } => {
+                    self.app.push_effect(fret_app::Effect::Command {
+                        window: Some(window),
+                        command,
+                    });
+                }
+                #[cfg(target_os = "macos")]
+                RunnerUserEvent::MacosMenuCommand { window, command } => {
+                    self.app
+                        .push_effect(fret_app::Effect::Command { window, command });
+                }
             }
         }
 

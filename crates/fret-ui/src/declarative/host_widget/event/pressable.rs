@@ -414,6 +414,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                             },
                             ActivateReason::Pointer,
                         );
+                        cx.notify();
                     }
                 }
                 cx.invalidate_self(Invalidation::Paint);
@@ -527,6 +528,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     },
                     ActivateReason::Keyboard,
                 );
+                cx.notify();
             }
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();

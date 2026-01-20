@@ -4,6 +4,36 @@ use std::path::Path;
 
 pub type FontsSettingsV1 = fret_core::TextFontFamilyConfig;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MenuBarSettingsV1 {
+    pub os: MenuBarIntegrationModeV1,
+    pub in_window: MenuBarIntegrationModeV1,
+}
+
+impl Default for MenuBarSettingsV1 {
+    fn default() -> Self {
+        Self {
+            os: MenuBarIntegrationModeV1::Auto,
+            in_window: MenuBarIntegrationModeV1::Auto,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MenuBarIntegrationModeV1 {
+    /// Use platform defaults:
+    /// - OS menubar on Windows/macOS
+    /// - in-window menubar on Linux/Web
+    #[default]
+    Auto,
+    /// Enable this surface (best-effort on platforms without an OS menubar mapping).
+    On,
+    /// Disable this surface.
+    Off,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum SettingsError {
     #[error("failed to read settings file: {path}")]
@@ -27,6 +57,7 @@ pub struct SettingsFileV1 {
     pub settings_version: u32,
     pub fonts: FontsSettingsV1,
     pub docking: DockingSettingsV1,
+    pub menu_bar: MenuBarSettingsV1,
 }
 
 impl Default for SettingsFileV1 {
@@ -35,6 +66,7 @@ impl Default for SettingsFileV1 {
             settings_version: 1,
             fonts: FontsSettingsV1::default(),
             docking: DockingSettingsV1::default(),
+            menu_bar: MenuBarSettingsV1::default(),
         }
     }
 }
@@ -150,6 +182,30 @@ impl SettingsFileV1 {
             drag_inversion: self.docking.drag_inversion.clone().into(),
             tab_drag_threshold: fret_core::Px(tab_drag_threshold_px),
             ..Default::default()
+        }
+    }
+}
+
+impl SettingsFileV1 {
+    pub fn menu_bar_os_enabled(&self, platform: fret_runtime::Platform) -> bool {
+        match self.menu_bar.os {
+            MenuBarIntegrationModeV1::Off => false,
+            MenuBarIntegrationModeV1::On => platform != fret_runtime::Platform::Web,
+            MenuBarIntegrationModeV1::Auto => matches!(
+                platform,
+                fret_runtime::Platform::Windows | fret_runtime::Platform::Macos
+            ),
+        }
+    }
+
+    pub fn menu_bar_in_window_enabled(&self, platform: fret_runtime::Platform) -> bool {
+        match self.menu_bar.in_window {
+            MenuBarIntegrationModeV1::Off => false,
+            MenuBarIntegrationModeV1::On => true,
+            MenuBarIntegrationModeV1::Auto => matches!(
+                platform,
+                fret_runtime::Platform::Linux | fret_runtime::Platform::Web
+            ),
         }
     }
 }

@@ -168,6 +168,71 @@ fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
 }
 
 #[test]
+fn view_cache_notify_marks_cache_root_needs_rerender() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let boundary = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![leaf]);
+
+    ui.nodes[boundary].view_cache.enabled = true;
+    ui.nodes[boundary].view_cache.contained_layout = true;
+
+    for id in [root, boundary, leaf] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.mark_invalidation_with_source(leaf, Invalidation::Paint, UiDebugInvalidationSource::Notify);
+
+    assert!(ui.nodes[boundary].invalidation.paint);
+    assert!(ui.nodes[boundary].view_cache_needs_rerender);
+    assert!(!ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
+fn view_cache_notify_propagates_to_ancestor_cache_roots() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let outer = ui.create_node(TestStack::default());
+    let mid = ui.create_node(TestStack::default());
+    let inner = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer]);
+    ui.set_children(outer, vec![mid]);
+    ui.set_children(mid, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    ui.nodes[outer].view_cache.enabled = true;
+    ui.nodes[outer].view_cache.contained_layout = true;
+    ui.nodes[inner].view_cache.enabled = true;
+    ui.nodes[inner].view_cache.contained_layout = true;
+
+    for id in [root, outer, mid, inner, leaf] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.mark_invalidation_with_source(leaf, Invalidation::Paint, UiDebugInvalidationSource::Notify);
+
+    assert!(ui.nodes[inner].view_cache_needs_rerender);
+    assert!(ui.nodes[outer].view_cache_needs_rerender);
+    assert!(!ui.should_reuse_view_cache_node(inner));
+    assert!(!ui.should_reuse_view_cache_node(outer));
+}
+
+#[test]
 fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots() {
     let mut app = crate::test_host::TestHost::new();
     let model = app.models_mut().insert(0u32);
@@ -230,5 +295,13 @@ fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_root
 
     assert!(ui.nodes[inner].invalidation.paint);
     assert!(ui.nodes[outer].invalidation.paint);
+    assert!(
+        ui.nodes[inner].view_cache_needs_rerender,
+        "model change should mark nearest cache root as dirty"
+    );
+    assert!(
+        ui.nodes[outer].view_cache_needs_rerender,
+        "nested cache-root correctness requires dirty propagation to ancestor cache roots"
+    );
     assert!(!ui.nodes[root].invalidation.paint);
 }

@@ -49,7 +49,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
+    let mut warmup_frames: u64 = 0;
+    let mut check_stale_paint_test_id: Option<String> = None;
+    let mut check_stale_paint_eps: f32 = 0.5;
     let mut launch: Option<Vec<String>> = None;
+    let mut launch_env: Vec<(String, String)> = Vec::new();
 
     // Parse global `diag` flags regardless of their position, leaving positional args intact.
     // This keeps the behavior aligned with the help text in `apps/fretboard/src/cli.rs`.
@@ -218,8 +222,51 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .map_err(|_| "invalid value for --top".to_string())?;
                 i += 1;
             }
+            "--warmup-frames" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --warmup-frames".to_string());
+                };
+                warmup_frames = v
+                    .parse::<u64>()
+                    .map_err(|_| "invalid value for --warmup-frames".to_string())?;
+                i += 1;
+            }
+            "--check-stale-paint" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-stale-paint".to_string());
+                };
+                check_stale_paint_test_id = Some(v);
+                i += 1;
+            }
+            "--check-stale-paint-eps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-stale-paint-eps".to_string());
+                };
+                check_stale_paint_eps = v
+                    .parse::<f32>()
+                    .map_err(|_| "invalid value for --check-stale-paint-eps".to_string())?;
+                i += 1;
+            }
             "--json" => {
                 stats_json = true;
+                i += 1;
+            }
+            "--env" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --env (expected KEY=VALUE)".to_string());
+                };
+                let (key, value) = v
+                    .split_once('=')
+                    .ok_or_else(|| "invalid value for --env (expected KEY=VALUE)".to_string())?;
+                let key = key.trim();
+                if key.is_empty() {
+                    return Err("invalid value for --env (empty KEY)".to_string());
+                }
+                launch_env.push((key.to_string(), value.to_string()));
                 i += 1;
             }
             "--launch" => {
@@ -448,6 +495,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let src = resolve_path(&workspace_root, PathBuf::from(src));
             let mut child = maybe_launch_demo(
                 &launch,
+                &launch_env,
                 &workspace_root,
                 &resolved_out_dir,
                 &resolved_ready_path,
@@ -510,6 +558,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
+                    &launch_env,
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
@@ -523,6 +572,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if !reuse_process {
                     child = maybe_launch_demo(
                         &launch,
+                        &launch_env,
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
@@ -629,6 +679,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
+                    &launch_env,
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
@@ -641,11 +692,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
+            let stats_opts = BundleStatsOptions { warmup_frames };
 
             for src in scripts {
                 if !reuse_process {
                     child = maybe_launch_demo(
                         &launch,
+                        &launch_env,
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
@@ -720,10 +773,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                 if let Some(bundle_dir) = bundle_dir {
                     let bundle_path = resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
-                    let report = bundle_stats_from_path(&bundle_path, stats_top.max(1), sort)?;
+                    let mut report =
+                        bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
+                    if warmup_frames > 0 && report.top.is_empty() {
+                        report = bundle_stats_from_path(
+                            &bundle_path,
+                            stats_top.max(1),
+                            sort,
+                            BundleStatsOptions::default(),
+                        )?;
+                    }
                     let top = report.top.first();
                     let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
                     let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                    let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
@@ -734,6 +797,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             "sort": sort.as_str(),
                             "top_total_time_us": top_total,
                             "top_layout_time_us": top_layout,
+                            "top_prepaint_time_us": top_prepaint,
                             "top_paint_time_us": top_paint,
                             "top_tick_id": top_tick,
                             "top_frame_id": top_frame,
@@ -741,11 +805,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         }));
                     } else {
                         println!(
-                            "PERF {} sort={} top.us(total/layout/paint)={}/{}/{} top.tick={} top.frame={} bundle={}",
+                            "PERF {} sort={} top.us(total/layout/prepaint/paint)={}/{}/{}/{} top.tick={} top.frame={} bundle={}",
                             src.display(),
                             sort.as_str(),
                             top_total,
                             top_layout,
+                            top_prepaint,
                             top_paint,
                             top_tick,
                             top_frame,
@@ -821,11 +886,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let src = resolve_path(&workspace_root, PathBuf::from(src));
             let bundle_path = resolve_bundle_json_path(&src);
-            let report = bundle_stats_from_path(
+            let mut report = bundle_stats_from_path(
                 &bundle_path,
                 stats_top,
                 sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                BundleStatsOptions { warmup_frames },
             )?;
+            if warmup_frames > 0 && report.top.is_empty() {
+                report = bundle_stats_from_path(
+                    &bundle_path,
+                    stats_top,
+                    sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                    BundleStatsOptions::default(),
+                )?;
+            }
 
             if stats_json {
                 println!(
@@ -835,6 +909,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
             } else {
                 report.print_human(&bundle_path);
+            }
+            if let Some(test_id) = check_stale_paint_test_id.as_deref() {
+                check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
             }
             Ok(())
         }
@@ -1075,6 +1152,7 @@ fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
 
 fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
+    launch_env: &[(String, String)],
     workspace_root: &Path,
     out_dir: &Path,
     ready_path: &Path,
@@ -1099,6 +1177,14 @@ fn maybe_launch_demo(
     cmd.env("FRET_DIAG", "1");
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
+    for (key, value) in launch_env {
+        match key.as_str() {
+            "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" => {
+                return Err(format!("--env cannot override reserved var: {key}"));
+            }
+            _ => cmd.env(key, value),
+        };
+    }
     if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR").filter(|v| !v.is_empty()) {
         cmd.env("CARGO_TARGET_DIR", target_dir);
     }
@@ -1196,13 +1282,17 @@ fn read_pick_result_run_id(path: &Path) -> Option<u64> {
 #[derive(Debug, Default, Clone)]
 struct BundleStatsReport {
     sort: BundleStatsSort,
+    warmup_frames: u64,
     windows: u32,
     snapshots: u32,
+    snapshots_considered: u32,
+    snapshots_skipped_warmup: u32,
     snapshots_with_model_changes: u32,
     snapshots_with_global_changes: u32,
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
     sum_layout_time_us: u64,
+    sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
     sum_total_time_us: u64,
     sum_cache_roots: u64,
@@ -1213,6 +1303,7 @@ struct BundleStatsReport {
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
     max_layout_time_us: u64,
+    max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
     max_invalidation_walk_calls: u32,
@@ -1231,6 +1322,7 @@ struct BundleStatsSnapshotRow {
     frame_id: u64,
     timestamp_unix_ms: Option<u64>,
     layout_time_us: u64,
+    prepaint_time_us: u64,
     paint_time_us: u64,
     total_time_us: u64,
     layout_nodes_performed: u32,
@@ -1378,22 +1470,33 @@ impl BundleStatsReport {
     fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
         println!(
-            "windows={} snapshots={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
+            "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
             self.windows,
             self.snapshots,
+            self.snapshots_considered,
+            self.snapshots_skipped_warmup,
             self.snapshots_with_model_changes,
             self.snapshots_with_global_changes,
             self.snapshots_with_propagated_model_changes,
             self.snapshots_with_propagated_global_changes
         );
+        if self.warmup_frames > 0 {
+            println!("warmup_frames={}", self.warmup_frames);
+        }
         println!("sort={}", self.sort.as_str());
         println!(
-            "time sum (us): total={} layout={} paint={}",
-            self.sum_total_time_us, self.sum_layout_time_us, self.sum_paint_time_us
+            "time sum (us): total={} layout={} prepaint={} paint={}",
+            self.sum_total_time_us,
+            self.sum_layout_time_us,
+            self.sum_prepaint_time_us,
+            self.sum_paint_time_us
         );
         println!(
-            "time max (us): total={} layout={} paint={}",
-            self.max_total_time_us, self.max_layout_time_us, self.max_paint_time_us
+            "time max (us): total={} layout={} prepaint={} paint={}",
+            self.max_total_time_us,
+            self.max_layout_time_us,
+            self.max_prepaint_time_us,
+            self.max_paint_time_us
         );
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
@@ -1444,13 +1547,14 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/paint)={}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
                 ts,
                 row.total_time_us,
                 row.layout_time_us,
+                row.prepaint_time_us,
                 row.paint_time_us,
                 row.layout_engine_solve_time_us,
                 row.paint_cache_misses,
@@ -1710,8 +1814,17 @@ impl BundleStatsReport {
         let mut root = Map::new();
         root.insert("schema_version".to_string(), Value::from(1));
         root.insert("sort".to_string(), Value::from(self.sort.as_str()));
+        root.insert("warmup_frames".to_string(), Value::from(self.warmup_frames));
         root.insert("windows".to_string(), Value::from(self.windows));
         root.insert("snapshots".to_string(), Value::from(self.snapshots));
+        root.insert(
+            "snapshots_considered".to_string(),
+            Value::from(self.snapshots_considered),
+        );
+        root.insert(
+            "snapshots_skipped_warmup".to_string(),
+            Value::from(self.snapshots_skipped_warmup),
+        );
         root.insert(
             "snapshots_with_model_changes".to_string(),
             Value::from(self.snapshots_with_model_changes),
@@ -1733,6 +1846,10 @@ impl BundleStatsReport {
         sum.insert(
             "layout_time_us".to_string(),
             Value::from(self.sum_layout_time_us),
+        );
+        sum.insert(
+            "prepaint_time_us".to_string(),
+            Value::from(self.sum_prepaint_time_us),
         );
         sum.insert(
             "paint_time_us".to_string(),
@@ -1773,6 +1890,10 @@ impl BundleStatsReport {
         max.insert(
             "layout_time_us".to_string(),
             Value::from(self.max_layout_time_us),
+        );
+        max.insert(
+            "prepaint_time_us".to_string(),
+            Value::from(self.max_prepaint_time_us),
         );
         max.insert(
             "paint_time_us".to_string(),
@@ -1846,6 +1967,10 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_time_us".to_string(),
                     Value::from(row.layout_time_us),
+                );
+                obj.insert(
+                    "prepaint_time_us".to_string(),
+                    Value::from(row.prepaint_time_us),
                 );
                 obj.insert("paint_time_us".to_string(), Value::from(row.paint_time_us));
                 obj.insert("total_time_us".to_string(), Value::from(row.total_time_us));
@@ -2265,20 +2390,143 @@ impl BundleStatsReport {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct BundleStatsOptions {
+    warmup_frames: u64,
+}
+
 fn bundle_stats_from_path(
     bundle_path: &Path,
     top: usize,
     sort: BundleStatsSort,
+    opts: BundleStatsOptions,
 ) -> Result<BundleStatsReport, String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    bundle_stats_from_json(&bundle, top, sort)
+    bundle_stats_from_json_with_options(&bundle, top, sort, opts)
 }
 
-fn bundle_stats_from_json(
+fn check_bundle_for_stale_paint(bundle_path: &Path, test_id: &str, eps: f32) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_stale_paint_json(&bundle, bundle_path, test_id, eps)
+}
+
+fn check_bundle_for_stale_paint_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    eps: f32,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut suspicious: Vec<String> = Vec::new();
+    let mut missing_scene_fingerprint = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut prev_y: Option<f64> = None;
+        let mut prev_fp: Option<u64> = None;
+        for s in snaps {
+            let y = semantics_node_y_for_test_id(s, test_id);
+            let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
+            if fp.is_none() {
+                missing_scene_fingerprint = true;
+            }
+            let (Some(y), Some(fp)) = (y, fp) else {
+                prev_y = y;
+                prev_fp = fp;
+                continue;
+            };
+
+            if let (Some(prev_y), Some(prev_fp)) = (prev_y, prev_fp) {
+                if (y - prev_y).abs() >= eps as f64 && fp == prev_fp {
+                    let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let paint_nodes_performed = s
+                        .get("debug")
+                        .and_then(|v| v.get("stats"))
+                        .and_then(|v| v.get("paint_nodes_performed"))
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let paint_replayed_ops = s
+                        .get("debug")
+                        .and_then(|v| v.get("stats"))
+                        .and_then(|v| v.get("paint_cache_replayed_ops"))
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    suspicious.push(format!(
+                        "window={window_id} tick={tick_id} frame={frame_id} test_id={test_id} delta_y={:.2} scene_fingerprint=0x{:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_replayed_ops}",
+                        y - prev_y,
+                        fp
+                    ));
+                    if suspicious.len() >= 8 {
+                        break;
+                    }
+                }
+            }
+
+            prev_y = Some(y);
+            prev_fp = Some(fp);
+        }
+    }
+
+    if missing_scene_fingerprint {
+        return Err(format!(
+            "stale paint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if suspicious.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str(
+        "stale paint suspected (semantics bounds moved but scene fingerprint did not change)\n",
+    );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in suspicious {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> Option<f64> {
+    let nodes = snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array())?;
+    let node = nodes.iter().find(|n| {
+        n.get("test_id")
+            .and_then(|v| v.as_str())
+            .is_some_and(|id| id == test_id)
+    })?;
+    node.get("bounds")
+        .and_then(|v| v.get("y"))
+        .and_then(|v| v.as_f64())
+}
+
+fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
     top: usize,
     sort: BundleStatsSort,
+    opts: BundleStatsOptions,
 ) -> Result<BundleStatsReport, String> {
     let windows = bundle
         .get("windows")
@@ -2287,6 +2535,7 @@ fn bundle_stats_from_json(
 
     let mut out = BundleStatsReport::default();
     out.sort = sort;
+    out.warmup_frames = opts.warmup_frames;
     out.windows = windows.len().min(u32::MAX as usize) as u32;
 
     let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
@@ -2302,6 +2551,12 @@ fn bundle_stats_from_json(
             .map_or(&[][..], |v| v);
         for s in snaps {
             out.snapshots = out.snapshots.saturating_add(1);
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < opts.warmup_frames {
+                out.snapshots_skipped_warmup = out.snapshots_skipped_warmup.saturating_add(1);
+                continue;
+            }
+            out.snapshots_considered = out.snapshots_considered.saturating_add(1);
 
             let changed_models = s
                 .get("changed_models")
@@ -2370,11 +2625,17 @@ fn bundle_stats_from_json(
                 .and_then(|m| m.get("layout_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let prepaint_time_us = stats
+                .and_then(|m| m.get("prepaint_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let paint_time_us = stats
                 .and_then(|m| m.get("paint_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            let total_time_us = layout_time_us.saturating_add(paint_time_us);
+            let total_time_us = layout_time_us
+                .saturating_add(prepaint_time_us)
+                .saturating_add(paint_time_us);
             let layout_nodes_performed = stats
                 .and_then(|m| m.get("layout_nodes_performed"))
                 .and_then(|v| v.as_u64())
@@ -2528,6 +2789,7 @@ fn bundle_stats_from_json(
             let global_change_unobserved = snapshot_global_change_unobserved(s, 3);
 
             out.sum_layout_time_us = out.sum_layout_time_us.saturating_add(layout_time_us);
+            out.sum_prepaint_time_us = out.sum_prepaint_time_us.saturating_add(prepaint_time_us);
             out.sum_paint_time_us = out.sum_paint_time_us.saturating_add(paint_time_us);
             out.sum_total_time_us = out.sum_total_time_us.saturating_add(total_time_us);
             out.sum_cache_roots = out.sum_cache_roots.saturating_add(cache_roots as u64);
@@ -2561,6 +2823,7 @@ fn bundle_stats_from_json(
                 .max_global_change_invalidation_roots
                 .max(global_change_invalidation_roots);
             out.max_layout_time_us = out.max_layout_time_us.max(layout_time_us);
+            out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
 
@@ -2570,6 +2833,7 @@ fn bundle_stats_from_json(
                 frame_id: s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
                 timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
                 layout_time_us,
+                prepaint_time_us,
                 paint_time_us,
                 total_time_us,
                 layout_nodes_performed,
@@ -3538,7 +3802,13 @@ mod tests {
             ]
         });
 
-        let report = bundle_stats_from_json(&bundle, 1, BundleStatsSort::Invalidation).unwrap();
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Invalidation,
+            BundleStatsOptions::default(),
+        )
+        .unwrap();
         assert_eq!(report.windows, 1);
         assert_eq!(report.snapshots, 2);
         assert_eq!(report.snapshots_with_model_changes, 1);
@@ -3588,7 +3858,13 @@ mod tests {
             ]
         });
 
-        let report = bundle_stats_from_json(&bundle, 1, BundleStatsSort::Invalidation).unwrap();
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            1,
+            BundleStatsSort::Invalidation,
+            BundleStatsOptions::default(),
+        )
+        .unwrap();
         assert_eq!(report.top.len(), 1);
         assert_eq!(report.top[0].top_invalidation_walks.len(), 2);
         assert_eq!(report.top[0].top_invalidation_walks[0].root_node, 43);

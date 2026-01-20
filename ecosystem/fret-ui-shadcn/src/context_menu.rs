@@ -31,6 +31,7 @@ use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radiu
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::shortcut_display::command_shortcut_label;
 
 #[derive(Default)]
 struct ContextMenuAnchorStore {
@@ -749,11 +750,18 @@ impl ContextMenuRenderEnv {
                 menu::sub_content::wire_item(cx, item_id, disabled, &submenu_for_item);
 
                 if !disabled {
-                    cx.pressable_dispatch_command_opt(command);
+                    cx.pressable_dispatch_command_opt(command.clone());
                     if close_on_select {
                         cx.pressable_set_bool(&open_for_item, false);
                     }
                 }
+
+                let trailing = trailing.clone().or_else(|| {
+                    command.as_ref().and_then(|cmd| {
+                        command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                            .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                    })
+                });
 
                 let props = PressableProps {
                     layout: {
@@ -794,7 +802,7 @@ impl ContextMenuRenderEnv {
                     label.clone(),
                     leading.clone(),
                     reserve_leading_slot,
-                    trailing.clone(),
+                    trailing,
                     false,
                     None,
                     disabled,
@@ -858,10 +866,17 @@ impl ContextMenuRenderEnv {
                 if !disabled {
                     menu::checkbox_item::wire_toggle_on_activate(cx, checked.clone());
                 }
-                cx.pressable_dispatch_command_opt(command);
+                cx.pressable_dispatch_command_opt(command.clone());
                 if !disabled && close_on_select {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
+
+                let trailing = trailing.clone().or_else(|| {
+                    command.as_ref().and_then(|cmd| {
+                        command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                            .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                    })
+                });
 
                 let props = PressableProps {
                     layout: {
@@ -890,7 +905,7 @@ impl ContextMenuRenderEnv {
                     label.clone(),
                     leading.clone(),
                     reserve_leading_slot,
-                    trailing.clone(),
+                    trailing,
                     false,
                     Some(checked_now),
                     disabled,
@@ -960,10 +975,17 @@ impl ContextMenuRenderEnv {
                         value.clone(),
                     );
                 }
-                cx.pressable_dispatch_command_opt(command);
+                cx.pressable_dispatch_command_opt(command.clone());
                 if !disabled && close_on_select {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
+
+                let trailing = trailing.clone().or_else(|| {
+                    command.as_ref().and_then(|cmd| {
+                        command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                            .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                    })
+                });
 
                 let props = PressableProps {
                     layout: {
@@ -992,7 +1014,7 @@ impl ContextMenuRenderEnv {
                     label.clone(),
                     leading.clone(),
                     reserve_leading_slot,
-                    trailing.clone(),
+                    trailing,
                     false,
                     Some(is_selected),
                     disabled,
@@ -1246,7 +1268,7 @@ impl ContextMenuContentRenderEnv {
                 .unwrap_or(false);
 
                 if !has_submenu && !disabled {
-                    cx.pressable_dispatch_command_opt(command);
+                    cx.pressable_dispatch_command_opt(command.clone());
                     if close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
@@ -1295,12 +1317,23 @@ impl ContextMenuContentRenderEnv {
                     }
                 }
 
+                let trailing = if has_submenu {
+                    trailing.clone()
+                } else {
+                    trailing.clone().or_else(|| {
+                        command.as_ref().and_then(|cmd| {
+                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                        })
+                    })
+                };
+
                 let children = menu_row_children(
                     cx,
                     label.clone(),
                     leading.clone(),
                     reserve_leading_slot,
-                    trailing.clone(),
+                    trailing,
                     has_submenu,
                     None,
                     disabled,
@@ -1378,10 +1411,17 @@ impl ContextMenuContentRenderEnv {
                     if !disabled {
                         menu::checkbox_item::wire_toggle_on_activate(cx, checked.clone());
                     }
-                    cx.pressable_dispatch_command_opt(command);
+                    cx.pressable_dispatch_command_opt(command.clone());
                     if !disabled && close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
+
+                    let trailing = trailing.clone().or_else(|| {
+                        command.as_ref().and_then(|cmd| {
+                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                        })
+                    });
 
                     let mut row_bg = fret_core::Color::TRANSPARENT;
                     let mut row_fg = fg;
@@ -1395,7 +1435,7 @@ impl ContextMenuContentRenderEnv {
                         label.clone(),
                         leading.clone(),
                         reserve_leading_slot,
-                        trailing.clone(),
+                        trailing,
                         false,
                         Some(checked_now),
                         disabled,
@@ -1478,10 +1518,17 @@ impl ContextMenuContentRenderEnv {
                             value.clone(),
                         );
                     }
-                    cx.pressable_dispatch_command_opt(command);
+                    cx.pressable_dispatch_command_opt(command.clone());
                     if !disabled && close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
+
+                    let trailing = trailing.clone().or_else(|| {
+                        command.as_ref().and_then(|cmd| {
+                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                        })
+                    });
 
                     let mut row_bg = fret_core::Color::TRANSPARENT;
                     let mut row_fg = fg;
@@ -1495,7 +1542,7 @@ impl ContextMenuContentRenderEnv {
                         label.clone(),
                         leading.clone(),
                         reserve_leading_slot,
-                        trailing.clone(),
+                        trailing,
                         false,
                         Some(is_selected),
                         disabled,
@@ -2585,7 +2632,7 @@ impl ContextMenu {
                                                                     .unwrap_or(false);
 
                                                                     if !has_submenu && !disabled {
-                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        cx.pressable_dispatch_command_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open, false,
@@ -2651,12 +2698,23 @@ impl ContextMenu {
                                                                         }
                                                                     }
 
+                                                                    let trailing = if has_submenu {
+                                                                        trailing.clone()
+                                                                    } else {
+                                                                        trailing.clone().or_else(|| {
+                                                                            command.as_ref().and_then(|cmd| {
+                                                                                command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                    .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                                                                            })
+                                                                        })
+                                                                    };
+
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         has_submenu,
                                                                         None,
                                                                         disabled,
@@ -2737,10 +2795,17 @@ impl ContextMenu {
                                                                             checked.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_opt(command);
+                                                                    cx.pressable_dispatch_command_opt(command.clone());
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
+
+                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                        command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                                                                        })
+                                                                    });
 
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
@@ -2758,7 +2823,7 @@ impl ContextMenu {
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         false,
                                                                         Some(checked_now),
                                                                         disabled,
@@ -2846,10 +2911,17 @@ impl ContextMenu {
                                                                             value.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_opt(command);
+                                                                    cx.pressable_dispatch_command_opt(command.clone());
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
+
+                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                        command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                .map(|text| ContextMenuShortcut::new(text).into_element(cx))
+                                                                        })
+                                                                    });
 
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
@@ -2867,7 +2939,7 @@ impl ContextMenu {
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         false,
                                                                         Some(is_selected),
                                                                         disabled,

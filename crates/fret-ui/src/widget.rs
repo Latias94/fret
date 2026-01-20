@@ -37,6 +37,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub requested_focus: Option<NodeId>,
     pub requested_capture: Option<Option<NodeId>>,
     pub requested_cursor: Option<fret_core::CursorIcon>,
+    pub notify_requested: bool,
     pub stop_propagation: bool,
 }
 
@@ -101,6 +102,14 @@ impl<'a, H: UiHost> EventCx<'a, H> {
             return;
         };
         self.app.request_redraw(window);
+    }
+
+    /// Mark the current view as dirty and schedule a redraw.
+    ///
+    /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
+    /// and prevents paint replay of stale recorded ranges.
+    pub fn notify(&mut self) {
+        self.notify_requested = true;
     }
 
     pub fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {

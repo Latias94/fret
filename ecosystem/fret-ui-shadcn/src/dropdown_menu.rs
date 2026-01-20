@@ -31,6 +31,7 @@ use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radiu
 
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::shortcut_display::command_shortcut_label;
 
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -1695,7 +1696,7 @@ impl DropdownMenu {
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        cx.pressable_dispatch_command_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -1739,12 +1740,19 @@ impl DropdownMenu {
                                                                         row_fg = accent_fg;
                                                                     }
 
+                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                        command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
+                                                                        })
+                                                                    });
+
                                                                     let children = checkable_menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot_enabled,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         CheckableIndicatorKind::Check,
                                                                         checked_now,
                                                                         disabled,
@@ -1821,7 +1829,7 @@ impl DropdownMenu {
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        cx.pressable_dispatch_command_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -1865,12 +1873,19 @@ impl DropdownMenu {
                                                                         row_fg = accent_fg;
                                                                     }
 
+                                                                    let trailing = trailing.clone().or_else(|| {
+                                                                        command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
+                                                                        })
+                                                                    });
+
                                                                     let children = checkable_menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
                                                                         reserve_leading_slot_enabled,
-                                                                        trailing.clone(),
+                                                                        trailing,
                                                                         CheckableIndicatorKind::RadioDot,
                                                                         is_selected,
                                                                         disabled,
@@ -1972,7 +1987,7 @@ impl DropdownMenu {
                                                                 }
 
                                                                 if !has_submenu && !disabled {
-                                                                    cx.pressable_dispatch_command_opt(command);
+                                                                    cx.pressable_dispatch_command_opt(command.clone());
                                                                     if close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2031,6 +2046,17 @@ impl DropdownMenu {
                                                                         row_fg = accent_fg;
                                                                     }
                                                                 }
+
+                                                                let trailing = if has_submenu {
+                                                                    trailing.clone()
+                                                                } else {
+                                                                    trailing.clone().or_else(|| {
+                                                                        command.as_ref().and_then(|cmd| {
+                                                                            command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
+                                                                        })
+                                                                    })
+                                                                };
 
                                                                 let children = vec![cx.container(
                                                                         ContainerProps {
@@ -2602,7 +2628,7 @@ impl DropdownMenu {
                                                                                     checked.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command);
+                                                                            cx.pressable_dispatch_command_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2636,12 +2662,19 @@ impl DropdownMenu {
                                                                                 row_fg = accent_fg;
                                                                             }
 
+                                                                            let trailing = trailing.clone().or_else(|| {
+                                                                                command.as_ref().and_then(|cmd| {
+                                                                                    command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                        .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
+                                                                                })
+                                                                            });
+
                                                                             let children = checkable_menu_row_children(
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
                                                                                 reserve_leading_slot_enabled,
-                                                                                trailing.clone(),
+                                                                                trailing,
                                                                                 CheckableIndicatorKind::Check,
                                                                                 checked_now,
                                                                                 disabled,
@@ -2708,7 +2741,7 @@ impl DropdownMenu {
                                                                                     value.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command);
+                                                                            cx.pressable_dispatch_command_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2742,12 +2775,19 @@ impl DropdownMenu {
                                                                                 row_fg = accent_fg;
                                                                             }
 
+                                                                            let trailing = trailing.clone().or_else(|| {
+                                                                                command.as_ref().and_then(|cmd| {
+                                                                                    command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                        .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
+                                                                                })
+                                                                            });
+
                                                                             let children = checkable_menu_row_children(
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
                                                                                 reserve_leading_slot_enabled,
-                                                                                trailing.clone(),
+                                                                                trailing,
                                                                                 CheckableIndicatorKind::RadioDot,
                                                                                 is_selected,
                                                                                 disabled,
@@ -2800,7 +2840,7 @@ impl DropdownMenu {
                                                                                 disabled,
                                                                                 &submenu_for_key,
                                                                             );
-                                                                            cx.pressable_dispatch_command_opt(command);
+                                                                            cx.pressable_dispatch_command_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2846,6 +2886,13 @@ impl DropdownMenu {
                                                                                     row_fg = accent_fg;
                                                                                 }
                                                                             }
+
+                                                                            let trailing = trailing.clone().or_else(|| {
+                                                                                command.as_ref().and_then(|cmd| {
+                                                                                    command_shortcut_label(cx, cmd, fret_runtime::Platform::current())
+                                                                                        .map(|text| DropdownMenuShortcut::new(text).into_element(cx))
+                                                                                })
+                                                                            });
 
                                                                             let children = vec![cx.container(
                                                                                 ContainerProps {

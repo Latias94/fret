@@ -11,7 +11,7 @@ use fret_core::{
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
-    ModelCreatedDebugInfo, ModelId, Platform, PlatformCapabilities,
+    ModelCreatedDebugInfo, ModelId, Platform, PlatformCapabilities, TickId,
 };
 use slotmap::{Key, SlotMap};
 use std::any::TypeId;
@@ -27,6 +27,7 @@ mod layers;
 mod layout;
 mod paint;
 mod paint_cache;
+mod prepaint;
 mod semantics;
 mod shortcuts;
 
@@ -95,8 +96,24 @@ struct Node<H: UiHost> {
     measured_size: Size,
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
+    interaction_cache: Option<prepaint::InteractionCacheEntry>,
+    prepaint_hit_test: Option<PrepaintHitTestCache>,
     view_cache: ViewCacheFlags,
     view_cache_needs_rerender: bool,
+}
+
+#[derive(Debug, Clone)]
+struct HitTestPathCache {
+    layer_root: NodeId,
+    path: Vec<NodeId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PrepaintHitTestCache {
+    render_transform_inv: Option<Transform2D>,
+    children_render_transform_inv: Option<Transform2D>,
+    clips_hit_test: bool,
+    clip_hit_test_corner_radii: Option<Corners>,
 }
 
 impl<H: UiHost> Node<H> {
@@ -114,6 +131,8 @@ impl<H: UiHost> Node<H> {
                 hit_test: true,
             },
             paint_cache: None,
+            interaction_cache: None,
+            prepaint_hit_test: None,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
         }
@@ -132,14 +151,20 @@ impl<H: UiHost> Node<H> {
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
     pub layout_time: Duration,
+    pub prepaint_time: Duration,
     pub paint_time: Duration,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
+    pub prepaint_nodes_visited: u32,
     pub paint_nodes: u32,
     pub paint_nodes_performed: u32,
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    pub interaction_cache_hits: u32,
+    pub interaction_cache_misses: u32,
+    pub interaction_cache_replayed_records: u32,
+    pub interaction_records: u32,
     /// Number of layout engine root solves performed during the current frame.
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
@@ -258,6 +283,7 @@ pub struct UiDebugGlobalChangeUnobserved {
 pub enum UiDebugInvalidationSource {
     ModelChange,
     GlobalChange,
+    Notify,
     Hover,
     Focus,
     Other,
@@ -268,6 +294,7 @@ pub enum UiDebugInvalidationDetail {
     Unknown,
     ModelObservation,
     GlobalObservation,
+    NotifyCall,
     HoverEvent,
     FocusEvent,
     ScrollHandle,
@@ -281,6 +308,7 @@ impl UiDebugInvalidationDetail {
         match source {
             UiDebugInvalidationSource::ModelChange => Self::ModelObservation,
             UiDebugInvalidationSource::GlobalChange => Self::GlobalObservation,
+            UiDebugInvalidationSource::Notify => Self::NotifyCall,
             UiDebugInvalidationSource::Hover => Self::HoverEvent,
             UiDebugInvalidationSource::Focus => Self::FocusEvent,
             UiDebugInvalidationSource::Other => Self::Unknown,
@@ -292,6 +320,7 @@ impl UiDebugInvalidationDetail {
             Self::Unknown => None,
             Self::ModelObservation => Some("model_observation"),
             Self::GlobalObservation => Some("global_observation"),
+            Self::NotifyCall => Some("notify_call"),
             Self::HoverEvent => Some("hover_event"),
             Self::FocusEvent => Some("focus_event"),
             Self::ScrollHandle => Some("scroll_handle"),
@@ -300,6 +329,14 @@ impl UiDebugInvalidationDetail {
             Self::AnimationFrameRequest => Some("animation_frame_request"),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugDirtyView {
+    pub root: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub source: UiDebugInvalidationSource,
+    pub detail: UiDebugInvalidationDetail,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -378,6 +415,7 @@ pub enum UiDebugCacheRootReuseReason {
     NodeRecreated,
     MarkedReuseRoot,
     NotMarkedReuseRoot,
+    CacheKeyMismatch,
 }
 
 impl UiDebugCacheRootReuseReason {
@@ -387,6 +425,7 @@ impl UiDebugCacheRootReuseReason {
             Self::NodeRecreated => "node_recreated",
             Self::MarkedReuseRoot => "marked_reuse_root",
             Self::NotMarkedReuseRoot => "not_marked_reuse_root",
+            Self::CacheKeyMismatch => "cache_key_mismatch",
         }
     }
 }
@@ -652,6 +691,7 @@ pub struct UiTree<H: UiHost> {
     focus: Option<NodeId>,
     captured: HashMap<PointerId, NodeId>,
     last_pointer_move_hit: Option<NodeId>,
+    hit_test_path_cache: Option<HitTestPathCache>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     ime_allowed: bool,
@@ -682,11 +722,18 @@ pub struct UiTree<H: UiHost> {
     debug_hover_edge_this_frame: bool,
     debug_hover_declarative_invalidations:
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
+    debug_dirty_views: Vec<UiDebugDirtyView>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
     inspection_active: bool,
     paint_cache: PaintCacheState,
+    interaction_cache: prepaint::InteractionCacheState,
+
+    dirty_cache_roots: HashSet<NodeId>,
+    dirty_cache_root_reasons:
+        HashMap<NodeId, (UiDebugInvalidationSource, UiDebugInvalidationDetail)>,
+    last_redraw_request_tick: Option<TickId>,
 
     propagation_depth_cache: HashMap<NodeId, u32>,
     propagation_chain: Vec<NodeId>,
@@ -709,6 +756,7 @@ impl<H: UiHost> Default for UiTree<H> {
             focus: None,
             captured: HashMap::new(),
             last_pointer_move_hit: None,
+            hit_test_path_cache: None,
             last_internal_drag_target: None,
             window: None,
             ime_allowed: false,
@@ -737,10 +785,15 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_global_change_unobserved: Vec::new(),
             debug_hover_edge_this_frame: false,
             debug_hover_declarative_invalidations: HashMap::new(),
+            debug_dirty_views: Vec::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
             paint_cache: PaintCacheState::default(),
+            interaction_cache: prepaint::InteractionCacheState::default(),
+            dirty_cache_roots: HashSet::new(),
+            dirty_cache_root_reasons: HashMap::new(),
+            last_redraw_request_tick: None,
             propagation_depth_cache: HashMap::new(),
             propagation_chain: Vec::new(),
             propagation_entries: Vec::new(),
@@ -796,6 +849,37 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn invalidation_source_marks_view_dirty(source: UiDebugInvalidationSource) -> bool {
+        matches!(
+            source,
+            UiDebugInvalidationSource::Notify
+                | UiDebugInvalidationSource::ModelChange
+                | UiDebugInvalidationSource::GlobalChange
+        )
+    }
+
+    pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
+        let Some(window) = self.window else {
+            return;
+        };
+        let tick = app.tick_id();
+        if self.last_redraw_request_tick == Some(tick) {
+            return;
+        }
+        self.last_redraw_request_tick = Some(tick);
+        app.request_redraw(window);
+    }
+
+    fn mark_cache_root_dirty(
+        &mut self,
+        root: NodeId,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        self.dirty_cache_roots.insert(root);
+        self.dirty_cache_root_reasons.insert(root, (source, detail));
+    }
+
     pub(crate) fn begin_debug_frame_if_needed(&mut self, frame_id: FrameId) {
         if !self.debug_enabled {
             return;
@@ -846,6 +930,26 @@ impl<H: UiHost> UiTree<H> {
         self.debug_global_change_unobserved.clear();
         self.debug_hover_edge_this_frame = false;
         self.debug_hover_declarative_invalidations.clear();
+        self.debug_dirty_views.clear();
+        let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
+        dirty_roots.sort_by_key(|id| id.data().as_ffi());
+        for root in dirty_roots {
+            let element = self.nodes.get(root).and_then(|n| n.element);
+            let (source, detail) = self
+                .dirty_cache_root_reasons
+                .get(&root)
+                .copied()
+                .unwrap_or((
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::Unknown,
+                ));
+            self.debug_dirty_views.push(UiDebugDirtyView {
+                root,
+                element,
+                source,
+                detail,
+            });
+        }
     }
 
     pub(crate) fn debug_record_hover_edge_pressable(&mut self) {
@@ -1072,6 +1176,10 @@ impl<H: UiHost> UiTree<H> {
         if let Some(n) = self.nodes.get_mut(node) {
             n.view_cache_needs_rerender = needs;
         }
+        if !needs {
+            self.dirty_cache_roots.remove(&node);
+            self.dirty_cache_root_reasons.remove(&node);
+        }
     }
 
     pub(crate) fn take_layout_engine(&mut self) -> crate::layout_engine::TaffyLayoutEngine {
@@ -1183,6 +1291,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_invalidation_walks.as_slice()
+    }
+
+    pub fn debug_dirty_views(&self) -> &[UiDebugDirtyView] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_dirty_views.as_slice()
     }
 
     pub fn debug_model_change_hotspots(&self) -> &[UiDebugModelChangeHotspot] {
@@ -2130,6 +2245,12 @@ impl<H: UiHost> UiTree<H> {
                     .invalidation_walk_calls_global_change
                     .saturating_add(1);
             }
+            UiDebugInvalidationSource::Notify => {
+                self.debug_stats.invalidation_walk_calls_other = self
+                    .debug_stats
+                    .invalidation_walk_calls_other
+                    .saturating_add(1);
+            }
             UiDebugInvalidationSource::Hover => {
                 self.debug_stats.invalidation_walk_calls_hover = self
                     .debug_stats
@@ -2168,6 +2289,12 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.invalidation_walk_nodes_global_change = self
                     .debug_stats
                     .invalidation_walk_nodes_global_change
+                    .saturating_add(1);
+            }
+            UiDebugInvalidationSource::Notify => {
+                self.debug_stats.invalidation_walk_nodes_other = self
+                    .debug_stats
+                    .invalidation_walk_nodes_other
                     .saturating_add(1);
             }
             UiDebugInvalidationSource::Hover => {
@@ -2219,9 +2346,15 @@ impl<H: UiHost> UiTree<H> {
                 self.record_invalidation_walk_node(source);
                 walked_nodes = walked_nodes.saturating_add(1);
             }
+            let mut next_parent: Option<NodeId> = None;
+            let mut did_stop = false;
+            let mut mark_dirty = false;
             if let Some(n) = self.nodes.get_mut(id) {
                 n.invalidation.mark(inv);
-                if stop_at_view_cache && n.view_cache.enabled {
+                if stop_at_view_cache
+                    && n.view_cache.enabled
+                    && (inv == Invalidation::Paint || n.view_cache.contained_layout)
+                {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
                             .debug_stats
@@ -2229,12 +2362,25 @@ impl<H: UiHost> UiTree<H> {
                             .saturating_add(1);
                     }
                     hit_cache_root = Some(id);
-                    break;
+                    did_stop = true;
+                    if Self::invalidation_source_marks_view_dirty(source) {
+                        n.view_cache_needs_rerender = true;
+                        mark_dirty = true;
+                    }
+                } else {
+                    next_parent = n.parent;
                 }
-                current = n.parent;
             } else {
                 break;
             }
+
+            if did_stop {
+                if mark_dirty {
+                    self.mark_cache_root_dirty(id, source, detail);
+                }
+                break;
+            }
+            current = next_parent;
         }
 
         if self.debug_enabled {
@@ -2256,10 +2402,18 @@ impl<H: UiHost> UiTree<H> {
             let mut parent = self.nodes.get(cache_root).and_then(|n| n.parent);
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+                let mut mark_dirty = false;
                 if let Some(n) = self.nodes.get_mut(id)
                     && n.view_cache.enabled
                 {
                     n.invalidation.mark(inv);
+                    if Self::invalidation_source_marks_view_dirty(source) {
+                        n.view_cache_needs_rerender = true;
+                        mark_dirty = true;
+                    }
+                }
+                if mark_dirty {
+                    self.mark_cache_root_dirty(id, source, detail);
                 }
                 parent = next_parent;
             }
@@ -2299,9 +2453,10 @@ impl<H: UiHost> UiTree<H> {
     ) {
         let stop_at_view_cache = self.view_cache_active();
         let needed = Self::invalidation_mask(inv);
-        if visited
-            .get(&node)
-            .is_some_and(|already| (*already & needed) == needed)
+        if source != UiDebugInvalidationSource::Notify
+            && visited
+                .get(&node)
+                .is_some_and(|already| (*already & needed) == needed)
         {
             return;
         }
@@ -2313,7 +2468,10 @@ impl<H: UiHost> UiTree<H> {
         let mut walked_nodes: u32 = 0;
         while let Some(id) = current {
             let already = visited.get(&id).copied().unwrap_or_default();
-            if (already & needed) == needed {
+            if source != UiDebugInvalidationSource::Notify
+                && (already & needed) == needed
+                && !(stop_at_view_cache && Self::invalidation_source_marks_view_dirty(source))
+            {
                 break;
             }
 
@@ -2321,9 +2479,14 @@ impl<H: UiHost> UiTree<H> {
                 self.record_invalidation_walk_node(source);
                 walked_nodes = walked_nodes.saturating_add(1);
             }
+            let mut next_parent: Option<NodeId> = None;
+            let mut did_stop = false;
+            let mut mark_dirty = false;
             if let Some(n) = self.nodes.get_mut(id) {
-                n.invalidation.mark(inv);
-                visited.insert(id, already | needed);
+                if source == UiDebugInvalidationSource::Notify || (already & needed) != needed {
+                    n.invalidation.mark(inv);
+                    visited.insert(id, already | needed);
+                }
 
                 if stop_at_view_cache
                     && n.view_cache.enabled
@@ -2335,13 +2498,26 @@ impl<H: UiHost> UiTree<H> {
                             .view_cache_invalidation_truncations
                             .saturating_add(1);
                     }
+                    if Self::invalidation_source_marks_view_dirty(source) {
+                        n.view_cache_needs_rerender = true;
+                        mark_dirty = true;
+                    }
                     hit_cache_root = Some(id);
-                    break;
+                    did_stop = true;
+                } else {
+                    next_parent = n.parent;
                 }
-                current = n.parent;
             } else {
                 break;
             }
+
+            if did_stop {
+                if mark_dirty {
+                    self.mark_cache_root_dirty(id, source, detail);
+                }
+                break;
+            }
+            current = next_parent;
         }
 
         if self.debug_enabled {
@@ -2364,11 +2540,19 @@ impl<H: UiHost> UiTree<H> {
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
                 let already = visited.get(&id).copied().unwrap_or_default();
-                if (already & needed) != needed
-                    && self.nodes.get(id).is_some_and(|n| n.view_cache.enabled)
-                {
+                if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
+                    let mut mark_dirty = false;
                     if let Some(n) = self.nodes.get_mut(id) {
-                        n.invalidation.mark(inv);
+                        if Self::invalidation_source_marks_view_dirty(source) {
+                            n.view_cache_needs_rerender = true;
+                            mark_dirty = true;
+                        }
+                        if (already & needed) != needed {
+                            n.invalidation.mark(inv);
+                        }
+                    }
+                    if mark_dirty {
+                        self.mark_cache_root_dirty(id, source, detail);
                     }
                     visited.insert(id, already | needed);
                 }
@@ -2503,11 +2687,101 @@ impl<H: UiHost> UiTree<H> {
         self.propagation_visited = visited;
         self.propagation_entries = entries;
 
-        if did_invalidate && let Some(window) = self.window {
-            app.request_redraw(window);
+        if did_invalidate {
+            self.request_redraw_coalesced(app);
         }
 
         did_invalidate
+    }
+
+    fn propagate_model_changes_from_elements(&mut self, app: &mut H, changed: &[ModelId]) -> bool {
+        let Some(window) = self.window else {
+            return false;
+        };
+        if changed.is_empty() {
+            return false;
+        }
+
+        let changed: std::collections::HashSet<ModelId> = changed.iter().copied().collect();
+        let frame_id = app.frame_id();
+        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
+            let Some(window_state) = runtime.for_window(window) else {
+                return;
+            };
+            window_state.for_each_observed_model_for_invalidation(
+                frame_id,
+                |element, observations| {
+                    let mut mask = ObservationMask::default();
+                    for (model, inv) in observations {
+                        if changed.contains(model) {
+                            mask.add(*inv);
+                        }
+                    }
+                    if mask.is_empty() {
+                        return;
+                    }
+                    let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+                        return;
+                    };
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                },
+            );
+        });
+
+        if combined.is_empty() {
+            return false;
+        }
+        self.propagate_observation_masks(app, combined, UiDebugInvalidationSource::ModelChange)
+    }
+
+    fn propagate_global_changes_from_elements(&mut self, app: &mut H, changed: &[TypeId]) -> bool {
+        let Some(window) = self.window else {
+            return false;
+        };
+        if changed.is_empty() {
+            return false;
+        }
+
+        let changed: std::collections::HashSet<TypeId> = changed.iter().copied().collect();
+        let frame_id = app.frame_id();
+        let mut combined: HashMap<NodeId, ObservationMask> = HashMap::new();
+
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, _app| {
+            let Some(window_state) = runtime.for_window(window) else {
+                return;
+            };
+            window_state.for_each_observed_global_for_invalidation(
+                frame_id,
+                |element, observations| {
+                    let mut mask = ObservationMask::default();
+                    for (global, inv) in observations {
+                        if changed.contains(global) {
+                            mask.add(*inv);
+                        }
+                    }
+                    if mask.is_empty() {
+                        return;
+                    }
+                    let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+                        return;
+                    };
+                    combined
+                        .entry(node)
+                        .and_modify(|m| *m = m.union(mask))
+                        .or_insert(mask);
+                },
+            );
+        });
+
+        if combined.is_empty() {
+            return false;
+        }
+        self.propagate_observation_masks(app, combined, UiDebugInvalidationSource::GlobalChange)
     }
 
     pub fn propagate_model_changes(&mut self, app: &mut H, changed: &[ModelId]) -> bool {
@@ -2519,6 +2793,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_model_change_hotspots.clear();
             self.debug_model_change_unobserved.clear();
         }
+
+        let mut did_invalidate = false;
 
         if changed.len() == 1 {
             let model = changed[0];
@@ -2541,11 +2817,13 @@ impl<H: UiHost> UiTree<H> {
                         changed: app.models().debug_last_changed_info_for_id(model),
                     }];
                 }
-                return self.propagate_observation_masks(
+                did_invalidate |= self.propagate_observation_masks(
                     app,
                     masks,
                     UiDebugInvalidationSource::ModelChange,
                 );
+                did_invalidate |= self.propagate_model_changes_from_elements(app, changed);
+                return did_invalidate;
             }
         }
 
@@ -2613,11 +2891,13 @@ impl<H: UiHost> UiTree<H> {
                 .sort_by(|a, b| a.model.data().as_ffi().cmp(&b.model.data().as_ffi()));
             self.debug_model_change_unobserved.truncate(5);
         }
-        self.propagate_observation_masks(
+        did_invalidate |= self.propagate_observation_masks(
             app,
             combined.into_iter(),
             UiDebugInvalidationSource::ModelChange,
-        )
+        );
+        did_invalidate |= self.propagate_model_changes_from_elements(app, changed);
+        did_invalidate
     }
 
     pub fn propagate_global_changes(&mut self, app: &mut H, changed: &[TypeId]) -> bool {
@@ -2629,6 +2909,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_global_change_hotspots.clear();
             self.debug_global_change_unobserved.clear();
         }
+
+        let mut did_invalidate = false;
 
         if changed.len() == 1 {
             let global = changed[0];
@@ -2646,11 +2928,13 @@ impl<H: UiHost> UiTree<H> {
                         masks.len().min(u32::MAX as usize) as u32;
                     self.debug_stats.global_change_unobserved_globals = 0;
                 }
-                return self.propagate_observation_masks(
+                did_invalidate |= self.propagate_observation_masks(
                     app,
                     masks,
                     UiDebugInvalidationSource::GlobalChange,
                 );
+                did_invalidate |= self.propagate_global_changes_from_elements(app, changed);
+                return did_invalidate;
             }
         }
 
@@ -2713,11 +2997,13 @@ impl<H: UiHost> UiTree<H> {
                 .sort_by_key(|u| type_id_sort_key(u.global));
             self.debug_global_change_unobserved.truncate(5);
         }
-        self.propagate_observation_masks(
+        did_invalidate |= self.propagate_observation_masks(
             app,
             combined.into_iter(),
             UiDebugInvalidationSource::GlobalChange,
-        )
+        );
+        did_invalidate |= self.propagate_global_changes_from_elements(app, changed);
+        did_invalidate
     }
 
     fn refresh_semantics_snapshot(&mut self, app: &mut H) {
