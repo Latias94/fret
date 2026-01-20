@@ -140,6 +140,75 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
     let _ = Kbd::new("x").ui().px_2().into_element(cx);
 }
 
+#[allow(dead_code, unused_variables)]
+fn ui_builder_nested_surfaces_compile<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    composable_accordion_value: Model<Option<Arc<str>>>,
+) {
+    // Composable accordion surface (`accordion::composable`).
+    {
+        use fret_ui_shadcn::accordion::composable;
+
+        let trigger = composable::AccordionTrigger::new(vec![cx.text("Trigger")])
+            .ui()
+            .p_2()
+            .build();
+
+        let content = composable::AccordionContent::new(vec![cx.text("Content")])
+            .ui()
+            .p_2()
+            .build();
+
+        let item = composable::AccordionItem::new("item")
+            .trigger(trigger)
+            .content(content)
+            .ui()
+            .p_2()
+            .build();
+
+        let _ = composable::AccordionRoot::single(composable_accordion_value)
+            .item(item)
+            .ui()
+            .w_full()
+            .into_element(cx);
+    }
+
+    // Breadcrumb primitives (`breadcrumb::primitives`).
+    {
+        use fret_ui_shadcn::breadcrumb::primitives;
+
+        let _ = primitives::Breadcrumb::new()
+            .ui()
+            .p_2()
+            .into_element(cx, |cx| {
+                vec![
+                    primitives::BreadcrumbList::new()
+                        .ui()
+                        .p_2()
+                        .into_element(cx, |cx| {
+                            vec![primitives::BreadcrumbItem::new().ui().p_2().into_element(
+                                cx,
+                                |cx| {
+                                    vec![
+                                        primitives::BreadcrumbLink::new("Home")
+                                            .ui()
+                                            .p_0()
+                                            .into_element(cx),
+                                    ]
+                                },
+                            )]
+                        }),
+                ]
+            });
+
+        let _ = primitives::BreadcrumbSeparator::new().ui().into_element(cx);
+        let _ = primitives::BreadcrumbEllipsis::new().ui().into_element(cx);
+        let _ = primitives::BreadcrumbPage::new("Page")
+            .ui()
+            .into_element(cx);
+    }
+}
+
 #[test]
 fn ui_builder_smoke_applies_supported_patches() {
     let mut store = ModelStore::default();
@@ -170,6 +239,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     let data_table_view_option_checked = store.insert(false);
     let command_dialog_open = store.insert(false);
     let command_dialog_query = store.insert(String::new());
+    let _composable_accordion_value = store.insert(None::<Arc<str>>);
 
     let _ = Button::new("OK").ui().px_3().w_full().build();
     let _ = Alert::new(Vec::new()).ui().p_4().border_1().build();

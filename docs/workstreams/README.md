@@ -15,3 +15,5 @@ Active workstreams:
 - `docs/workstreams/ecosystem-status.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
+- `docs/workstreams/unified-authoring-builder-v1.md`
+- `docs/workstreams/unified-authoring-builder-v1-todo.md`

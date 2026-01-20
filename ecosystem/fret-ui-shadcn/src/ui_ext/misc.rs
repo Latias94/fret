@@ -12,3 +12,12 @@ impl_ui_patch_chrome_layout!(Kbd);
 impl_ui_patch_layout_only!(KbdGroup);
 impl_ui_patch_chrome_layout!(Breadcrumb);
 impl_ui_patch_chrome_layout!(Empty);
+
+// Upstream-shaped breadcrumb primitives (see `breadcrumb::primitives`).
+impl_ui_patch_chrome_layout_patch_only!(crate::breadcrumb::primitives::Breadcrumb);
+impl_ui_patch_chrome_layout_patch_only!(crate::breadcrumb::primitives::BreadcrumbList);
+impl_ui_patch_chrome_layout_patch_only!(crate::breadcrumb::primitives::BreadcrumbItem);
+impl_ui_patch_chrome_layout!(crate::breadcrumb::primitives::BreadcrumbLink);
+impl_ui_patch_chrome_layout!(crate::breadcrumb::primitives::BreadcrumbPage);
+impl_ui_patch_chrome_layout!(crate::breadcrumb::primitives::BreadcrumbSeparator);
+impl_ui_patch_chrome_layout!(crate::breadcrumb::primitives::BreadcrumbEllipsis);

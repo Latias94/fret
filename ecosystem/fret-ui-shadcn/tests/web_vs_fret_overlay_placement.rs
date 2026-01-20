@@ -10444,7 +10444,10 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
         bounds,
         FrameId(1),
         false,
-        |cx| vec![pad_root(cx, Px(0.0), render(cx))],
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
 
@@ -10459,7 +10462,10 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
             bounds,
             FrameId(2 + tick),
             request_semantics,
-            |cx| vec![pad_root(cx, Px(0.0), render(cx))],
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
         );
     }
 

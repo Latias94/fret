@@ -256,10 +256,10 @@ pub use ui_builder_ext::*;
 /// `fret-ui-shadcn` and `use fret_ui_shadcn::prelude::*;`.
 pub mod prelude {
     pub use crate::{
-        AlertDialogUiBuilderExt, CollapsibleUiBuilderExt, CommandDialogUiBuilderExt,
-        ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt, DataGridElementUiBuilderExt,
-        DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt, DropdownMenuUiBuilderExt,
-        PopoverUiBuilderExt, SheetUiBuilderExt,
+        AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt,
+        CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt,
+        DataGridElementUiBuilderExt, DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt,
+        DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt,
     };
     pub use crate::{
         ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,

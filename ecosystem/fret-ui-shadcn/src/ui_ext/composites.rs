@@ -26,3 +26,9 @@ impl_ui_patch_chrome_layout_patch_only!(AccordionTrigger);
 impl_ui_patch_chrome_layout_patch_only!(AccordionContent);
 impl_ui_patch_chrome_layout_patch_only!(AccordionItem);
 impl_ui_patch_layout_only!(Accordion);
+
+// Radix-shaped composable accordion primitives (see `accordion::composable`).
+impl_ui_patch_layout_only!(crate::accordion::composable::AccordionRoot);
+impl_ui_patch_chrome_layout_patch_only!(crate::accordion::composable::AccordionItem);
+impl_ui_patch_chrome_layout_patch_only!(crate::accordion::composable::AccordionTrigger);
+impl_ui_patch_chrome_layout_patch_only!(crate::accordion::composable::AccordionContent);

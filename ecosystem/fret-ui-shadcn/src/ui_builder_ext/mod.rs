@@ -1,9 +1,11 @@
+mod breadcrumb;
 mod collapsible;
 mod command_dialog;
 mod data;
 mod menus;
 mod overlay_roots;
 
+pub use breadcrumb::*;
 pub use collapsible::*;
 pub use command_dialog::*;
 pub use data::*;
