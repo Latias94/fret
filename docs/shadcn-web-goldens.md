@@ -242,8 +242,9 @@ Overlay placement + menu sizing conformance:
 `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
 
 This suite asserts portal wrapper placement (side/align/gap) and also includes explicit checks for
-menu sizing signals such as per-item heights, content insets, and Select listbox width (including
-constrained-viewport variants that force max-height/scroll behavior).
+menu sizing signals such as per-item heights, content insets, and Select metrics (listbox
+width/height, option row height, and scroll button height), including constrained-viewport variants
+that force max-height/scroll behavior.
 
 Overlay chrome conformance (border, radii, and selected colors):
 
