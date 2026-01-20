@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{Graph, GroupId, NodeId, PortDirection, PortId};
+use crate::io::NodeGraphNodeOrigin;
 use crate::ui::presenter::{NodeGraphPresenter, PortAnchorHint};
 use crate::ui::style::NodeGraphStyle;
 
@@ -42,12 +43,14 @@ impl CanvasGeometry {
         draw_order: &[NodeId],
         style: &NodeGraphStyle,
         zoom: f32,
+        node_origin: NodeGraphNodeOrigin,
         presenter: &mut dyn NodeGraphPresenter,
     ) -> Self {
         let mut out = Self::default();
         if !zoom.is_finite() || zoom <= 0.0 {
             return out;
         }
+        let node_origin = node_origin.normalized();
 
         out.order = node_order(graph, draw_order);
         out.node_rank = out
@@ -72,8 +75,15 @@ impl CanvasGeometry {
 
             let w = w_px / zoom;
             let h = h_px / zoom;
+            let off = node_origin_offset_canvas(
+                crate::core::CanvasSize {
+                    width: w,
+                    height: h,
+                },
+                node_origin,
+            );
             let rect = Rect::new(
-                Point::new(Px(node.pos.x), Px(node.pos.y)),
+                Point::new(Px(node.pos.x - off.x), Px(node.pos.y - off.y)),
                 Size::new(Px(w), Px(h)),
             );
 
@@ -141,17 +151,57 @@ impl CanvasGeometry {
     }
 }
 
+pub(crate) fn node_origin_offset_canvas(
+    size_canvas: crate::core::CanvasSize,
+    node_origin: NodeGraphNodeOrigin,
+) -> crate::core::CanvasPoint {
+    let origin = node_origin.normalized();
+    crate::core::CanvasPoint {
+        x: origin.x * size_canvas.width,
+        y: origin.y * size_canvas.height,
+    }
+}
+
+pub(crate) fn node_rect_origin_from_anchor(
+    anchor: crate::core::CanvasPoint,
+    size_canvas: crate::core::CanvasSize,
+    node_origin: NodeGraphNodeOrigin,
+) -> crate::core::CanvasPoint {
+    let off = node_origin_offset_canvas(size_canvas, node_origin);
+    crate::core::CanvasPoint {
+        x: anchor.x - off.x,
+        y: anchor.y - off.y,
+    }
+}
+
+pub(crate) fn node_anchor_from_rect_origin(
+    rect_origin: crate::core::CanvasPoint,
+    size_canvas: crate::core::CanvasSize,
+    node_origin: NodeGraphNodeOrigin,
+) -> crate::core::CanvasPoint {
+    let off = node_origin_offset_canvas(size_canvas, node_origin);
+    crate::core::CanvasPoint {
+        x: rect_origin.x + off.x,
+        y: rect_origin.y + off.y,
+    }
+}
+
 pub(crate) fn node_order(graph: &Graph, draw_order: &[NodeId]) -> Vec<NodeId> {
     let mut seen: BTreeSet<NodeId> = BTreeSet::new();
     let mut out: Vec<NodeId> = Vec::new();
 
+    let visible = |id: &NodeId| graph.nodes.get(id).is_some_and(|n| !n.hidden);
+
     for id in draw_order {
-        if graph.nodes.contains_key(id) && seen.insert(*id) {
+        if visible(id) && seen.insert(*id) {
             out.push(*id);
         }
     }
 
     for id in graph.nodes.keys() {
+        if !visible(id) {
+            continue;
+        }
         if seen.insert(*id) {
             out.push(*id);
         }

@@ -213,6 +213,55 @@ where
     }
 }
 
+/// Warm a tile cache incrementally under a per-frame budget, with an on-hit hook.
+///
+/// This is useful for replay caches that must keep renderer-owned resources alive (e.g. by touching
+/// `TextBlobId`/`PathId`/`SvgId` caches) before replaying ops.
+pub fn warm_scene_op_tiles_u64_with<ReplayDeltaForTile, OnHit, OpsForTile>(
+    cache: &mut SceneOpTileCache<u64>,
+    scene: &mut Scene,
+    tiles: &[TileCoord],
+    base_key: u64,
+    units_per_tile: u32,
+    budget: &mut WorkBudget,
+    mut replay_delta_for_tile: ReplayDeltaForTile,
+    mut on_hit: OnHit,
+    mut ops_for_tile: OpsForTile,
+) -> SceneOpTileWarmupOutcome
+where
+    ReplayDeltaForTile: FnMut(TileCoord) -> Point,
+    OnHit: FnMut(&[SceneOp]),
+    OpsForTile: FnMut(TileCoord) -> Vec<SceneOp>,
+{
+    let mut built_tiles: u32 = 0;
+    let mut skipped_tiles: u32 = 0;
+
+    for tile in tiles.iter().copied() {
+        let key = tile_cache_key(base_key, tile);
+        let replay_delta = replay_delta_for_tile(tile);
+
+        if cache.try_replay_with(key, scene, replay_delta, |ops| on_hit(ops)) {
+            continue;
+        }
+
+        if !budget.try_consume(units_per_tile) {
+            skipped_tiles = skipped_tiles.saturating_add(1);
+            continue;
+        }
+
+        let ops = ops_for_tile(tile);
+        scene.replay_ops_translated(&ops, replay_delta);
+        cache.store_ops(key, ops);
+        built_tiles = built_tiles.saturating_add(1);
+    }
+
+    SceneOpTileWarmupOutcome {
+        requested_tiles: tiles.len(),
+        built_tiles,
+        skipped_tiles,
+    }
+}
+
 /// Cache for recorded `SceneOp`s split into fixed-size tiles (retained-canvas replay caching).
 ///
 /// This is intended for large canvases where:
@@ -302,6 +351,38 @@ impl<K: Eq + Hash + Copy> SceneOpTileCache<K> {
         true
     }
 
+    /// Replay cached ops for `key` when present, with an additional on-hit hook.
+    ///
+    /// This is useful for replay caches that must keep renderer-owned resources alive (e.g. by
+    /// touching `TextBlobId`/`PathId`/`SvgId` caches) before replaying ops.
+    ///
+    /// `replay_delta` is applied via `Scene::replay_ops_translated()`.
+    /// Returns `true` when the cache was hit.
+    pub fn try_replay_with(
+        &mut self,
+        key: K,
+        scene: &mut Scene,
+        replay_delta: Point,
+        on_hit: impl FnOnce(&[SceneOp]),
+    ) -> bool {
+        self.stats.calls = self.stats.calls.saturating_add(1);
+
+        let Some(entry) = self.entries.get_mut(&key) else {
+            self.stats.misses = self.stats.misses.saturating_add(1);
+            return false;
+        };
+
+        entry.last_used_frame = self.frame;
+        self.stats.hits = self.stats.hits.saturating_add(1);
+        self.stats.replayed_ops = self
+            .stats
+            .replayed_ops
+            .saturating_add(entry.ops.len().min(u64::MAX as usize) as u64);
+        on_hit(&entry.ops);
+        scene.replay_ops_translated(&entry.ops, replay_delta);
+        true
+    }
+
     /// Replace cached ops for `key`.
     pub fn store_ops(&mut self, key: K, ops: Vec<SceneOp>) {
         self.stats.stored_tiles = self.stats.stored_tiles.saturating_add(1);
@@ -357,6 +438,7 @@ impl<K: Eq + Hash + Copy> SceneOpTileCache<K> {
 #[cfg(test)]
 mod tests {
     use fret_core::{Color, DrawOrder, Size};
+    use std::cell::Cell;
 
     use super::*;
 
@@ -492,6 +574,73 @@ mod tests {
         );
         assert_eq!(out.built_tiles, 0);
         assert_eq!(out.skipped_tiles, 0);
+        assert_eq!(scene.ops_len(), 1);
+    }
+
+    #[test]
+    fn tile_cache_try_replay_with_calls_hook_only_on_hit() {
+        let mut cache: SceneOpTileCache<u64> = SceneOpTileCache::default();
+        cache.begin_frame();
+        cache.store_ops(1, vec![SceneOp::PopTransform]);
+
+        cache.begin_frame();
+        let calls = Cell::new(0usize);
+        let mut scene = Scene::default();
+        assert!(
+            cache.try_replay_with(1, &mut scene, Point::new(Px(0.0), Px(0.0)), |_ops| {
+                calls.set(calls.get() + 1);
+            })
+        );
+        assert_eq!(calls.get(), 1);
+
+        let mut scene = Scene::default();
+        assert!(
+            !cache.try_replay_with(2, &mut scene, Point::new(Px(0.0), Px(0.0)), |_ops| {
+                calls.set(calls.get() + 1);
+            })
+        );
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn warm_scene_op_tiles_calls_on_hit_for_cached_tiles() {
+        let tiles = [TileCoord { x: 0, y: 0 }];
+        let base_key = 123u64;
+
+        let mut cache: SceneOpTileCache<u64> = SceneOpTileCache::default();
+        cache.begin_frame();
+
+        let mut scene = Scene::default();
+        let mut budget = WorkBudget::new(1);
+        let _ = warm_scene_op_tiles_u64(
+            &mut cache,
+            &mut scene,
+            &tiles,
+            base_key,
+            1,
+            &mut budget,
+            |_tile| Point::new(Px(0.0), Px(0.0)),
+            |_tile| vec![SceneOp::PopTransform],
+        );
+
+        cache.begin_frame();
+        let calls = Cell::new(0usize);
+        let mut scene = Scene::default();
+        let mut budget = WorkBudget::new(0);
+        let _ = warm_scene_op_tiles_u64_with(
+            &mut cache,
+            &mut scene,
+            &tiles,
+            base_key,
+            1,
+            &mut budget,
+            |_tile| Point::new(Px(0.0), Px(0.0)),
+            |_ops| {
+                calls.set(calls.get() + 1);
+            },
+            |_tile| panic!("should hit cache and never rebuild ops"),
+        );
+        assert_eq!(calls.get(), 1);
         assert_eq!(scene.ops_len(), 1);
     }
 }

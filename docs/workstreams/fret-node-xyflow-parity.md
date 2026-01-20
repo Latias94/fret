@@ -32,8 +32,8 @@ Scope notes:
 | `zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick` | `NodeGraphInteractionState.zoom_on_scroll`, `.zoom_on_pinch`, `.zoom_on_double_click` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs` |
 | `panActivationKeyCode`, `zoomActivationKeyCode` | `NodeGraphInteractionState.pan_activation_key_code`, `.zoom_activation_key` (+ `space_to_pan`) | Implemented (naming differs) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs` |
 | `translateExtent` (constrain viewport) | `NodeGraphInteractionState.translate_extent` (clamped in `update_view_state`) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_math.rs` |
-| `fitView`, `fitViewOptions` (`padding`, `duration`, `ease`, `interpolate`, `nodes`) | `frame_nodes_in_view(...)` (animated “frame selection/all”) | Partial (has duration/interpolate, missing padding/nodes/ease) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs` |
-| Viewport animation helpers (`duration`, `ease`, `interpolate`) | Timer-driven viewport animation (duration + interpolate) | Partial (missing custom ease + helper APIs) | `ecosystem/fret-node/src/ui/canvas/state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
+| `fitView`, `fitViewOptions` (`padding`, `duration`, `ease`, `interpolate`, `nodes`) | `frame_nodes_in_view(...)` (animated “frame selection/all”) + `NodeGraphViewQueue` (`FrameNodes`) + `with_fit_view_on_mount*` | Implemented (different integration shape; includes `nodes` + `includeHiddenNodes` + per-call `minZoom`/`maxZoom`) | `ecosystem/fret-node/src/runtime/fit_view.rs`, `ecosystem/fret-node/src/ui/view_queue.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_on_mount_conformance.rs` |
+| Viewport animation helpers (`duration`, `ease`, `interpolate`) | Timer-driven viewport animation + `NodeGraphViewQueue::SetViewport` | Implemented (queue-driven helper API; integration shape differs) | `ecosystem/fret-node/src/ui/view_queue.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs` |
 | `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `NodeGraphInteractionState.auto_pan` (`on_node_drag`, `on_connect`, `speed`, `margin`) | Implemented (defaults differ) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
 | `autoPanOnNodeFocus` | `NodeGraphInteractionState.auto_pan.on_node_focus` | Implemented (opt-in) | `ecosystem/fret-node/src/ui/canvas/widget/focus_nav.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/focus_auto_pan_conformance.rs` |
 | Inertial/momentum pan (not a first-class xyflow prop) | `NodeGraphInteractionState.pan_inertia` | Implemented (opt-in) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
@@ -45,7 +45,7 @@ Scope notes:
 | `elementsSelectable` | `NodeGraphInteractionState.elements_selectable` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` |
 | `selectionKeyCode` (box select modifier) | `NodeGraphInteractionState.selection_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
 | `selectionOnDrag` | `NodeGraphInteractionState.selection_on_drag` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
-| `selectionMode` (`full` vs `partial`) | Marquee selection uses `rects_intersect` (always “partial”) | Partial (no “full” mode) | `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
+| `selectionMode` (`full` vs `partial`) | `NodeGraphInteractionState.selection_mode` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/selection_mode_conformance.rs` |
 | `multiSelectionKeyCode` | `NodeGraphInteractionState.multi_selection_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` |
 | `deleteKeyCode` | `NodeGraphInteractionState.delete_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs` |
 | `disableKeyboardA11y` | `NodeGraphInteractionState.disable_keyboard_a11y` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs` |
@@ -58,7 +58,7 @@ Scope notes:
 | `nodesDraggable` | `NodeGraphInteractionState.nodes_draggable` (+ per-node override) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs` |
 | `nodesConnectable` | `NodeGraphInteractionState.nodes_connectable` (+ per-node/port override) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs` |
 | Node extent constraint (`nodeExtent`) | `NodeGraphInteractionState.node_extent` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` |
-| `nodeOrigin` | Node positions are stored as `Node.pos` (top-left mental model) | Missing (no configurable origin) | `ecosystem/fret-node/src/core/mod.rs`, `ecosystem/fret-node/src/ui/canvas/geometry.rs` |
+| `nodeOrigin` | `NodeGraphInteractionState.node_origin` (interprets `Node.pos` as an anchor) | Implemented (off-by-default; default remains `(0, 0)`) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/geometry.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs` |
 | Node resize handles (not a single xyflow prop; typically via custom nodes) | Built-in resize interactions | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` |
 | Grouping / parent containers (subflows) | Group model + group resize/drag | Implemented (different API surface) | `ecosystem/fret-node/src/core/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs` |
 
@@ -80,7 +80,7 @@ Scope notes:
 
 | xyflow prop / behavior | fret-node equivalent | Status | Evidence |
 |---|---|---|---|
-| `onlyRenderVisibleElements` | Always-on culling via `render_cull_margin_px` + spatial index | Partial (no toggle) | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/spatial.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs` |
+| `onlyRenderVisibleElements` | `NodeGraphInteractionState.only_render_visible_elements` (default `true`) | Implemented (different default; preserves current behavior) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs` |
 | Z-index modes, elevate-on-select (`elevateNodesOnSelect`, `elevateEdgesOnSelect`) | Explicit draw order + edge draw order derived from endpoints | Partial (no “elevate on select” policy toggle) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/z_order_conformance.rs` |
 | Cache stability under large graphs | Scene op tile caches + per-frame warmup budgets | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs` |
 
@@ -103,6 +103,6 @@ Scope notes:
 
 ## Recommended Next Steps (Top 3)
 
-1) **Fit-view option parity**: extend framing to support `padding`, `nodes`, and an `ease` surface (custom or preset), matching XyFlow's `fitViewOptions`.
-2) **Selection mode parity**: add a `full` vs `partial` marquee mode knob to match `selectionMode` semantics (current behavior is effectively “partial only”).
-3) **Rendering toggle parity**: consider an explicit `onlyRenderVisibleElements` switch (currently culling is always-on), so apps can trade overhead vs pop-in.
+1) **Viewport helper APIs**: add a public UI helper that animates from current viewport to a target (XyFlow `viewportHelper` mental model); keep runtime helpers headless-safe.
+2) **View-state shaping**: decide whether `nodeOrigin` should be moved from view-state tuning to a higher-level config surface for apps that want `Node.pos` in different coordinate conventions.
+3) **Node sizing parity**: consider port-driven auto-sizing and handle/label layout parity with upstream defaults (depends on UX direction).

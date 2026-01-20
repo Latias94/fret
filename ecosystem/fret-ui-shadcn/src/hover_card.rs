@@ -285,19 +285,43 @@ impl HoverCard {
         let arrow_bg = theme.color_required("popover");
         let arrow_border = theme.color_required("border");
 
+        let uncontrolled_default_open = self.open.is_none() && self.default_open;
         let open_root = radix_hover_card::HoverCardRoot::new()
             .open(self.open)
             .default_open(self.default_open);
+        // Store the uncontrolled `open` model at the HoverCard call site so `default_open` behaves
+        // like Radix `defaultOpen` across frames (rather than being tied to an internal wrapper).
+        let open = open_root.open_model(cx);
         let trigger = self.trigger;
         let content = self.content;
         let content_size_hint = fixed_size_hint_px(&content);
         let trigger_id = trigger.id;
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
+        let debug_trace = cfg!(test) && std::env::var_os("FRET_DEBUG_HOVERCARD").is_some();
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let hover_card_id = cx.root_id();
-            let open = open_root.open_model(cx);
-            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+            let open = open.clone();
+            let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+            if uncontrolled_default_open {
+                #[derive(Default)]
+                struct HoverCardDefaultOpenInit {
+                    applied: bool,
+                }
+                let should_apply =
+                    cx.with_state_for(hover_card_id, HoverCardDefaultOpenInit::default, |st| {
+                        if st.applied {
+                            false
+                        } else {
+                            st.applied = true;
+                            true
+                        }
+                    });
+                if should_apply && !open_now {
+                    let _ = cx.app.models_mut().update(&open, |v| *v = true);
+                    open_now = true;
+                }
+            }
 
             #[derive(Default)]
             struct HoverCardPointerDownModelState {
@@ -446,6 +470,12 @@ impl HoverCard {
             let scale = motion.scale;
 
             let out = vec![trigger];
+            if debug_trace {
+                eprintln!(
+                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={}",
+                    cx.frame_id.0, open_now, update.open, motion.present, hovered
+                );
+            }
             if !motion.present {
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.overlay_hovered = false;
@@ -1063,6 +1093,8 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
@@ -1076,6 +1108,7 @@ mod tests {
                       app: &mut App,
                       services: &mut dyn fret_core::UiServices,
                       frame: u64| {
+            let trigger_id_out = trigger_id.clone();
             let content_id_out = content_id.clone();
             app.set_frame_id(FrameId(frame));
             OverlayController::begin_frame(app, window);
@@ -1087,22 +1120,23 @@ mod tests {
                 bounds,
                 "test",
                 move |cx| {
-                    let trigger = cx.pressable_with_id(
-                        PressableProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Px(Px(120.0));
-                                layout.size.height = Length::Px(Px(40.0));
-                                layout
+                    let trigger = cx.pressable_with_id_props(move |cx, _st, id| {
+                        trigger_id_out.set(Some(id));
+                        (
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
                             },
-                            enabled: true,
-                            focusable: true,
-                            ..Default::default()
-                        },
-                        |cx, _st, _id| {
-                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                        },
-                    );
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())],
+                        )
+                    });
 
                     let content = cx.semantics(
                         SemanticsProps {
@@ -1139,6 +1173,19 @@ mod tests {
         render(&mut ui, &mut app, &mut services, 2);
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let last_trigger_bounds = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "hover-card-default-open-probe",
+            |cx| cx.last_bounds_for_element(trigger_element),
+        );
+        assert!(
+            last_trigger_bounds.is_some(),
+            "expected trigger to have last-frame bounds for placement"
+        );
 
         let content_element = content_id.get().expect("content element id");
         let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)

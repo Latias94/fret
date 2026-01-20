@@ -8,6 +8,7 @@
 //! Unlike declarative hosted caches (ADR 0156), retained widgets own their caches directly and
 //! must release resources deterministically via `Widget::cleanup_resources`.
 
+mod hosted_resource_touch;
 mod path_cache;
 mod scene_op_cache;
 mod scene_op_tile_cache;
@@ -37,6 +38,7 @@ pub struct CacheStats {
     pub release_evict: u64,
 }
 
+pub use hosted_resource_touch::*;
 pub use path_cache::*;
 pub use scene_op_cache::*;
 pub use scene_op_tile_cache::*;

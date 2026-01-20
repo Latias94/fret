@@ -128,6 +128,26 @@ pub(super) fn handle_scroll<H: UiHost>(
             let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
             handle.set_offset(desired);
             let next = handle.offset();
+            if std::env::var("FRET_DEBUG_SCROLL_WHEEL")
+                .ok()
+                .is_some_and(|v| v == "1")
+            {
+                let max = handle.max_offset();
+                eprintln!(
+                    "scroll wheel element={:?} handle_key={} axis={:?} delta=({:.3},{:.3}) prev=({:.3},{:.3}) next=({:.3},{:.3}) max=({:.3},{:.3})",
+                    this.element,
+                    handle.binding_key(),
+                    props.axis,
+                    delta_x.0,
+                    delta_y.0,
+                    prev.x.0,
+                    prev.y.0,
+                    next.x.0,
+                    next.y.0,
+                    max.x.0,
+                    max.y.0,
+                );
+            }
             (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01
         } else {
             crate::elements::with_element_state(

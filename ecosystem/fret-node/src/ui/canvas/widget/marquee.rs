@@ -14,6 +14,7 @@ fn nodes_in_marquee(
     geom: &super::super::geometry::CanvasGeometry,
     a: Point,
     b: Point,
+    mode: crate::io::NodeGraphSelectionMode,
 ) -> Vec<GraphNodeId> {
     let rect = super::rect_from_points(a, b);
     geom.nodes
@@ -23,7 +24,20 @@ fn nodes_in_marquee(
             if !node.selectable.unwrap_or(true) {
                 return None;
             }
-            super::rects_intersect(rect, ng.rect).then_some(*id)
+            match mode {
+                crate::io::NodeGraphSelectionMode::Full => {
+                    let fully_contained = ng.rect.origin.x.0 >= rect.origin.x.0
+                        && ng.rect.origin.y.0 >= rect.origin.y.0
+                        && (ng.rect.origin.x.0 + ng.rect.size.width.0)
+                            <= (rect.origin.x.0 + rect.size.width.0)
+                        && (ng.rect.origin.y.0 + ng.rect.size.height.0)
+                            <= (rect.origin.y.0 + rect.size.height.0);
+                    fully_contained.then_some(*id)
+                }
+                crate::io::NodeGraphSelectionMode::Partial => {
+                    super::rects_intersect(rect, ng.rect).then_some(*id)
+                }
+            }
         })
         .collect()
 }
@@ -61,7 +75,13 @@ pub(super) fn handle_marquee_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         let selection = canvas
             .graph
             .read_ref(cx.app, |graph| {
-                nodes_in_marquee(graph, geom.as_ref(), marquee.start_pos, marquee.pos)
+                nodes_in_marquee(
+                    graph,
+                    geom.as_ref(),
+                    marquee.start_pos,
+                    marquee.pos,
+                    snapshot.interaction.selection_mode,
+                )
             })
             .ok()
             .unwrap_or_default();
@@ -119,7 +139,13 @@ pub(super) fn handle_marquee_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     let selection = canvas
                         .graph
                         .read_ref(cx.app, |graph| {
-                            nodes_in_marquee(graph, geom.as_ref(), marquee.start_pos, marquee.pos)
+                            nodes_in_marquee(
+                                graph,
+                                geom.as_ref(),
+                                marquee.start_pos,
+                                marquee.pos,
+                                snapshot.interaction.selection_mode,
+                            )
                         })
                         .ok()
                         .unwrap_or_default();

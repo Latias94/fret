@@ -193,13 +193,24 @@ impl Default for NodeGraphViewState {
 impl NodeGraphViewState {
     /// Removes stale IDs (selection / draw order) that no longer exist in the target graph.
     pub fn sanitize_for_graph(&mut self, graph: &Graph) {
-        self.selected_nodes
-            .retain(|id| graph.nodes.contains_key(id));
-        self.selected_edges
-            .retain(|id| graph.edges.contains_key(id));
+        let visible_node = |id: &NodeId| graph.nodes.get(id).is_some_and(|n| !n.hidden);
+
+        self.selected_nodes.retain(visible_node);
+        self.selected_edges.retain(|id| {
+            let Some(edge) = graph.edges.get(id) else {
+                return false;
+            };
+            let Some(from) = graph.ports.get(&edge.from) else {
+                return false;
+            };
+            let Some(to) = graph.ports.get(&edge.to) else {
+                return false;
+            };
+            visible_node(&from.node) && visible_node(&to.node)
+        });
         self.selected_groups
             .retain(|id| graph.groups.contains_key(id));
-        self.draw_order.retain(|id| graph.nodes.contains_key(id));
+        self.draw_order.retain(visible_node);
         self.group_draw_order
             .retain(|id| graph.groups.contains_key(id));
     }
@@ -222,6 +233,47 @@ pub enum NodeGraphBoxSelectEdges {
     Connected,
     /// Select edges only when both endpoints are within the marquee-selected node set.
     BothEndpoints,
+}
+
+/// Behavior for selecting nodes during marquee (box) selection.
+///
+/// This matches XyFlow's `selectionMode`:
+/// - `full`: select nodes only when their rect is fully contained in the marquee.
+/// - `partial`: select nodes when they intersect the marquee.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphSelectionMode {
+    /// Select nodes only when fully contained by the marquee (XyFlow default).
+    #[default]
+    Full,
+    /// Select nodes when partially intersecting the marquee.
+    Partial,
+}
+
+/// Node origin (anchor) used to interpret `Node.pos` (XyFlow `nodeOrigin`).
+///
+/// This is expressed as a normalized fraction of the node rect:
+/// - `(0.0, 0.0)` means `Node.pos` is the node's top-left.
+/// - `(0.5, 0.5)` means `Node.pos` is the node's center.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphNodeOrigin {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl NodeGraphNodeOrigin {
+    pub fn normalized(self) -> Self {
+        let mut out = self;
+        if !out.x.is_finite() {
+            out.x = 0.0;
+        }
+        if !out.y.is_finite() {
+            out.y = 0.0;
+        }
+        out.x = out.x.clamp(0.0, 1.0);
+        out.y = out.y.clamp(0.0, 1.0);
+        out
+    }
 }
 
 impl<'de> Deserialize<'de> for NodeGraphBoxSelectEdges {
@@ -468,6 +520,20 @@ pub enum NodeGraphViewportInterpolate {
     Smooth,
 }
 
+/// Easing curve for animated viewport changes (XyFlow `fitViewOptions.ease`).
+///
+/// Note: this is an optional override. When unset, the legacy behavior is derived from
+/// `frame_view_interpolate` for backward compatibility.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphViewportEase {
+    Linear,
+    /// Smoothstep `t*t*(3-2*t)` (close to common editor defaults).
+    Smoothstep,
+    /// Cubic ease-in-out.
+    CubicInOut,
+}
+
 /// Optional interaction tuning persisted as part of editor view state.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphInteractionState {
@@ -535,6 +601,14 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_spatial_index_tuning")]
     pub spatial_index: NodeGraphSpatialIndexTuning,
 
+    /// Whether to only process/render elements near the visible viewport (XyFlow
+    /// `onlyRenderVisibleElements`).
+    ///
+    /// Note: Fret's canvas is always clipped to the viewport, but this flag controls whether we
+    /// cull work (geometry queries, render data collection) to a padded viewport rect.
+    #[serde(default = "default_only_render_visible_elements")]
+    pub only_render_visible_elements: bool,
+
     /// Paint-cache pruning tuning for long-lived graphs.
     #[serde(default = "default_paint_cache_prune_tuning")]
     pub paint_cache_prune: NodeGraphPaintCachePruneTuning,
@@ -568,6 +642,10 @@ pub struct NodeGraphInteractionState {
     /// This matches XyFlow's `selectionOnDrag`.
     #[serde(default)]
     pub selection_on_drag: bool,
+
+    /// Selection behavior for marquee selection (XyFlow `selectionMode`).
+    #[serde(default)]
+    pub selection_mode: NodeGraphSelectionMode,
 
     /// How to select edges when marquee-selecting nodes (XyFlow behavior).
     ///
@@ -680,6 +758,19 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub frame_view_interpolate: NodeGraphViewportInterpolate,
 
+    /// Optional easing curve for view framing / fit-view style commands.
+    ///
+    /// Parity knob for XyFlow's `fitViewOptions.ease`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame_view_ease: Option<NodeGraphViewportEase>,
+
+    /// Optional extra padding when framing nodes (XyFlow `fitViewOptions.padding`).
+    ///
+    /// This is a fraction of the current viewport size (0.0 .. 0.45 recommended). When set to
+    /// `0.0`, the framing logic falls back to its legacy fixed pixel margin.
+    #[serde(default = "default_frame_view_padding")]
+    pub frame_view_padding: f32,
+
     /// Whether double-clicking a wire inserts a reroute node (ShaderGraph-style).
     ///
     /// This is separate from `zoom_on_double_click`: zoom only applies when the double click hits
@@ -742,6 +833,10 @@ pub struct NodeGraphInteractionState {
     /// extent. Parent groups may further constrain movement.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node_extent: Option<CanvasRect>,
+
+    /// Node origin (anchor) used to interpret `Node.pos` (XyFlow `nodeOrigin`).
+    #[serde(default)]
+    pub node_origin: NodeGraphNodeOrigin,
 }
 
 impl NodeGraphInteractionState {
@@ -768,6 +863,7 @@ impl Default for NodeGraphInteractionState {
             edge_interaction_width: default_edge_interaction_width(),
             bezier_hit_test_steps: default_bezier_hit_test_steps(),
             spatial_index: NodeGraphSpatialIndexTuning::default(),
+            only_render_visible_elements: default_only_render_visible_elements(),
             paint_cache_prune: NodeGraphPaintCachePruneTuning::default(),
             snap_to_grid: false,
             snap_grid: default_snap_grid(),
@@ -776,6 +872,7 @@ impl Default for NodeGraphInteractionState {
             pan_on_scroll: default_pan_on_scroll(),
             pan_on_drag: default_pan_on_drag_buttons(),
             selection_on_drag: false,
+            selection_mode: NodeGraphSelectionMode::default(),
             box_select_edges: default_box_select_edges(),
             selection_key: default_selection_key(),
             multi_selection_key: default_multi_selection_key(),
@@ -794,6 +891,8 @@ impl Default for NodeGraphInteractionState {
             zoom_on_double_click: default_zoom_on_double_click(),
             frame_view_duration_ms: default_frame_view_duration_ms(),
             frame_view_interpolate: NodeGraphViewportInterpolate::default(),
+            frame_view_ease: None,
+            frame_view_padding: default_frame_view_padding(),
             reroute_on_edge_double_click: default_reroute_on_edge_double_click(),
             edge_insert_on_alt_drag: default_edge_insert_on_alt_drag(),
             zoom_activation_key: NodeGraphZoomActivationKey::default(),
@@ -805,6 +904,7 @@ impl Default for NodeGraphInteractionState {
             auto_pan: NodeGraphAutoPanTuning::default(),
             translate_extent: None,
             node_extent: None,
+            node_origin: NodeGraphNodeOrigin::default(),
         }
     }
 }
@@ -895,6 +995,10 @@ fn default_pan_on_scroll() -> bool {
     true
 }
 
+fn default_only_render_visible_elements() -> bool {
+    true
+}
+
 fn default_space_to_pan() -> bool {
     true
 }
@@ -941,6 +1045,10 @@ fn default_zoom_on_double_click() -> bool {
 
 fn default_frame_view_duration_ms() -> u32 {
     200
+}
+
+fn default_frame_view_padding() -> f32 {
+    0.0
 }
 
 fn default_reroute_on_edge_double_click() -> bool {
@@ -1202,6 +1310,7 @@ mod tests {
                 extent: None,
                 expand_parent: None,
                 size: None,
+                hidden: false,
                 collapsed: false,
                 ports: Vec::new(),
                 data: serde_json::Value::Null,

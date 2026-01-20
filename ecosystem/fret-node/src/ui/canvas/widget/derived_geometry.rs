@@ -47,11 +47,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         snapshot: &ViewSnapshot,
     ) -> Arc<CanvasGeometry> {
         let zoom = snapshot.zoom;
+        let node_origin = snapshot.interaction.node_origin.normalized();
         let graph_rev = self.graph.revision(host).unwrap_or(0);
         let presenter_rev = self.presenter.geometry_revision();
         let key = GeometryCacheKey {
             graph_rev,
             zoom_bits: snapshot.zoom.to_bits(),
+            node_origin_x_bits: node_origin.x.to_bits(),
+            node_origin_y_bits: node_origin.y.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
             presenter_rev,
         };
@@ -69,6 +72,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         &draw_order,
                         &style,
                         zoom,
+                        node_origin,
                         presenter,
                     );
                     let z = zoom.max(1.0e-6);

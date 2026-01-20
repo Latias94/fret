@@ -37,9 +37,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     registry.record_path_cache(key, frame_id, entries, stats);
                 });
         }
-        for id in self.text_blobs.drain(..) {
-            cx.services.text().release(id);
-        }
 
         let zoom = snapshot.zoom;
         let pan = snapshot.pan;
@@ -52,7 +49,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
             Size::new(Px(viewport_w), Px(viewport_h)),
         );
-        let render_cull_rect = {
+        let only_render_visible_elements = snapshot.interaction.only_render_visible_elements;
+        let render_cull_rect = if !only_render_visible_elements {
+            None
+        } else {
             let margin_screen = self.style.render_cull_margin_px;
             if !margin_screen.is_finite()
                 || margin_screen <= 0.0
@@ -108,6 +108,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.update_internals_store(&*cx.app, &snapshot, cx.bounds, &geom);
 
         let can_use_static_scene_cache = self.geometry.drag_preview.is_none()
+            && only_render_visible_elements
             && zoom.is_finite()
             && zoom > 1.0e-6
             && cx.bounds.size.width.0.is_finite()
@@ -228,9 +229,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             b.finish()
         };
 
+        let node_origin = snapshot.interaction.node_origin.normalized();
         let geom_key = self.geometry.key.unwrap_or(GeometryCacheKey {
             graph_rev: self.graph.revision(&*cx.app).unwrap_or(0),
             zoom_bits: zoom.to_bits(),
+            node_origin_x_bits: node_origin.x.to_bits(),
+            node_origin_y_bits: node_origin.y.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
             presenter_rev: self.presenter.geometry_revision(),
         });
@@ -241,6 +245,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_groups.v1");
                 b.add_u64(geom_key.graph_rev);
                 b.add_u32(geom_key.zoom_bits);
+                b.add_u32(geom_key.node_origin_x_bits);
+                b.add_u32(geom_key.node_origin_y_bits);
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
                 b.add_u64(style_key);
@@ -251,14 +257,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             };
 
             let replay_delta = Point::new(Px(0.0), Px(0.0));
-            let groups_hit = self
-                .groups_scene_cache
-                .try_replay(groups_key, cx.scene, replay_delta);
-            if groups_hit {
-                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
+            let groups_hit = self.groups_scene_cache.try_replay_with(
+                groups_key,
+                cx.scene,
+                replay_delta,
+                |ops| {
                     self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
-            } else {
+                },
+            );
+            if !groups_hit {
                 let render_groups: RenderData = self.collect_render_data(
                     &*cx.app,
                     &snapshot,
@@ -284,12 +291,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 tmp.push(SceneOp::PopClip);
                 self.groups_scene_cache
                     .store_ops(groups_key, tmp.ops().to_vec());
-                let _ = self
-                    .groups_scene_cache
-                    .try_replay(groups_key, cx.scene, replay_delta);
-                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
+                let _ = self.groups_scene_cache.try_replay_with(
+                    groups_key,
+                    cx.scene,
+                    replay_delta,
+                    |ops| {
+                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                    },
+                );
             }
 
             // Selected group border overlay must remain ordered before edges (ADR 0082).
@@ -385,6 +394,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             TileCacheKeyBuilder::new("fret-node.canvas.static_edges.tile.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -417,14 +428,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             ),
                         );
 
-                        if self
-                            .edges_scene_cache
-                            .try_replay(tile_key, cx.scene, replay_delta)
-                        {
-                            self.edges_build_states.remove(&tile_key);
-                            if let Some(ops) = self.edges_scene_cache.ops_for_key(tile_key) {
+                        if self.edges_scene_cache.try_replay_with(
+                            tile_key,
+                            cx.scene,
+                            replay_delta,
+                            |ops| {
                                 self.paint_cache.touch_paths_in_scene_ops(ops);
-                            }
+                            },
+                        ) {
+                            self.edges_build_states.remove(&tile_key);
                             continue;
                         }
 
@@ -554,6 +566,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             TileCacheKeyBuilder::new("fret-node.canvas.static_edge_labels.tile.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -574,14 +588,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let tile_key = tile_cache_key(labels_base_key, tile);
                         self.edge_labels_tile_keys_scratch.push(tile_key);
 
-                        if self
-                            .edge_labels_scene_cache
-                            .try_replay(tile_key, cx.scene, replay_delta)
-                        {
-                            self.edge_labels_build_states.remove(&tile_key);
-                            if let Some(ops) = self.edge_labels_scene_cache.ops_for_key(tile_key) {
+                        if self.edge_labels_scene_cache.try_replay_with(
+                            tile_key,
+                            cx.scene,
+                            replay_delta,
+                            |ops| {
                                 self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                            }
+                            },
+                        ) {
+                            self.edge_labels_build_states.remove(&tile_key);
                             continue;
                         }
 
@@ -703,6 +718,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_edges.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -717,6 +734,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             TileCacheKeyBuilder::new("fret-node.canvas.static_edge_labels.v1");
                         b.add_u64(geom_key.graph_rev);
                         b.add_u32(geom_key.zoom_bits);
+                        b.add_u32(geom_key.node_origin_x_bits);
+                        b.add_u32(geom_key.node_origin_y_bits);
                         b.add_u64(geom_key.draw_order_hash);
                         b.add_u64(geom_key.presenter_rev);
                         b.add_u64(style_key);
@@ -726,14 +745,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         b.finish()
                     };
 
-                    let edges_hit =
-                        self.edges_scene_cache
-                            .try_replay(edges_key, cx.scene, replay_delta);
+                    let edges_hit = self.edges_scene_cache.try_replay_with(
+                        edges_key,
+                        cx.scene,
+                        replay_delta,
+                        |ops| {
+                            self.paint_cache.touch_paths_in_scene_ops(ops);
+                        },
+                    );
                     if edges_hit {
                         self.edges_build_states.remove(&edges_key);
-                        if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
-                            self.paint_cache.touch_paths_in_scene_ops(ops);
-                        }
                     } else {
                         let mut state =
                             self.edges_build_states
@@ -826,14 +847,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         if state.next_edge >= state.edges.len() {
                             self.edges_scene_cache
                                 .store_ops(edges_key, state.ops.clone());
-                            let _ = self.edges_scene_cache.try_replay(
+                            let _ = self.edges_scene_cache.try_replay_with(
                                 edges_key,
                                 cx.scene,
                                 replay_delta,
+                                |ops| {
+                                    self.paint_cache.touch_paths_in_scene_ops(ops);
+                                },
                             );
-                            if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
-                                self.paint_cache.touch_paths_in_scene_ops(ops);
-                            }
                         } else {
                             cx.scene.replay_ops_translated(&state.ops, replay_delta);
                             self.paint_cache.touch_paths_in_scene_ops(&state.ops);
@@ -925,13 +946,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     self.paint_edge_overlays_selected_hovered(cx, &snapshot, &geom, zoom);
 
                     // Labels must remain on top of selected/hovered overlays.
-                    if self
-                        .edge_labels_scene_cache
-                        .try_replay(labels_key, cx.scene, replay_delta)
-                    {
-                        if let Some(ops) = self.edge_labels_scene_cache.ops_for_key(labels_key) {
+                    if self.edge_labels_scene_cache.try_replay_with(
+                        labels_key,
+                        cx.scene,
+                        replay_delta,
+                        |ops| {
                             self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                        }
+                        },
+                    ) {
                     } else if let Some(state) = self
                         .edge_labels_build_state
                         .as_ref()
@@ -965,6 +987,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_nodes.v1");
                 b.add_u64(geom_key.graph_rev);
                 b.add_u32(geom_key.zoom_bits);
+                b.add_u32(geom_key.node_origin_x_bits);
+                b.add_u32(geom_key.node_origin_y_bits);
                 b.add_u64(geom_key.draw_order_hash);
                 b.add_u64(geom_key.presenter_rev);
                 b.add_u64(style_key);
@@ -974,14 +998,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 b.finish()
             };
 
-            let nodes_hit = self
-                .nodes_scene_cache
-                .try_replay(nodes_key, cx.scene, replay_delta);
-            if nodes_hit {
-                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
-            } else {
+            let nodes_hit =
+                self.nodes_scene_cache
+                    .try_replay_with(nodes_key, cx.scene, replay_delta, |ops| {
+                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                    });
+            if !nodes_hit {
                 let render_nodes: RenderData = self.collect_render_data(
                     &*cx.app,
                     &snapshot,
@@ -1007,12 +1029,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 tmp.push(SceneOp::PopClip);
                 self.nodes_scene_cache
                     .store_ops(nodes_key, tmp.ops().to_vec());
-                let _ = self
-                    .nodes_scene_cache
-                    .try_replay(nodes_key, cx.scene, replay_delta);
-                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
+                let _ = self.nodes_scene_cache.try_replay_with(
+                    nodes_key,
+                    cx.scene,
+                    replay_delta,
+                    |ops| {
+                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                    },
+                );
             }
 
             // --- Nodes (dynamic overlays) ---

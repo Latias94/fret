@@ -24,6 +24,10 @@ use crate::core::{
 mod callbacks_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
+mod fit_view_nodes_conformance;
+mod fit_view_on_mount_conformance;
+mod fit_view_options_conformance;
+mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
 mod hit_testing_conformance;
 mod insert_node_drag_conformance;
@@ -31,11 +35,15 @@ mod interaction_conformance;
 mod internals_conformance;
 mod invalidation_ordering_conformance;
 mod middleware_conformance;
+mod node_origin_conformance;
+mod only_render_visible_elements_conformance;
 mod perf_cache;
 mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
 mod portal_pointer_passthrough_conformance;
+mod selection_mode_conformance;
+mod set_viewport_conformance;
 mod viewport_animation_conformance;
 mod z_order_conformance;
 
@@ -1447,6 +1455,7 @@ fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -1466,6 +1475,7 @@ fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -1499,6 +1509,7 @@ fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
                 width: 40.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -1521,6 +1532,7 @@ fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
                 width: 40.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -1551,6 +1563,7 @@ fn make_test_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, Nod
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![a_in, a_out],
             data: Value::Null,
@@ -1603,6 +1616,7 @@ fn make_test_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, Nod
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![b_in],
             data: Value::Null,
@@ -1689,6 +1703,7 @@ fn yank_edges_from_port_returns_all_incident_edges() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![p_out],
             data: Value::Null,
@@ -1727,6 +1742,7 @@ fn yank_edges_from_port_returns_all_incident_edges() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![p_in1, p_in2],
             data: Value::Null,
@@ -1808,6 +1824,7 @@ fn should_add_bundle_port_requires_same_side_and_dedupes() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![p_out1, p_out2, p_in],
             data: Value::Null,
@@ -1983,6 +2000,7 @@ fn connect_bundle_records_single_history_entry() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![out1, out2],
             data: Value::Null,
@@ -2022,6 +2040,7 @@ fn connect_bundle_records_single_history_entry() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![inn],
             data: Value::Null,
@@ -2183,6 +2202,7 @@ fn nudge_respects_per_node_extent_rect() {
                 width: 40.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2232,6 +2252,7 @@ fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2251,6 +2272,7 @@ fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2547,6 +2569,7 @@ fn align_right_respects_per_node_extent_rect() {
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2569,6 +2592,7 @@ fn align_right_respects_per_node_extent_rect() {
                 width: 40.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2622,6 +2646,7 @@ fn align_center_x_preserves_alignment_under_node_extent_bounds() {
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2644,6 +2669,7 @@ fn align_center_x_preserves_alignment_under_node_extent_bounds() {
                 width: 40.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2714,6 +2740,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2736,6 +2763,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2758,6 +2786,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
                 width: 80.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2780,6 +2809,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2863,6 +2893,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2885,6 +2916,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -2908,6 +2940,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
                 width: 40.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -3000,6 +3033,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -3022,6 +3056,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
                 width: 10.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,
@@ -3053,6 +3088,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
                 width: 40.0,
                 height: 20.0,
             }),
+            hidden: false,
             collapsed: false,
             ports: Vec::new(),
             data: Value::Null,

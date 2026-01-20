@@ -5085,10 +5085,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         key = Self::hash_u64(key, self.x_scale.key());
                         key = Self::hash_u64(key, self.y_scale.key());
 
-                        if self
-                            .quads_scene_cache
-                            .try_replay(key, cx.scene, layout.plot.origin)
-                        {
+                        if self.quads_scene_cache.try_replay_with(
+                            key,
+                            cx.scene,
+                            layout.plot.origin,
+                            |_ops| {},
+                        ) {
                             // Cache hit.
                         } else {
                             let quads = self.rebuild_quads_if_needed(
@@ -5112,6 +5114,22 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     border_color: Color::TRANSPARENT,
                                     corner_radii: fret_core::Corners::all(Px(0.0)),
                                 });
+                            }
+
+                            #[cfg(debug_assertions)]
+                            {
+                                debug_assert!(
+                                    ops.iter().all(|op| {
+                                        !matches!(
+                                            op,
+                                            SceneOp::Text { .. }
+                                                | SceneOp::Path { .. }
+                                                | SceneOp::SvgMaskIcon { .. }
+                                                | SceneOp::SvgImage { .. }
+                                        )
+                                    }),
+                                    "Cached plot quad scene ops must not include hosted resources without touching their caches on replay"
+                                );
                             }
 
                             cx.scene.replay_ops_translated(&ops, layout.plot.origin);
@@ -5280,11 +5298,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             gradient_key = Self::hash_f32_bits(gradient_key, bar_w);
                             gradient_key = Self::hash_f32_bits(gradient_key, bar_h);
 
-                            self.heatmap_colorbar_gradient_cache.replay_or_record(
+                            self.heatmap_colorbar_gradient_cache.replay_or_record_with(
                                 gradient_key,
                                 scene,
                                 Point::new(Px(0.0), Px(0.0)),
+                                |_ops| {},
                                 |scene| {
+                                    #[cfg(debug_assertions)]
+                                    let start = scene.ops_len();
                                     for i in 0..steps {
                                         let t0 = (i as f32) / (steps as f32);
                                         let t1 = ((i + 1) as f32) / (steps as f32);
@@ -5304,6 +5325,22 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             border_color: Color::TRANSPARENT,
                                             corner_radii: fret_core::Corners::all(Px(0.0)),
                                         });
+                                    }
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        let end = scene.ops_len();
+                                        debug_assert!(
+                                            scene.ops()[start..end].iter().all(|op| {
+                                                !matches!(
+                                                    op,
+                                                    SceneOp::Text { .. }
+                                                        | SceneOp::Path { .. }
+                                                        | SceneOp::SvgMaskIcon { .. }
+                                                        | SceneOp::SvgImage { .. }
+                                                )
+                                            }),
+                                            "Cached colorbar gradient ops must not include hosted resources without touching their caches on replay"
+                                        );
                                     }
                                 },
                             );

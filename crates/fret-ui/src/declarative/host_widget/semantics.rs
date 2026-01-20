@@ -154,42 +154,52 @@ impl ElementHostWidget {
                 group.semantics(cx);
             }
             ElementInstance::Pressable(props) => {
-                cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
-                if let Some(label) = props.a11y.label.as_ref() {
-                    cx.set_label(label.as_ref().to_string());
+                if props.a11y.hidden {
+                    cx.set_role(SemanticsRole::Generic);
+                    if let Some(test_id) = props.a11y.test_id.as_ref() {
+                        cx.set_test_id(test_id.as_ref().to_string());
+                    }
+                    cx.set_disabled(true);
+                    cx.set_focusable(false);
+                    cx.set_invokable(false);
+                } else {
+                    cx.set_role(props.a11y.role.unwrap_or(SemanticsRole::Button));
+                    if let Some(label) = props.a11y.label.as_ref() {
+                        cx.set_label(label.as_ref().to_string());
+                    }
+                    if let Some(test_id) = props.a11y.test_id.as_ref() {
+                        cx.set_test_id(test_id.as_ref().to_string());
+                    }
+                    cx.set_active_descendant(props.a11y.active_descendant);
+                    if props.a11y.selected {
+                        cx.set_selected(true);
+                    }
+                    if let Some(expanded) = props.a11y.expanded {
+                        cx.set_expanded(expanded);
+                    }
+                    if props.a11y.checked.is_some() {
+                        cx.set_checked(props.a11y.checked);
+                    }
+                    if let Some(element) = props.a11y.labelled_by_element
+                        && let Some(node) = cx.resolve_declarative_element(element)
+                    {
+                        cx.push_labelled_by(node);
+                    }
+                    if let Some(element) = props.a11y.described_by_element
+                        && let Some(node) = cx.resolve_declarative_element(element)
+                    {
+                        cx.push_described_by(node);
+                    }
+                    if let Some(element) = props.a11y.controls_element
+                        && let Some(node) = cx.resolve_declarative_element(element)
+                    {
+                        cx.push_controlled(node);
+                    }
+                    cx.set_disabled(!props.enabled);
+                    cx.set_focusable(props.enabled && props.focusable);
+                    cx.set_invokable(props.enabled);
+                    cx.set_collection_position(props.a11y.pos_in_set, props.a11y.set_size);
                 }
-                if let Some(test_id) = props.a11y.test_id.as_ref() {
-                    cx.set_test_id(test_id.as_ref().to_string());
-                }
-                cx.set_active_descendant(props.a11y.active_descendant);
-                if props.a11y.selected {
-                    cx.set_selected(true);
-                }
-                if let Some(expanded) = props.a11y.expanded {
-                    cx.set_expanded(expanded);
-                }
-                if props.a11y.checked.is_some() {
-                    cx.set_checked(props.a11y.checked);
-                }
-                if let Some(element) = props.a11y.labelled_by_element
-                    && let Some(node) = cx.resolve_declarative_element(element)
-                {
-                    cx.push_labelled_by(node);
-                }
-                if let Some(element) = props.a11y.described_by_element
-                    && let Some(node) = cx.resolve_declarative_element(element)
-                {
-                    cx.push_described_by(node);
-                }
-                if let Some(element) = props.a11y.controls_element
-                    && let Some(node) = cx.resolve_declarative_element(element)
-                {
-                    cx.push_controlled(node);
-                }
-                cx.set_disabled(!props.enabled);
-                cx.set_focusable(props.enabled && props.focusable);
-                cx.set_invokable(props.enabled);
-                cx.set_collection_position(props.a11y.pos_in_set, props.a11y.set_size);
             }
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);

@@ -65,6 +65,7 @@ fn select_scroll_with_buttons<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
+    scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
@@ -91,7 +92,7 @@ fn select_scroll_with_buttons<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let handle = scroll_handle.clone();
             let did_initial_scroll = initial_scroll_to_y.is_some();
             if let Some(y) = initial_scroll_to_y {
                 let prev = handle.offset();
@@ -126,11 +127,12 @@ fn select_scroll_with_buttons<H: UiHost>(
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
-                                 label: &'static str,
-                                 dir: f32| {
+                                 test_id: &'static str,
+                                 dir: f32,
+                                 visible: bool| {
                 let handle = handle.clone();
                 let theme = theme.clone();
-                cx.pressable(
+                let pressable = cx.pressable(
                     PressableProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
@@ -141,8 +143,8 @@ fn select_scroll_with_buttons<H: UiHost>(
                         enabled: true,
                         focusable: false,
                         a11y: PressableA11y {
-                            role: Some(SemanticsRole::Button),
-                            label: Some(Arc::from(label)),
+                            hidden: true,
+                            test_id: Some(Arc::from(test_id)),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -225,6 +227,10 @@ fn select_scroll_with_buttons<H: UiHost>(
                         )]
                     },
                 )
+                ;
+
+                let gated = cx.interactivity_gate(true, visible, |_cx| vec![pressable]);
+                cx.opacity(if visible { 1.0 } else { 0.0 }, |_cx| vec![gated])
             };
 
             let handle_for_stack = handle.clone();
@@ -334,15 +340,23 @@ fn select_scroll_with_buttons<H: UiHost>(
                 },
             );
 
-            let mut out = Vec::new();
-            if show_up {
-                out.push(scroll_button(cx, ids::ui::CHEVRON_UP, "Scroll up", -1.0));
-            }
-            out.push(stack);
-            if show_down {
-                out.push(scroll_button(cx, ids::ui::CHEVRON_DOWN, "Scroll down", 1.0));
-            }
-            out
+            vec![
+                scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_UP,
+                    "select-scroll-up-button",
+                    -1.0,
+                    show_up,
+                ),
+                stack,
+                scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_DOWN,
+                    "select-scroll-down-button",
+                    1.0,
+                    show_down,
+                ),
+            ]
         },
     )
 }
@@ -853,6 +867,7 @@ fn select_impl<H: UiHost>(
             pointer: radix_select::SelectTriggerPointerState,
             content: radix_select::SelectContentKeyState,
             was_open: bool,
+            scroll_handle: fret_ui::scroll::ScrollHandle,
             value_node: Option<GlobalElementId>,
             viewport: Option<GlobalElementId>,
             listbox: Option<GlobalElementId>,
@@ -863,6 +878,8 @@ fn select_impl<H: UiHost>(
             alignment_item_has_leading_non_item: bool,
             width_probe: Option<GlobalElementId>,
             pending_item_aligned_scroll_to_y: Option<Px>,
+            last_item_aligned_scroll_to_y: Option<Px>,
+            item_aligned_user_scrolled: bool,
             did_item_aligned_scroll_initial: bool,
             did_item_aligned_scroll_reposition: bool,
             did_item_aligned_focus_scroll: bool,
@@ -877,6 +894,7 @@ fn select_impl<H: UiHost>(
                     pointer: radix_select::SelectTriggerPointerState::default(),
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
+                    scroll_handle: fret_ui::scroll::ScrollHandle::default(),
                     value_node: None,
                     viewport: None,
                     listbox: None,
@@ -887,6 +905,8 @@ fn select_impl<H: UiHost>(
                     alignment_item_has_leading_non_item: false,
                     width_probe: None,
                     pending_item_aligned_scroll_to_y: None,
+                    last_item_aligned_scroll_to_y: None,
+                    item_aligned_user_scrolled: false,
                     did_item_aligned_scroll_initial: false,
                     did_item_aligned_scroll_reposition: false,
                     did_item_aligned_focus_scroll: false,
@@ -1339,10 +1359,26 @@ fn select_impl<H: UiHost>(
                         // Radix repositions once after the scroll-up button mounts (it shifts the
                         // viewport down in the normal flow). Model this as an initial scroll plus
                         // a single follow-up scroll if the viewport became scrollable at the top.
-                        let should_scroll_initial = !did_item_aligned_scroll_initial;
-                        let should_scroll_reposition = did_item_aligned_scroll_initial
-                            && !did_item_aligned_scroll_reposition
-                            && item_aligned_scroll_up_visible;
+                        let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                        if !state.item_aligned_user_scrolled {
+                            if let Some(last) = state.last_item_aligned_scroll_to_y
+                                && state.did_item_aligned_scroll_initial
+                            {
+                                let offset = state.scroll_handle.offset();
+                                let drift = (offset.y.0 - last.0).abs();
+                                let drift_threshold = item_h.0 * 2.0;
+                                if drift > drift_threshold {
+                                    state.item_aligned_user_scrolled = true;
+                                }
+                            }
+                        }
+
+                        let should_scroll_initial =
+                            !state.did_item_aligned_scroll_initial && !state.item_aligned_user_scrolled;
+                        let should_scroll_reposition = state.did_item_aligned_scroll_initial
+                            && !state.did_item_aligned_scroll_reposition
+                            && state.item_aligned_scroll_up_visible
+                            && !state.item_aligned_user_scrolled;
                         if should_scroll_initial || should_scroll_reposition {
                             if std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
                                 .ok()
@@ -1353,8 +1389,8 @@ fn select_impl<H: UiHost>(
                                     scroll_to.0, should_scroll_initial, should_scroll_reposition
                                 );
                             }
-                            let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
                             state.pending_item_aligned_scroll_to_y = Some(scroll_to);
+                            state.last_item_aligned_scroll_to_y = Some(scroll_to);
                             if should_scroll_initial {
                                 state.did_item_aligned_scroll_initial = true;
                             }
@@ -1499,12 +1535,18 @@ fn select_impl<H: UiHost>(
                             .color_by_key("border")
                             .unwrap_or_else(|| theme_for_overlay.color_required("border"));
                         let arrow_border = overlay_border;
-                        let initial_scroll_to_y = {
-                            let mut state = trigger_state_for_overlay
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            state.pending_item_aligned_scroll_to_y.take()
-                        };
+                                        let initial_scroll_to_y = {
+                                            let mut state = trigger_state_for_overlay
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            state.pending_item_aligned_scroll_to_y.take()
+                                        };
+                                        let scroll_handle = {
+                                            let state = trigger_state_for_overlay
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            state.scroll_handle.clone()
+                                        };
 
                         let probe = cx.container(
                             ContainerProps {
@@ -1636,6 +1678,7 @@ fn select_impl<H: UiHost>(
                                             cx,
                                             theme_for_overlay.clone(),
                                             item_h,
+                                            scroll_handle,
                                             initial_scroll_to_y,
                                             viewport_id_out,
                                             active_element_id_out,
@@ -2183,6 +2226,8 @@ fn select_impl<H: UiHost>(
                                 state.did_item_aligned_scroll_reposition = false;
                                 state.did_item_aligned_focus_scroll = false;
                                 state.item_aligned_scroll_up_visible = false;
+                                state.last_item_aligned_scroll_to_y = None;
+                                state.item_aligned_user_scrolled = false;
                             }
                         }
 
@@ -3563,14 +3608,8 @@ mod tests {
         let scroll_down = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll down"))
-            .expect("scroll down button");
-        assert!(
-            !snap.nodes.iter().any(|n| {
-                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
-            }),
-            "expected scroll up to be hidden at the top"
-        );
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
+            .expect("scroll down node");
 
         let down_bounds = ui
             .debug_node_bounds(scroll_down.id)
@@ -3635,11 +3674,38 @@ mod tests {
 
         assert_eq!(app.models().get_copied(&open), Some(true));
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_up = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+            .expect("scroll up node");
+        let up_bounds = ui
+            .debug_node_bounds(scroll_up.id)
+            .expect("scroll up bounds");
+        let up_is_hit_testable = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(up_bounds.origin.x.0 + up_bounds.size.width.0 * fx),
+                    Px(up_bounds.origin.y.0 + up_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_up.id)
+                {
+                    return true;
+                }
+            }
+            false
+        })();
         assert!(
-            snap.nodes.iter().any(|n| {
-                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
-            }),
-            "expected scroll up to appear after scrolling down"
+            up_is_hit_testable,
+            "expected scroll up to become hit-testable after scrolling down; bounds={up_bounds:?}"
         );
     }
 

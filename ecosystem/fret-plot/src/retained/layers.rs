@@ -8,7 +8,7 @@
 use fret_canvas::budget::{InteractionBudget, WorkBudget};
 use fret_canvas::cache::{
     PathCache, SceneOpTileCache, TileCacheKeyBuilder, TileCoord, TileGrid2D,
-    warm_scene_op_tiles_u64,
+    warm_scene_op_tiles_u64_with,
 };
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
@@ -1431,6 +1431,22 @@ fn grid_heatmap_tile_ops(
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
+    }
+
+    #[cfg(debug_assertions)]
+    {
+        debug_assert!(
+            ops.iter().all(|op| {
+                !matches!(
+                    op,
+                    SceneOp::Text { .. }
+                        | SceneOp::Path { .. }
+                        | SceneOp::SvgMaskIcon { .. }
+                        | SceneOp::SvgImage { .. }
+                )
+            }),
+            "Heatmap tile ops are cached/replayed; do not cache hosted resource ops without touching their caches on replay"
+        );
     }
 
     ops
@@ -4832,7 +4848,7 @@ impl PlotLayer for HeatmapPlotLayer {
         )
         .select(view_interacting);
         let mut tile_budget = WorkBudget::new(tile_budget_limit);
-        let warmup = warm_scene_op_tiles_u64(
+        let warmup = warm_scene_op_tiles_u64_with(
             &mut self.tile_ops_cache,
             cx.scene,
             &self.tile_scratch,
@@ -4850,6 +4866,7 @@ impl PlotLayer for HeatmapPlotLayer {
                     Px(plot_origin_y + screen_tile_origin.y.0),
                 )
             },
+            |_ops| {},
             |tile| {
                 let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
                 let tile_rect_world = Rect::new(
@@ -5368,7 +5385,7 @@ impl PlotLayer for Histogram2DPlotLayer {
         )
         .select(view_interacting);
         let mut tile_budget = WorkBudget::new(tile_budget_limit);
-        let warmup = warm_scene_op_tiles_u64(
+        let warmup = warm_scene_op_tiles_u64_with(
             &mut self.tile_ops_cache,
             cx.scene,
             &self.tile_scratch,
@@ -5386,6 +5403,7 @@ impl PlotLayer for Histogram2DPlotLayer {
                     Px(plot_origin_y + screen_tile_origin.y.0),
                 )
             },
+            |_ops| {},
             |tile| {
                 let tile_origin_world = tile.origin(TILE_SIZE_CANVAS);
                 let tile_rect_world = Rect::new(

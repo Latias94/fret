@@ -6,15 +6,17 @@ use fret_ui::UiHost;
 
 use crate::core::{CanvasPoint, NodeId as GraphNodeId};
 use crate::core::{CanvasRect, CanvasSize, NodeExtent};
+use crate::io::NodeGraphNodeOrigin;
 
+use super::super::geometry::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
 
-fn clamp_point_in_rect_with_size(
-    pos: CanvasPoint,
+fn clamp_rect_origin_in_rect_with_size(
+    rect_origin: CanvasPoint,
     size: CanvasSize,
     extent: CanvasRect,
 ) -> CanvasPoint {
-    let mut out = pos;
+    let mut out = rect_origin;
     let node_w = size.width.max(0.0);
     let node_h = size.height.max(0.0);
 
@@ -25,6 +27,17 @@ fn clamp_point_in_rect_with_size(
     out.x = out.x.clamp(min_x, max_x);
     out.y = out.y.clamp(min_y, max_y);
     out
+}
+
+fn clamp_anchor_in_rect_with_size(
+    anchor: CanvasPoint,
+    size: CanvasSize,
+    extent: CanvasRect,
+    node_origin: NodeGraphNodeOrigin,
+) -> CanvasPoint {
+    let rect_origin = node_rect_origin_from_anchor(anchor, size, node_origin);
+    let clamped = clamp_rect_origin_in_rect_with_size(rect_origin, size, extent);
+    node_anchor_from_rect_origin(clamped, size, node_origin)
 }
 
 fn union_rect(a: CanvasRect, b: CanvasRect) -> CanvasRect {
@@ -108,7 +121,7 @@ fn clamp_delta_for_extent_rect(
 
 fn dragged_group_bounds(
     geom: &super::super::geometry::CanvasGeometry,
-    nodes: &[(GraphNodeId, CanvasPoint)],
+    nodes: &[GraphNodeId],
 ) -> Option<(CanvasPoint, CanvasSize)> {
     let mut min_x: f32 = f32::INFINITY;
     let mut min_y: f32 = f32::INFINITY;
@@ -116,21 +129,23 @@ fn dragged_group_bounds(
     let mut max_y: f32 = f32::NEG_INFINITY;
     let mut any = false;
 
-    for (id, start) in nodes {
+    for id in nodes {
         let Some(node_geom) = geom.nodes.get(id) else {
             continue;
         };
         let w = node_geom.rect.size.width.0.max(0.0);
         let h = node_geom.rect.size.height.0.max(0.0);
-        if !start.x.is_finite() || !start.y.is_finite() || !w.is_finite() || !h.is_finite() {
+        let x0 = node_geom.rect.origin.x.0;
+        let y0 = node_geom.rect.origin.y.0;
+        if !x0.is_finite() || !y0.is_finite() || !w.is_finite() || !h.is_finite() {
             continue;
         }
 
         any = true;
-        min_x = min_x.min(start.x);
-        min_y = min_y.min(start.y);
-        max_x = max_x.max(start.x + w);
-        max_y = max_y.max(start.y + h);
+        min_x = min_x.min(x0);
+        min_y = min_y.min(y0);
+        max_x = max_x.max(x0 + w);
+        max_y = max_y.max(y0 + h);
     }
 
     if !any || !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite()
@@ -255,8 +270,11 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     let geom_for_extent = canvas.canvas_geometry(&*cx.app, snapshot);
+    let node_origin = snapshot.interaction.node_origin.normalized();
     if multi_drag && let Some(extent) = snapshot.interaction.node_extent {
-        if let Some((group_min, group_size)) = dragged_group_bounds(&geom_for_extent, &drag.nodes) {
+        if let Some((group_min, group_size)) =
+            dragged_group_bounds(&geom_for_extent, &drag.node_ids)
+        {
             delta = clamp_delta_for_extent_rect(delta, group_min, group_size, extent);
         }
     }
@@ -286,11 +304,11 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 };
 
                 if !multi_drag && let Some(extent) = snapshot.interaction.node_extent {
-                    to = clamp_point_in_rect_with_size(to, node_size, extent);
+                    to = clamp_anchor_in_rect_with_size(to, node_size, extent, node_origin);
                 }
 
                 if let Some(NodeExtent::Rect { rect }) = node.extent {
-                    to = clamp_point_in_rect_with_size(to, node_size, rect);
+                    to = clamp_anchor_in_rect_with_size(to, node_size, rect, node_origin);
                 }
 
                 let expand_parent = node.expand_parent.unwrap_or(false);
@@ -303,10 +321,11 @@ pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
                         };
 
                     if clamp_to_parent && let Some(group_rect) = parent_rect {
-                        to = clamp_point_in_rect_with_size(to, node_size, group_rect);
+                        to = clamp_anchor_in_rect_with_size(to, node_size, group_rect, node_origin);
                     } else if expand_parent && let Some(group_rect) = parent_rect {
+                        let rect_origin = node_rect_origin_from_anchor(to, node_size, node_origin);
                         let child_rect = CanvasRect {
-                            origin: to,
+                            origin: rect_origin,
                             size: node_size,
                         };
                         let next = union_rect(group_rect, child_rect);

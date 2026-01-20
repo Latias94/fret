@@ -13,6 +13,7 @@ use std::sync::Arc;
 use fret_canvas::budget::WorkBudget;
 use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::PathCache;
+use fret_canvas::text::TextCache;
 use fret_core::{
     FillStyle, PathCommand, PathConstraints, PathId, PathStyle, Point, Px, SceneOp, StrokeStyle,
     TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap,
@@ -53,47 +54,6 @@ struct MarkerPathKey {
     scale: i64,
     size_screen: i64,
     pin_radius_screen: i64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct TextBlobKey {
-    text_hash: u64,
-    text_len: u32,
-    text: Arc<str>,
-    font: fret_core::FontId,
-    size: i64,
-    weight: u16,
-    slant: u8,
-    line_height: i64,
-    letter_spacing_em: i64,
-    max_width: i64,
-    wrap: TextWrap,
-    overflow: TextOverflow,
-    scale_factor: i64,
-}
-
-impl Hash for TextBlobKey {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.text_hash.hash(state);
-        self.text_len.hash(state);
-        self.font.hash(state);
-        self.size.hash(state);
-        self.weight.hash(state);
-        self.slant.hash(state);
-        self.line_height.hash(state);
-        self.letter_spacing_em.hash(state);
-        self.max_width.hash(state);
-        self.wrap.hash(state);
-        self.overflow.hash(state);
-        self.scale_factor.hash(state);
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct TextBlobEntry {
-    id: TextBlobId,
-    metrics: TextMetrics,
-    last_used_frame: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -140,8 +100,7 @@ struct TextMetricsEntry {
 pub(crate) struct CanvasPaintCache {
     frame: u64,
     paths: PathCache,
-    text_blobs: HashMap<TextBlobKey, TextBlobEntry>,
-    text_blob_by_id: HashMap<TextBlobId, TextBlobKey>,
+    text: TextCache,
     text_metrics: HashMap<TextMetricsKey, TextMetricsEntry>,
 }
 
@@ -149,32 +108,16 @@ impl CanvasPaintCache {
     pub(crate) fn begin_frame(&mut self) -> u64 {
         self.frame = self.frame.wrapping_add(1);
         self.paths.begin_frame();
+        self.text.begin_frame();
         self.frame
     }
 
     pub(crate) fn touch_text_blobs_in_scene_ops(&mut self, ops: &[SceneOp]) {
-        let now = self.frame;
-        for op in ops {
-            let SceneOp::Text { text, .. } = *op else {
-                continue;
-            };
-            let Some(key) = self.text_blob_by_id.get(&text).cloned() else {
-                continue;
-            };
-            let Some(entry) = self.text_blobs.get_mut(&key) else {
-                continue;
-            };
-            entry.last_used_frame = now;
-        }
+        let _ = self.text.touch_blobs_in_scene_ops(ops);
     }
 
     pub(crate) fn touch_paths_in_scene_ops(&mut self, ops: &[SceneOp]) {
-        for op in ops {
-            let SceneOp::Path { path, .. } = *op else {
-                continue;
-            };
-            let _ = self.paths.touch_path(path);
-        }
+        let _ = self.paths.touch_paths_in_scene_ops(ops);
     }
 
     pub(crate) fn diagnostics_path_cache_snapshot(&self) -> (usize, CacheStats) {
@@ -183,10 +126,7 @@ impl CanvasPaintCache {
 
     pub(crate) fn clear(&mut self, services: &mut dyn fret_core::UiServices) {
         self.paths.clear(services);
-        for entry in self.text_blobs.drain().map(|(_, e)| e) {
-            services.text().release(entry.id);
-        }
-        self.text_blob_by_id.clear();
+        self.text.clear(services);
         self.text_metrics.clear();
     }
 
@@ -196,7 +136,6 @@ impl CanvasPaintCache {
         max_age_frames: u64,
         max_entries: usize,
     ) {
-        let now = self.frame;
         if max_entries == 0 {
             self.clear(services);
             return;
@@ -209,35 +148,11 @@ impl CanvasPaintCache {
         let metrics_budget = text_budget.saturating_sub(text_blob_budget);
 
         self.paths.prune(services, max_age_frames, path_budget);
+        self.text.prune(services, max_age_frames, text_blob_budget);
 
-        self.text_blobs.retain(|_, entry| {
-            let keep = now.saturating_sub(entry.last_used_frame) <= max_age_frames;
-            if !keep {
-                services.text().release(entry.id);
-                self.text_blob_by_id.remove(&entry.id);
-            }
-            keep
-        });
-
+        let now = self.frame;
         self.text_metrics
             .retain(|_, entry| now.saturating_sub(entry.last_used_frame) <= max_age_frames);
-
-        if text_blob_budget > 0 && self.text_blobs.len() > text_blob_budget {
-            let mut candidates: Vec<(u64, TextBlobKey)> = self
-                .text_blobs
-                .iter()
-                .map(|(k, v)| (v.last_used_frame, k.clone()))
-                .collect();
-            candidates.sort_by_key(|(last_used, _)| *last_used);
-
-            let over = self.text_blobs.len().saturating_sub(text_blob_budget);
-            for (_, key) in candidates.into_iter().take(over) {
-                if let Some(entry) = self.text_blobs.remove(&key) {
-                    services.text().release(entry.id);
-                    self.text_blob_by_id.remove(&entry.id);
-                }
-            }
-        }
 
         if metrics_budget > 0 && self.text_metrics.len() > metrics_budget {
             let mut candidates: Vec<(u64, TextMetricsKey)> = self
@@ -554,59 +469,10 @@ impl CanvasPaintCache {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let text: Arc<str> = text.into();
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        text.as_ref().hash(&mut hasher);
-        let text_hash = hasher.finish();
-
-        let q = |v: f32, step: f32| -> i64 {
-            if !v.is_finite() {
-                return 0;
-            }
-            (v / step).round() as i64
-        };
-
-        let max_width = constraints.max_width.map(|w| w.0.max(0.0)).unwrap_or(0.0);
-
-        let key = TextBlobKey {
-            text_hash,
-            text_len: text.len().min(u32::MAX as usize) as u32,
-            text: text.clone(),
-            font: style.font.clone(),
-            size: q(style.size.0.max(0.0), 0.01),
-            weight: style.weight.0,
-            slant: match style.slant {
-                fret_core::TextSlant::Normal => 0,
-                fret_core::TextSlant::Italic => 1,
-                fret_core::TextSlant::Oblique => 2,
-            },
-            line_height: q(style.line_height.map(|v| v.0).unwrap_or(0.0).max(0.0), 0.01),
-            letter_spacing_em: q(style.letter_spacing_em.unwrap_or(0.0), 0.0001),
-            max_width: q(max_width, 0.01),
-            wrap: constraints.wrap,
-            overflow: constraints.overflow,
-            scale_factor: q(constraints.scale_factor.max(0.0), 0.0001),
-        };
-
-        let now = self.frame;
-        if let Some(entry) = self.text_blobs.get_mut(&key) {
-            entry.last_used_frame = now;
-            return (entry.id, entry.metrics);
-        }
-
-        let (id, metrics) = services
-            .text()
-            .prepare_str(text.as_ref(), style, constraints);
-        self.text_blob_by_id.insert(id, key.clone());
-        self.text_blobs.insert(
-            key,
-            TextBlobEntry {
-                id,
-                metrics,
-                last_used_frame: now,
-            },
-        );
-        (id, metrics)
+        let prepared = self
+            .text
+            .prepare_arc(services, text.into(), style, constraints);
+        (prepared.blob, prepared.metrics)
     }
 
     pub(crate) fn text_metrics(
@@ -678,62 +544,17 @@ impl CanvasPaintCache {
         budget: &mut WorkBudget,
     ) -> (Option<(TextBlobId, TextMetrics)>, bool) {
         let text: Arc<str> = text.into();
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        text.as_ref().hash(&mut hasher);
-        let text_hash = hasher.finish();
 
-        let q = |v: f32, step: f32| -> i64 {
-            if !v.is_finite() {
-                return 0;
-            }
-            (v / step).round() as i64
-        };
-
-        let max_width = constraints.max_width.map(|w| w.0.max(0.0)).unwrap_or(0.0);
-
-        let key = TextBlobKey {
-            text_hash,
-            text_len: text.len().min(u32::MAX as usize) as u32,
-            text: text.clone(),
-            font: style.font.clone(),
-            size: q(style.size.0.max(0.0), 0.01),
-            weight: style.weight.0,
-            slant: match style.slant {
-                fret_core::TextSlant::Normal => 0,
-                fret_core::TextSlant::Italic => 1,
-                fret_core::TextSlant::Oblique => 2,
-            },
-            line_height: q(style.line_height.map(|v| v.0).unwrap_or(0.0).max(0.0), 0.01),
-            letter_spacing_em: q(style.letter_spacing_em.unwrap_or(0.0), 0.0001),
-            max_width: q(max_width, 0.01),
-            wrap: constraints.wrap,
-            overflow: constraints.overflow,
-            scale_factor: q(constraints.scale_factor.max(0.0), 0.0001),
-        };
-
-        let now = self.frame;
-        if let Some(entry) = self.text_blobs.get_mut(&key) {
-            entry.last_used_frame = now;
-            return (Some((entry.id, entry.metrics)), false);
+        if let Some(prepared) = self.text.get_arc(text.clone(), style, constraints) {
+            return (Some((prepared.blob, prepared.metrics)), false);
         }
 
         if !budget.try_consume(1) {
             return (None, true);
         }
 
-        let (id, metrics) = services
-            .text()
-            .prepare_str(text.as_ref(), style, constraints);
-        self.text_blob_by_id.insert(id, key.clone());
-        self.text_blobs.insert(
-            key,
-            TextBlobEntry {
-                id,
-                metrics,
-                last_used_frame: now,
-            },
-        );
-        (Some((id, metrics)), false)
+        let prepared = self.text.prepare_arc(services, text, style, constraints);
+        (Some((prepared.blob, prepared.metrics)), false)
     }
 }
 

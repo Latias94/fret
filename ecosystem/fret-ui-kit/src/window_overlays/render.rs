@@ -121,18 +121,14 @@ pub fn render<H: UiHost>(
     let modal_request_ids: HashSet<GlobalElementId> = modal_requests.iter().map(|r| r.id).collect();
     let popover_request_ids: HashSet<GlobalElementId> =
         popover_requests.iter().map(|r| r.id).collect();
-    let hover_overlay_request_ids: HashSet<GlobalElementId> =
-        hover_overlay_requests.iter().map(|r| r.id).collect();
-    let tooltip_request_ids: HashSet<GlobalElementId> =
-        tooltip_requests.iter().map(|r| r.id).collect();
     let toast_request_ids: HashSet<GlobalElementId> = toast_requests.iter().map(|r| r.id).collect();
 
     let (extra_modals, extra_popovers, extra_hover_overlays, extra_tooltips, extra_toasts) = app
         .with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut modals: Vec<ModalRequest> = Vec::new();
             let mut popovers: Vec<DismissiblePopoverRequest> = Vec::new();
-            let mut hover_overlays: Vec<HoverOverlayRequest> = Vec::new();
-            let mut tooltips: Vec<TooltipRequest> = Vec::new();
+            let hover_overlays: Vec<HoverOverlayRequest> = Vec::new();
+            let tooltips: Vec<TooltipRequest> = Vec::new();
             let mut toasts: Vec<ToastLayerRequest> = Vec::new();
 
             for ((w, id), req) in overlays.cached_modal_requests.iter() {
@@ -161,33 +157,20 @@ pub fn render<H: UiHost>(
                 popovers.push(req);
             }
 
-            for ((w, id), req) in overlays.cached_hover_overlay_requests.iter() {
-                if *w != window || hover_overlay_request_ids.contains(id) {
-                    continue;
-                }
-                let key = (*w, *id);
-                let Some(active) = overlays.hover_overlays.get(&key) else {
-                    continue;
-                };
-                if !ui.is_layer_visible(active.layer) {
-                    continue;
-                }
-                hover_overlays.push(req.clone());
-            }
+            // Hover overlays currently have no authoritative open/present model (unlike
+            // popovers/modals). Re-emitting cached hover overlays would therefore keep them alive
+            // even after the source subtree stops requesting them, which breaks Radix-style
+            // unmount expectations (e.g. `HoverCard` closing on blur).
+            //
+            // Treat hover overlays as strictly per-frame requests until we introduce an explicit
+            // presence contract for `HoverOverlayRequest`.
 
-            for ((w, id), req) in overlays.cached_tooltip_requests.iter() {
-                if *w != window || tooltip_request_ids.contains(id) {
-                    continue;
-                }
-                let key = (*w, *id);
-                let Some(active) = overlays.tooltips.get(&key) else {
-                    continue;
-                };
-                if !ui.is_layer_visible(active.layer) {
-                    continue;
-                }
-                tooltips.push(req.clone());
-            }
+            // Tooltips have the same challenge as hover overlays: without an explicit open/present
+            // model, cached synthesis can keep tooltips alive even after their producer stops
+            // requesting them (e.g. when hoverable content becomes disabled).
+            //
+            // Keep tooltips strictly per-frame until `TooltipRequest` has an authoritative open
+            // signal that survives view caching.
 
             for ((w, id), req) in overlays.cached_toast_layer_requests.iter() {
                 if *w != window || toast_request_ids.contains(id) {

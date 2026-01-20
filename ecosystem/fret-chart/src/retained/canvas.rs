@@ -4051,10 +4051,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
         let rect_key = rect_key.finish();
 
-        if !self
-            .cached_rect_scene_ops
-            .try_replay(rect_key, cx.scene, Point::new(Px(0.0), Px(0.0)))
-        {
+        if !self.cached_rect_scene_ops.try_replay_with(
+            rect_key,
+            cx.scene,
+            Point::new(Px(0.0), Px(0.0)),
+            |_ops| {},
+        ) {
             let mut ops: Vec<SceneOp> = Vec::with_capacity(self.cached_rects.len());
             for cached in &self.cached_rects {
                 let base_order = self
@@ -4103,6 +4105,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     border_color,
                     corner_radii: Corners::all(Px(0.0)),
                 });
+            }
+
+            #[cfg(debug_assertions)]
+            {
+                debug_assert!(
+                    ops.iter().all(|op| {
+                        !matches!(
+                            op,
+                            SceneOp::Text { .. }
+                                | SceneOp::Path { .. }
+                                | SceneOp::SvgMaskIcon { .. }
+                                | SceneOp::SvgImage { .. }
+                        )
+                    }),
+                    "Cached rect scene ops must not include hosted resources without touching their caches on replay"
+                );
             }
 
             cx.scene.replay_ops(&ops);
@@ -4198,10 +4216,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
         let point_key = point_key.finish();
 
-        if !self.cached_point_scene_ops.try_replay(
+        if !self.cached_point_scene_ops.try_replay_with(
             point_key,
             cx.scene,
             Point::new(Px(0.0), Px(0.0)),
+            |_ops| {},
         ) {
             let base_point_r = self.style.scatter_point_radius.0.max(1.0);
             let point_order_bias = 2u32;
@@ -4260,6 +4279,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     border_color,
                     corner_radii: Corners::all(Px(point_r)),
                 });
+            }
+
+            #[cfg(debug_assertions)]
+            {
+                debug_assert!(
+                    ops.iter().all(|op| {
+                        !matches!(
+                            op,
+                            SceneOp::Text { .. }
+                                | SceneOp::Path { .. }
+                                | SceneOp::SvgMaskIcon { .. }
+                                | SceneOp::SvgImage { .. }
+                        )
+                    }),
+                    "Cached point scene ops must not include hosted resources without touching their caches on replay"
+                );
             }
 
             cx.scene.replay_ops(&ops);

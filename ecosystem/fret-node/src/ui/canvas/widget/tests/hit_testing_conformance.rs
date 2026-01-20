@@ -114,6 +114,7 @@ fn loose_mode_prefers_opposite_side_when_handles_overlap() {
             extent: None,
             expand_parent: None,
             size: None,
+            hidden: false,
             collapsed: false,
             ports: vec![c_out],
             data: serde_json::Value::Null,

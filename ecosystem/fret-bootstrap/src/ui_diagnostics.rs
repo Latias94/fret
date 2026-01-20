@@ -2592,12 +2592,12 @@ impl UiCacheRootStatsV1 {
     fn from_stats(
         window: AppWindowId,
         ui: &UiTree<App>,
-        element_runtime_state: Option<&ElementRuntime>,
+        element_runtime: Option<&ElementRuntime>,
         semantics: Option<&UiSemanticsSnapshotV1>,
         stats: &fret_ui::tree::UiDebugCacheRootStats,
     ) -> Self {
         let element_path = stats.element.and_then(|id| {
-            element_runtime_state.and_then(|runtime| runtime.debug_path_for_element(window, id))
+            element_runtime.and_then(|runtime| runtime.debug_path_for_element(window, id))
         });
 
         let direct_child_nodes = ui.children(stats.root).len().min(u32::MAX as usize) as u32;
@@ -2641,7 +2641,6 @@ impl UiCacheRootStatsV1 {
                 )
             })
             .unwrap_or((None, None, None, None));
-
         Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),

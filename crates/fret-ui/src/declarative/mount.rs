@@ -185,11 +185,13 @@ pub fn render_root<H: UiHost>(
         );
 
         // Declarative GC uses `UiTree::node_layer` to detect whether nodes are detached from any UI
-        // layer. The base layer is typically registered by the app after `render_root` returns
-        // (e.g. `ui.set_root(root_node)`), which is too late for the GC pass below.
+        // layer. On the first frame, the base layer is typically registered by the app after
+        // `render_root` returns (e.g. `ui.set_root(root_node)`), which is too late for the GC pass
+        // below.
         //
-        // Register the base root early so node-layer queries are meaningful inside this function.
-        if ui.node_layer(root_node).is_none() {
+        // However, `render_root` is also used for non-base roots (e.g. overlay helper roots). Do not
+        // steal the base layer if it is already installed.
+        if ui.node_layer(root_node).is_none() && ui.base_root().is_none() {
             ui.set_root(root_node);
         }
 
