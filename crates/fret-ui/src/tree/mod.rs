@@ -379,6 +379,18 @@ pub struct UiDebugCacheRootStats {
     pub reuse_reason: UiDebugCacheRootReuseReason,
 }
 
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugSetChildrenWrite {
+    pub parent: NodeId,
+    pub frame_id: FrameId,
+    pub old_len: u32,
+    pub new_len: u32,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct UiDebugLayoutEngineMeasureHotspot {
     pub node: NodeId,
@@ -723,6 +735,8 @@ pub struct UiTree<H: UiHost> {
     debug_hover_declarative_invalidations:
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
+    #[cfg(feature = "diagnostics")]
+    debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -786,6 +800,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_edge_this_frame: false,
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_set_children_writes: HashMap::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -931,6 +947,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_edge_this_frame = false;
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_set_children_writes.clear();
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
         for root in dirty_roots {
@@ -1117,6 +1135,14 @@ impl<H: UiHost> UiTree<H> {
 
         out.sort_by_key(|s| std::cmp::Reverse(s.paint_replayed_ops));
         out
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_set_children_write_for(&self, parent: NodeId) -> Option<UiDebugSetChildrenWrite> {
+        if !self.debug_enabled {
+            return None;
+        }
+        self.debug_set_children_writes.get(&parent).copied()
     }
 
     pub fn debug_layout_engine_solves(&self) -> &[UiDebugLayoutEngineSolve] {
@@ -1683,12 +1709,30 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[track_caller]
     pub fn set_children(&mut self, parent: NodeId, children: Vec<NodeId>) {
         let Some(existing_children) = self.nodes.get(parent).map(|n| n.children.as_slice()) else {
             return;
         };
         if existing_children == children.as_slice() {
             return;
+        }
+
+        #[cfg(feature = "diagnostics")]
+        if self.debug_enabled {
+            let location = std::panic::Location::caller();
+            self.debug_set_children_writes.insert(
+                parent,
+                UiDebugSetChildrenWrite {
+                    parent,
+                    frame_id: self.debug_stats.frame_id,
+                    old_len: existing_children.len().min(u32::MAX as usize) as u32,
+                    new_len: children.len().min(u32::MAX as usize) as u32,
+                    file: location.file(),
+                    line: location.line(),
+                    column: location.column(),
+                },
+            );
         }
 
         let Some(old_children) = self
