@@ -10,6 +10,11 @@ Historical documents under `docs/archive/` are kept for context only and may be 
 
 - `docs/archive/backlog/shadcn-v4-component-parity-todo.md` (archived)
 
+Related trackers:
+
+- Cross-repo priorities: `docs/roadmap.md`, `docs/todo-tracker.md`
+- Web conformance harness: `docs/shadcn-web-goldens.md`, `docs/audits/shadcn-web-layout-conformance.md`
+
 ## Scope
 
 - `ecosystem/fret-ui-shadcn`: shadcn/ui v4 naming + taxonomy surface (recipes).
