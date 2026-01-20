@@ -6,13 +6,13 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    AppWindowId, Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole,
+    TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
-    WindowCommandEnabledService, format_sequence,
+    WindowCommandEnabledService, WindowInputContextService, format_sequence,
 };
 use fret_runtime::{CommandMeta, Model};
 use fret_ui::action::ActivateReason;
@@ -65,6 +65,29 @@ fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
     }
 }
 
+fn command_palette_input_context_for_window<H: UiHost>(
+    app: &H,
+    window: AppWindowId,
+) -> InputContext {
+    let fallback = command_palette_input_context(app);
+    let Some(snapshot) = app
+        .global::<WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+    else {
+        return fallback;
+    };
+
+    InputContext {
+        // Best-effort: the command palette itself is typically presented in a modal dialog.
+        ui_has_modal: true,
+        // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
+        focus_is_text_input: false,
+        dispatch_phase: InputDispatchPhase::Normal,
+        ..snapshot
+    }
+}
+
 fn command_item_from_meta<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     input_ctx: &InputContext,
@@ -111,7 +134,7 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     options: CommandCatalogOptions,
 ) -> Vec<CommandEntry> {
-    let input_ctx = command_palette_input_context(&*cx.app);
+    let input_ctx = command_palette_input_context_for_window(&*cx.app, cx.window);
 
     let mut commands: Vec<(CommandId, CommandMeta)> = cx
         .app
