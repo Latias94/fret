@@ -91,12 +91,15 @@ Conformance gates:
 ### `Command` / `CommandDialog`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
-- Upstream demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx`
+- Upstream demos: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx`
 - Fret: `ecosystem/fret-ui-shadcn/src/command.rs`
 - Notes:
   - `CommandDialog` is a `Dialog`-backed recipe that composes `CommandPalette` into a modal.
   - The upstream demo opens via a key chord (`Ctrl/Cmd+J`); the golden extractor treats it as `openAction=keys`.
 - Conformance gates:
+  - Layout (command demo): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    (`web_vs_fret_layout_command_demo_input_height_matches`, `web_vs_fret_layout_command_demo_listbox_height_matches`,
+    `web_vs_fret_layout_command_demo_listbox_option_height_matches`, `web_vs_fret_layout_command_demo_listbox_option_insets_match`).
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_command_dialog_panel_chrome_matches`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_command_dialog_overlay_center_matches`).
   - List metrics: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
