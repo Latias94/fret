@@ -14,6 +14,7 @@ pub const APP_HIDE_OTHERS: &str = "app.hide_others";
 pub const APP_SHOW_ALL: &str = "app.show_all";
 pub const FOCUS_NEXT: &str = "focus.next";
 pub const FOCUS_PREVIOUS: &str = "focus.previous";
+pub const FOCUS_MENU_BAR: &str = "focus.menu_bar";
 
 pub const TEXT_COPY: &str = "text.copy";
 pub const TEXT_CUT: &str = "text.cut";
@@ -165,6 +166,28 @@ pub fn register_focus_commands(registry: &mut CommandRegistry) {
             .with_category("Focus")
             .with_keywords(["focus", "tab", "previous"])
             .with_scope(CommandScope::Widget),
+    );
+
+    let when_not_text = WhenExpr::parse("!focus.is_text_input").expect("valid when expression");
+
+    registry.register(
+        CommandId::new(FOCUS_MENU_BAR),
+        CommandMeta::new("Focus Menu Bar")
+            .with_category("Focus")
+            .with_keywords(["focus", "menu", "menubar"])
+            .with_scope(CommandScope::Widget)
+            .with_default_keybindings([
+                DefaultKeybinding {
+                    platform: PlatformFilter::Windows,
+                    sequence: vec![KeyChord::new(KeyCode::F10, Modifiers::default())],
+                    when: Some(when_not_text.clone()),
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Linux,
+                    sequence: vec![KeyChord::new(KeyCode::F10, Modifiers::default())],
+                    when: Some(when_not_text),
+                },
+            ]),
     );
 }
 
