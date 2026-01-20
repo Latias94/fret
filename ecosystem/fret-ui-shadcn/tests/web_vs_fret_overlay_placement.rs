@@ -751,6 +751,47 @@ fn web_portal_slot_heights(theme: &WebGoldenTheme, slots: &[&str]) -> Vec<f32> {
     heights
 }
 
+fn web_portal_slot_rects(theme: &WebGoldenTheme, slot: &str) -> Vec<WebRect> {
+    let mut rects = Vec::new();
+
+    let mut walk = |root: &WebNode| {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if node.attrs.get("data-slot").is_some_and(|s| s == slot) {
+                rects.push(node.rect);
+            }
+            for child in &node.children {
+                stack.push(child);
+            }
+        }
+    };
+
+    for portal in &theme.portals {
+        walk(portal);
+    }
+    for portal in &theme.portal_wrappers {
+        walk(portal);
+    }
+
+    rects
+}
+
+fn web_portal_slot_rect_within(theme: &WebGoldenTheme, slot: &str, container: WebRect) -> WebRect {
+    let eps = 1.0;
+    let rects = web_portal_slot_rects(theme, slot);
+    let within = |r: WebRect| {
+        r.x + eps >= container.x
+            && rect_right(r) <= rect_right(container) + eps
+            && r.y + eps >= container.y
+            && rect_bottom(r) <= rect_bottom(container) + eps
+    };
+
+    rects
+        .into_iter()
+        .find(|&r| within(r))
+        .unwrap_or_else(|| panic!("web slot {slot} had no rect within {container:?}"))
+}
+
 fn fret_menu_item_heights_in_menus(snap: &fret_core::SemanticsSnapshot) -> Vec<f32> {
     let debug = std::env::var("FRET_DEBUG_MENU_SEMANTICS")
         .ok()
@@ -1297,6 +1338,16 @@ fn fret_node_heights_by_test_id(snap: &fret_core::SemanticsSnapshot, test_id: &s
         .iter()
         .filter(|n| n.test_id.as_deref() == Some(test_id))
         .map(|n| n.bounds.size.height.0)
+        .collect()
+}
+
+fn fret_nodes_by_test_id<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    test_id: &str,
+) -> Vec<&'a fret_core::SemanticsNode> {
+    snap.nodes
+        .iter()
+        .filter(|n| n.test_id.as_deref() == Some(test_id))
         .collect()
 }
 
@@ -5146,6 +5197,7 @@ fn web_vs_fret_select_scrollable_tiny_viewport_listbox_option_height_matches() {
 fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
+    let web_listbox = web_select_listbox(theme);
 
     let expected: std::collections::BTreeSet<i32> = web_portal_slot_heights(
         theme,
@@ -5272,6 +5324,37 @@ fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
     }
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox for {web_name}"));
+
+    let up_nodes = fret_nodes_by_test_id(&snap, "select-scroll-up-button");
+    let down_nodes = fret_nodes_by_test_id(&snap, "select-scroll-down-button");
+
+    assert!(
+        !up_nodes.is_empty(),
+        "{web_name} missing fret scroll-up node"
+    );
+    assert!(
+        !down_nodes.is_empty(),
+        "{web_name} missing fret scroll-down node"
+    );
+
+    // Match web: these nodes exist for geometry but are aria-hidden (not in the a11y tree).
+    for (label, nodes) in [("scroll-up", &up_nodes), ("scroll-down", &down_nodes)] {
+        assert!(
+            nodes.iter().all(|n| n.role == SemanticsRole::Generic),
+            "{web_name} expected {label} role=Generic; got roles={:?}",
+            nodes.iter().map(|n| n.role).collect::<Vec<_>>()
+        );
+        assert!(
+            nodes.iter().all(|n| !n.actions.focus && !n.actions.invoke),
+            "{web_name} expected {label} to have no focus/invoke actions"
+        );
+    }
+
     let up: std::collections::BTreeSet<i32> =
         fret_node_heights_by_test_id(&snap, "select-scroll-up-button")
             .into_iter()
@@ -5301,6 +5384,70 @@ fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
         &format!("{web_name} scroll_down_h"),
         down_h,
         expected_h,
+        1.0,
+    );
+
+    let web_up = web_portal_slot_rect_within(theme, "select-scroll-up-button", web_listbox.rect);
+    let web_down =
+        web_portal_slot_rect_within(theme, "select-scroll-down-button", web_listbox.rect);
+
+    let fret_up = up_nodes
+        .iter()
+        .copied()
+        .find(|n| fret_rect_contains(listbox.bounds, n.bounds))
+        .unwrap_or(up_nodes[0])
+        .bounds;
+    let fret_down = down_nodes
+        .iter()
+        .copied()
+        .find(|n| fret_rect_contains(listbox.bounds, n.bounds))
+        .unwrap_or(down_nodes[0])
+        .bounds;
+
+    let web_left = web_up.x - web_listbox.rect.x;
+    let web_right = rect_right(web_listbox.rect) - rect_right(web_up);
+    let web_top = web_up.y - web_listbox.rect.y;
+    assert_close(
+        &format!("{web_name} scroll_up_left"),
+        fret_up.origin.x.0 - listbox.bounds.origin.x.0,
+        web_left,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} scroll_up_right"),
+        (listbox.bounds.origin.x.0 + listbox.bounds.size.width.0)
+            - (fret_up.origin.x.0 + fret_up.size.width.0),
+        web_right,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} scroll_up_top"),
+        fret_up.origin.y.0 - listbox.bounds.origin.y.0,
+        web_top,
+        1.0,
+    );
+
+    let web_left = web_down.x - web_listbox.rect.x;
+    let web_right = rect_right(web_listbox.rect) - rect_right(web_down);
+    let web_bottom = rect_bottom(web_listbox.rect) - rect_bottom(web_down);
+    assert_close(
+        &format!("{web_name} scroll_down_left"),
+        fret_down.origin.x.0 - listbox.bounds.origin.x.0,
+        web_left,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} scroll_down_right"),
+        (listbox.bounds.origin.x.0 + listbox.bounds.size.width.0)
+            - (fret_down.origin.x.0 + fret_down.size.width.0),
+        web_right,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} scroll_down_bottom"),
+        (listbox.bounds.origin.y.0 + listbox.bounds.size.height.0)
+            - (fret_down.origin.y.0 + fret_down.size.height.0),
+        web_bottom,
         1.0,
     );
 }
