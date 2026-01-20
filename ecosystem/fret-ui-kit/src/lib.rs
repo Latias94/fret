@@ -36,7 +36,7 @@ pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef,
-    OverflowRefinement, Radius, SignedMetricRef, Space,
+    OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
@@ -67,7 +67,7 @@ pub mod prelude {
 
     pub use crate::{
         ChromeRefinement, ColorRef, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
-        SignedMetricRef, Size, Space, StyledExt, UiExt,
+        ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
     };
     pub use crate::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
 

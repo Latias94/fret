@@ -10,6 +10,7 @@ mod tests;
 
 pub use chrome::{
     ChromeRefinement, InsetRefinement, MarginEdgeRefinement, MarginRefinement, PaddingRefinement,
+    ShadowPreset,
 };
 pub use layout::{LayoutRefinement, LengthRefinement, SizeRefinement};
 pub use refs::{ColorRef, MetricRef, SignedMetricRef};

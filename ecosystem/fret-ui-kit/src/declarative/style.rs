@@ -6,7 +6,7 @@ use fret_ui::element::{
 
 use crate::style::{
     ChromeRefinement, InsetRefinement, LayoutRefinement, LengthRefinement, MarginRefinement,
-    PaddingRefinement, SizeRefinement,
+    PaddingRefinement, ShadowPreset, SizeRefinement,
 };
 use crate::{ColorRef, MetricRef, Radius, Space};
 
@@ -169,11 +169,20 @@ pub fn container_props(
 
     let layout = layout_style(theme, layout_refinement);
 
+    let shadow = match chrome.shadow {
+        Some(ShadowPreset::None) => None,
+        Some(ShadowPreset::Xs) => Some(shadow_xs(theme, radius)),
+        Some(ShadowPreset::Sm) => Some(shadow_sm(theme, radius)),
+        Some(ShadowPreset::Md) => Some(shadow_md(theme, radius)),
+        Some(ShadowPreset::Lg) => Some(shadow_lg(theme, radius)),
+        None => None,
+    };
+
     ContainerProps {
         layout,
         padding,
         background,
-        shadow: None,
+        shadow,
         border: Edges::all(border_width),
         border_color,
         corner_radii: Corners::all(radius),

@@ -105,10 +105,20 @@ pub struct ChromeRefinement {
     pub padding: Option<PaddingRefinement>,
     pub min_height: Option<MetricRef>,
     pub radius: Option<MetricRef>,
+    pub shadow: Option<ShadowPreset>,
     pub border_width: Option<MetricRef>,
     pub background: Option<ColorRef>,
     pub border_color: Option<ColorRef>,
     pub text_color: Option<ColorRef>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShadowPreset {
+    None,
+    Xs,
+    Sm,
+    Md,
+    Lg,
 }
 
 impl ChromeRefinement {
@@ -121,6 +131,9 @@ impl ChromeRefinement {
         }
         if other.radius.is_some() {
             self.radius = other.radius;
+        }
+        if other.shadow.is_some() {
+            self.shadow = other.shadow;
         }
         if other.border_width.is_some() {
             self.border_width = other.border_width;
@@ -197,6 +210,31 @@ impl ChromeRefinement {
     pub fn rounded(mut self, radius: Radius) -> Self {
         self.radius = Some(MetricRef::radius(radius));
         self
+    }
+
+    pub fn shadow(mut self, shadow: ShadowPreset) -> Self {
+        self.shadow = Some(shadow);
+        self
+    }
+
+    pub fn shadow_none(self) -> Self {
+        self.shadow(ShadowPreset::None)
+    }
+
+    pub fn shadow_xs(self) -> Self {
+        self.shadow(ShadowPreset::Xs)
+    }
+
+    pub fn shadow_sm(self) -> Self {
+        self.shadow(ShadowPreset::Sm)
+    }
+
+    pub fn shadow_md(self) -> Self {
+        self.shadow(ShadowPreset::Md)
+    }
+
+    pub fn shadow_lg(self) -> Self {
+        self.shadow(ShadowPreset::Lg)
     }
 
     // Tailwind-like spacing scale, backed by namespaced tokens.

@@ -134,6 +134,26 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
         self.style_with(ChromeRefinement::focused_border)
     }
 
+    pub fn shadow_none(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_none)
+    }
+
+    pub fn shadow_xs(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_xs)
+    }
+
+    pub fn shadow_sm(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_sm)
+    }
+
+    pub fn shadow_md(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_md)
+    }
+
+    pub fn shadow_lg(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_lg)
+    }
+
     pub fn debug_border(self, color: ColorRef) -> Self {
         self.style_with(|c| c.debug_border(color))
     }
@@ -612,6 +632,7 @@ mod tests {
             ))
             .insets(Edges4::all(Space::N1).neg())
             .focused_border()
+            .shadow_md()
             .debug_border_primary()
             .debug_border_destructive()
             .build();
@@ -658,6 +679,8 @@ mod tests {
             Some(ColorRef::Token { key, .. }) => assert_eq!(key, "destructive"),
             other => panic!("expected debug_border_destructive to set border_color, got {other:?}"),
         }
+
+        assert_eq!(dummy.chrome.shadow, Some(crate::style::ShadowPreset::Md));
     }
 
     #[test]
