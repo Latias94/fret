@@ -216,6 +216,17 @@ fn submenu_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMen
     }
 }
 
+fn system_menu_placeholder_item(
+    title: Arc<str>,
+    value: Arc<str>,
+    items: Vec<InWindowMenuEntry>,
+) -> InWindowMenuEntry {
+    InWindowMenuEntry::Submenu(InWindowSubmenu {
+        trigger: submenu_item(title, value, true),
+        entries: Arc::from(items.into_boxed_slice()),
+    })
+}
+
 fn build_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: &[MenuItem],
@@ -227,7 +238,19 @@ fn build_entries<H: UiHost>(
     for (idx, item) in items.iter().enumerate() {
         match item {
             MenuItem::Separator => out.push(InWindowMenuEntry::Separator),
-            MenuItem::SystemMenu { .. } => {}
+            MenuItem::SystemMenu {
+                title,
+                menu_type: _,
+            } => {
+                // In-window surfaces cannot materialize OS-owned menus. Keep a disabled placeholder
+                // entry so the authored menu shape remains visible.
+                let value: Arc<str> = Arc::from(format!("{prefix}.system_menu.{idx}"));
+                out.push(system_menu_placeholder_item(
+                    title.clone(),
+                    value,
+                    Vec::new(),
+                ));
+            }
             MenuItem::Command { command, when } => out.push(InWindowMenuEntry::Item(command_item(
                 cx,
                 command,
