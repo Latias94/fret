@@ -630,6 +630,15 @@ where
     }
 }
 
+impl<H: UiHost, F> UiBuilder<crate::ui::StackBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
 /// Extension trait providing the `ui()` entrypoint for types that opt into `UiPatchTarget`.
 pub trait UiExt: UiPatchTarget + Sized {
     fn ui(self) -> UiBuilder<Self> {
