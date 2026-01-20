@@ -117,12 +117,7 @@ impl CanvasPaintCache {
     }
 
     pub(crate) fn touch_paths_in_scene_ops(&mut self, ops: &[SceneOp]) {
-        for op in ops {
-            let SceneOp::Path { path, .. } = *op else {
-                continue;
-            };
-            let _ = self.paths.touch_path(path);
-        }
+        let _ = self.paths.touch_paths_in_scene_ops(ops);
     }
 
     pub(crate) fn diagnostics_path_cache_snapshot(&self) -> (usize, CacheStats) {

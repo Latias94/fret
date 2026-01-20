@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathStyle, UiServices};
+use fret_core::{
+    PathCommand, PathConstraints, PathId, PathMetrics, PathStyle, SceneOp, UiServices,
+};
 
 use super::CacheStats;
 
@@ -135,6 +137,20 @@ impl PathCache {
         };
         entry.last_used_frame = self.frame;
         true
+    }
+
+    /// Touch any paths referenced by `SceneOp::Path` so they are not pruned.
+    pub fn touch_paths_in_scene_ops(&mut self, ops: &[SceneOp]) -> u32 {
+        let mut touched: u32 = 0;
+        for op in ops {
+            let SceneOp::Path { path, .. } = *op else {
+                continue;
+            };
+            if self.touch_path(path) {
+                touched = touched.saturating_add(1);
+            }
+        }
+        touched
     }
 
     /// Returns a cached path for `(key, constraints.scale_factor)` if present.
@@ -274,9 +290,9 @@ impl PathCache {
 mod tests {
     use super::*;
     use fret_core::{
-        FillStyle, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
-        Point, Px, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
-        TextService,
+        Color, DrawOrder, FillStyle, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Point, Px, SceneOp, Size, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextInput, TextMetrics, TextService,
     };
 
     #[derive(Default)]
@@ -473,5 +489,40 @@ mod tests {
         assert_eq!(services.path_prepare_calls, 1);
         assert_eq!(cache.stats().get_hits, 1);
         assert_eq!(cache.stats().get_misses, 0);
+    }
+
+    #[test]
+    fn touch_paths_in_scene_ops_prevents_prune_age_release() {
+        let mut cache = PathCache::default();
+        let mut services = FakeServices::default();
+
+        let cmds = [
+            PathCommand::MoveTo(Point::new(Px(0.0), Px(0.0))),
+            PathCommand::LineTo(Point::new(Px(10.0), Px(0.0))),
+            PathCommand::Close,
+        ];
+        let constraints = PathConstraints { scale_factor: 1.0 };
+
+        cache.begin_frame(); // frame 1
+        let (id, _) = cache.prepare(
+            &mut services,
+            1,
+            &cmds,
+            PathStyle::Fill(FillStyle::default()),
+            constraints,
+        );
+
+        let ops = [SceneOp::Path {
+            order: DrawOrder(0),
+            origin: Point::new(Px(0.0), Px(0.0)),
+            path: id,
+            color: Color::TRANSPARENT,
+        }];
+
+        cache.begin_frame(); // frame 2
+        let touched = cache.touch_paths_in_scene_ops(&ops);
+        assert_eq!(touched, 1);
+        cache.prune(&mut services, 0, 10);
+        assert_eq!(services.path_release_calls, 0);
     }
 }
