@@ -32,10 +32,10 @@ Scope notes:
 | `zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick` | `NodeGraphInteractionState.zoom_on_scroll`, `.zoom_on_pinch`, `.zoom_on_double_click` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs` |
 | `panActivationKeyCode`, `zoomActivationKeyCode` | `NodeGraphInteractionState.pan_activation_key_code`, `.zoom_activation_key` (+ `space_to_pan`) | Implemented (naming differs) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs` |
 | `translateExtent` (constrain viewport) | `NodeGraphInteractionState.translate_extent` (clamped in `update_view_state`) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_math.rs` |
-| `fitView`, `fitViewOptions` (`padding`, `duration`, `ease`, `interpolate`, `nodes`) | `frame_nodes_in_view(...)` (immediate “frame selection”) | Partial (no animation/options, selection-only API) | `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs` |
-| Viewport animation helpers (`duration`, `ease`, `interpolate`) | No equivalent yet | Missing | `repo-ref/xyflow/packages/system/src/types/general.ts`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs` |
+| `fitView`, `fitViewOptions` (`padding`, `duration`, `ease`, `interpolate`, `nodes`) | `frame_nodes_in_view(...)` (animated “frame selection/all”) | Partial (has duration/interpolate, missing padding/nodes/ease) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs` |
+| Viewport animation helpers (`duration`, `ease`, `interpolate`) | Timer-driven viewport animation (duration + interpolate) | Partial (missing custom ease + helper APIs) | `ecosystem/fret-node/src/ui/canvas/state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
 | `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `NodeGraphInteractionState.auto_pan` (`on_node_drag`, `on_connect`, `speed`, `margin`) | Implemented (defaults differ) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
-| `autoPanOnNodeFocus` | `NodeGraphInteractionState.auto_pan.on_node_focus` | Missing (field exists but not wired) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs` |
+| `autoPanOnNodeFocus` | `NodeGraphInteractionState.auto_pan.on_node_focus` | Implemented (opt-in) | `ecosystem/fret-node/src/ui/canvas/widget/focus_nav.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/focus_auto_pan_conformance.rs` |
 | Inertial/momentum pan (not a first-class xyflow prop) | `NodeGraphInteractionState.pan_inertia` | Implemented (opt-in) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
 
 ### Selection / Keyboard
@@ -103,7 +103,6 @@ Scope notes:
 
 ## Recommended Next Steps (Top 3)
 
-1) **Viewport animation contract**: add duration/ease/interpolate to framing (`fitView`-like) and any “set viewport” commands; keep it headless-friendly by driving it from view-state + timers.
+1) **Fit-view option parity**: extend framing to support `padding`, `nodes`, and an `ease` surface (custom or preset), matching XyFlow's `fitViewOptions`.
 2) **Selection mode parity**: add a `full` vs `partial` marquee mode knob to match `selectionMode` semantics (current behavior is effectively “partial only”).
-3) **Focus-driven pan parity**: wire `auto_pan.on_node_focus` (defaulting toward xyflow’s `autoPanOnNodeFocus=true`) by calling `ensure_canvas_point_visible(...)` when keyboard focus moves.
-
+3) **Rendering toggle parity**: consider an explicit `onlyRenderVisibleElements` switch (currently culling is always-on), so apps can trade overhead vs pop-in.
