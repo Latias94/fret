@@ -16,9 +16,13 @@ Related:
 
 ## A. Fluent “Edges” Helpers
 
-- [ ] AUE-helpers-001 Add `UiBuilder::paddings(Edges<Space>)` (and `Edges<Px>` variant if needed).
-- [ ] AUE-helpers-002 Add `UiBuilder::margins(Edges<Space>)` (and `Edges<Px>` variant if needed).
-- [ ] AUE-helpers-003 Add `UiBuilder::insets(Edges<Space>)` (positioning) to avoid repetitive `top/right/bottom/left`.
+- [x] AUE-helpers-001 Add `UiBuilder::paddings(...)` that accepts a single token-aware 4-edge value.
+  - Evidence: `ecosystem/fret-ui-kit/src/edges4.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- [x] AUE-helpers-002 Add `UiBuilder::margins(...)` that accepts a single token-aware 4-edge value (supports `auto`).
+  - Evidence: `ecosystem/fret-ui-kit/src/edges4.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- [x] AUE-helpers-003 Add `UiBuilder::insets(...)` (positioning) that accepts a token-aware 4-edge value and supports
+  signed/negative values via `SignedMetricRef`.
+  - Evidence: `ecosystem/fret-ui-kit/src/edges4.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
 
 ## B. Chrome Presets (Discoverable Recipes)
 
@@ -52,4 +56,3 @@ Related:
   - `IntoElement` for props structs
   - `RenderOnce` boilerplate reduction
   - ergonomics for children slots
-

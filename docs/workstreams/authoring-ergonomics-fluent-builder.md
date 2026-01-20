@@ -94,8 +94,9 @@ gpui-component exposes `paddings(Edges)` / `margins(Edges)` which is a big ergon
 
 Fret today:
 
-- `UiBuilder` has `px/py/p/pt/pr/pb/pl` and `m/mx/my/...`, but no “all-edges at once” helper that takes a single
-  `Edges` value (token-based or pixel-based).
+- `UiBuilder` supports `paddings/margins/insets` via a token-aware 4-edge type (`Edges4`).
+  - This avoids the “repeat `pt/pr/pb/pl`” pattern when porting exact geometry from specs/goldens.
+  - `fret_core::Edges` remains Px-only (`crates/fret-core/src/geometry.rs`) and is not used for authoring.
 
 ### 4.3 “Per-corner radii” gap
 
@@ -113,8 +114,9 @@ gpui-component’s authoring loop starts from a single constructor (`div()`), th
 Fret today:
 
 - The patch chain (`ui()`) assumes you already have a component/type to patch.
-- When writing pure layout, authors still drop down to `cx.flex(...)` / `cx.container(...)` props structs, which is
-  correct but lower-density than gpui-component.
+- For layout-only authoring, we already have component-layer helpers like
+  `fret-ui-kit::declarative::stack::{hstack, vstack}` (`ecosystem/fret-ui-kit/src/declarative/stack.rs`), but they
+  are not integrated with the `ui()` patch chain (authors still pass `LayoutRefinement` explicitly).
 
 ---
 
@@ -123,8 +125,9 @@ Fret today:
 Recommendation: keep the existing `UiPatch` model, but provide two complementary “golden path” entry points:
 
 1) **Patch existing components** (already present): `component.ui().px_2().w_full().into_element(cx)`
-2) **Build layout nodes fluently** (missing): `ui::h_flex(cx, |cx| ...)` / `ui::v_flex(cx, |cx| ...)` returning a
-   patchable builder (or a patchable node wrapper) so layout code can look “styled” without writing props structs.
+2) **Build layout nodes fluently** (partially present): `stack::hstack/vstack` exist, but we still want an
+   integrated path where layout nodes can be patched via `ui()` (or an equivalent builder) without “props struct +
+   `LayoutRefinement` ceremony”.
 
 This keeps the layering clean:
 
@@ -141,9 +144,9 @@ This is not a 1:1 parity target; it is a “what should feel equally easy” che
 | gpui-component | Intent | Fret today | v1 action |
 | --- | --- | --- | --- |
 | `refine_style(&StyleRefinement)` | apply a patch | `ui().style(ChromeRefinement)` / `ui().layout(LayoutRefinement)` | Keep; add more shorthands |
-| `h_flex()` / `v_flex()` | start a flex layout | `cx.flex(...)` / `cx.row(...)` (non-fluent) | Add `ui::h_flex` / `ui::v_flex` constructors |
-| `paddings(Edges)` | batch edge edits | no single helper | Add `UiBuilder::paddings(...)` |
-| `margins(Edges)` | batch edge edits | no single helper | Add `UiBuilder::margins(...)` |
+| `h_flex()` / `v_flex()` | start a flex layout | `stack::hstack/vstack` (component-layer), or `cx.row/column` (runtime) | Integrate layout constructors with `ui()` patching (or provide a patchable wrapper) |
+| `paddings(Edges)` | batch edge edits | no single helper | Add `UiBuilder::paddings(Edges4<...>)` (token-aware + px-friendly) |
+| `margins(Edges)` | batch edge edits | no single helper | Add `UiBuilder::margins(Edges4<...>)` (token-aware + px-friendly, supports `auto`) |
 | `debug_*()` | debug borders | ad-hoc per component | Add builder debug helpers (debug-only gated) |
 | `focused_border(cx)` | focus ring/border | component-local focus ring logic | Add a `ChromeRefinement` preset in kit |
 | `popover_style(cx)` | common popover skin | component-local popover recipes | Add a preset in `fret-ui-shadcn` (policy layer) |
@@ -158,4 +161,3 @@ Execute the TODO tracker in small, reviewable slices:
 - Start with **helpers** (edges, debug helpers, per-corner radii).
 - Then add **layout constructors** (`ui::h_flex` / `ui::v_flex`) to reduce “props struct noise”.
 - Keep `docs/shadcn-declarative-progress.md` updated when the authoring surface changes.
-
