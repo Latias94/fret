@@ -665,10 +665,12 @@ fn stale_nodes_are_swept_after_gc_lag() {
     );
 
     let node_to_remove =
-        app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, app| {
-            runtime.prepare_window_for_frame(window, app.frame_id());
-            let st = runtime.for_window_mut(window);
-            st.node_entry(ids[1].1).unwrap().node
+        app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+            runtime
+                .for_window_mut(window)
+                .node_entry(ids[1].1)
+                .unwrap()
+                .node
         });
 
     // Remove item 2 from the render output, but it should not be swept immediately.

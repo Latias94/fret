@@ -317,8 +317,8 @@ pub fn render_root<H: UiHost>(
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable = reachable_from_root
-                .get_or_insert_with(|| collect_reachable_nodes_capped(ui, root_node, 200_000));
+            let reachable =
+                reachable_from_root.get_or_insert_with(|| collect_reachable_nodes(ui, root_node));
             if reachable.contains(&entry.node) {
                 return true;
             }
@@ -545,8 +545,8 @@ fn render_dismissible_root_impl<
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable = reachable_from_root
-                .get_or_insert_with(|| collect_reachable_nodes_capped(ui, root_node, 200_000));
+            let reachable =
+                reachable_from_root.get_or_insert_with(|| collect_reachable_nodes(ui, root_node));
             if reachable.contains(&entry.node) {
                 return true;
             }
@@ -803,7 +803,12 @@ fn mount_element<H: UiHost>(
             .or_insert_with(|| ui.children(node));
 
         let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
-        if transitioned_into_reuse {
+        let touched =
+            window_state.touch_view_cache_subtree_elements_if_recorded(id, frame_id, root_id);
+        if transitioned_into_reuse && !touched {
+            // If a cache root transitions into reuse without having a recorded subtree list yet,
+            // fall back to walking the retained subtree so GC liveness bookkeeping remains
+            // correct on the first cache-hit frame.
             mark_existing_declarative_subtree_seen(
                 ui,
                 window_state,
@@ -816,23 +821,19 @@ fn mount_element<H: UiHost>(
                 id,
                 collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
             );
-        } else {
-            let touched =
-                window_state.touch_view_cache_subtree_elements_if_recorded(id, frame_id, root_id);
-            if !touched {
-                mark_existing_declarative_subtree_seen(
-                    ui,
-                    window_state,
-                    window_frame,
-                    root_id,
-                    frame_id,
-                    node,
-                );
-                window_state.record_view_cache_subtree_elements(
-                    id,
-                    collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
-                );
-            }
+        } else if !touched {
+            mark_existing_declarative_subtree_seen(
+                ui,
+                window_state,
+                window_frame,
+                root_id,
+                frame_id,
+                node,
+            );
+            window_state.record_view_cache_subtree_elements(
+                id,
+                collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
+            );
         }
         inherit_observations_for_existing_subtree(ui, window_state, window_frame, node);
         collect_scroll_handle_bindings_for_existing_subtree(
@@ -879,6 +880,8 @@ fn mount_element<H: UiHost>(
         ui.set_children(node, child_nodes.clone());
         window_frame.children.insert(node, child_nodes);
 
+        // Keep a complete retained-subtree element list for this cache root so cache-hit frames
+        // can refresh liveness without re-running the render closure.
         window_state.record_view_cache_subtree_elements(
             id,
             collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
@@ -1064,12 +1067,7 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
             window_state.touch_debug_identity_for_element(frame_id, element);
         }
 
-        // Do not rely on `window_frame.children` here: when view-cache reuses skip mounts, the
-        // per-frame child table can become stale/partial. The `UiTree` is the source of truth for
-        // the retained subtree we want to keep alive across frames.
-        for child in ui.children(node) {
-            stack.push(child);
-        }
+        push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
 }
 
@@ -1128,26 +1126,17 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
             }
         }
 
-        for child in ui.children(node) {
-            stack.push(child);
-        }
+        push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
     out
 }
 
-fn collect_reachable_nodes_capped<H: UiHost>(
-    ui: &UiTree<H>,
-    root: NodeId,
-    cap: usize,
-) -> HashSet<NodeId> {
+fn collect_reachable_nodes<H: UiHost>(ui: &UiTree<H>, root: NodeId) -> HashSet<NodeId> {
     let mut out: HashSet<NodeId> = HashSet::new();
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
         if !out.insert(node) {
             continue;
-        }
-        if out.len() >= cap {
-            break;
         }
         for child in ui.children(node) {
             stack.push(child);
@@ -1167,9 +1156,7 @@ fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
             collect_scroll_handle_bindings(record.element, &record.instance, out);
         }
 
-        for child in ui.children(node) {
-            stack.push(child);
-        }
+        push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
 }
 
@@ -1187,11 +1174,25 @@ fn view_cache_root_needs_layout_for_deferred_scroll_requests<H: UiHost>(
             return true;
         }
 
-        for child in ui.children(node) {
-            stack.push(child);
-        }
+        push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
     false
+}
+
+fn push_existing_subtree_children<H: UiHost>(
+    ui: &UiTree<H>,
+    window_frame: &WindowFrame,
+    node: NodeId,
+    stack: &mut Vec<NodeId>,
+) {
+    let children = ui.children(node);
+    if children.is_empty() {
+        if let Some(children) = window_frame.children.get(&node) {
+            stack.extend(children.iter().copied());
+        }
+        return;
+    }
+    stack.extend(children);
 }
 
 fn inherit_observations_for_existing_subtree<H: UiHost>(
@@ -1211,9 +1212,7 @@ fn inherit_observations_for_existing_subtree<H: UiHost>(
             }
         }
 
-        for child in ui.children(node) {
-            stack.push(child);
-        }
+        push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
 }
 

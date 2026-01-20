@@ -96,6 +96,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         *self.stack.last().expect("root exists")
     }
 
+    fn new_any_element(
+        &mut self,
+        id: GlobalElementId,
+        kind: ElementKind,
+        children: Vec<AnyElement>,
+    ) -> AnyElement {
+        AnyElement::new(id, kind, children)
+    }
+
     /// Returns the nearest ancestor state value of type `S` in the current element scope stack.
     ///
     /// This is a lightweight building block for component-layer "provider" patterns (e.g. Radix
@@ -528,7 +537,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Container(props), children)
+            cx.new_any_element(id, ElementKind::Container(props), children)
         })
     }
 
@@ -541,7 +550,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Semantics(props), children)
+            cx.new_any_element(id, ElementKind::Semantics(props), children)
         })
     }
 
@@ -554,7 +563,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::SemanticFlex(props), children)
+            cx.new_any_element(id, ElementKind::SemanticFlex(props), children)
         })
     }
 
@@ -567,7 +576,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::FocusScope(props), children)
+            cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
     }
 
@@ -627,7 +636,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx.window_state.end_view_cache_scope(id);
                 children
             };
-            AnyElement::new(id, ElementKind::ViewCache(props), children)
+            cx.new_any_element(id, ElementKind::ViewCache(props), children)
         })
     }
 
@@ -640,7 +649,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx, id);
-            AnyElement::new(id, ElementKind::FocusScope(props), children)
+            cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
     }
 
@@ -653,7 +662,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx, id);
-            AnyElement::new(id, ElementKind::Semantics(props), children)
+            cx.new_any_element(id, ElementKind::Semantics(props), children)
         })
     }
 
@@ -679,7 +688,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Opacity(props), children)
+            cx.new_any_element(id, ElementKind::Opacity(props), children)
         })
     }
 
@@ -709,7 +718,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::EffectLayer(props), children)
+            cx.new_any_element(id, ElementKind::EffectLayer(props), children)
         })
     }
 
@@ -769,7 +778,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::VisualTransform(props), children)
+            cx.new_any_element(id, ElementKind::VisualTransform(props), children)
         })
     }
 
@@ -782,7 +791,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::RenderTransform(props), children)
+            cx.new_any_element(id, ElementKind::RenderTransform(props), children)
         })
     }
 
@@ -795,7 +804,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::FractionalRenderTransform(props), children)
+            cx.new_any_element(id, ElementKind::FractionalRenderTransform(props), children)
         })
     }
 
@@ -808,7 +817,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Anchored(props), children)
+            cx.new_any_element(id, ElementKind::Anchored(props), children)
         })
     }
 
@@ -838,7 +847,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::InteractivityGate(props), children)
+            cx.new_any_element(id, ElementKind::InteractivityGate(props), children)
         })
     }
 
@@ -863,7 +872,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     focused,
                 },
             );
-            AnyElement::new(id, ElementKind::Pressable(props), children)
+            cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
 
@@ -889,7 +898,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 },
                 id,
             );
-            AnyElement::new(id, ElementKind::Pressable(props), children)
+            cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
 
@@ -915,7 +924,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 },
                 id,
             );
-            AnyElement::new(id, ElementKind::Pressable(props), children)
+            cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
 
@@ -1222,7 +1231,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.pointer_region_clear_on_wheel();
             cx.pointer_region_clear_on_pinch_gesture();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::PointerRegion(props), children)
+            cx.new_any_element(id, ElementKind::PointerRegion(props), children)
         })
     }
 
@@ -1235,7 +1244,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             cx.internal_drag_region_clear_on_internal_drag();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::InternalDragRegion(props), children)
+            cx.new_any_element(id, ElementKind::InternalDragRegion(props), children)
         })
     }
 
@@ -1661,7 +1670,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Stack(props), children)
+            cx.new_any_element(id, ElementKind::Stack(props), children)
         })
     }
 
@@ -1674,7 +1683,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Column(props), children)
+            cx.new_any_element(id, ElementKind::Column(props), children)
         })
     }
 
@@ -1687,7 +1696,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Row(props), children)
+            cx.new_any_element(id, ElementKind::Row(props), children)
         })
     }
 
@@ -1695,7 +1704,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn spacer(&mut self, props: SpacerProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::Spacer(props), Vec::new())
+            cx.new_any_element(id, ElementKind::Spacer(props), Vec::new())
         })
     }
 
@@ -1703,7 +1712,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn text(&mut self, text: impl Into<std::sync::Arc<str>>) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::Text(TextProps::new(text)), Vec::new())
+            cx.new_any_element(id, ElementKind::Text(TextProps::new(text)), Vec::new())
         })
     }
 
@@ -1711,7 +1720,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn text_props(&mut self, props: TextProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::Text(props), Vec::new())
+            cx.new_any_element(id, ElementKind::Text(props), Vec::new())
         })
     }
 
@@ -1719,7 +1728,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn styled_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(
+            cx.new_any_element(
                 id,
                 ElementKind::StyledText(StyledTextProps::new(rich)),
                 Vec::new(),
@@ -1731,7 +1740,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn styled_text_props(&mut self, props: StyledTextProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::StyledText(props), Vec::new())
+            cx.new_any_element(id, ElementKind::StyledText(props), Vec::new())
         })
     }
 
@@ -1739,7 +1748,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn selectable_text(&mut self, rich: fret_core::AttributedText) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(
+            cx.new_any_element(
                 id,
                 ElementKind::SelectableText(SelectableTextProps::new(rich)),
                 Vec::new(),
@@ -1751,7 +1760,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn selectable_text_props(&mut self, props: SelectableTextProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::SelectableText(props), Vec::new())
+            cx.new_any_element(id, ElementKind::SelectableText(props), Vec::new())
         })
     }
 
@@ -1759,7 +1768,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn text_input(&mut self, props: TextInputProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::TextInput(props), Vec::new())
+            cx.new_any_element(id, ElementKind::TextInput(props), Vec::new())
         })
     }
 
@@ -1767,7 +1776,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn text_area(&mut self, props: TextAreaProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::TextArea(props), Vec::new())
+            cx.new_any_element(id, ElementKind::TextArea(props), Vec::new())
         })
     }
 
@@ -1780,7 +1789,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::ResizablePanelGroup(props), children)
+            cx.new_any_element(id, ElementKind::ResizablePanelGroup(props), children)
         })
     }
 
@@ -1788,7 +1797,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn image(&mut self, image: fret_core::ImageId) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::Image(ImageProps::new(image)), Vec::new())
+            cx.new_any_element(id, ElementKind::Image(ImageProps::new(image)), Vec::new())
         })
     }
 
@@ -1796,7 +1805,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn image_props(&mut self, props: ImageProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::Image(props), Vec::new())
+            cx.new_any_element(id, ElementKind::Image(props), Vec::new())
         })
     }
 
@@ -1812,7 +1821,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.with_state_for(id, CanvasPaintHooks::default, |hooks| {
                 hooks.on_paint = Some(on_paint.clone());
             });
-            AnyElement::new(id, ElementKind::Canvas(props), Vec::new())
+            cx.new_any_element(id, ElementKind::Canvas(props), Vec::new())
         })
     }
 
@@ -1839,7 +1848,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn viewport_surface_props(&mut self, props: ViewportSurfaceProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::ViewportSurface(props), Vec::new())
+            cx.new_any_element(id, ElementKind::ViewportSurface(props), Vec::new())
         })
     }
 
@@ -1852,7 +1861,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn svg_icon_props(&mut self, props: SvgIconProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::SvgIcon(props), Vec::new())
+            cx.new_any_element(id, ElementKind::SvgIcon(props), Vec::new())
         })
     }
 
@@ -1865,7 +1874,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn spinner_props(&mut self, props: SpinnerProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::Spinner(props), Vec::new())
+            cx.new_any_element(id, ElementKind::Spinner(props), Vec::new())
         })
     }
 
@@ -1879,7 +1888,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_hover_region == Some(id);
             let children = f(cx, hovered);
-            AnyElement::new(id, ElementKind::HoverRegion(props), children)
+            cx.new_any_element(id, ElementKind::HoverRegion(props), children)
         })
     }
 
@@ -1892,7 +1901,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::WheelRegion(props), children)
+            cx.new_any_element(id, ElementKind::WheelRegion(props), children)
         })
     }
 
@@ -1905,7 +1914,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Scroll(props), children)
+            cx.new_any_element(id, ElementKind::Scroll(props), children)
         })
     }
 
@@ -1913,7 +1922,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn scrollbar(&mut self, props: ScrollbarProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
-            AnyElement::new(id, ElementKind::Scrollbar(props), Vec::new())
+            cx.new_any_element(id, ElementKind::Scrollbar(props), Vec::new())
         })
     }
 
@@ -2160,7 +2169,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             });
 
             let children = f(cx, &visible_items);
-            AnyElement::new(
+            cx.new_any_element(
                 id,
                 ElementKind::VirtualList(VirtualListProps {
                     layout,
@@ -2190,7 +2199,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Flex(props), children)
+            cx.new_any_element(id, ElementKind::Flex(props), children)
         })
     }
 
@@ -2206,7 +2215,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.roving_clear_on_typeahead();
             cx.roving_clear_on_navigate();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::RovingFlex(props), children)
+            cx.new_any_element(id, ElementKind::RovingFlex(props), children)
         })
     }
 
@@ -2219,7 +2228,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let children = f(cx);
-            AnyElement::new(id, ElementKind::Grid(props), children)
+            cx.new_any_element(id, ElementKind::Grid(props), children)
         })
     }
 
