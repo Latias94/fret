@@ -34,6 +34,12 @@ pub enum Effect {
     ///
     /// Web runners may ignore this request.
     QuitApp,
+    /// Show the standard native "About" panel when available.
+    ///
+    /// Platform mapping:
+    /// - macOS: `NSApplication orderFrontStandardAboutPanel:`
+    /// - Other platforms: runners may ignore this request.
+    ShowAboutPanel,
     /// Hide the application (macOS: `NSApplication hide:`).
     ///
     /// Other platforms may ignore this request.
