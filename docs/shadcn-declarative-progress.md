@@ -149,6 +149,20 @@ let col = ui::v_flex(cx, move |cx| {
 .into_element(cx);
 ```
 
+Overlay stack (layered children):
+
+```rust
+let overlay = ui::stack(cx, move |cx| {
+    vec![
+        // Underlay (e.g. modal barrier)
+        cx.container(Default::default(), |_cx| Vec::new()),
+        // Foreground content
+        DialogContent::new(vec![]).ui().into_element(cx),
+    ]
+})
+.into_element(cx);
+```
+
 ### Coverage Tracker (Update as we proceed)
 
 Legend:
