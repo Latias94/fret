@@ -13,10 +13,16 @@
       },
       "timeout_frames": 240
     },
+    { "type": "press_key", "key": "f10" },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-menubar-file" }
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-file" }
+      },
+      "timeout_frames": 120
     },
+    { "type": "press_key", "key": "down" },
     {
       "type": "wait_until",
       "predicate": {
