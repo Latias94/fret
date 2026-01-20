@@ -232,14 +232,24 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         wire_drag: &WireDrag,
         zoom: f32,
     ) {
-        let text = match &wire_drag.kind {
-            WireDragKind::New { bundle, .. } if bundle.len() > 1 => {
-                Arc::<str>::from(format!("Bundle: {}", bundle.len()))
+        let invalid_hover =
+            self.interaction.hover_port.is_some() && !self.interaction.hover_port_valid;
+        let text = if invalid_hover {
+            self.interaction
+                .hover_port_diagnostic
+                .as_ref()
+                .map(|(_sev, msg)| msg.clone())
+                .unwrap_or_else(|| Arc::<str>::from("Invalid connection"))
+        } else {
+            match &wire_drag.kind {
+                WireDragKind::New { bundle, .. } if bundle.len() > 1 => {
+                    Arc::<str>::from(format!("Bundle: {}", bundle.len()))
+                }
+                WireDragKind::ReconnectMany { edges } if edges.len() > 1 => {
+                    Arc::<str>::from(format!("Yank: {}", edges.len()))
+                }
+                _ => return,
             }
-            WireDragKind::ReconnectMany { edges } if edges.len() > 1 => {
-                Arc::<str>::from(format!("Yank: {}", edges.len()))
-            }
-            _ => return,
         };
 
         let mut text_style = self.style.context_menu_text_style.clone();
@@ -274,26 +284,45 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             Size::new(Px(box_w), Px(box_h)),
         );
 
-        let border_color =
-            if self.interaction.hover_port.is_some() && !self.interaction.hover_port_valid {
-                if self.interaction.hover_port_convertible {
-                    Color {
+        let border_color = if invalid_hover {
+            if self.interaction.hover_port_convertible {
+                Color {
+                    r: 0.95,
+                    g: 0.75,
+                    b: 0.20,
+                    a: 1.0,
+                }
+            } else {
+                match self
+                    .interaction
+                    .hover_port_diagnostic
+                    .as_ref()
+                    .map(|(sev, _)| *sev)
+                    .unwrap_or(DiagnosticSeverity::Error)
+                {
+                    DiagnosticSeverity::Info => Color {
+                        r: 0.20,
+                        g: 0.55,
+                        b: 0.95,
+                        a: 1.0,
+                    },
+                    DiagnosticSeverity::Warning => Color {
                         r: 0.95,
                         g: 0.75,
                         b: 0.20,
                         a: 1.0,
-                    }
-                } else {
-                    Color {
+                    },
+                    DiagnosticSeverity::Error => Color {
                         r: 0.90,
                         g: 0.35,
                         b: 0.35,
                         a: 1.0,
-                    }
+                    },
                 }
-            } else {
-                self.style.context_menu_border
-            };
+            }
+        } else {
+            self.style.context_menu_border
+        };
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(69),

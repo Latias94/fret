@@ -78,6 +78,16 @@ fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
     assert_eq!(canvas.interaction.hover_port, Some(b_out));
     assert!(!canvas.interaction.hover_port_valid);
     assert!(!canvas.interaction.hover_port_convertible);
+    assert!(
+        canvas.interaction.hover_port_diagnostic.is_some(),
+        "expected a hover-time diagnostic for invalid connection"
+    );
+    if let Some((_sev, msg)) = canvas.interaction.hover_port_diagnostic.as_ref() {
+        assert!(
+            !msg.is_empty(),
+            "expected non-empty hover diagnostic message"
+        );
+    }
 }
 
 #[test]
@@ -131,6 +141,16 @@ fn wire_drag_hover_tracks_non_connectable_end_port_as_invalid() {
     assert_eq!(canvas.interaction.hover_port, Some(b_in));
     assert!(!canvas.interaction.hover_port_valid);
     assert!(!canvas.interaction.hover_port_convertible);
+    let msg = canvas
+        .interaction
+        .hover_port_diagnostic
+        .as_ref()
+        .map(|(_sev, msg)| msg.as_ref())
+        .unwrap_or_default();
+    assert!(
+        msg.contains("not connectable"),
+        "expected connectable-end gating diagnostic, got: {msg:?}"
+    );
 }
 
 #[test]
@@ -179,4 +199,5 @@ fn wire_drag_hover_marks_valid_target_port_as_valid() {
 
     assert_eq!(canvas.interaction.hover_port, Some(b_in));
     assert!(canvas.interaction.hover_port_valid);
+    assert!(canvas.interaction.hover_port_diagnostic.is_none());
 }

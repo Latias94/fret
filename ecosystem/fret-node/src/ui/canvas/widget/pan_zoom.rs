@@ -123,6 +123,7 @@ pub(super) fn begin_panning<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.hover_port = None;
     canvas.interaction.hover_port_valid = false;
     canvas.interaction.hover_port_convertible = false;
+    canvas.interaction.hover_port_diagnostic = None;
 
     canvas.interaction.panning = true;
     canvas.interaction.panning_button = Some(button);

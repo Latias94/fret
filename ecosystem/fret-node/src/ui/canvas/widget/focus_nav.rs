@@ -400,6 +400,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.interaction.hover_port = None;
             self.interaction.hover_port_valid = false;
             self.interaction.hover_port_convertible = false;
+            self.interaction.hover_port_diagnostic = None;
             return true;
         }
 

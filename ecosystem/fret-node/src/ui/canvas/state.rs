@@ -81,6 +81,7 @@ pub(crate) struct InteractionState {
     pub(crate) hover_port: Option<PortId>,
     pub(crate) hover_port_valid: bool,
     pub(crate) hover_port_convertible: bool,
+    pub(crate) hover_port_diagnostic: Option<(DiagnosticSeverity, Arc<str>)>,
     pub(crate) context_menu: Option<ContextMenuState>,
     pub(crate) searcher: Option<SearcherState>,
     pub(crate) pending_insert_node_drag: Option<PendingInsertNodeDrag>,

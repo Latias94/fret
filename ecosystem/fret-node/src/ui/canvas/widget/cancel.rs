@@ -126,6 +126,7 @@ fn cancel_active_gestures_inner<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.interaction.hover_port = None;
     canvas.interaction.hover_port_valid = false;
     canvas.interaction.hover_port_convertible = false;
+    canvas.interaction.hover_port_diagnostic = None;
     canvas.interaction.hover_edge = None;
     canvas.interaction.hover_edge_anchor = None;
     canvas.interaction.focused_edge = None;
