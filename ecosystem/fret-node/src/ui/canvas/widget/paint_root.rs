@@ -248,14 +248,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             };
 
             let replay_delta = Point::new(Px(0.0), Px(0.0));
-            let groups_hit = self
-                .groups_scene_cache
-                .try_replay(groups_key, cx.scene, replay_delta);
-            if groups_hit {
-                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
+            let groups_hit = self.groups_scene_cache.try_replay_with(
+                groups_key,
+                cx.scene,
+                replay_delta,
+                |ops| {
                     self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
-            } else {
+                },
+            );
+            if !groups_hit {
                 let render_groups: RenderData = self.collect_render_data(
                     &*cx.app,
                     &snapshot,
@@ -281,12 +282,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 tmp.push(SceneOp::PopClip);
                 self.groups_scene_cache
                     .store_ops(groups_key, tmp.ops().to_vec());
-                let _ = self
-                    .groups_scene_cache
-                    .try_replay(groups_key, cx.scene, replay_delta);
-                if let Some(ops) = self.groups_scene_cache.ops_for_key(groups_key) {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
+                let _ = self.groups_scene_cache.try_replay_with(
+                    groups_key,
+                    cx.scene,
+                    replay_delta,
+                    |ops| {
+                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                    },
+                );
             }
 
             // Selected group border overlay must remain ordered before edges (ADR 0082).
@@ -414,14 +417,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             ),
                         );
 
-                        if self
-                            .edges_scene_cache
-                            .try_replay(tile_key, cx.scene, replay_delta)
-                        {
-                            self.edges_build_states.remove(&tile_key);
-                            if let Some(ops) = self.edges_scene_cache.ops_for_key(tile_key) {
+                        if self.edges_scene_cache.try_replay_with(
+                            tile_key,
+                            cx.scene,
+                            replay_delta,
+                            |ops| {
                                 self.paint_cache.touch_paths_in_scene_ops(ops);
-                            }
+                            },
+                        ) {
+                            self.edges_build_states.remove(&tile_key);
                             continue;
                         }
 
@@ -571,14 +575,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let tile_key = tile_cache_key(labels_base_key, tile);
                         self.edge_labels_tile_keys_scratch.push(tile_key);
 
-                        if self
-                            .edge_labels_scene_cache
-                            .try_replay(tile_key, cx.scene, replay_delta)
-                        {
-                            self.edge_labels_build_states.remove(&tile_key);
-                            if let Some(ops) = self.edge_labels_scene_cache.ops_for_key(tile_key) {
+                        if self.edge_labels_scene_cache.try_replay_with(
+                            tile_key,
+                            cx.scene,
+                            replay_delta,
+                            |ops| {
                                 self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                            }
+                            },
+                        ) {
+                            self.edge_labels_build_states.remove(&tile_key);
                             continue;
                         }
 
@@ -723,14 +728,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         b.finish()
                     };
 
-                    let edges_hit =
-                        self.edges_scene_cache
-                            .try_replay(edges_key, cx.scene, replay_delta);
+                    let edges_hit = self.edges_scene_cache.try_replay_with(
+                        edges_key,
+                        cx.scene,
+                        replay_delta,
+                        |ops| {
+                            self.paint_cache.touch_paths_in_scene_ops(ops);
+                        },
+                    );
                     if edges_hit {
                         self.edges_build_states.remove(&edges_key);
-                        if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
-                            self.paint_cache.touch_paths_in_scene_ops(ops);
-                        }
                     } else {
                         let mut state =
                             self.edges_build_states
@@ -823,14 +830,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         if state.next_edge >= state.edges.len() {
                             self.edges_scene_cache
                                 .store_ops(edges_key, state.ops.clone());
-                            let _ = self.edges_scene_cache.try_replay(
+                            let _ = self.edges_scene_cache.try_replay_with(
                                 edges_key,
                                 cx.scene,
                                 replay_delta,
+                                |ops| {
+                                    self.paint_cache.touch_paths_in_scene_ops(ops);
+                                },
                             );
-                            if let Some(ops) = self.edges_scene_cache.ops_for_key(edges_key) {
-                                self.paint_cache.touch_paths_in_scene_ops(ops);
-                            }
                         } else {
                             cx.scene.replay_ops_translated(&state.ops, replay_delta);
                             self.paint_cache.touch_paths_in_scene_ops(&state.ops);
@@ -922,13 +929,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     self.paint_edge_overlays_selected_hovered(cx, &snapshot, &geom, zoom);
 
                     // Labels must remain on top of selected/hovered overlays.
-                    if self
-                        .edge_labels_scene_cache
-                        .try_replay(labels_key, cx.scene, replay_delta)
-                    {
-                        if let Some(ops) = self.edge_labels_scene_cache.ops_for_key(labels_key) {
+                    if self.edge_labels_scene_cache.try_replay_with(
+                        labels_key,
+                        cx.scene,
+                        replay_delta,
+                        |ops| {
                             self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                        }
+                        },
+                    ) {
                     } else if let Some(state) = self
                         .edge_labels_build_state
                         .as_ref()
@@ -971,14 +979,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 b.finish()
             };
 
-            let nodes_hit = self
-                .nodes_scene_cache
-                .try_replay(nodes_key, cx.scene, replay_delta);
-            if nodes_hit {
-                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
-            } else {
+            let nodes_hit =
+                self.nodes_scene_cache
+                    .try_replay_with(nodes_key, cx.scene, replay_delta, |ops| {
+                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                    });
+            if !nodes_hit {
                 let render_nodes: RenderData = self.collect_render_data(
                     &*cx.app,
                     &snapshot,
@@ -1004,12 +1010,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 tmp.push(SceneOp::PopClip);
                 self.nodes_scene_cache
                     .store_ops(nodes_key, tmp.ops().to_vec());
-                let _ = self
-                    .nodes_scene_cache
-                    .try_replay(nodes_key, cx.scene, replay_delta);
-                if let Some(ops) = self.nodes_scene_cache.ops_for_key(nodes_key) {
-                    self.paint_cache.touch_text_blobs_in_scene_ops(ops);
-                }
+                let _ = self.nodes_scene_cache.try_replay_with(
+                    nodes_key,
+                    cx.scene,
+                    replay_delta,
+                    |ops| {
+                        self.paint_cache.touch_text_blobs_in_scene_ops(ops);
+                    },
+                );
             }
 
             // --- Nodes (dynamic overlays) ---
