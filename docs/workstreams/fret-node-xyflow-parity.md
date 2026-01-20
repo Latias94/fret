@@ -72,7 +72,7 @@ Headless / substrate ergonomics:
 Built-in add-ons:
 - [~] Background variants parity (dots / cross) + per-editor theming.
 - [~] First-class NodeToolbar / EdgeToolbar primitives (overlay positioning + hit-testing discipline).
-- [ ] “Custom edge” Stage 2 (custom path builders / painters) with a stable contract.
+- [x] “Custom edge” Stage 2 (custom path builders) with a stable contract.
 
 ## Milestones
 
@@ -147,11 +147,19 @@ Deliverables:
   plus markers and label placement hooks.
 
 Work items:
-- [ ] Define the Stage 2 edge extension contract:
+- [x] Define and implement the Stage 2 edge extension contract (custom paths):
   - Current Stage 1: `ecosystem/fret-node/src/ui/edge_types.rs`
   - Stage 2 TODO is tracked in `docs/node-graph-xyflow-parity.md`
-- [ ] Ensure hit-testing semantics remain deterministic (especially under semantic zoom).
-- [ ] Add conformance tests for:
+  - Implemented:
+    - `NodeGraphEdgeTypes::register_path(...)` + `EdgeCustomPath` (`ecosystem/fret-node/src/ui/edge_types.rs`)
+    - Paint + hit-test + AABB alignment:
+      - painting: `ecosystem/fret-node/src/ui/canvas/widget/paint_edges.rs`, `ecosystem/fret-node/src/ui/canvas/paint.rs`
+      - hit-test: `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_math.rs`
+      - spatial index patch: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry.rs`
+      - internals edge centers (EdgeToolbar): `ecosystem/fret-node/src/ui/canvas/widget/stores.rs`
+    - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
+- [~] Ensure hit-testing semantics remain deterministic (especially under semantic zoom).
+- [~] Add conformance tests for:
   - path generation determinism,
   - hit-test width semantics,
   - selection + elevate-on-select interactions across custom edges.

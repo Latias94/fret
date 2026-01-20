@@ -183,7 +183,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - `edgeTypes` registry (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` (`NodeGraphEdgeTypes`)
   - Notes:
     - `NodeGraphPresenter::edge_render_hint` remains the baseline; `NodeGraphEdgeTypes` overrides are applied in `NodeGraphCanvas`.
-    - Custom edge painters/path builders are deferred (Stage 2).
+    - Stage 2 custom edge paths are supported via `NodeGraphEdgeTypes::register_path(...)` (`EdgeCustomPath`).
+      The canvas uses the custom path for painting, hit-testing, edge labels, and EdgeToolbar internals.
 
 - [~] **Per-node/edge view lifecycle + memoization strategy**
   - XyFlow: React memoization + internals updates + DOM handle bounds pipeline
@@ -857,7 +858,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: edge types (`edgeTypes`) + label renderer
   - fret-node:
     - Stage 1 (hint overrides): `ecosystem/fret-node/src/ui/edge_types.rs` + `ecosystem/fret-node/src/ui/canvas/widget.rs`
-    - Stage 2 (custom painters/path builders): TODO
+    - Stage 2 (custom paths): implemented via `NodeGraphEdgeTypes::register_path(...)` and
+      `wire_math::path_midpoint_and_normal(...)` (label anchor + normal).
 
 - [~] **Plugin-like extension hooks**
   - XyFlow: store middleware maps for node/edge changes
