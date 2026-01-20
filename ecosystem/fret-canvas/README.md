@@ -69,6 +69,10 @@ To reduce foot-guns, prefer the on-hit hook variants when replaying cached ops:
 - `SceneOpTileCache::try_replay_with(..., |ops| { ...touch... })`
 - `warm_scene_op_tiles_u64_with(..., |ops| { ...touch... }, ...)`
 
+If you have multiple retained caches, you can aggregate touch behavior into one call:
+
+- `(&mut text_cache, &mut path_cache, &mut svg_cache).touch_hosted_resources_in_scene_ops(&ops)`
+
 ## Future: declarative surface
 
 Fret now provides a declarative canvas element in `crates/fret-ui` (ADR 0156).
