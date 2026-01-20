@@ -533,7 +533,6 @@ impl UiDiagnosticsService {
                     wait_frames_remaining: 0,
                     wait_until: None,
                     last_reported_step: Some(0),
-                    missing_target_dumped_step: None,
                 },
             );
             self.write_script_result(UiScriptResultV1 {
@@ -709,22 +708,46 @@ impl UiDiagnosticsService {
             }
             UiActionStepV1::Click { target, button } => {
                 let Some(snapshot) = semantics_snapshot else {
-                    self.active_scripts.insert(window, active);
                     output.request_redraw = true;
+                    let label = format!("script-step-{step_index:04}-click-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
                     return output;
                 };
                 let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
                 else {
-                    if self.cfg.script_auto_dump
-                        && active.missing_target_dumped_step != Some(step_index)
-                    {
-                        self.request_force_dump(format!(
-                            "script-step-{step_index:04}-click-no-semantics-match"
-                        ));
-                        active.missing_target_dumped_step = Some(step_index);
-                    }
-                    self.active_scripts.insert(window, active);
                     output.request_redraw = true;
+                    let label = format!("script-step-{step_index:04}-click-no-semantics-match");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("click_no_semantics_match".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
                     return output;
                 };
 
@@ -740,14 +763,47 @@ impl UiDiagnosticsService {
             }
             UiActionStepV1::MovePointer { target } => {
                 let Some(snapshot) = semantics_snapshot else {
-                    self.active_scripts.insert(window, active);
                     output.request_redraw = true;
+                    let label = format!("script-step-{step_index:04}-move_pointer-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
                     return output;
                 };
                 let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
                 else {
-                    self.active_scripts.insert(window, active);
                     output.request_redraw = true;
+                    let label =
+                        format!("script-step-{step_index:04}-move_pointer-no-semantics-match");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("move_pointer_no_semantics_match".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
                     return output;
                 };
 
@@ -767,14 +823,46 @@ impl UiDiagnosticsService {
                 delta_y,
             } => {
                 let Some(snapshot) = semantics_snapshot else {
-                    self.active_scripts.insert(window, active);
                     output.request_redraw = true;
+                    let label = format!("script-step-{step_index:04}-wheel-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
                     return output;
                 };
                 let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
                 else {
-                    self.active_scripts.insert(window, active);
                     output.request_redraw = true;
+                    let label = format!("script-step-{step_index:04}-wheel-no-semantics-match");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("wheel_no_semantics_match".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
                     return output;
                 };
 
@@ -796,10 +884,15 @@ impl UiDiagnosticsService {
             }
         }
 
-        if let Some(label) = force_dump_label {
-            self.request_force_dump(label);
-        }
         if stop_script {
+            if self.cfg.script_auto_dump {
+                if let Some(label) = force_dump_label.as_deref() {
+                    self.dump_bundle(Some(label));
+                }
+            } else if let Some(label) = force_dump_label {
+                self.request_force_dump(label);
+            }
+
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id: active.run_id,
@@ -813,22 +906,28 @@ impl UiDiagnosticsService {
                     .as_ref()
                     .map(|p| display_path(&self.cfg.out_dir, p)),
             });
-        } else if active.next_step >= active.script.steps.len() {
-            self.write_script_result(UiScriptResultV1 {
-                schema_version: 1,
-                run_id: active.run_id,
-                updated_unix_ms: unix_ms_now(),
-                window: Some(window.data().as_ffi()),
-                stage: UiScriptStageV1::Passed,
-                step_index: Some(active.next_step.saturating_sub(1) as u32),
-                reason: None,
-                last_bundle_dir: self
-                    .last_dump_dir
-                    .as_ref()
-                    .map(|p| display_path(&self.cfg.out_dir, p)),
-            });
-        } else if active.next_step < active.script.steps.len() {
-            self.active_scripts.insert(window, active);
+        } else {
+            if let Some(label) = force_dump_label {
+                self.request_force_dump(label);
+            }
+
+            if active.next_step >= active.script.steps.len() {
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id: active.run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: Some(window.data().as_ffi()),
+                    stage: UiScriptStageV1::Passed,
+                    step_index: Some(active.next_step.saturating_sub(1) as u32),
+                    reason: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                });
+            } else if active.next_step < active.script.steps.len() {
+                self.active_scripts.insert(window, active);
+            }
         }
         output
     }
@@ -2258,7 +2357,6 @@ struct ActiveScript {
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
     last_reported_step: Option<usize>,
-    missing_target_dumped_step: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
