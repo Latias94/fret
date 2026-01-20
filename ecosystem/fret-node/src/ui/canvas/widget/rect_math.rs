@@ -1,4 +1,5 @@
 use super::*;
+use fret_core::PathCommand;
 
 pub(super) fn rect_from_points(a: Point, b: Point) -> Rect {
     let min_x = a.x.0.min(b.x.0);
@@ -58,6 +59,68 @@ pub(super) fn inflate_rect(rect: Rect, margin: f32) -> Rect {
             Px(rect.size.height.0 + 2.0 * margin),
         ),
     )
+}
+
+pub(super) fn path_bounds_rect(commands: &[PathCommand]) -> Option<Rect> {
+    let mut min_x = f32::INFINITY;
+    let mut min_y = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    let mut max_y = f32::NEG_INFINITY;
+
+    let mut saw_any = false;
+    let mut subpath_start: Option<Point> = None;
+
+    let mut push = |p: Point| {
+        if !p.x.0.is_finite() || !p.y.0.is_finite() {
+            return;
+        }
+        saw_any = true;
+        min_x = min_x.min(p.x.0);
+        min_y = min_y.min(p.y.0);
+        max_x = max_x.max(p.x.0);
+        max_y = max_y.max(p.y.0);
+    };
+
+    for cmd in commands {
+        match *cmd {
+            PathCommand::MoveTo(p) => {
+                subpath_start = Some(p);
+                push(p);
+            }
+            PathCommand::LineTo(p) => push(p),
+            PathCommand::QuadTo { ctrl, to } => {
+                push(ctrl);
+                push(to);
+            }
+            PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                push(ctrl1);
+                push(ctrl2);
+                push(to);
+            }
+            PathCommand::Close => {
+                if let Some(p) = subpath_start {
+                    push(p);
+                }
+            }
+        }
+    }
+
+    if !saw_any
+        || !min_x.is_finite()
+        || !min_y.is_finite()
+        || !max_x.is_finite()
+        || !max_y.is_finite()
+    {
+        return None;
+    }
+    if min_x > max_x || min_y > max_y {
+        return None;
+    }
+
+    Some(Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        Size::new(Px(max_x - min_x), Px(max_y - min_y)),
+    ))
 }
 
 pub(super) fn edge_bounds_rect(

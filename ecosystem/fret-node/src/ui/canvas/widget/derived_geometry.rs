@@ -50,6 +50,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let node_origin = snapshot.interaction.node_origin.normalized();
         let graph_rev = self.graph.revision(host).unwrap_or(0);
         let presenter_rev = self.presenter.geometry_revision();
+        let edge_types_rev = self.edge_types.as_ref().map(|t| t.revision()).unwrap_or(0);
         let key = GeometryCacheKey {
             graph_rev,
             zoom_bits: snapshot.zoom.to_bits(),
@@ -57,6 +58,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             node_origin_y_bits: node_origin.y.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
             presenter_rev,
+            edge_types_rev,
         };
 
         if self.geometry.key != Some(key) {
@@ -65,6 +67,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let draw_order = snapshot.draw_order.clone();
             let graph = self.graph.clone();
             let presenter = &mut *self.presenter;
+            let edge_types = self.edge_types.as_ref();
             let (geom, index) = graph
                 .read_ref(host, |graph| {
                     let geom = CanvasGeometry::build_with_presenter(
@@ -81,13 +84,59 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         .max(tuning.min_cell_size_screen_px / z)
                         .max(1.0);
                     let max_hit_pad_canvas = (tuning.edge_aabb_pad_screen_px / z).max(0.0);
-                    let index = CanvasSpatialIndex::build(
+                    let mut index = CanvasSpatialIndex::build(
                         graph,
                         &geom,
                         zoom,
                         max_hit_pad_canvas,
                         cell_size_canvas,
                     );
+
+                    // Stage 2 `edgeTypes`: custom edge paths may exceed the default conservative
+                    // wire AABB, so patch the index with a custom bounds rect when available.
+                    if let Some(edge_types) = edge_types
+                        && edge_types.has_custom_paths()
+                    {
+                        let pin_pad = (style.pin_radius.max(0.0) / z).max(0.0);
+                        for (&edge_id, edge) in &graph.edges {
+                            let Some(from) = geom.port_center(edge.from) else {
+                                continue;
+                            };
+                            let Some(to) = geom.port_center(edge.to) else {
+                                continue;
+                            };
+
+                            let base = presenter.edge_render_hint(graph, edge_id, &style);
+                            let hint = edge_types.apply(graph, edge_id, &style, base).normalized();
+                            let marker_pad = hint
+                                .start_marker
+                                .as_ref()
+                                .map(|m| (m.size.max(0.0) / z).max(0.0))
+                                .unwrap_or(0.0)
+                                .max(
+                                    hint.end_marker
+                                        .as_ref()
+                                        .map(|m| (m.size.max(0.0) / z).max(0.0))
+                                        .unwrap_or(0.0),
+                                );
+                            let pad = max_hit_pad_canvas.max(pin_pad).max(marker_pad);
+
+                            let Some(custom) = edge_types.custom_path(
+                                graph,
+                                edge_id,
+                                &style,
+                                &hint,
+                                crate::ui::edge_types::EdgePathInput { from, to, zoom },
+                            ) else {
+                                continue;
+                            };
+
+                            let Some(bounds) = path_bounds_rect(&custom.commands) else {
+                                continue;
+                            };
+                            index.update_edge_rect(edge_id, inflate_rect(bounds, pad));
+                        }
+                    }
                     (geom, index)
                 })
                 .ok()
@@ -135,6 +184,43 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let start_dir = norm_or_fallback(edge_route_start_tangent(route, from, to, zoom), fallback);
         let end_dir = norm_or_fallback(edge_route_end_tangent(route, from, to, zoom), fallback);
+
+        let start = Point::new(
+            Px(from.x.0 + start_dir.x.0 * off),
+            Px(from.y.0 + start_dir.y.0 * off),
+        );
+        let end = Point::new(
+            Px(to.x.0 - end_dir.x.0 * off),
+            Px(to.y.0 - end_dir.y.0 * off),
+        );
+        (start, end)
+    }
+
+    pub(super) fn edge_focus_anchor_centers_from_tangents(
+        from: Point,
+        to: Point,
+        zoom: f32,
+        start_tangent: Point,
+        end_tangent: Point,
+    ) -> (Point, Point) {
+        fn norm_or_fallback(v: Point, fallback: Point) -> Point {
+            let len = (v.x.0 * v.x.0 + v.y.0 * v.y.0).sqrt();
+            if len.is_finite() && len > 1.0e-6 {
+                return Point::new(Px(v.x.0 / len), Px(v.y.0 / len));
+            }
+            let len = (fallback.x.0 * fallback.x.0 + fallback.y.0 * fallback.y.0).sqrt();
+            if len.is_finite() && len > 1.0e-6 {
+                return Point::new(Px(fallback.x.0 / len), Px(fallback.y.0 / len));
+            }
+            Point::new(Px(1.0), Px(0.0))
+        }
+
+        let z = zoom.max(1.0e-6);
+        let off = Self::EDGE_FOCUS_ANCHOR_OFFSET_SCREEN / z;
+        let fallback = Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0));
+
+        let start_dir = norm_or_fallback(start_tangent, fallback);
+        let end_dir = norm_or_fallback(end_tangent, fallback);
 
         let start = Point::new(
             Px(from.x.0 + start_dir.x.0 * off),

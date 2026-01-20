@@ -30,6 +30,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let graph_rev = self.graph.revision(host).unwrap_or(0);
         let presenter_rev = self.presenter.geometry_revision();
+        let edge_types_rev = self.edge_types.as_ref().map(|t| t.revision()).unwrap_or(0);
         let node_origin = snapshot.interaction.node_origin.normalized();
         let key = InternalsCacheKey {
             graph_rev,
@@ -38,6 +39,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             node_origin_y_bits: node_origin.y.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
             presenter_rev,
+            edge_types_rev,
             pan_x_bits: snapshot.pan.x.to_bits(),
             pan_y_bits: snapshot.pan.y.to_bits(),
             bounds_x_bits: bounds.origin.x.0.to_bits(),
@@ -75,6 +77,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         let style = self.style.clone();
+        let zoom = snapshot.zoom;
+        let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
+        let edge_types = self.edge_types.as_ref();
+        let presenter: &dyn NodeGraphPresenter = &*self.presenter;
         let edge_centers: Vec<(crate::core::EdgeId, Point)> = self
             .graph
             .read_ref(host, |graph| {
@@ -84,8 +90,31 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     .filter_map(|(&edge_id, edge)| {
                         let from = geom.port_center(edge.from)?;
                         let to = geom.port_center(edge.to)?;
-                        let hint = self.presenter.edge_render_hint(graph, edge_id, &style);
-                        let center = Self::edge_center_canvas(hint.route, from, to, snapshot.zoom);
+
+                        let base = presenter.edge_render_hint(graph, edge_id, &style);
+                        let hint = if let Some(edge_types) = edge_types {
+                            edge_types.apply(graph, edge_id, &style, base).normalized()
+                        } else {
+                            base.normalized()
+                        };
+
+                        let center = if let Some(edge_types) = edge_types
+                            && edge_types.has_custom_paths()
+                            && let Some(custom) = edge_types.custom_path(
+                                graph,
+                                edge_id,
+                                &style,
+                                &hint,
+                                crate::ui::edge_types::EdgePathInput { from, to, zoom },
+                            ) {
+                            path_midpoint_and_normal(&custom.commands, bezier_steps)
+                                .map(|(p, _n)| p)
+                                .unwrap_or_else(|| {
+                                    Self::edge_center_canvas(hint.route, from, to, zoom)
+                                })
+                        } else {
+                            Self::edge_center_canvas(hint.route, from, to, zoom)
+                        };
                         Some((edge_id, center))
                     })
                     .collect()

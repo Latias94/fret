@@ -534,6 +534,7 @@ pub(crate) struct GeometryCacheKey {
     pub(crate) node_origin_y_bits: u32,
     pub(crate) draw_order_hash: u64,
     pub(crate) presenter_rev: u64,
+    pub(crate) edge_types_rev: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -544,6 +545,7 @@ pub(crate) struct InternalsCacheKey {
     pub(crate) node_origin_y_bits: u32,
     pub(crate) draw_order_hash: u64,
     pub(crate) presenter_rev: u64,
+    pub(crate) edge_types_rev: u64,
     pub(crate) pan_x_bits: u32,
     pub(crate) pan_y_bits: u32,
     pub(crate) bounds_x_bits: u32,

@@ -31,7 +31,7 @@ pub use canvas::{
     NoopNodeGraphCanvasMiddleware,
 };
 pub use commands::register_node_graph_commands;
-pub use edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
+pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
 pub use editor::NodeGraphEditor;
 pub use editors::{
