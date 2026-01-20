@@ -119,37 +119,34 @@ let ok = Button::new("OK")
 
 ### Layout-Only Cookbook (Stack / Flex)
 
-Layout-only code should prefer `fret-ui-kit::declarative::stack` helpers to avoid leaking runtime props types.
-This is the current “layout constructors” story while `ui::h_flex/v_flex`-style helpers are still pending.
+Layout-only code can use `ui::h_flex` / `ui::v_flex` for a patchable builder (so layout nodes participate in the
+same fluent `ui()` vocabulary as components). `stack::hstack/vstack` remain available as a lower-level helper.
 
 Horizontal row:
 
 ```rust
-let row = stack::hstack(
-    cx,
-    stack::HStackProps::default()
-        .gap(Space::N2)
-        .layout(LayoutRefinement::default().w_full()),
-    move |cx| {
-        vec![
-            Button::new("Cancel").ui().into_element(cx),
-            Button::new("OK").ui().into_element(cx),
-        ]
-    },
-);
+let row = ui::h_flex(cx, move |cx| {
+    vec![
+        Button::new("Cancel").ui().into_element(cx),
+        Button::new("OK").ui().into_element(cx),
+    ]
+})
+.gap(Space::N2)
+.w_full()
+.into_element(cx);
 ```
 
 Vertical column:
 
 ```rust
-let col = stack::vstack(
-    cx,
-    stack::VStackProps::default().gap(Space::N2),
-    move |cx| vec![
+let col = ui::v_flex(cx, move |cx| {
+    vec![
         Input::new().ui().w_full().into_element(cx),
         Textarea::new().ui().w_full().into_element(cx),
-    ],
-);
+    ]
+})
+.gap(Space::N2)
+.into_element(cx);
 ```
 
 ### Coverage Tracker (Update as we proceed)
