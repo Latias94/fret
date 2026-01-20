@@ -1407,7 +1407,15 @@ impl UiDiagnosticsService {
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
             scene_fingerprint: scene.fingerprint(),
-            debug: UiTreeDebugSnapshotV1::from_tree(app, ui, hit_test, element_diag, semantics),
+            debug: UiTreeDebugSnapshotV1::from_tree(
+                app,
+                window,
+                ui,
+                element_runtime,
+                hit_test,
+                element_diag,
+                semantics,
+            ),
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
             changed_model_sources_top,
@@ -2393,9 +2401,11 @@ pub struct UiTreeDebugSnapshotV1 {
 impl UiTreeDebugSnapshotV1 {
     fn from_tree(
         app: &App,
+        window: AppWindowId,
         ui: &UiTree<App>,
+        element_runtime_state: Option<&ElementRuntime>,
         hit_test: Option<UiHitTestSnapshotV1>,
-        element_runtime: Option<ElementDiagnosticsSnapshotV1>,
+        element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
     ) -> Self {
         Self {
@@ -2433,7 +2443,15 @@ impl UiTreeDebugSnapshotV1 {
             cache_roots: ui
                 .debug_cache_root_stats()
                 .iter()
-                .map(UiCacheRootStatsV1::from_stats)
+                .map(|stats| {
+                    UiCacheRootStatsV1::from_stats(
+                        window,
+                        ui,
+                        element_runtime_state,
+                        semantics.as_ref(),
+                        stats,
+                    )
+                })
                 .collect(),
             layout_engine_solves: ui
                 .debug_layout_engine_solves()
@@ -2446,7 +2464,7 @@ impl UiTreeDebugSnapshotV1 {
                 .map(UiLayerInfoV1::from_layer)
                 .collect(),
             hit_test,
-            element_runtime,
+            element_runtime: element_runtime_snapshot,
             semantics,
         }
     }
@@ -2487,21 +2505,71 @@ impl UiDirtyViewV1 {
 pub struct UiCacheRootStatsV1 {
     pub root: u64,
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub reused: bool,
     pub contained_layout: bool,
     pub paint_replayed_ops: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direct_child_nodes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subtree_nodes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subtree_nodes_truncated_at: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_in_semantics: Option<bool>,
     #[serde(default)]
     pub reuse_reason: Option<String>,
 }
 
 impl UiCacheRootStatsV1 {
-    fn from_stats(stats: &fret_ui::tree::UiDebugCacheRootStats) -> Self {
+    fn from_stats(
+        window: AppWindowId,
+        ui: &UiTree<App>,
+        element_runtime: Option<&ElementRuntime>,
+        semantics: Option<&UiSemanticsSnapshotV1>,
+        stats: &fret_ui::tree::UiDebugCacheRootStats,
+    ) -> Self {
+        let element_path = stats.element.and_then(|id| {
+            element_runtime.and_then(|runtime| runtime.debug_path_for_element(window, id))
+        });
+
+        let direct_child_nodes = ui.children(stats.root).len().min(u32::MAX as usize) as u32;
+
+        // Keep bundles bounded: cache roots can cover large subtrees in real apps.
+        const MAX_SUBTREE_NODES: usize = 50_000;
+        let mut subtree_nodes_truncated_at: Option<u32> = None;
+        let mut seen: HashSet<fret_core::NodeId> = HashSet::new();
+        let mut stack: Vec<fret_core::NodeId> = vec![stats.root];
+        while let Some(node) = stack.pop() {
+            if !seen.insert(node) {
+                continue;
+            }
+            if seen.len() > MAX_SUBTREE_NODES {
+                subtree_nodes_truncated_at = Some(MAX_SUBTREE_NODES as u32);
+                break;
+            }
+            for child in ui.children(node) {
+                stack.push(child);
+            }
+        }
+
+        let root_in_semantics = semantics.map(|snap| {
+            let id = stats.root.data().as_ffi();
+            snap.nodes.iter().any(|n| n.id == id)
+        });
+
         Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),
+            element_path,
             reused: stats.reused,
             contained_layout: stats.contained_layout,
             paint_replayed_ops: stats.paint_replayed_ops,
+            direct_child_nodes: Some(direct_child_nodes),
+            subtree_nodes: Some(seen.len().min(u32::MAX as usize) as u32),
+            subtree_nodes_truncated_at,
+            root_in_semantics,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
         }
     }
