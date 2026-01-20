@@ -35,6 +35,7 @@ mod interaction_conformance;
 mod internals_conformance;
 mod invalidation_ordering_conformance;
 mod middleware_conformance;
+mod node_origin_conformance;
 mod perf_cache;
 mod portal_conformance;
 mod portal_keyboard_conformance;
