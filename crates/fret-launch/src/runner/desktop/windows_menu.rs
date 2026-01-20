@@ -5,7 +5,7 @@ use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use fret_core::AppWindowId;
 use fret_runtime::{
     CommandId, InputContext, Keymap, KeymapService, MenuBar, MenuItem, Platform, WhenExpr,
-    WindowInputContextService,
+    WindowCommandEnabledService, WindowInputContextService,
 };
 use winit::event_loop::EventLoopProxy;
 use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -40,6 +40,7 @@ struct WindowsMenuItemDef {
 struct WindowsMenuHookState {
     hwnd_to_app_window: HashMap<isize, AppWindowId>,
     hwnd_to_item_defs: HashMap<isize, HashMap<u16, WindowsMenuItemDef>>,
+    hwnd_to_command_enabled: HashMap<isize, HashMap<CommandId, bool>>,
     hwnd_to_input_ctx: HashMap<isize, InputContext>,
     cached_keymap: Arc<Keymap>,
 }
@@ -76,6 +77,7 @@ pub(crate) fn unregister_window(window: &dyn Window) {
     };
     state.hwnd_to_app_window.remove(&(hwnd as isize));
     state.hwnd_to_item_defs.remove(&(hwnd as isize));
+    state.hwnd_to_command_enabled.remove(&(hwnd as isize));
     state.hwnd_to_input_ctx.remove(&(hwnd as isize));
 }
 
@@ -186,6 +188,11 @@ fn apply_popup_menu_state(hwnd: isize, popup: HMENU) {
             return;
         };
         let keymap = state.cached_keymap.clone();
+        let command_enabled = state
+            .hwnd_to_command_enabled
+            .get(&hwnd)
+            .cloned()
+            .unwrap_or_default();
         let input_ctx = state
             .hwnd_to_input_ctx
             .get(&hwnd)
@@ -215,6 +222,7 @@ fn apply_popup_menu_state(hwnd: isize, popup: HMENU) {
                     .as_ref()
                     .map(|w| w.eval(&input_ctx))
                     .unwrap_or(true);
+            let enabled = enabled && command_enabled.get(&def.command).copied().unwrap_or(true);
 
             let shortcut = keymap.display_shortcut_for_command_sequence(&input_ctx, &def.command);
             let text = if let Some(seq) = shortcut {
@@ -314,6 +322,12 @@ pub(crate) fn set_window_menu_bar(
             dispatch_phase: Default::default(),
         });
 
+    let enabled = app
+        .global::<WindowCommandEnabledService>()
+        .and_then(|svc| svc.snapshot(app_window))
+        .cloned()
+        .unwrap_or_default();
+
     let (menu, defs_by_id) = build_menu_bar(menu_bar, commands, keymap, &input_ctx)?;
 
     unsafe {
@@ -326,6 +340,7 @@ pub(crate) fn set_window_menu_bar(
     };
     state.hwnd_to_app_window.insert(hwnd as isize, app_window);
     state.hwnd_to_item_defs.insert(hwnd as isize, defs_by_id);
+    state.hwnd_to_command_enabled.insert(hwnd as isize, enabled);
     state.hwnd_to_input_ctx.insert(hwnd as isize, input_ctx);
     state.cached_keymap = Arc::new(keymap.cloned().unwrap_or_default());
 
@@ -390,6 +405,40 @@ pub(crate) fn sync_input_context_from_app(app: &fret_app::App) {
         };
         for (hwnd, input_ctx) in by_hwnd {
             state.hwnd_to_input_ctx.insert(hwnd, input_ctx);
+        }
+    }
+}
+
+pub(crate) fn sync_command_enabled_from_app(app: &fret_app::App) {
+    #[cfg(target_os = "windows")]
+    {
+        let snapshots = app.global::<WindowCommandEnabledService>();
+
+        let windows: Vec<(isize, AppWindowId)> = {
+            let Ok(state) = MENU_HOOK_STATE.lock() else {
+                return;
+            };
+            state
+                .hwnd_to_app_window
+                .iter()
+                .map(|(&hwnd, &window)| (hwnd, window))
+                .collect()
+        };
+
+        let mut by_hwnd: HashMap<isize, HashMap<CommandId, bool>> = HashMap::new();
+        for (hwnd, window) in windows {
+            let enabled = snapshots
+                .and_then(|svc| svc.snapshot(window))
+                .cloned()
+                .unwrap_or_default();
+            by_hwnd.insert(hwnd, enabled);
+        }
+
+        let Ok(mut state) = MENU_HOOK_STATE.lock() else {
+            return;
+        };
+        for (hwnd, enabled) in by_hwnd {
+            state.hwnd_to_command_enabled.insert(hwnd, enabled);
         }
     }
 }

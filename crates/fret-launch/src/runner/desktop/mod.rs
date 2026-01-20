@@ -2558,6 +2558,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 svc.remove_window(window);
             },
         );
+        self.app.with_global_mut(
+            fret_runtime::WindowCommandEnabledService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
         self.app
             .with_global_mut(WindowMetricsService::default, |svc, _app| {
                 svc.remove(window);
@@ -3866,6 +3872,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>()) {
                 windows_menu::sync_input_context_from_app(&self.app);
             }
+            if changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>()) {
+                windows_menu::sync_command_enabled_from_app(&self.app);
+            }
         }
 
         #[cfg(target_os = "macos")]
@@ -3876,6 +3885,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
             if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>()) {
                 macos_menu::sync_input_context_from_app(&self.app);
+            }
+            if changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>()) {
+                macos_menu::sync_command_enabled_from_app(&self.app);
             }
             if keymap_changed && let Some(menu_bar) = self.menu_bar.clone() {
                 macos_menu::set_app_menu_bar(&self.app, &menu_bar);
