@@ -283,6 +283,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return false;
         }
 
+        let snapshot = self.sync_view_state(host);
+        let padding = snapshot.interaction.frame_view_padding;
+        let padding = if padding.is_finite() {
+            padding.clamp(0.0, 0.45)
+        } else {
+            0.0
+        };
+        let (margin_x, margin_y) = if padding > 0.0 {
+            (viewport_w * padding, viewport_h * padding)
+        } else {
+            (48.0f32, 48.0f32)
+        };
+
         let mut min_x = f32::INFINITY;
         let mut min_y = f32::INFINITY;
         let mut max_x = f32::NEG_INFINITY;
@@ -301,14 +314,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let spread_x = (max_x - min_x).max(0.0);
         let spread_y = (max_y - min_y).max(0.0);
 
-        let margin = 48.0f32;
         let mut zoom_x = self.style.max_zoom;
         let mut zoom_y = self.style.max_zoom;
         if spread_x > 1.0e-3 {
-            zoom_x = (viewport_w - max_w - 2.0 * margin) / spread_x;
+            zoom_x = (viewport_w - max_w - 2.0 * margin_x) / spread_x;
         }
         if spread_y > 1.0e-3 {
-            zoom_y = (viewport_h - max_h - 2.0 * margin) / spread_y;
+            zoom_y = (viewport_h - max_h - 2.0 * margin_y) / spread_y;
         }
 
         let mut zoom = zoom_x.min(zoom_y);
@@ -351,7 +363,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             y: target_center_y - center_y,
         };
 
-        let snapshot = self.sync_view_state(host);
         let duration_ms = snapshot.interaction.frame_view_duration_ms;
         let duration = std::time::Duration::from_millis(duration_ms as u64);
         let interpolate = match snapshot.interaction.frame_view_interpolate {

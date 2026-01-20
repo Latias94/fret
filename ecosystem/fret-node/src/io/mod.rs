@@ -699,6 +699,13 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub frame_view_interpolate: NodeGraphViewportInterpolate,
 
+    /// Optional extra padding when framing nodes (XyFlow `fitViewOptions.padding`).
+    ///
+    /// This is a fraction of the current viewport size (0.0 .. 0.45 recommended). When set to
+    /// `0.0`, the framing logic falls back to its legacy fixed pixel margin.
+    #[serde(default = "default_frame_view_padding")]
+    pub frame_view_padding: f32,
+
     /// Whether double-clicking a wire inserts a reroute node (ShaderGraph-style).
     ///
     /// This is separate from `zoom_on_double_click`: zoom only applies when the double click hits
@@ -814,6 +821,7 @@ impl Default for NodeGraphInteractionState {
             zoom_on_double_click: default_zoom_on_double_click(),
             frame_view_duration_ms: default_frame_view_duration_ms(),
             frame_view_interpolate: NodeGraphViewportInterpolate::default(),
+            frame_view_padding: default_frame_view_padding(),
             reroute_on_edge_double_click: default_reroute_on_edge_double_click(),
             edge_insert_on_alt_drag: default_edge_insert_on_alt_drag(),
             zoom_activation_key: NodeGraphZoomActivationKey::default(),
@@ -961,6 +969,10 @@ fn default_zoom_on_double_click() -> bool {
 
 fn default_frame_view_duration_ms() -> u32 {
     200
+}
+
+fn default_frame_view_padding() -> f32 {
+    0.0
 }
 
 fn default_reroute_on_edge_double_click() -> bool {
