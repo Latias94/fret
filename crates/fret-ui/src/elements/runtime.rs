@@ -116,6 +116,8 @@ pub struct WindowElementState {
     pub(super) view_cache_elements_rendered: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_elements_next: HashMap<GlobalElementId, Vec<GlobalElementId>>,
     pub(super) view_cache_reuse_roots: HashSet<GlobalElementId>,
+    view_cache_last_reused_frame: HashMap<GlobalElementId, FrameId>,
+    view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
     prepared_frame: FrameId,
@@ -186,6 +188,7 @@ impl WindowElementState {
         self.view_cache_elements_next.clear();
 
         self.view_cache_reuse_roots.clear();
+        self.view_cache_transitioned_reuse_roots.clear();
         self.view_cache_stack.clear();
 
         std::mem::swap(
@@ -357,6 +360,32 @@ impl WindowElementState {
         self.view_cache_reuse_roots.insert(root);
     }
 
+    /// Returns `true` if this cache root was *not* reused in the immediately-previous frame.
+    ///
+    /// This is used to refresh liveness/recording when a view-cache root transitions into reuse,
+    /// avoiding GC sweeping stale-but-live subtrees on the first cache-hit frame.
+    pub(crate) fn record_view_cache_reuse_frame(
+        &mut self,
+        root: GlobalElementId,
+        frame_id: FrameId,
+    ) -> bool {
+        let transitioned = self
+            .view_cache_last_reused_frame
+            .get(&root)
+            .is_none_or(|last| last.0.saturating_add(1) < frame_id.0);
+        self.view_cache_last_reused_frame.insert(root, frame_id);
+        if transitioned {
+            self.view_cache_transitioned_reuse_roots.insert(root);
+        }
+        transitioned
+    }
+
+    pub(crate) fn view_cache_transitioned_reuse_roots(
+        &self,
+    ) -> impl Iterator<Item = GlobalElementId> + '_ {
+        self.view_cache_transitioned_reuse_roots.iter().copied()
+    }
+
     pub(crate) fn should_reuse_view_cache_root(&self, root: GlobalElementId) -> bool {
         self.view_cache_reuse_roots.contains(&root)
     }
@@ -476,6 +505,9 @@ impl WindowElementState {
         &self,
         root: GlobalElementId,
     ) -> Option<&[GlobalElementId]> {
+        if let Some(v) = self.view_cache_elements_next.get(&root) {
+            return Some(v.as_slice());
+        }
         self.view_cache_elements_rendered
             .get(&root)
             .map(|v| v.as_slice())

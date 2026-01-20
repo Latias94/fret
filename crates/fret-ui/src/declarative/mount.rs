@@ -272,12 +272,30 @@ pub fn render_root<H: UiHost>(
             keep_alive
         };
 
+        // If any cache root transitions into reuse this frame, proactively touch the entire
+        // retained subtree from the window root. This avoids GC sweeping still-live nodes in the
+        // transition frame when the producer subtree starts skipping renders.
+        if window_state
+            .view_cache_transitioned_reuse_roots()
+            .next()
+            .is_some()
+        {
+            touch_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, root_node);
+        }
+
         // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
         // re-mounting cached subtrees, so cache roots must keep the retained subtree alive.
         //
         // We only sweep nodes that are both stale and detached from any UI layer.
+        //
+        // Note: `UiTree::node_layer` relies on parent pointers. If a retained subtree becomes
+        // inconsistent (children edges still attached, but parent pointers broken), `node_layer`
+        // can return `None` even though the node is still reachable from the layer root. In that
+        // case, do not sweep: treat reachability from `root_node` as authoritative for liveness.
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         let mut stale_elements: Vec<GlobalElementId> = Vec::new();
+        let mut reachable_from_root: Option<HashSet<NodeId>> = None;
+        let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -295,6 +313,14 @@ pub fn render_root<H: UiHost>(
                 return true;
             }
             if ui.node_layer(entry.node).is_some() {
+                return true;
+            }
+            let reachable = reachable_from_root
+                .get_or_insert_with(|| collect_reachable_nodes_capped(ui, root_node, 200_000));
+            if reachable.contains(&entry.node) {
+                return true;
+            }
+            if view_cache_has_reuse_roots {
                 return true;
             }
             stale_nodes.push(entry.node);
@@ -480,10 +506,22 @@ fn render_dismissible_root_impl<
             keep_alive
         };
 
+        // See `render_root`: on the first cache-hit frame for a previously dirty root, ensure the
+        // overlay subtree stays alive even if it won't rerender this frame.
+        if window_state
+            .view_cache_transitioned_reuse_roots()
+            .next()
+            .is_some()
+        {
+            touch_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, root_node);
+        }
+
         // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
         // only detached nodes that have been stale beyond the configured lag window.
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         let mut stale_elements: Vec<GlobalElementId> = Vec::new();
+        let mut reachable_from_root: Option<HashSet<NodeId>> = None;
+        let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -503,6 +541,14 @@ fn render_dismissible_root_impl<
                 return true;
             }
             if ui.node_layer(entry.node).is_some() {
+                return true;
+            }
+            let reachable = reachable_from_root
+                .get_or_insert_with(|| collect_reachable_nodes_capped(ui, root_node, 200_000));
+            if reachable.contains(&entry.node) {
+                return true;
+            }
+            if view_cache_has_reuse_roots {
                 return true;
             }
             stale_nodes.push(entry.node);
@@ -754,9 +800,8 @@ fn mount_element<H: UiHost>(
             .entry(node)
             .or_insert_with(|| ui.children(node));
 
-        let touched =
-            window_state.touch_view_cache_subtree_elements_if_recorded(id, frame_id, root_id);
-        if !touched {
+        let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
+        if transitioned_into_reuse {
             mark_existing_declarative_subtree_seen(
                 ui,
                 window_state,
@@ -765,6 +810,27 @@ fn mount_element<H: UiHost>(
                 frame_id,
                 node,
             );
+            window_state.record_view_cache_subtree_elements(
+                id,
+                collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
+            );
+        } else {
+            let touched =
+                window_state.touch_view_cache_subtree_elements_if_recorded(id, frame_id, root_id);
+            if !touched {
+                mark_existing_declarative_subtree_seen(
+                    ui,
+                    window_state,
+                    window_frame,
+                    root_id,
+                    frame_id,
+                    node,
+                );
+                window_state.record_view_cache_subtree_elements(
+                    id,
+                    collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
+                );
+            }
         }
         inherit_observations_for_existing_subtree(ui, window_state, window_frame, node);
         collect_scroll_handle_bindings_for_existing_subtree(
@@ -1005,6 +1071,38 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
     }
 }
 
+fn touch_existing_declarative_subtree_seen<H: UiHost>(
+    ui: &UiTree<H>,
+    window_state: &mut crate::elements::WindowElementState,
+    root_id: GlobalElementId,
+    frame_id: FrameId,
+    root: NodeId,
+) {
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if !ui.node_exists(node) {
+            continue;
+        }
+        if let Some(element) = ui.node_element(node) {
+            window_state.set_node_entry(
+                element,
+                NodeEntry {
+                    node,
+                    last_seen_frame: frame_id,
+                    root: root_id,
+                },
+            );
+
+            #[cfg(feature = "diagnostics")]
+            window_state.touch_debug_identity_for_element(frame_id, element);
+        }
+
+        for child in ui.children(node) {
+            stack.push(child);
+        }
+    }
+}
+
 fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
     ui: &UiTree<H>,
     window_frame: &WindowFrame,
@@ -1028,6 +1126,27 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
             }
         }
 
+        for child in ui.children(node) {
+            stack.push(child);
+        }
+    }
+    out
+}
+
+fn collect_reachable_nodes_capped<H: UiHost>(
+    ui: &UiTree<H>,
+    root: NodeId,
+    cap: usize,
+) -> HashSet<NodeId> {
+    let mut out: HashSet<NodeId> = HashSet::new();
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if !out.insert(node) {
+            continue;
+        }
+        if out.len() >= cap {
+            break;
+        }
         for child in ui.children(node) {
             stack.push(child);
         }
