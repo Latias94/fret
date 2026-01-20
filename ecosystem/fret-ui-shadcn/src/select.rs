@@ -1144,9 +1144,9 @@ fn select_impl<H: UiHost>(
 
                     let (
                         item_aligned_inputs,
-                        did_item_aligned_scroll_initial,
-                        did_item_aligned_scroll_reposition,
-                        item_aligned_scroll_up_visible,
+                        _did_item_aligned_scroll_initial,
+                        _did_item_aligned_scroll_reposition,
+                        _item_aligned_scroll_up_visible,
                     ) = if position == SelectPosition::ItemAligned {
                         let (
                             value_node,
