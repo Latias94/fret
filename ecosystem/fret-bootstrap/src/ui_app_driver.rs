@@ -642,6 +642,13 @@ fn ui_app_handle_command<S>(
     }
 
     match command.as_str() {
+        fret_app::core_commands::APP_ABOUT => {
+            #[cfg(target_os = "macos")]
+            {
+                app.push_effect(Effect::ShowAboutPanel);
+                return;
+            }
+        }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
             return;
@@ -701,6 +708,13 @@ fn ui_app_handle_global_command<S>(
     let WinitGlobalContext { app, services } = context;
 
     match command.as_str() {
+        fret_app::core_commands::APP_ABOUT => {
+            #[cfg(target_os = "macos")]
+            {
+                app.push_effect(Effect::ShowAboutPanel);
+                return;
+            }
+        }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
             return;
