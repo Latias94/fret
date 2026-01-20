@@ -5114,6 +5114,22 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 });
                             }
 
+                            #[cfg(debug_assertions)]
+                            {
+                                debug_assert!(
+                                    ops.iter().all(|op| {
+                                        !matches!(
+                                            op,
+                                            SceneOp::Text { .. }
+                                                | SceneOp::Path { .. }
+                                                | SceneOp::SvgMaskIcon { .. }
+                                                | SceneOp::SvgImage { .. }
+                                        )
+                                    }),
+                                    "Cached plot quad scene ops must not include hosted resources without touching their caches on replay"
+                                );
+                            }
+
                             cx.scene.replay_ops_translated(&ops, layout.plot.origin);
                             self.quads_scene_cache.store_ops(key, ops);
                         }
@@ -5285,6 +5301,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 scene,
                                 Point::new(Px(0.0), Px(0.0)),
                                 |scene| {
+                                    #[cfg(debug_assertions)]
+                                    let start = scene.ops_len();
                                     for i in 0..steps {
                                         let t0 = (i as f32) / (steps as f32);
                                         let t1 = ((i + 1) as f32) / (steps as f32);
@@ -5304,6 +5322,22 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             border_color: Color::TRANSPARENT,
                                             corner_radii: fret_core::Corners::all(Px(0.0)),
                                         });
+                                    }
+                                    #[cfg(debug_assertions)]
+                                    {
+                                        let end = scene.ops_len();
+                                        debug_assert!(
+                                            scene.ops()[start..end].iter().all(|op| {
+                                                !matches!(
+                                                    op,
+                                                    SceneOp::Text { .. }
+                                                        | SceneOp::Path { .. }
+                                                        | SceneOp::SvgMaskIcon { .. }
+                                                        | SceneOp::SvgImage { .. }
+                                                )
+                                            }),
+                                            "Cached colorbar gradient ops must not include hosted resources without touching their caches on replay"
+                                        );
                                     }
                                 },
                             );

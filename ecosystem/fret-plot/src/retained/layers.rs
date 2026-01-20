@@ -1433,6 +1433,22 @@ fn grid_heatmap_tile_ops(
         }
     }
 
+    #[cfg(debug_assertions)]
+    {
+        debug_assert!(
+            ops.iter().all(|op| {
+                !matches!(
+                    op,
+                    SceneOp::Text { .. }
+                        | SceneOp::Path { .. }
+                        | SceneOp::SvgMaskIcon { .. }
+                        | SceneOp::SvgImage { .. }
+                )
+            }),
+            "Heatmap tile ops are cached/replayed; do not cache hosted resource ops without touching their caches on replay"
+        );
+    }
+
     ops
 }
 

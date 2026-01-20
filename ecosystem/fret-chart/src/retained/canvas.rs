@@ -4105,6 +4105,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 });
             }
 
+            #[cfg(debug_assertions)]
+            {
+                debug_assert!(
+                    ops.iter().all(|op| {
+                        !matches!(
+                            op,
+                            SceneOp::Text { .. }
+                                | SceneOp::Path { .. }
+                                | SceneOp::SvgMaskIcon { .. }
+                                | SceneOp::SvgImage { .. }
+                        )
+                    }),
+                    "Cached rect scene ops must not include hosted resources without touching their caches on replay"
+                );
+            }
+
             cx.scene.replay_ops(&ops);
             self.cached_rect_scene_ops.store_ops(rect_key, ops);
         }
@@ -4260,6 +4276,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     border_color,
                     corner_radii: Corners::all(Px(point_r)),
                 });
+            }
+
+            #[cfg(debug_assertions)]
+            {
+                debug_assert!(
+                    ops.iter().all(|op| {
+                        !matches!(
+                            op,
+                            SceneOp::Text { .. }
+                                | SceneOp::Path { .. }
+                                | SceneOp::SvgMaskIcon { .. }
+                                | SceneOp::SvgImage { .. }
+                        )
+                    }),
+                    "Cached point scene ops must not include hosted resources without touching their caches on replay"
+                );
             }
 
             cx.scene.replay_ops(&ops);
