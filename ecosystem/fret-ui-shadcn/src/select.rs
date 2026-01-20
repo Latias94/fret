@@ -127,11 +127,12 @@ fn select_scroll_with_buttons<H: UiHost>(
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
-                                 label: &'static str,
-                                 dir: f32| {
+                                 test_id: &'static str,
+                                 dir: f32,
+                                 visible: bool| {
                 let handle = handle.clone();
                 let theme = theme.clone();
-                cx.pressable(
+                let pressable = cx.pressable(
                     PressableProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
@@ -142,8 +143,8 @@ fn select_scroll_with_buttons<H: UiHost>(
                         enabled: true,
                         focusable: false,
                         a11y: PressableA11y {
-                            role: Some(SemanticsRole::Button),
-                            label: Some(Arc::from(label)),
+                            hidden: true,
+                            test_id: Some(Arc::from(test_id)),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -226,6 +227,10 @@ fn select_scroll_with_buttons<H: UiHost>(
                         )]
                     },
                 )
+                ;
+
+                let gated = cx.interactivity_gate(true, visible, |_cx| vec![pressable]);
+                cx.opacity(if visible { 1.0 } else { 0.0 }, |_cx| vec![gated])
             };
 
             let handle_for_stack = handle.clone();
@@ -335,15 +340,23 @@ fn select_scroll_with_buttons<H: UiHost>(
                 },
             );
 
-            let mut out = Vec::new();
-            if show_up {
-                out.push(scroll_button(cx, ids::ui::CHEVRON_UP, "Scroll up", -1.0));
-            }
-            out.push(stack);
-            if show_down {
-                out.push(scroll_button(cx, ids::ui::CHEVRON_DOWN, "Scroll down", 1.0));
-            }
-            out
+            vec![
+                scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_UP,
+                    "select-scroll-up-button",
+                    -1.0,
+                    show_up,
+                ),
+                stack,
+                scroll_button(
+                    cx,
+                    ids::ui::CHEVRON_DOWN,
+                    "select-scroll-down-button",
+                    1.0,
+                    show_down,
+                ),
+            ]
         },
     )
 }
@@ -3595,8 +3608,8 @@ mod tests {
         let scroll_down = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll down"))
-            .expect("scroll down button");
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
+            .expect("scroll down node");
 
         let down_bounds = ui
             .debug_node_bounds(scroll_down.id)
@@ -3661,11 +3674,38 @@ mod tests {
 
         assert_eq!(app.models().get_copied(&open), Some(true));
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_up = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+            .expect("scroll up node");
+        let up_bounds = ui
+            .debug_node_bounds(scroll_up.id)
+            .expect("scroll up bounds");
+        let up_is_hit_testable = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(up_bounds.origin.x.0 + up_bounds.size.width.0 * fx),
+                    Px(up_bounds.origin.y.0 + up_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_up.id)
+                {
+                    return true;
+                }
+            }
+            false
+        })();
         assert!(
-            snap.nodes.iter().any(|n| {
-                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
-            }),
-            "expected scroll up to appear after scrolling down"
+            up_is_hit_testable,
+            "expected scroll up to become hit-testable after scrolling down; bounds={up_bounds:?}"
         );
     }
 
