@@ -45,7 +45,7 @@ Scope notes:
 | `elementsSelectable` | `NodeGraphInteractionState.elements_selectable` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` |
 | `selectionKeyCode` (box select modifier) | `NodeGraphInteractionState.selection_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
 | `selectionOnDrag` | `NodeGraphInteractionState.selection_on_drag` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
-| `selectionMode` (`full` vs `partial`) | Marquee selection uses `rects_intersect` (always “partial”) | Partial (no “full” mode) | `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
+| `selectionMode` (`full` vs `partial`) | `NodeGraphInteractionState.selection_mode` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/selection_mode_conformance.rs` |
 | `multiSelectionKeyCode` | `NodeGraphInteractionState.multi_selection_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` |
 | `deleteKeyCode` | `NodeGraphInteractionState.delete_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs` |
 | `disableKeyboardA11y` | `NodeGraphInteractionState.disable_keyboard_a11y` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs` |
@@ -104,5 +104,5 @@ Scope notes:
 ## Recommended Next Steps (Top 3)
 
 1) **Fit-view option parity**: extend framing to support `padding`, `nodes`, and an `ease` surface (custom or preset), matching XyFlow's `fitViewOptions`.
-2) **Selection mode parity**: add a `full` vs `partial` marquee mode knob to match `selectionMode` semantics (current behavior is effectively “partial only”).
+2) **Node origin parity**: add a configurable node origin (center vs top-left) to match `nodeOrigin` behavior; keep it off-by-default to avoid breaking layout.
 3) **Rendering toggle parity**: consider an explicit `onlyRenderVisibleElements` switch (currently culling is always-on), so apps can trade overhead vs pop-in.
