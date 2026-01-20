@@ -54,7 +54,8 @@ Implemented (Windows-first baseline):
 - `Effect::SetMenuBar { window, menu_bar }` contract.
 - Windows native menu bar mapping (Win32 `HMENU` + `WM_COMMAND`).
 - macOS native menu bar mapping (`NSMenu`).
-- Window-scoped `InputContext` snapshots for runner-side gating.
+- Window-scoped `InputContext` snapshots for runner-side gating (including post-dispatch publishing so
+  focus/modal changes are reflected without waiting for paint).
 - Window-scoped per-command enable overrides (optional; `WindowCommandEnabledService`).
 - Window-scoped command availability snapshots for non-focus gating (v1: Undo/Redo).
 - Layered `menubar.json` loading + hot reload.
