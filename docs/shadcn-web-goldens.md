@@ -243,8 +243,8 @@ Overlay placement + menu sizing conformance:
 
 This suite asserts portal wrapper placement (side/align/gap) and also includes explicit checks for
 menu sizing signals such as per-item heights, content insets, and Select metrics (listbox
-width/height, option row height, and scroll button height), including constrained-viewport variants
-that force max-height/scroll behavior.
+width/height, option row height, and scroll button height/insets), including constrained-viewport
+variants that force max-height/scroll behavior.
 
 Overlay chrome conformance (border, radii, and selected colors):
 
