@@ -1,6 +1,20 @@
 use fret_core::{Color, Px, TextStyle};
 use fret_ui::{Theme, ThemeSnapshot};
 
+/// Background grid pattern variant (XyFlow `BackgroundVariant`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NodeGraphBackgroundPattern {
+    Lines,
+    Dots,
+    Cross,
+}
+
+impl Default for NodeGraphBackgroundPattern {
+    fn default() -> Self {
+        Self::Lines
+    }
+}
+
 /// Color mode override for the node graph canvas (XyFlow `colorMode`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeGraphColorMode {
@@ -23,10 +37,17 @@ impl Default for NodeGraphColorMode {
 pub struct NodeGraphStyle {
     pub background: Color,
 
+    pub grid_pattern: NodeGraphBackgroundPattern,
     pub grid_spacing: f32,
     pub grid_minor_color: Color,
     pub grid_major_every: u32,
     pub grid_major_color: Color,
+    /// Grid stroke thickness in screen pixels (XyFlow `BackgroundProps.lineWidth`).
+    pub grid_line_width: f32,
+    /// Dot diameter in canvas units at zoom=1 (XyFlow `BackgroundProps.size` for dots).
+    pub grid_dot_size: f32,
+    /// Cross size in canvas units at zoom=1 (XyFlow `BackgroundProps.size` for cross).
+    pub grid_cross_size: f32,
 
     pub node_width: f32,
     pub node_header_height: f32,
@@ -122,6 +143,7 @@ impl Default for NodeGraphStyle {
                 a: 1.0,
             },
 
+            grid_pattern: NodeGraphBackgroundPattern::Lines,
             grid_spacing: 64.0,
             grid_minor_color: Color {
                 r: 0.14,
@@ -136,6 +158,9 @@ impl Default for NodeGraphStyle {
                 b: 0.22,
                 a: 1.0,
             },
+            grid_line_width: 1.0,
+            grid_dot_size: 1.0,
+            grid_cross_size: 6.0,
 
             node_width: 220.0,
             node_header_height: 28.0,
@@ -504,10 +529,14 @@ impl NodeGraphStyle {
         Self {
             background,
 
+            grid_pattern: NodeGraphBackgroundPattern::Lines,
             grid_spacing: 64.0,
             grid_minor_color: alpha(border, 0.32),
             grid_major_every: 4,
             grid_major_color: alpha(border, 0.52),
+            grid_line_width: 1.0,
+            grid_dot_size: 1.0,
+            grid_cross_size: 6.0,
 
             node_width: 220.0,
             node_header_height: 28.0,

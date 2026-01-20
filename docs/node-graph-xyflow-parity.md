@@ -9,6 +9,8 @@ It is intentionally practical and code-oriented: each item includes pointers to 
 files in `repo-ref/xyflow` and the current (or planned) module in `fret-node`.
 
 If you are looking for overall sequencing and milestones, see `docs/node-graph-roadmap.md`.
+If you are looking for an execution plan (milestones + deliverables), see
+`docs/workstreams/fret-node-xyflow-parity.md`.
 If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed-connections.md`.
 
 ## How to use this doc
@@ -735,12 +737,18 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 8.3 Background patterns
 
-- [~] **Grid background**
+- [~] **Grid background patterns (lines/dots/cross)**
   - XyFlow: `additional-components/Background/Background.tsx` (dots/lines/cross patterns)
-  - fret-node: grid rendering in canvas (`grid_spacing`, major/minor colors)
+  - fret-node:
+    - renderer: `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+    - style surface:
+      - `NodeGraphStyle.grid_pattern` (`Lines` / `Dots` / `Cross`)
+      - `NodeGraphStyle.grid_line_width`
+      - `NodeGraphStyle.grid_dot_size`
+      - `NodeGraphStyle.grid_cross_size`
+      - see: `ecosystem/fret-node/src/ui/style.rs`
   - TODO:
-    - support dots/cross variants
-    - per-editor styling via theme tokens
+    - per-editor styling via theme tokens (plumb theme metrics/colors into the new fields)
 
 ## 8.4 Viewport portals and window-space overlays
 

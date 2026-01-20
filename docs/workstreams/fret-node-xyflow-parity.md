@@ -1,109 +1,168 @@
-# fret-node ↔ xyflow Parity Checklist (Workstream)
+# fret-node ↔ xyflow Alignment Workstream
 
-This document tracks feature parity between `ecosystem/fret-node` (Rust) and `xyflow` (React Flow / Svelte Flow).
+This document is an **execution plan** for aligning `ecosystem/fret-node` (Rust) with `xyflow`
+(React Flow / Svelte Flow / `@xyflow/system`) across two deliverables:
 
-Scope notes:
-- `xyflow` expresses most configuration as component props and hook callbacks.
-- `fret-node` expresses comparable configuration via `NodeGraphViewState` (persisted), `NodeGraphInteractionState` (persisted tuning), `NodeGraphStyle` (visual tuning), plus `NodeGraphCallbacks` and `NodeGraphCanvasMiddleware` (integration points).
-- DOM-only concerns (CSS class names, event propagation quirks) are considered **out of scope** unless they encode a core interaction contract we want to reproduce.
+1) **Headless substrate parity** (framework-agnostic mechanics and runtime ergonomics)
+2) **Batteries-included UI add-ons parity** (common built-in components developers expect out of the box)
 
-## Sources
+For the capability-by-capability parity map, see:
+- Detailed parity matrix: `docs/node-graph-xyflow-parity.md`
+- Node graph roadmap: `docs/node-graph-roadmap.md`
+- Contracts: `docs/adr/0135-node-graph-editor-and-typed-connections.md`
 
-- `xyflow` props: `repo-ref/xyflow/packages/react/src/types/component-props.ts`
-- `xyflow` viewport helpers: `repo-ref/xyflow/packages/system/src/types/general.ts` (`FitViewOptionsBase`, `ViewportHelperFunctionOptions`)
+## Scope (what “parity” means here)
 
-## Status Legend
+- `xyflow` encodes most behavior as component props, store actions, and hook callbacks.
+- `fret-node` encodes comparable behavior via:
+  - persisted `NodeGraphViewState` + `NodeGraphInteractionState` (tuning),
+  - `NodeGraphStyle` (visual tuning),
+  - headless `runtime::*` (store, changes, fit-view),
+  - optional UI integration under the default `fret-ui` feature (`ui::*`).
+- DOM-only concerns (CSS class names, browser scrolling quirks) are **out of scope** unless they
+  encode a core interaction contract we want to preserve.
 
-- **Implemented**: behavior exists and is reasonably aligned.
-- **Partial**: exists but differs (defaults, knobs, semantics, missing options).
-- **Missing**: not present (or only a stub field exists).
-- **N/A**: React/DOM specific, not meaningful in `fret-node`.
+## Ownership boundaries (what goes where)
 
-## Parity Matrix
+- Headless-safe surfaces **must not** depend on `fret-ui`:
+  - `ecosystem/fret-node/src/core/*`
+  - `ecosystem/fret-node/src/ops/*`
+  - `ecosystem/fret-node/src/runtime/*`
+- UI add-ons and widgets live behind the default `fret-ui` feature:
+  - `ecosystem/fret-node/src/ui/*`
+- Policy-heavy “recipes” should live in `kit` (and remain headless-safe when possible).
 
-### Viewport / Navigation
+## Sources (reference implementation)
 
-| xyflow prop / behavior | fret-node equivalent | Status | Evidence |
-|---|---|---|---|
-| `viewport`, `defaultViewport`, `onViewportChange` | Persisted view-state (`NodeGraphViewState.pan`, `.zoom`) + view callbacks (`on_viewport_change` / `on_move`) | Implemented (different integration shape) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/runtime/callbacks.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs` |
-| `minZoom`, `maxZoom` | `NodeGraphStyle.min_zoom`, `NodeGraphStyle.max_zoom` | Implemented | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs` |
-| `panOnDrag` | `NodeGraphInteractionState.pan_on_drag` (buttons) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`, `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs` |
-| `panOnScroll`, `panOnScrollSpeed`, `panOnScrollMode` | `NodeGraphInteractionState.pan_on_scroll`, `.pan_on_scroll_speed`, `.pan_on_scroll_mode` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs` |
-| `zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick` | `NodeGraphInteractionState.zoom_on_scroll`, `.zoom_on_pinch`, `.zoom_on_double_click` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs` |
-| `panActivationKeyCode`, `zoomActivationKeyCode` | `NodeGraphInteractionState.pan_activation_key_code`, `.zoom_activation_key` (+ `space_to_pan`) | Implemented (naming differs) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs` |
-| `translateExtent` (constrain viewport) | `NodeGraphInteractionState.translate_extent` (clamped in `update_view_state`) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_math.rs` |
-| `fitView`, `fitViewOptions` (`padding`, `duration`, `ease`, `interpolate`, `nodes`) | `frame_nodes_in_view(...)` (animated “frame selection/all”) + `NodeGraphViewQueue` (`FrameNodes`) + `with_fit_view_on_mount*` | Implemented (different integration shape; includes `nodes` + `includeHiddenNodes` + per-call `minZoom`/`maxZoom`) | `ecosystem/fret-node/src/runtime/fit_view.rs`, `ecosystem/fret-node/src/ui/view_queue.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_on_mount_conformance.rs` |
-| Viewport animation helpers (`duration`, `ease`, `interpolate`) | Timer-driven viewport animation + `NodeGraphViewQueue::SetViewport` (+ `NodeGraphViewportHelper`) | Implemented (queue-driven; includes a public UI helper wrapper) | `ecosystem/fret-node/src/ui/view_queue.rs`, `ecosystem/fret-node/src/ui/viewport_helper.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs` |
-| `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `NodeGraphInteractionState.auto_pan` (`on_node_drag`, `on_connect`, `speed`, `margin`) | Implemented (defaults differ) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
-| `autoPanOnNodeFocus` | `NodeGraphInteractionState.auto_pan.on_node_focus` | Implemented (opt-in) | `ecosystem/fret-node/src/ui/canvas/widget/focus_nav.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/focus_auto_pan_conformance.rs` |
-| Inertial/momentum pan (not a first-class xyflow prop) | `NodeGraphInteractionState.pan_inertia` | Implemented (opt-in) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
+- XyFlow system substrate: `repo-ref/xyflow/packages/system/src/*`
+- XyFlow React runtime + add-ons: `repo-ref/xyflow/packages/react/src/*`
 
-### Selection / Keyboard
+## Code map (where to look)
 
-| xyflow prop / behavior | fret-node equivalent | Status | Evidence |
-|---|---|---|---|
-| `elementsSelectable` | `NodeGraphInteractionState.elements_selectable` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` |
-| `selectionKeyCode` (box select modifier) | `NodeGraphInteractionState.selection_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
-| `selectionOnDrag` | `NodeGraphInteractionState.selection_on_drag` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs` |
-| `selectionMode` (`full` vs `partial`) | `NodeGraphInteractionState.selection_mode` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/marquee.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/selection_mode_conformance.rs` |
-| `multiSelectionKeyCode` | `NodeGraphInteractionState.multi_selection_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs` |
-| `deleteKeyCode` | `NodeGraphInteractionState.delete_key` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs` |
-| `disableKeyboardA11y` | `NodeGraphInteractionState.disable_keyboard_a11y` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard.rs` |
-| Keyboard nudge (arrow keys move selection) | Nudge commands/tests exist | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs` |
+XyFlow (reference):
+- System substrate:
+  - pan/zoom: `repo-ref/xyflow/packages/system/src/xypanzoom/*`
+  - node dragging: `repo-ref/xyflow/packages/system/src/xydrag/*`
+  - handle connect/reconnect: `repo-ref/xyflow/packages/system/src/xyhandle/*`
+  - resizer mechanics: `repo-ref/xyflow/packages/system/src/xyresizer/*`
+  - minimap math: `repo-ref/xyflow/packages/system/src/xyminimap/*`
+  - graph utils: `repo-ref/xyflow/packages/system/src/utils/*` (esp. `graph.ts`)
+- React runtime + add-ons:
+  - store: `repo-ref/xyflow/packages/react/src/store/*`
+  - add-ons: `repo-ref/xyflow/packages/react/src/additional-components/*`
 
-### Nodes / Groups
+fret-node (target):
+- Headless-safe:
+  - model: `ecosystem/fret-node/src/core/*`
+  - edits/undo: `ecosystem/fret-node/src/ops/*`
+  - runtime/store: `ecosystem/fret-node/src/runtime/store.rs`
+  - runtime changes/apply: `ecosystem/fret-node/src/runtime/changes.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
+  - lookups: `ecosystem/fret-node/src/runtime/lookups.rs`
+- UI integration (default `fret-ui` feature):
+  - canvas widget: `ecosystem/fret-node/src/ui/canvas/*` and `ecosystem/fret-node/src/ui/canvas/widget.rs`
+  - derived internals: `ecosystem/fret-node/src/ui/internals.rs`, `ecosystem/fret-node/src/ui/measured.rs`
+  - overlays/add-ons: `ecosystem/fret-node/src/ui/overlays.rs`, `ecosystem/fret-node/src/ui/panel.rs`
 
-| xyflow prop / behavior | fret-node equivalent | Status | Evidence |
-|---|---|---|---|
-| `nodesDraggable` | `NodeGraphInteractionState.nodes_draggable` (+ per-node override) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs` |
-| `nodesConnectable` | `NodeGraphInteractionState.nodes_connectable` (+ per-node/port override) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs` |
-| Node extent constraint (`nodeExtent`) | `NodeGraphInteractionState.node_extent` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` |
-| `nodeOrigin` | `NodeGraphInteractionState.node_origin` (interprets `Node.pos` as an anchor) | Implemented (off-by-default; default remains `(0, 0)`) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/geometry.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs` |
-| Node resize handles (not a single xyflow prop; typically via custom nodes) | Built-in resize interactions | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/node_resize.rs` |
-| Grouping / parent containers (subflows) | Group model + group resize/drag | Implemented (different API surface) | `ecosystem/fret-node/src/core/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs` |
+## Current gap summary (top items)
 
-### Edges / Connections
+Headless / substrate ergonomics:
+- [ ] Public “system utils” equivalents (e.g. outgoers/incomers/nodes-inside/bounds) on top of lookups.
+- [ ] A crisp “controlled mode” cookbook (store-driven vs external Graph/ViewState) with examples.
 
-| xyflow prop / behavior | fret-node equivalent | Status | Evidence |
-|---|---|---|---|
-| `edgesFocusable` | `NodeGraphInteractionState.edges_focusable` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/focus_nav.rs` |
-| `edgesReconnectable` + reconnect callbacks | `NodeGraphInteractionState.edges_reconnectable` + reconnect interactions/callbacks | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/edge_drag.rs`, `ecosystem/fret-node/src/runtime/callbacks.rs` |
-| `connectionMode` (`strict` / `loose`) | `NodeGraphInteractionState.connection_mode` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs` |
-| `connectOnClick` | `NodeGraphInteractionState.connect_on_click` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs` |
-| `connectionRadius`, `reconnectRadius` | `NodeGraphInteractionState.connection_radius`, `.reconnect_radius` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs` |
-| `isValidConnection` | Drag-time hover validity via `NodeGraphPresenter::can_connect` / `can_reconnect_edge` + connectability gates | Implemented (different integration shape) | `ecosystem/fret-node/src/ui/presenter.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/is_valid_connection_conformance.rs` |
-| Edge routing kinds (`Bezier`, `Straight`, `Step`) | `EdgeRouteKind` in presenter hints | Implemented | `ecosystem/fret-node/src/ui/presenter.rs`, `ecosystem/fret-node/src/ui/canvas/route_math.rs` |
-| Connection line styling / component | Rendered via canvas scene ops; not a React component surface | N/A | `ecosystem/fret-node/src/ui/canvas/widget/paint_edges.rs` |
-| Edge labels | Cached + incremental warmup (single-tile and multi-tile) | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs` |
+Built-in add-ons:
+- [~] Background variants parity (dots / cross) + per-editor theming.
+- [ ] First-class NodeToolbar / EdgeToolbar primitives (overlay positioning + hit-testing discipline).
+- [ ] “Custom edge” Stage 2 (custom path builders / painters) with a stable contract.
 
-### Rendering / Performance
+## Milestones
 
-| xyflow prop / behavior | fret-node equivalent | Status | Evidence |
-|---|---|---|---|
-| `onlyRenderVisibleElements` | `NodeGraphInteractionState.only_render_visible_elements` (default `true`) | Implemented (different default; preserves current behavior) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs` |
-| Z-index modes, elevate-on-select (`elevateNodesOnSelect`, `elevateEdgesOnSelect`) | `NodeGraphInteractionState.elevate_nodes_on_select` / `.elevate_edges_on_select` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/elevate_on_select_conformance.rs` |
-| Cache stability under large graphs | Scene op tile caches + per-frame warmup budgets | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs` |
+Each milestone should be considered “done” only when:
+1) there is a stable public API surface,
+2) conformance tests exist for the hard-to-change semantics,
+3) at least one demo showcases the feature without bespoke glue code.
 
-### UX Plugin Components
+### M1 — Headless substrate ergonomics (A-layer + runtime)
 
-| xyflow component | fret-node equivalent | Status | Evidence |
-|---|---|---|---|
-| `MiniMap` | `NodeGraphMiniMapOverlay` | Implemented | `ecosystem/fret-node/src/ui/overlays.rs` |
-| `Controls` | `NodeGraphControlsOverlay` | Implemented | `ecosystem/fret-node/src/ui/overlays.rs` |
-| `Background` (grid) | Built-in grid painting | Implemented | `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`, `ecosystem/fret-node/src/ui/style.rs` |
+Goal: match `@xyflow/system`-level *developer ergonomics* while keeping the model portable and
+deterministic (undo granularity, stable IDs, predictable hit-testing).
 
-### DOM-only / React-only Concepts
+Deliverables:
+- A public `runtime::utils` module (or equivalent) that covers common graph queries without
+  requiring consumers to manually build their own adjacency maps.
+- “Controlled mode” helper APIs and documentation that mirror XyFlow’s apply-change workflow.
 
-| xyflow prop / behavior | fret-node equivalent | Status | Notes |
-|---|---|---|---|
-| `noDragClassName`, `noPanClassName`, `noWheelClassName` | N/A | N/A | CSS class-based event filtering is a DOM concern. |
-| `preventScrolling` | N/A | N/A | Browser scroll containment is web-only. |
-| `width`, `height` | N/A | N/A | Layout is controlled by the host UI tree. |
-| `colorMode` | `NodeGraphColorMode` + `NodeGraphCanvas::with_color_mode` | Implemented | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs` |
-| Default node CSS tokens (width/padding/radius/handle size/font size) | `NodeGraphStyle::with_xyflow_default_node_style` | Implemented | `ecosystem/fret-node/src/ui/style.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/xyflow_style_conformance.rs` |
+Work items:
+- [ ] Add headless query helpers built on `NodeGraphLookups`:
+  - XyFlow reference: `repo-ref/xyflow/packages/system/src/utils/graph.ts`
+  - fret-node base: `ecosystem/fret-node/src/runtime/lookups.rs`
+  - Expected helpers (naming TBD):
+    - outgoers / incomers (node-level, derived from port-level edges)
+    - connected edges for a node / port
+    - nodes bounds / nodes inside rect (headless geometry; uses `Node.pos` + semantic size)
+- [ ] Add a “controlled mode” guide and a minimal example:
+  - XyFlow mental model: `applyNodeChanges` / `applyEdgeChanges`
+  - fret-node building blocks: `ecosystem/fret-node/src/runtime/changes.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
+- [ ] Add conformance tests for the new helpers (deterministic outputs, stable ordering rules).
 
-## Recommended Next Steps (Top 3)
+### M2 — Built-in add-ons parity (B-layer components)
 
-1) **Connection validation UX**: optionally surface hover-time diagnostics and/or middleware-derived constraints (if apps need parity with commit-time middleware rejection).
-2) **View-state shaping**: decide whether `nodeOrigin` should be moved from view-state tuning to a higher-level config surface for apps that want `Node.pos` in different coordinate conventions.
-3) **Node sizing parity**: consider port-driven auto-sizing and handle/label layout parity with upstream defaults (depends on UX direction).
+Goal: match the “common built-ins” developers reach for immediately when building an editor:
+background, minimap, controls, panels/toolbars — without forcing app-specific bespoke widgets.
+
+Deliverables:
+- A documented, stable set of add-ons that can be composed with `NodeGraphPanel` / overlays.
+- Clear hit-testing and focus rules for overlays (no accidental canvas input stealing).
+
+Work items:
+- [~] Background variants parity:
+  - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
+  - Current fret-node: grid rendering (major/minor) in `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
+  - Done: dot + cross variants (`NodeGraphStyle.grid_pattern` + sizes)
+  - TODO: per-editor theme token plumbing.
+- [ ] NodeToolbar primitive:
+  - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
+  - Implementation direction: window-space overlay positioned from derived geometry
+    (`NodeGraphInternalsStore`), composed via `NodeGraphPanel` (or a dedicated overlay host).
+- [ ] EdgeToolbar primitive:
+  - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
+  - Implementation direction: window-space overlay positioned from edge center/label anchors
+    (needs a public “edge anchor” query from internals).
+- [ ] MiniMap/Controls stabilization pass:
+  - Current fret-node: `NodeGraphMiniMapOverlay`, `NodeGraphControlsOverlay` in `ecosystem/fret-node/src/ui/overlays.rs`
+  - Add: accessibility baseline + placement APIs + theming tokens + store/action wiring guidance.
+
+### M3 — Custom edges Stage 2 (edgeTypes parity)
+
+Goal: make `edgeTypes` a first-class customization surface (not just hint overrides), while keeping
+hit-testing consistent and avoiding breaking performance invariants.
+
+Deliverables:
+- A stable “custom edge painter / path builder” contract.
+- A default suite of edge painters equivalent to XyFlow’s built-ins (Bezier / Step / Straight),
+  plus markers and label placement hooks.
+
+Work items:
+- [ ] Define the Stage 2 edge extension contract:
+  - Current Stage 1: `ecosystem/fret-node/src/ui/edge_types.rs`
+  - Stage 2 TODO is tracked in `docs/node-graph-xyflow-parity.md`
+- [ ] Ensure hit-testing semantics remain deterministic (especially under semantic zoom).
+- [ ] Add conformance tests for:
+  - path generation determinism,
+  - hit-test width semantics,
+  - selection + elevate-on-select interactions across custom edges.
+
+### M4 — Docs, demos, and stabilization gates
+
+Goal: make the aligned surfaces *discoverable* and safe to depend on.
+
+Work items:
+- [ ] Update demos to showcase the new built-ins (background variants, toolbars, custom edges).
+- [ ] Add an API-level “How to build a node editor like XyFlow” guide:
+  - store-driven integration (recommended),
+  - controlled mode integration (advanced),
+  - extension points: presenter vs nodeTypes/edgeTypes vs middleware.
+
+## Tracking policy
+
+- Use `docs/node-graph-xyflow-parity.md` as the authoritative “what exists vs what’s missing” map.
+- Use this file to track *sequencing*, *milestones*, and *deliverables* for the next iterations.
