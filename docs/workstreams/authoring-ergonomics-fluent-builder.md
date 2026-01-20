@@ -53,8 +53,11 @@ Where it plugs in:
 
 Observation:
 
-- For v1, `ui()` should be the “single obvious way” for shadcn authoring. `Styled<T>` is useful as a tiny helper, but
-  it risks splitting the ecosystem into two competing patterns.
+- Decision (v1): keep `Styled<T>` intentionally tiny and chrome-only.
+  - Purpose: an escape hatch for types that can accept **only** `ChromeRefinement` but are not `UiPatchTarget`
+    (or where `LayoutRefinement` would be a no-op / misleading).
+  - Golden path: `ui()` is the single recommended authoring chain for shadcn recipes.
+  - Export strategy: `fret-ui-shadcn::prelude` does not re-export `.styled()` to avoid suggesting it as the default.
 
 ---
 

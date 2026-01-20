@@ -46,11 +46,14 @@ Related:
 
 ## D. Surface Consolidation
 
-- [ ] AUE-surface-030 Decide whether `ecosystem/fret-ui-kit/src/styled.rs` should be:
+- [x] AUE-surface-030 Decide whether `ecosystem/fret-ui-kit/src/styled.rs` should be:
   - deprecated in favor of `ui()`, or
   - expanded to be a thin alias over `UiBuilder`, or
   - kept intentionally tiny (and documented as such).
-- [ ] AUE-surface-031 Ensure `fret-ui-shadcn` prelude re-exports the single recommended authoring chain.
+  - Decision: keep intentionally tiny + chrome-only; do not expand.
+  - Evidence: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
+- [x] AUE-surface-031 Ensure `fret-ui-shadcn` prelude re-exports the single recommended authoring chain.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/lib.rs`
 
 ## E. Documentation / Adoption
 
