@@ -540,8 +540,30 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     }
                 }
             }
-            kill_launched_demo(&mut child);
             let result = result?;
+            if result.stage.as_deref() == Some("passed") {
+                if check_stale_paint_test_id.is_some() || check_hover_layout_max.is_some() {
+                    let bundle_path = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    )
+                    .ok_or_else(|| {
+                        "script passed but no bundle.json was found (required for post-run checks)"
+                            .to_string()
+                    })?;
+
+                    apply_post_run_checks(
+                        &bundle_path,
+                        check_stale_paint_test_id.as_deref(),
+                        check_stale_paint_eps,
+                        check_hover_layout_max,
+                        warmup_frames,
+                    )?;
+                }
+            }
+            kill_launched_demo(&mut child);
             report_result_and_exit(&result);
         }
         "suite" => {
@@ -559,6 +581,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
                     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
                     "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+                    "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
                     "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
                 ]
                 .into_iter()
@@ -654,6 +677,30 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         kill_launched_demo(&mut child);
                         std::process::exit(1);
                     }
+                }
+
+                if result.stage.as_deref() == Some("passed")
+                    && (check_stale_paint_test_id.is_some() || check_hover_layout_max.is_some())
+                {
+                    let bundle_path = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    )
+                    .ok_or_else(|| {
+                        format!(
+                            "script passed but no bundle.json was found (required for post-run checks): {}",
+                            src.display()
+                        )
+                    })?;
+                    apply_post_run_checks(
+                        &bundle_path,
+                        check_stale_paint_test_id.as_deref(),
+                        check_stale_paint_eps,
+                        check_hover_layout_max,
+                        warmup_frames,
+                    )?;
                 }
 
                 if !reuse_process {
@@ -1133,6 +1180,55 @@ fn resolve_bundle_json_path(path: &Path) -> PathBuf {
     } else {
         path.to_path_buf()
     }
+}
+
+fn wait_for_bundle_json_from_script_result(
+    out_dir: &Path,
+    result: &ScriptResultSummary,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Option<PathBuf> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
+    while Instant::now() < deadline {
+        let dir = result
+            .last_bundle_dir
+            .as_deref()
+            .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()))
+            .map(PathBuf::from)
+            .map(|p| if p.is_absolute() { p } else { out_dir.join(p) })
+            .or_else(|| read_latest_pointer(out_dir))
+            .or_else(|| find_latest_export_dir(out_dir));
+        if let Some(dir) = dir {
+            let bundle_path = resolve_bundle_json_path(&dir);
+            if bundle_path.is_file() {
+                return Some(bundle_path);
+            }
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+    None
+}
+
+fn apply_post_run_checks(
+    bundle_path: &Path,
+    check_stale_paint_test_id: Option<&str>,
+    check_stale_paint_eps: f32,
+    check_hover_layout_max: Option<u32>,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    if let Some(test_id) = check_stale_paint_test_id {
+        check_bundle_for_stale_paint(bundle_path, test_id, check_stale_paint_eps)?;
+    }
+    if let Some(max_allowed) = check_hover_layout_max {
+        let report = bundle_stats_from_path(
+            bundle_path,
+            1,
+            BundleStatsSort::Invalidation,
+            BundleStatsOptions { warmup_frames },
+        )?;
+        check_report_for_hover_layout_invalidations(&report, max_allowed)?;
+    }
+    Ok(())
 }
 
 fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
