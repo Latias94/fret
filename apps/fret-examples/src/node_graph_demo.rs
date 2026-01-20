@@ -1,3 +1,5 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -49,12 +51,13 @@ use fret_node::ui::style::{NodeGraphBackgroundPattern, NodeGraphStyle};
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
     NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphControlsOverlay,
-    NodeGraphEdgeToolbar, NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore,
-    NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes, NodeGraphOverlayHost,
-    NodeGraphOverlayState, NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost,
-    NodeGraphPortalNodeLayout, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
-    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
-    RegistryNodeGraphPresenter, register_node_graph_commands,
+    NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphEditor,
+    NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel, NodeGraphPanelPosition,
+    NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphToolbarAlign,
+    NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
+    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
+    register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -1299,10 +1302,54 @@ impl NodeGraphDemoDriver {
 
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
+
+        // Stage 2 `edgeTypes`: demonstrate custom edge paths (used for paint + hit-testing).
+        let edge_types = NodeGraphEdgeTypes::new().register_path(
+            fret_node::ui::EdgeTypeKey::new("data"),
+            |_graph, edge_id, _style, _hint, input| {
+                let zoom = input.zoom.max(1.0e-6);
+
+                let dx = input.to.x.0 - input.from.x.0;
+                let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
+                let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
+                let bend = 48.0 / zoom;
+
+                let c1 = Point::new(Px(input.from.x.0 + dir * ctrl), Px(input.from.y.0 - bend));
+                let c2 = Point::new(Px(input.to.x.0 - dir * ctrl), Px(input.to.y.0 - bend));
+
+                let q = |v: f32, step: f32| -> i64 {
+                    if !v.is_finite() {
+                        return 0;
+                    }
+                    (v / step).round() as i64
+                };
+
+                let mut hasher = DefaultHasher::new();
+                edge_id.hash(&mut hasher);
+                q(input.from.x.0, 0.01).hash(&mut hasher);
+                q(input.from.y.0, 0.01).hash(&mut hasher);
+                q(input.to.x.0, 0.01).hash(&mut hasher);
+                q(input.to.y.0, 0.01).hash(&mut hasher);
+                q(zoom, 0.0001).hash(&mut hasher);
+
+                Some(fret_node::ui::edge_types::EdgeCustomPath {
+                    cache_key: hasher.finish(),
+                    commands: vec![
+                        fret_core::PathCommand::MoveTo(input.from),
+                        fret_core::PathCommand::CubicTo {
+                            ctrl1: c1,
+                            ctrl2: c2,
+                            to: input.to,
+                        },
+                    ],
+                })
+            },
+        );
         let canvas = NodeGraphCanvas::new(graph.clone(), view)
             .with_store(store.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
+            .with_edge_types(edge_types)
             .with_style(style.clone())
             .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
