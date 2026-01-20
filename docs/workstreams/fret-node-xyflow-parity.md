@@ -32,7 +32,7 @@ Scope notes:
 | `zoomOnScroll`, `zoomOnPinch`, `zoomOnDoubleClick` | `NodeGraphInteractionState.zoom_on_scroll`, `.zoom_on_pinch`, `.zoom_on_double_click` | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs` |
 | `panActivationKeyCode`, `zoomActivationKeyCode` | `NodeGraphInteractionState.pan_activation_key_code`, `.zoom_activation_key` (+ `space_to_pan`) | Implemented (naming differs) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs` |
 | `translateExtent` (constrain viewport) | `NodeGraphInteractionState.translate_extent` (clamped in `update_view_state`) | Implemented | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_math.rs` |
-| `fitView`, `fitViewOptions` (`padding`, `duration`, `ease`, `interpolate`, `nodes`) | `frame_nodes_in_view(...)` (animated “frame selection/all”) | Partial (has duration/interpolate, missing padding/nodes/ease) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs` |
+| `fitView`, `fitViewOptions` (`padding`, `duration`, `ease`, `interpolate`, `nodes`) | `frame_nodes_in_view(...)` (animated “frame selection/all”) | Partial (has padding/duration/interpolate, missing nodes/ease) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/view_state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs` |
 | Viewport animation helpers (`duration`, `ease`, `interpolate`) | Timer-driven viewport animation (duration + interpolate) | Partial (missing custom ease + helper APIs) | `ecosystem/fret-node/src/ui/canvas/state.rs`, `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
 | `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `NodeGraphInteractionState.auto_pan` (`on_node_drag`, `on_connect`, `speed`, `margin`) | Implemented (defaults differ) | `ecosystem/fret-node/src/io/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs` |
 | `autoPanOnNodeFocus` | `NodeGraphInteractionState.auto_pan.on_node_focus` | Implemented (opt-in) | `ecosystem/fret-node/src/ui/canvas/widget/focus_nav.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/focus_auto_pan_conformance.rs` |
@@ -103,6 +103,6 @@ Scope notes:
 
 ## Recommended Next Steps (Top 3)
 
-1) **Fit-view option parity**: extend framing to support `padding`, `nodes`, and an `ease` surface (custom or preset), matching XyFlow's `fitViewOptions`.
+1) **Fit-view option parity**: extend framing to support `nodes` and an `ease` surface (custom or preset), matching XyFlow's `fitViewOptions`.
 2) **Node origin parity**: add a configurable node origin (center vs top-left) to match `nodeOrigin` behavior; keep it off-by-default to avoid breaking layout.
 3) **Rendering toggle parity**: consider an explicit `onlyRenderVisibleElements` switch (currently culling is always-on), so apps can trade overhead vs pop-in.
