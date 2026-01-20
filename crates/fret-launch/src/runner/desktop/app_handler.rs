@@ -961,6 +961,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
+        // Ensure effects requested during `RedrawRequested` (after the pre-render drain) are still
+        // observed before the loop sleeps (e.g. `App::request_redraw()` inside a render callback).
+        self.drain_effects(event_loop);
+
         self.tick_id.0 = self.tick_id.0.saturating_add(1);
         self.app.set_tick_id(self.tick_id);
         self.saw_left_mouse_release_this_turn = false;
@@ -1126,7 +1130,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         let wants_poll = drag_poll || follow_poll;
 
         let wants_raf = !self.raf_windows.is_empty();
-        self.raf_windows.clear();
+        if wants_raf {
+            for app_window in self.raf_windows.drain() {
+                if let Some(state) = self.windows.get(app_window) {
+                    state.window.request_redraw();
+                }
+            }
+        }
 
         let next = match (next_deadline, wants_raf) {
             (Some(deadline), true) => Some((now + self.config.frame_interval).min(deadline)),
