@@ -2972,6 +2972,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         event_loop.exit();
                         return;
                     }
+                    Effect::ShowAboutPanel => {
+                        #[cfg(target_os = "macos")]
+                        {
+                            macos_menu::show_about_panel();
+                        }
+                    }
                     Effect::HideApp => {
                         #[cfg(target_os = "macos")]
                         {

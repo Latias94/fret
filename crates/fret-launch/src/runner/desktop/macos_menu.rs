@@ -270,6 +270,13 @@ pub(crate) fn hide_app() {
     }
 }
 
+pub(crate) fn show_about_panel() {
+    unsafe {
+        let app = NSApp();
+        let _: () = msg_send![app, orderFrontStandardAboutPanel: nil];
+    }
+}
+
 pub(crate) fn hide_other_apps() {
     unsafe {
         let app = NSApp();
@@ -544,8 +551,13 @@ fn active_app_window_id(state: &MacosMenuState) -> Option<AppWindowId> {
         .and_then(from_ptr)
         .or_else(|| main_window_ptr().and_then(from_ptr))
         .or_else(|| {
-            (state.ns_window_to_app_window.len() == 1)
-                .then(|| *state.ns_window_to_app_window.values().next().expect("len==1"))
+            (state.ns_window_to_app_window.len() == 1).then(|| {
+                *state
+                    .ns_window_to_app_window
+                    .values()
+                    .next()
+                    .expect("len==1")
+            })
         })
 }
 
