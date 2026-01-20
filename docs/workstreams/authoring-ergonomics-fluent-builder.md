@@ -107,8 +107,8 @@ gpui-component supports `corner_radii(Corners)` directly.
 
 Fret today:
 
-- `ChromeRefinement` exposes `rounded(Radius)` and a few shorthands; per-corner controls are not first-class in the
-  `ui()` chain.
+- Per-corner radii are supported via `Corners4` + `ChromeRefinement::corner_radii(...)` and `rounded_tl/tr/br/bl`,
+  and are available on the `ui()` chain.
 
 ### 4.4 “Node constructor” gap (`div().h_flex()` feel)
 
@@ -117,9 +117,8 @@ gpui-component’s authoring loop starts from a single constructor (`div()`), th
 Fret today:
 
 - The patch chain (`ui()`) assumes you already have a component/type to patch.
-- For layout-only authoring, we already have component-layer helpers like
-  `fret-ui-kit::declarative::stack::{hstack, vstack}` (`ecosystem/fret-ui-kit/src/declarative/stack.rs`), but they
-  are not integrated with the `ui()` patch chain (authors still pass `LayoutRefinement` explicitly).
+- Layout constructors are available via `fret-ui-kit::ui::{h_flex, v_flex}` which return a patchable builder (plus
+  gap/alignment shorthands), and can be re-exported by shadcn prelude for app code.
 
 ---
 
@@ -128,9 +127,8 @@ Fret today:
 Recommendation: keep the existing `UiPatch` model, but provide two complementary “golden path” entry points:
 
 1) **Patch existing components** (already present): `component.ui().px_2().w_full().into_element(cx)`
-2) **Build layout nodes fluently** (partially present): `stack::hstack/vstack` exist, but we still want an
-   integrated path where layout nodes can be patched via `ui()` (or an equivalent builder) without “props struct +
-   `LayoutRefinement` ceremony”.
+2) **Build layout nodes fluently** (present): `ui::h_flex/v_flex` provide a patchable flex constructor path that can
+   participate in the same authoring vocabulary as components.
 
 This keeps the layering clean:
 
@@ -147,7 +145,7 @@ This is not a 1:1 parity target; it is a “what should feel equally easy” che
 | gpui-component | Intent | Fret today | v1 action |
 | --- | --- | --- | --- |
 | `refine_style(&StyleRefinement)` | apply a patch | `ui().style(ChromeRefinement)` / `ui().layout(LayoutRefinement)` | Keep; add more shorthands |
-| `h_flex()` / `v_flex()` | start a flex layout | `stack::hstack/vstack` (component-layer), or `cx.row/column` (runtime) | Integrate layout constructors with `ui()` patching (or provide a patchable wrapper) |
+| `h_flex()` / `v_flex()` | start a flex layout | `fret-ui-kit::ui::h_flex/v_flex` (patchable builder) | Done; consider adding `ui::grid`/`ui::stack` |
 | `paddings(Edges)` | batch edge edits | no single helper | Add `UiBuilder::paddings(Edges4<...>)` (token-aware + px-friendly) |
 | `margins(Edges)` | batch edge edits | no single helper | Add `UiBuilder::margins(Edges4<...>)` (token-aware + px-friendly, supports `auto`) |
 | `debug_*()` | debug borders | ad-hoc per component | Add builder debug helpers (debug-only gated) |
@@ -162,5 +160,5 @@ This is not a 1:1 parity target; it is a “what should feel equally easy” che
 Execute the TODO tracker in small, reviewable slices:
 
 - Start with **helpers** (edges, debug helpers, per-corner radii).
-- Then add **layout constructors** (`ui::h_flex` / `ui::v_flex`) to reduce “props struct noise”.
+- Then expand the **layout constructors** surface (e.g. `ui::stack`, `ui::grid`, plus more shorthands).
 - Keep `docs/shadcn-declarative-progress.md` updated when the authoring surface changes.
