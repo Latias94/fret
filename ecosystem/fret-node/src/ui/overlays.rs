@@ -17,7 +17,7 @@ use fret_ui::{UiHost, retained_bridge::*};
 use super::edit_queue::NodeGraphEditQueue;
 use super::internals::NodeGraphInternalsStore;
 use super::style::NodeGraphStyle;
-use crate::core::{GroupId, NodeId};
+use crate::core::{EdgeId, GroupId, NodeId};
 use crate::interaction::NodeGraphConnectionMode;
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
@@ -556,6 +556,247 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
     }
 }
 
+/// A window-space toolbar anchored to an edge center derived from internals (XyFlow `EdgeToolbar`-style).
+///
+/// Expected children:
+/// - child 0: the toolbar content widget (should implement `Widget::measure` for `Auto` sizing).
+pub struct NodeGraphEdgeToolbar {
+    canvas_node: fret_core::NodeId,
+    graph: Model<crate::Graph>,
+    view_state: Model<NodeGraphViewState>,
+    internals: Arc<NodeGraphInternalsStore>,
+
+    edge: Option<EdgeId>,
+    visibility: NodeGraphToolbarVisibility,
+    align_x: NodeGraphToolbarAlign,
+    align_y: NodeGraphToolbarAlign,
+    size: NodeGraphToolbarSize,
+    offset: Point,
+
+    last_child_bounds: Option<Rect>,
+}
+
+impl NodeGraphEdgeToolbar {
+    pub fn new(
+        canvas_node: fret_core::NodeId,
+        graph: Model<crate::Graph>,
+        view_state: Model<NodeGraphViewState>,
+        internals: Arc<NodeGraphInternalsStore>,
+    ) -> Self {
+        Self {
+            canvas_node,
+            graph,
+            view_state,
+            internals,
+            edge: None,
+            visibility: NodeGraphToolbarVisibility::WhenSelected,
+            align_x: NodeGraphToolbarAlign::Center,
+            align_y: NodeGraphToolbarAlign::Center,
+            size: NodeGraphToolbarSize::Auto,
+            offset: Point::new(Px(0.0), Px(0.0)),
+            last_child_bounds: None,
+        }
+    }
+
+    /// Anchors the toolbar to a specific edge id.
+    pub fn for_edge(mut self, edge: EdgeId) -> Self {
+        self.edge = Some(edge);
+        self
+    }
+
+    pub fn with_visibility(mut self, visibility: NodeGraphToolbarVisibility) -> Self {
+        self.visibility = visibility;
+        self
+    }
+
+    pub fn with_align_x(mut self, align_x: NodeGraphToolbarAlign) -> Self {
+        self.align_x = align_x;
+        self
+    }
+
+    pub fn with_align_y(mut self, align_y: NodeGraphToolbarAlign) -> Self {
+        self.align_y = align_y;
+        self
+    }
+
+    pub fn with_offset_px(mut self, dx: f32, dy: f32) -> Self {
+        self.offset = Point::new(Px(dx), Px(dy));
+        self
+    }
+
+    pub fn with_size(mut self, size: NodeGraphToolbarSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    fn clamp_rect_to_bounds(mut rect: Rect, bounds: Rect) -> Rect {
+        let w = rect.size.width.0.max(0.0);
+        let h = rect.size.height.0.max(0.0);
+
+        let min_x = bounds.origin.x.0;
+        let min_y = bounds.origin.y.0;
+        let max_x = bounds.origin.x.0 + (bounds.size.width.0 - w).max(0.0);
+        let max_y = bounds.origin.y.0 + (bounds.size.height.0 - h).max(0.0);
+
+        rect.origin.x.0 = rect.origin.x.0.clamp(min_x, max_x);
+        rect.origin.y.0 = rect.origin.y.0.clamp(min_y, max_y);
+        rect
+    }
+
+    fn positioned_rect_for(
+        bounds: Rect,
+        anchor: Point,
+        size: Size,
+        align_x: NodeGraphToolbarAlign,
+        align_y: NodeGraphToolbarAlign,
+        offset: Point,
+    ) -> Rect {
+        let w = size.width.0.max(0.0);
+        let h = size.height.0.max(0.0);
+
+        let x = match align_x {
+            NodeGraphToolbarAlign::Start => anchor.x.0,
+            NodeGraphToolbarAlign::Center => anchor.x.0 - 0.5 * w,
+            NodeGraphToolbarAlign::End => anchor.x.0 - w,
+        };
+
+        let y = match align_y {
+            NodeGraphToolbarAlign::Start => anchor.y.0,
+            NodeGraphToolbarAlign::Center => anchor.y.0 - 0.5 * h,
+            NodeGraphToolbarAlign::End => anchor.y.0 - h,
+        };
+
+        let rect = Rect::new(
+            Point::new(Px(x + offset.x.0), Px(y + offset.y.0)),
+            Size::new(Px(w), Px(h)),
+        );
+        Self::clamp_rect_to_bounds(rect, bounds)
+    }
+
+    fn resolve_child_size<H: UiHost>(
+        &mut self,
+        cx: &mut LayoutCx<'_, H>,
+        child: fret_core::NodeId,
+    ) -> Size {
+        match self.size {
+            NodeGraphToolbarSize::Fixed(size) => size,
+            NodeGraphToolbarSize::Auto => {
+                let avail = cx.bounds.size;
+                let constraints = LayoutConstraints::new(
+                    LayoutSize::new(None, None),
+                    LayoutSize::new(
+                        AvailableSpace::Definite(avail.width),
+                        AvailableSpace::Definite(avail.height),
+                    ),
+                );
+                cx.measure_in(child, constraints)
+            }
+        }
+    }
+
+    fn resolve_target_edge<H: UiHost>(&self, host: &H) -> Option<(EdgeId, bool)> {
+        self.view_state
+            .read_ref(host, |s| {
+                if let Some(edge) = self.edge {
+                    Some((edge, s.selected_edges.contains(&edge)))
+                } else {
+                    s.selected_edges.first().copied().map(|id| (id, true))
+                }
+            })
+            .ok()
+            .flatten()
+    }
+}
+
+impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
+    fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+        self.last_child_bounds
+            .is_some_and(|rect| rect.contains(position))
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.observe_model(&self.graph, Invalidation::Layout);
+        cx.observe_model(&self.view_state, Invalidation::Layout);
+
+        let child = cx.children.get(0).copied();
+        self.last_child_bounds = None;
+
+        let Some((edge_id, is_selected)) = self.resolve_target_edge(&*cx.app) else {
+            if let Some(child) = child {
+                cx.layout_in(
+                    child,
+                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
+                );
+                if cx.focus == Some(child) {
+                    cx.tree.set_focus(Some(self.canvas_node));
+                }
+            }
+            return cx.bounds.size;
+        };
+
+        if self.visibility == NodeGraphToolbarVisibility::WhenSelected && !is_selected {
+            if let Some(child) = child {
+                cx.layout_in(
+                    child,
+                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
+                );
+                if cx.focus == Some(child) {
+                    cx.tree.set_focus(Some(self.canvas_node));
+                }
+            }
+            return cx.bounds.size;
+        }
+
+        let snapshot = self.internals.snapshot();
+        let Some(center) = snapshot.edge_centers_window.get(&edge_id).copied() else {
+            if let Some(child) = child {
+                cx.layout_in(
+                    child,
+                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
+                );
+                if cx.focus == Some(child) {
+                    cx.tree.set_focus(Some(self.canvas_node));
+                }
+            }
+            return cx.bounds.size;
+        };
+
+        if let Some(child) = child {
+            let size = self.resolve_child_size(cx, child);
+            if size.width.0 <= 0.0 && size.height.0 <= 0.0 {
+                cx.layout_in(
+                    child,
+                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
+                );
+                if cx.focus == Some(child) {
+                    cx.tree.set_focus(Some(self.canvas_node));
+                }
+            } else {
+                let rect = Self::positioned_rect_for(
+                    cx.bounds,
+                    center,
+                    size,
+                    self.align_x,
+                    self.align_y,
+                    self.offset,
+                );
+                self.last_child_bounds = Some(rect);
+                cx.layout_in(child, rect);
+            }
+        }
+
+        cx.bounds.size
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        for &child in cx.children {
+            if let Some(bounds) = cx.child_bounds(child) {
+                cx.paint(child, bounds);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod node_toolbar_tests {
     use super::{
@@ -648,6 +889,53 @@ mod node_toolbar_tests {
             NodeGraphToolbarVisibility::default(),
             NodeGraphToolbarVisibility::WhenSelected
         );
+    }
+}
+
+#[cfg(test)]
+mod edge_toolbar_tests {
+    use super::{NodeGraphEdgeToolbar, NodeGraphToolbarAlign};
+    use fret_core::{Point, Px, Rect, Size};
+
+    #[test]
+    fn positioned_rect_center_center_centers_about_anchor() {
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+        let anchor = Point::new(Px(50.0), Px(60.0));
+        let size = Size::new(Px(20.0), Px(10.0));
+
+        let rect = NodeGraphEdgeToolbar::positioned_rect_for(
+            bounds,
+            anchor,
+            size,
+            NodeGraphToolbarAlign::Center,
+            NodeGraphToolbarAlign::Center,
+            Point::new(Px(0.0), Px(0.0)),
+        );
+
+        assert_eq!(rect.origin.x.0, 40.0);
+        assert_eq!(rect.origin.y.0, 55.0);
+    }
+
+    #[test]
+    fn positioned_rect_is_clamped_to_bounds() {
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(80.0)));
+        let anchor = Point::new(Px(95.0), Px(10.0));
+        let size = Size::new(Px(50.0), Px(10.0));
+
+        let rect = NodeGraphEdgeToolbar::positioned_rect_for(
+            bounds,
+            anchor,
+            size,
+            NodeGraphToolbarAlign::Start,
+            NodeGraphToolbarAlign::Start,
+            Point::new(Px(0.0), Px(0.0)),
+        );
+
+        assert_eq!(rect.origin.x.0, 50.0);
+        assert_eq!(rect.origin.y.0, 10.0);
     }
 }
 

@@ -65,6 +65,7 @@ pub struct NodeGraphInternalsSnapshot {
     pub nodes_window: BTreeMap<NodeId, Rect>,
     pub ports_window: BTreeMap<PortId, Rect>,
     pub port_centers_window: BTreeMap<PortId, Point>,
+    pub edge_centers_window: BTreeMap<EdgeId, Point>,
     /// Optional human-readable label for the currently active descendant (a11y support).
     ///
     /// This is an editor-derived surface and must not be serialized into graph assets.

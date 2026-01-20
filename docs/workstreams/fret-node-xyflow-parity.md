@@ -125,10 +125,11 @@ Work items:
   - Implementation direction: window-space overlay positioned from derived geometry
     (`NodeGraphInternalsStore`), composed via `NodeGraphPanel` (or a dedicated overlay host).
   - fret-node implementation: `ecosystem/fret-node/src/ui/overlays.rs` (`NodeGraphNodeToolbar`)
-- [ ] EdgeToolbar primitive:
+- [x] EdgeToolbar primitive:
   - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
   - Implementation direction: window-space overlay positioned from edge center/label anchors
     (needs a public “edge anchor” query from internals).
+  - fret-node implementation: `ecosystem/fret-node/src/ui/overlays.rs` (`NodeGraphEdgeToolbar`) + `NodeGraphInternalsSnapshot.edge_centers_window`
 - [ ] MiniMap/Controls stabilization pass:
   - Current fret-node: `NodeGraphMiniMapOverlay`, `NodeGraphControlsOverlay` in `ecosystem/fret-node/src/ui/overlays.rs`
   - Add: accessibility baseline + placement APIs + theming tokens + store/action wiring guidance.

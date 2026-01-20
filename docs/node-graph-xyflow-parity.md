@@ -217,6 +217,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
   - fret-node: `NodeGraphNodeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
 
+- [x] **EdgeToolbar**
+  - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
+  - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+
 - [~] **Panels / toolbars / overlays composition API**
   - XyFlow: `<Panel />` composition patterns
   - fret-node:
