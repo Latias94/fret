@@ -2341,17 +2341,24 @@ impl WinitAppDriver for UiGalleryDriver {
                 }
             }
             fret_app::core_commands::APP_ABOUT => {
-                let sonner = shadcn::Sonner::global(app);
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
-                    &mut host,
-                    window,
-                    "About",
-                    shadcn::ToastMessageOptions::new().description("Fret UI Gallery"),
-                );
-                let _ = host.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("cmd.about");
-                });
+                if Platform::current() == Platform::Macos {
+                    app.push_effect(Effect::ShowAboutPanel);
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("cmd.about");
+                    });
+                } else {
+                    let sonner = shadcn::Sonner::global(app);
+                    let mut host = UiActionHostAdapter { app };
+                    sonner.toast_message(
+                        &mut host,
+                        window,
+                        "About",
+                        shadcn::ToastMessageOptions::new().description("Fret UI Gallery"),
+                    );
+                    let _ = host.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("cmd.about");
+                    });
+                }
             }
             fret_app::core_commands::APP_PREFERENCES => {
                 app.push_effect(Effect::Command {
