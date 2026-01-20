@@ -39,6 +39,7 @@ mod invalidation_ordering_conformance;
 mod is_valid_connection_conformance;
 mod middleware_conformance;
 mod node_origin_conformance;
+mod node_sizing_conformance;
 mod only_render_visible_elements_conformance;
 mod perf_cache;
 mod portal_conformance;
