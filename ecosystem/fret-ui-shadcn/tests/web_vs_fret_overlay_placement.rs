@@ -10423,16 +10423,35 @@ fn command_dialog_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsS
     let query: Model<String> = app.models_mut().insert(String::new());
     let open: Model<bool> = app.models_mut().insert(false);
 
-    let items = vec![
-        fret_ui_shadcn::CommandItem::new("Calendar"),
-        fret_ui_shadcn::CommandItem::new("Search Emoji"),
-        fret_ui_shadcn::CommandItem::new("Calculator"),
+    let entries = vec![
+        fret_ui_shadcn::CommandGroup::new(vec![
+            fret_ui_shadcn::CommandItem::new("Calendar").on_select("command.calendar"),
+            fret_ui_shadcn::CommandItem::new("Search Emoji").on_select("command.search_emoji"),
+            fret_ui_shadcn::CommandItem::new("Calculator").on_select("command.calculator"),
+        ])
+        .heading("Suggestions")
+        .into(),
+        fret_ui_shadcn::CommandSeparator::new().into(),
+        fret_ui_shadcn::CommandGroup::new(vec![
+            fret_ui_shadcn::CommandItem::new("Profile")
+                .shortcut("⌘P")
+                .on_select("command.profile"),
+            fret_ui_shadcn::CommandItem::new("Billing")
+                .shortcut("⌘B")
+                .on_select("command.billing"),
+            fret_ui_shadcn::CommandItem::new("Settings")
+                .shortcut("⌘S")
+                .on_select("command.settings"),
+        ])
+        .heading("Settings")
+        .into(),
     ];
 
     let render = |cx: &mut ElementContext<'_, App>| {
         use fret_ui_shadcn::{Button, CommandDialog};
 
-        CommandDialog::new(open.clone(), query.clone(), items.clone())
+        CommandDialog::new(open.clone(), query.clone(), Vec::new())
+            .entries(entries.clone())
             .into_element(cx, |cx| Button::new("Open").into_element(cx))
     };
 
