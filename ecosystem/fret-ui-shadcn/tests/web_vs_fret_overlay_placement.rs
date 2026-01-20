@@ -1572,12 +1572,17 @@ fn assert_overlay_placement_matches(
         window,
         bounds,
         FrameId(1),
-        false,
+        true,
         |cx| {
             let content = build_frame1(cx, &open);
             vec![pad_root(cx, Px(0.0), content)]
         },
     );
+
+    let snap_closed = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot (closed)")
+        .clone();
 
     let _ = app.models_mut().update(&open, |v| *v = true);
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
@@ -1600,9 +1605,12 @@ fn assert_overlay_placement_matches(
         );
     }
 
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let snap_open = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot (open)")
+        .clone();
 
-    let trigger = snap
+    let trigger = snap_closed
         .nodes
         .iter()
         .find(|n| {
@@ -1614,11 +1622,75 @@ fn assert_overlay_placement_matches(
             }
             true
         })
-        .unwrap_or_else(|| panic!("missing fret trigger role={fret_trigger_role:?}"));
+        .unwrap_or_else(|| {
+            use std::collections::BTreeMap;
+
+            fn role_name(role: SemanticsRole) -> &'static str {
+                match role {
+                    SemanticsRole::Generic => "Generic",
+                    SemanticsRole::Window => "Window",
+                    SemanticsRole::Panel => "Panel",
+                    SemanticsRole::Group => "Group",
+                    SemanticsRole::Dialog => "Dialog",
+                    SemanticsRole::AlertDialog => "AlertDialog",
+                    SemanticsRole::Alert => "Alert",
+                    SemanticsRole::Button => "Button",
+                    SemanticsRole::Checkbox => "Checkbox",
+                    SemanticsRole::Switch => "Switch",
+                    SemanticsRole::Slider => "Slider",
+                    SemanticsRole::ComboBox => "ComboBox",
+                    SemanticsRole::RadioGroup => "RadioGroup",
+                    SemanticsRole::RadioButton => "RadioButton",
+                    SemanticsRole::TabList => "TabList",
+                    SemanticsRole::Tab => "Tab",
+                    SemanticsRole::TabPanel => "TabPanel",
+                    SemanticsRole::MenuBar => "MenuBar",
+                    SemanticsRole::Menu => "Menu",
+                    SemanticsRole::MenuItem => "MenuItem",
+                    SemanticsRole::MenuItemCheckbox => "MenuItemCheckbox",
+                    SemanticsRole::MenuItemRadio => "MenuItemRadio",
+                    SemanticsRole::Tooltip => "Tooltip",
+                    SemanticsRole::Text => "Text",
+                    SemanticsRole::TextField => "TextField",
+                    SemanticsRole::List => "List",
+                    SemanticsRole::ListItem => "ListItem",
+                    SemanticsRole::ListBox => "ListBox",
+                    SemanticsRole::ListBoxOption => "ListBoxOption",
+                    SemanticsRole::TreeItem => "TreeItem",
+                    SemanticsRole::Viewport => "Viewport",
+                    _ => "Unknown",
+                }
+            }
+
+            let mut role_counts: BTreeMap<&'static str, usize> = BTreeMap::new();
+            for n in &snap_closed.nodes {
+                *role_counts.entry(role_name(n.role)).or_insert(0) += 1;
+            }
+
+            let candidates: Vec<(Option<&str>, Option<&str>)> = snap_closed
+                .nodes
+                .iter()
+                .filter(|n| n.role == fret_trigger_role)
+                .map(|n| (n.label.as_deref(), n.test_id.as_deref()))
+                .collect();
+
+            let roots: Vec<_> = snap_closed.roots.iter().map(|r| r.root).collect();
+
+            let sample: Vec<(SemanticsRole, Option<&str>, Option<&str>)> = snap_closed
+                .nodes
+                .iter()
+                .take(30)
+                .map(|n| (n.role, n.label.as_deref(), n.test_id.as_deref()))
+                .collect();
+
+            panic!(
+                "missing fret trigger role={fret_trigger_role:?} label={fret_trigger_label:?} (closed snapshot); roots={roots:?}; role_counts={role_counts:?}; candidates(label,test_id)={candidates:?}; sample(role,label,test_id)={sample:?}"
+            );
+        });
 
     let expected_portal_w = web_portal.rect.w;
     let expected_portal_h = web_portal.rect.h;
-    let portal = snap
+    let portal = snap_open
         .nodes
         .iter()
         .filter(|n| n.role == fret_portal_role)
@@ -1653,7 +1725,7 @@ fn assert_overlay_placement_matches(
     let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_portal);
 
     if debug {
-        let candidates: Vec<_> = snap
+        let candidates: Vec<_> = snap_open
             .nodes
             .iter()
             .filter(|n| n.role == fret_portal_role)
