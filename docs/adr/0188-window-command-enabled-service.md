@@ -40,6 +40,8 @@ Usage:
 - OS menubar gating MAY treat `Some(false)` as disabled even if `when` would otherwise evaluate to
   true.
 - Shortcut dispatch MUST respect `Some(false)` so keyboard behavior matches menu enablement.
+- App effect enqueue MUST drop `Effect::Command { window: Some(_), .. }` when the override is
+  `Some(false)` as a final guardrail against surface inconsistencies.
 
 This service is window-scoped (not viewport-scoped). Docking and multiple viewports do not change
 the seam: viewports are app/UI details; the OS menubar is a window-level integration surface.
@@ -61,9 +63,12 @@ the seam: viewports are app/UI details; the OS menubar is a window-level integra
 ## Evidence anchors (implementation)
 
 - Service: `crates/fret-runtime/src/window_command_enabled.rs`
+- App-level guardrail: `crates/fret-app/src/app.rs`
 - Shortcut gating: `crates/fret-ui/src/tree/shortcuts.rs`
 - Windows OS menubar gating: `crates/fret-launch/src/runner/desktop/windows_menu.rs`
 - macOS OS menubar gating: `crates/fret-launch/src/runner/desktop/macos_menu.rs`
+- In-window menubar gating: `ecosystem/fret-kit/src/workspace_menu.rs`
+- Command palette gating: `ecosystem/fret-ui-shadcn/src/command.rs`
 - Tests: `crates/fret-ui/src/tree/tests/command_enabled_service.rs`
 
 ## References
@@ -71,4 +76,3 @@ the seam: viewports are app/UI details; the OS menubar is a window-level integra
 - ADR 0183: `docs/adr/0183-os-menubar-effect-setmenubar.md`
 - ADR 0022: `docs/adr/0022-when-expressions.md`
 - ADR 0066: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
-

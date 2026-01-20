@@ -6,13 +6,13 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    AppWindowId, Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole,
+    TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
-    format_sequence,
+    WindowCommandEnabledService, WindowInputContextService, format_sequence,
 };
 use fret_runtime::{CommandMeta, Model};
 use fret_ui::action::ActivateReason;
@@ -65,11 +65,35 @@ fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
     }
 }
 
+fn command_palette_input_context_for_window<H: UiHost>(
+    app: &H,
+    window: AppWindowId,
+) -> InputContext {
+    let fallback = command_palette_input_context(app);
+    let Some(snapshot) = app
+        .global::<WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+    else {
+        return fallback;
+    };
+
+    InputContext {
+        // Best-effort: the command palette itself is typically presented in a modal dialog.
+        ui_has_modal: true,
+        // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
+        focus_is_text_input: false,
+        dispatch_phase: InputDispatchPhase::Normal,
+        ..snapshot
+    }
+}
+
 fn command_item_from_meta<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     input_ctx: &InputContext,
     id: &CommandId,
     meta: &CommandMeta,
+    disabled: bool,
 ) -> CommandItem {
     let mut keywords: Vec<Arc<str>> = meta.keywords.clone();
     keywords.push(Arc::from(id.as_str()));
@@ -92,7 +116,7 @@ fn command_item_from_meta<H: UiHost>(
     let mut item = CommandItem::new(meta.title.clone())
         .value(Arc::from(id.as_str()))
         .keywords(keywords)
-        .disabled(meta.when.as_ref().is_some_and(|w| !w.eval(input_ctx)))
+        .disabled(disabled)
         .on_select(id.clone());
     if let Some(shortcut) = shortcut {
         item = item.shortcut(shortcut);
@@ -110,7 +134,7 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     options: CommandCatalogOptions,
 ) -> Vec<CommandEntry> {
-    let input_ctx = command_palette_input_context(&*cx.app);
+    let input_ctx = command_palette_input_context_for_window(&*cx.app, cx.window);
 
     let mut commands: Vec<(CommandId, CommandMeta)> = cx
         .app
@@ -135,12 +159,17 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
         std::collections::BTreeMap::new();
 
     for (id, meta) in &commands {
-        let disabled = meta.when.as_ref().is_some_and(|w| !w.eval(&input_ctx));
+        let command_enabled = cx
+            .app
+            .global::<WindowCommandEnabledService>()
+            .and_then(|svc| svc.enabled(cx.window, id))
+            != Some(false);
+        let disabled = meta.when.as_ref().is_some_and(|w| !w.eval(&input_ctx)) || !command_enabled;
         if disabled && options.hide_disabled {
             continue;
         }
 
-        let item = command_item_from_meta(cx, &input_ctx, id, meta);
+        let item = command_item_from_meta(cx, &input_ctx, id, meta, disabled);
 
         if let Some(category) = meta.category.clone() {
             groups.entry(category).or_default().push(item);
@@ -1118,9 +1147,11 @@ impl CommandList {
                                                 ..Default::default()
                                             },
                                             move |cx, st| {
-                                                cx.pressable_dispatch_command_opt(command);
-                                                if let Some(on_select) = on_select.clone() {
-                                                    cx.pressable_add_on_activate(on_select);
+                                                if enabled {
+                                                    cx.pressable_dispatch_command_opt(command);
+                                                    if let Some(on_select) = on_select.clone() {
+                                                        cx.pressable_add_on_activate(on_select);
+                                                    }
                                                 }
                                                 let hovered = st.hovered && !st.pressed;
                                                 let pressed = st.pressed;
@@ -1768,9 +1799,11 @@ impl CommandPalette {
                                     ..Default::default()
                                 },
                                 move |cx, st| {
-                                    cx.pressable_dispatch_command_opt(command);
-                                    if let Some(on_select) = on_select.clone() {
-                                        cx.pressable_add_on_activate(on_select);
+                                    if enabled {
+                                        cx.pressable_dispatch_command_opt(command);
+                                        if let Some(on_select) = on_select.clone() {
+                                            cx.pressable_add_on_activate(on_select);
+                                        }
                                     }
                                     if enabled {
                                         let active = active_for_row.clone();
@@ -2105,6 +2138,9 @@ impl CommandPalette {
                                     let Some(entry) = entries.get(idx) else {
                                         return false;
                                     };
+                                    if entry.disabled {
+                                        return false;
+                                    }
 
                                     if let Some(on_select) = entry.on_select.clone() {
                                         on_select(host, action_cx, ActivateReason::Keyboard);
@@ -2414,6 +2450,66 @@ impl CommandDialog {
                 .refine_style(ChromeRefinement::default().p(Space::N0))
                 .into_element(cx)
         })
+    }
+}
+
+#[cfg(test)]
+mod command_enabled_tests {
+    use super::*;
+
+    #[test]
+    fn command_palette_disables_commands_via_window_command_enabled_service() {
+        use fret_app::App;
+        use fret_core::{AppWindowId, Point, Rect, Size};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let cmd = CommandId::from("test.command");
+        app.commands_mut()
+            .register(cmd.clone(), CommandMeta::new("Test").with_category("Test"));
+
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        let mut runtime = fret_ui::ElementRuntime::new();
+        let mut cx =
+            fret_ui::ElementContext::new_for_root_name(&mut app, &mut runtime, window, bounds, "t");
+
+        let entries = command_entries_from_host_commands_with_options(
+            &mut cx,
+            CommandCatalogOptions {
+                hide_disabled: false,
+            },
+        );
+
+        let mut found = false;
+        for entry in entries {
+            match entry {
+                CommandEntry::Item(item) => {
+                    if item.command.as_ref() == Some(&cmd) {
+                        found = true;
+                        assert!(item.disabled, "command should be disabled by override");
+                    }
+                }
+                CommandEntry::Group(group) => {
+                    for item in group.items {
+                        if item.command.as_ref() == Some(&cmd) {
+                            found = true;
+                            assert!(item.disabled, "command should be disabled by override");
+                        }
+                    }
+                }
+                CommandEntry::Separator(_) => {}
+            }
+        }
+
+        assert!(found, "expected command to be present in catalog entries");
     }
 }
 

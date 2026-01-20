@@ -156,6 +156,89 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return false;
         };
 
+        let hook = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::action::CommandActionHooks::default,
+            |hooks| hooks.on_command.clone(),
+        );
+        if let Some(hook) = hook {
+            struct CommandHookHost<'a, H: UiHost> {
+                app: &'a mut H,
+                window: AppWindowId,
+                element: crate::GlobalElementId,
+                requested_focus: &'a mut Option<NodeId>,
+            }
+
+            impl<H: UiHost> crate::action::UiActionHost for CommandHookHost<'_, H> {
+                fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                    self.app.models_mut()
+                }
+
+                fn push_effect(&mut self, effect: Effect) {
+                    match effect {
+                        Effect::SetTimer {
+                            window: Some(window),
+                            token,
+                            ..
+                        } if window == self.window => {
+                            crate::elements::record_timer_target(
+                                &mut *self.app,
+                                window,
+                                token,
+                                self.element,
+                            );
+                        }
+                        Effect::CancelTimer { token } => {
+                            crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                        }
+                        _ => {}
+                    }
+                    self.app.push_effect(effect);
+                }
+
+                fn request_redraw(&mut self, window: AppWindowId) {
+                    self.app.request_redraw(window);
+                }
+
+                fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                    self.app.next_timer_token()
+                }
+            }
+
+            impl<H: UiHost> crate::action::UiFocusActionHost for CommandHookHost<'_, H> {
+                fn request_focus(&mut self, target: crate::GlobalElementId) {
+                    let Some(node) = crate::elements::with_window_state(
+                        &mut *self.app,
+                        self.window,
+                        |window_state| window_state.node_entry(target).map(|e| e.node),
+                    ) else {
+                        return;
+                    };
+                    *self.requested_focus = Some(node);
+                }
+            }
+
+            let mut host = CommandHookHost {
+                app: &mut *cx.app,
+                window,
+                element: self.element,
+                requested_focus: &mut cx.requested_focus,
+            };
+            if hook(
+                &mut host,
+                crate::action::ActionCx {
+                    window,
+                    target: self.element,
+                },
+                command.clone(),
+            ) {
+                cx.stop_propagation();
+                return true;
+            }
+        }
+
         match instance {
             ElementInstance::SelectableText(props) => {
                 if cx.focus != Some(cx.node) {

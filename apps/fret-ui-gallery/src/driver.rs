@@ -6,7 +6,9 @@ use fret_core::{
     AlphaMode, AppWindowId, Event, ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole,
     UiServices,
 };
-use fret_kit::prelude::{MenubarFromRuntimeOptions, menubar_from_runtime};
+use fret_kit::prelude::{
+    InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
+};
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
@@ -1394,9 +1396,17 @@ impl UiGalleryDriver {
                         cx.app,
                         fret_app::Platform::current(),
                     );
+                    let menubar_handle: std::cell::RefCell<Option<InWindowMenubarFocusHandle>> =
+                        std::cell::RefCell::new(None);
                     let in_window_menu_bar = if show_in_window_menu_bar {
                         menu_bar.as_ref().map(|menu_bar| {
-                            menubar_from_runtime(cx, menu_bar, MenubarFromRuntimeOptions::default())
+                            let (menu, handle) = menubar_from_runtime_with_focus_handle(
+                                cx,
+                                menu_bar,
+                                MenubarFromRuntimeOptions::default(),
+                            );
+                            *menubar_handle.borrow_mut() = Some(handle);
+                            menu
                         })
                     } else {
                         None
@@ -1471,15 +1481,51 @@ impl UiGalleryDriver {
                         .bottom(status_bar)
                         .into_element(cx);
 
+                    let panel = cx.semantics(
+                        SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("fret-ui-gallery")),
+                            ..Default::default()
+                        },
+                        |_cx| vec![frame],
+                    );
+                    if let Some(handle) = menubar_handle.borrow().clone() {
+                        let group_active = handle.group_active.clone();
+                        let trigger_registry = handle.trigger_registry.clone();
+                        cx.command_add_on_command_for(
+                            panel.id,
+                            Arc::new(move |host, acx, command| {
+                                if command.as_str() != fret_app::core_commands::FOCUS_MENU_BAR {
+                                    return false;
+                                }
+
+                                let active = host.models_mut().get_cloned(&group_active).flatten();
+                                if let Some(active) = active {
+                                    let _ = host.models_mut().update(&active.open, |v| *v = false);
+                                    let _ = host.models_mut().update(&group_active, |v| *v = None);
+                                    host.request_focus(active.trigger);
+                                    host.request_redraw(acx.window);
+                                    return true;
+                                }
+
+                                let entries = host
+                                    .models_mut()
+                                    .get_cloned(&trigger_registry)
+                                    .unwrap_or_default();
+                                let target = entries.iter().find(|e| e.enabled).map(|e| e.trigger);
+                                let Some(target) = target else {
+                                    return false;
+                                };
+
+                                host.request_focus(target);
+                                host.request_redraw(acx.window);
+                                true
+                            }),
+                        );
+                    }
+
                     let mut content: Vec<AnyElement> = vec![
-                        cx.semantics(
-                            SemanticsProps {
-                                role: SemanticsRole::Panel,
-                                label: Some(Arc::from("fret-ui-gallery")),
-                                ..Default::default()
-                            },
-                            |_cx| vec![frame],
-                        ),
+                        panel,
                         if (bisect & BISECT_DISABLE_TOASTER) != 0 {
                             cx.text("")
                         } else {

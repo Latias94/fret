@@ -144,6 +144,39 @@ impl<H: UiHost> UiTree<H> {
             self.request_redraw_coalesced(app);
         }
 
+        // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
+        // see the latest focus/modal state without waiting for the next paint pass.
+        if let Some(window) = self.window {
+            let (_active_layers, barrier_root) = self.active_input_layers();
+            let caps = app
+                .global::<PlatformCapabilities>()
+                .cloned()
+                .unwrap_or_default();
+            let mut input_ctx = InputContext {
+                platform: Platform::current(),
+                caps,
+                ui_has_modal: barrier_root.is_some(),
+                focus_is_text_input: self.focus_is_text_input(),
+                edit_can_undo: true,
+                edit_can_redo: true,
+                dispatch_phase: InputDispatchPhase::Normal,
+            };
+            if let Some(availability) = app
+                .global::<fret_runtime::WindowCommandAvailabilityService>()
+                .and_then(|svc| svc.snapshot(window))
+                .copied()
+            {
+                input_ctx.edit_can_undo = availability.edit_can_undo;
+                input_ctx.edit_can_redo = availability.edit_can_redo;
+            }
+            app.with_global_mut(
+                fret_runtime::WindowInputContextService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, input_ctx);
+                },
+            );
+        }
+
         handled
     }
 

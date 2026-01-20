@@ -42,6 +42,15 @@ runtime should publish a window-scoped snapshot that runners can read.
 Decision: introduce a global, window-scoped snapshot service (data-only; `fret-runtime`) that stores
 the latest `InputContext` per `AppWindowId`, updated by `fret-ui` during dispatch/paint.
 
+Publishing requirements:
+
+- The UI runtime MUST publish a post-dispatch snapshot after processing an input event so the
+  runner can gate OS menu items without waiting for the next paint.
+- The UI runtime MUST publish a post-dispatch snapshot after command routing (`dispatch_command`),
+  since commands can change focus/modal state (e.g. opening a modal overlay).
+- The UI runtime SHOULD also publish during paint to cover programmatic focus changes that did not
+  go through an input event (best-effort).
+
 Some enable/disable predicates are not derivable from focus/modal state (e.g. whether Undo/Redo is
 available for the active document). Apps may publish additional window-scoped availability via a
 separate data-only service (e.g. `WindowCommandAvailabilityService`), which the UI runtime can

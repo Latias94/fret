@@ -382,6 +382,13 @@ pub(crate) struct KeyActionHooks {
     pub on_key_down: Option<OnKeyDown>,
 }
 
+pub type OnCommand = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, CommandId) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct CommandActionHooks {
+    pub on_command: Option<OnCommand>,
+}
+
 pub type OnTimer = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;
 
 #[derive(Default)]

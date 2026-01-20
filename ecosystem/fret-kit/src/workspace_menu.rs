@@ -6,7 +6,8 @@ use fret_core::{
 };
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem, Platform,
-    PlatformCapabilities, WhenExpr, WindowInputContextService, format_sequence,
+    PlatformCapabilities, WhenExpr, WindowCommandEnabledService, WindowInputContextService,
+    format_sequence,
 };
 use fret_ui::action::{ActionCx, OnDismissRequest, UiActionHost};
 use fret_ui::element::{
@@ -76,6 +77,12 @@ struct InWindowMenu {
     title: Arc<str>,
     enabled: bool,
     entries: Arc<[InWindowMenuEntry]>,
+}
+
+#[derive(Debug, Clone)]
+pub struct InWindowMenubarFocusHandle {
+    pub group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
+    pub trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
 }
 
 #[derive(Default)]
@@ -187,7 +194,12 @@ fn command_item<H: UiHost>(
     };
 
     let item_disabled = item_when.is_some_and(|w| !w.eval(base_ctx));
-    let disabled = meta_disabled || item_disabled;
+    let command_disabled = cx
+        .app
+        .global::<WindowCommandEnabledService>()
+        .and_then(|svc| svc.enabled(cx.window, command))
+        == Some(false);
+    let disabled = meta_disabled || item_disabled || command_disabled;
 
     InWindowMenuItem {
         label,
@@ -210,6 +222,17 @@ fn submenu_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMen
     }
 }
 
+fn system_menu_placeholder_item(
+    title: Arc<str>,
+    value: Arc<str>,
+    items: Vec<InWindowMenuEntry>,
+) -> InWindowMenuEntry {
+    InWindowMenuEntry::Submenu(InWindowSubmenu {
+        trigger: submenu_item(title, value, true),
+        entries: Arc::from(items.into_boxed_slice()),
+    })
+}
+
 fn build_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: &[MenuItem],
@@ -221,7 +244,19 @@ fn build_entries<H: UiHost>(
     for (idx, item) in items.iter().enumerate() {
         match item {
             MenuItem::Separator => out.push(InWindowMenuEntry::Separator),
-            MenuItem::SystemMenu { .. } => {}
+            MenuItem::SystemMenu {
+                title,
+                menu_type: _,
+            } => {
+                // In-window surfaces cannot materialize OS-owned menus. Keep a disabled placeholder
+                // entry so the authored menu shape remains visible.
+                let value: Arc<str> = Arc::from(format!("{prefix}.system_menu.{idx}"));
+                out.push(system_menu_placeholder_item(
+                    title.clone(),
+                    value,
+                    Vec::new(),
+                ));
+            }
             MenuItem::Command { command, when } => out.push(InWindowMenuEntry::Item(command_item(
                 cx,
                 command,
@@ -254,6 +289,15 @@ pub fn menubar_from_runtime<H: UiHost>(
     menu_bar: &MenuBar,
     opts: MenubarFromRuntimeOptions,
 ) -> AnyElement {
+    let (el, _handle) = menubar_from_runtime_with_focus_handle(cx, menu_bar, opts);
+    el
+}
+
+pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    menu_bar: &MenuBar,
+    opts: MenubarFromRuntimeOptions,
+) -> (AnyElement, InWindowMenubarFocusHandle) {
     let group = cx.root_id();
 
     let theme = Theme::global(&*cx.app).clone();
@@ -262,6 +306,9 @@ pub fn menubar_from_runtime<H: UiHost>(
 
     let radius = theme.metric_required("metric.radius.sm");
     let pad = theme.metric_required("metric.padding.sm");
+
+    let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
+    let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
 
     let base_ctx = menu_shortcut_input_context(cx, opts.platform);
     let menus: Vec<InWindowMenu> = menu_bar
@@ -296,7 +343,10 @@ pub fn menubar_from_runtime<H: UiHost>(
             .into_boxed_slice(),
     );
 
-    cx.semantics(
+    let group_active_for_render = group_active.clone();
+    let trigger_registry_for_render = trigger_registry.clone();
+
+    let element = cx.semantics(
         SemanticsProps {
             layout: LayoutStyle::default(),
             role: SemanticsRole::MenuBar,
@@ -304,6 +354,9 @@ pub fn menubar_from_runtime<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
+            let group_active = group_active_for_render.clone();
+            let trigger_registry = trigger_registry_for_render.clone();
+
             vec![cx.container(
                 ContainerProps {
                     layout: LayoutStyle::default(),
@@ -341,28 +394,43 @@ pub fn menubar_from_runtime<H: UiHost>(
                             menus
                                 .iter()
                                 .cloned()
-                                .map(|menu| render_menu_from_runtime(cx, group, menu, pad, &opts))
+                                .map(|menu| {
+                                    render_menu_from_runtime(
+                                        cx,
+                                        group_active.clone(),
+                                        trigger_registry.clone(),
+                                        menu,
+                                        pad,
+                                        &opts,
+                                    )
+                                })
                                 .collect()
                         },
                     )]
                 },
             )]
         },
+    );
+
+    (
+        element,
+        InWindowMenubarFocusHandle {
+            group_active,
+            trigger_registry,
+        },
     )
 }
 
 fn render_menu_from_runtime<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    group: GlobalElementId,
+    group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
+    trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
     menu: InWindowMenu,
     pad: Px,
     opts: &MenubarFromRuntimeOptions,
 ) -> AnyElement {
     let key = menu.title.clone();
     cx.keyed(key, |cx| {
-        let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
-        let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
-
         let open = cx.with_state(InWindowMenubarMenuState::default, |st| st.open.clone());
         let open = if let Some(open) = open {
             open
