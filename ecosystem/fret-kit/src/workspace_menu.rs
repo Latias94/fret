@@ -6,7 +6,8 @@ use fret_core::{
 };
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem, Platform,
-    PlatformCapabilities, WhenExpr, WindowInputContextService, format_sequence,
+    PlatformCapabilities, WhenExpr, WindowCommandEnabledService, WindowInputContextService,
+    format_sequence,
 };
 use fret_ui::action::{ActionCx, OnDismissRequest, UiActionHost};
 use fret_ui::element::{
@@ -187,7 +188,12 @@ fn command_item<H: UiHost>(
     };
 
     let item_disabled = item_when.is_some_and(|w| !w.eval(base_ctx));
-    let disabled = meta_disabled || item_disabled;
+    let command_disabled = cx
+        .app
+        .global::<WindowCommandEnabledService>()
+        .and_then(|svc| svc.enabled(cx.window, command))
+        == Some(false);
+    let disabled = meta_disabled || item_disabled || command_disabled;
 
     InWindowMenuItem {
         label,
