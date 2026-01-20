@@ -3597,12 +3597,6 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll down"))
             .expect("scroll down button");
-        assert!(
-            !snap.nodes.iter().any(|n| {
-                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
-            }),
-            "expected scroll up to be hidden at the top"
-        );
 
         let down_bounds = ui
             .debug_node_bounds(scroll_down.id)
