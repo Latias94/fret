@@ -7836,6 +7836,433 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
 }
 
 #[test]
+fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
+    let web = read_web_golden("input-group-textarea");
+    let theme = web_theme(&web);
+    let web_group = web_find_by_class_tokens(&theme.root, &["group/input-group", "border-input"])
+        .expect("web input group root");
+    let web_textarea = find_first(web_group, &|n| n.tag == "textarea").expect("web textarea");
+
+    let mut web_svgs = Vec::new();
+    web_collect_tag(web_group, "svg", &mut web_svgs);
+    web_svgs.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .x
+                    .partial_cmp(&b.rect.x)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+
+    let web_js = *web_svgs.first().expect("web js icon");
+    let web_refresh = *web_svgs.get(1).expect("web refresh icon");
+    let web_copy = *web_svgs.get(2).expect("web copy icon");
+    let web_run = *web_svgs.get(3).expect("web run icon");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-input-group-textarea",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let js_icon = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-textarea:js")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![decl_icon::icon_with(
+                                cx,
+                                fret_icons::ids::ui::SEARCH,
+                                Some(Px(16.0)),
+                                None,
+                            )]
+                        },
+                    );
+
+                    let refresh_icon = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-textarea:refresh")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![decl_icon::icon_with(
+                                cx,
+                                fret_icons::ids::ui::SEARCH,
+                                Some(Px(16.0)),
+                                None,
+                            )]
+                        },
+                    );
+                    let copy_icon = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-textarea:copy")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![decl_icon::icon_with(
+                                cx,
+                                fret_icons::ids::ui::SEARCH,
+                                Some(Px(16.0)),
+                                None,
+                            )]
+                        },
+                    );
+
+                    let run_icon = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-textarea:run")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![decl_icon::icon_with(
+                                cx,
+                                fret_icons::ids::ui::SEARCH,
+                                Some(Px(16.0)),
+                                None,
+                            )]
+                        },
+                    );
+
+                    let script_label = cx.text("script.js");
+                    let block_start_left = cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: MetricRef::space(Space::N2).resolve(&Theme::global(&*cx.app)),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| vec![js_icon, script_label],
+                    );
+
+                    let refresh_button = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: fret_ui_kit::declarative::style::layout_style(
+                                &Theme::global(&*cx.app),
+                                fret_ui_kit::LayoutRefinement::default()
+                                    .ml_auto()
+                                    .w_px(MetricRef::Px(Px(24.0)))
+                                    .h_px(MetricRef::Px(Px(24.0))),
+                            ),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: Px(0.0),
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| vec![refresh_icon],
+                            )]
+                        },
+                    );
+                    let copy_button = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: fret_ui_kit::declarative::style::layout_style(
+                                &Theme::global(&*cx.app),
+                                fret_ui_kit::LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(24.0)))
+                                    .h_px(MetricRef::Px(Px(24.0))),
+                            ),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: Px(0.0),
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| vec![copy_icon],
+                            )]
+                        },
+                    );
+
+                    let block_end_text = cx.text("Line 1, Column 1");
+                    let run_button = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: fret_ui_kit::declarative::style::layout_style(
+                                &Theme::global(&*cx.app),
+                                fret_ui_kit::LayoutRefinement::default()
+                                    .ml_auto()
+                                    .w_px(MetricRef::Px(Px(32.0)))
+                                    .h_px(MetricRef::Px(Px(32.0))),
+                            ),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: Px(0.0),
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| vec![run_icon],
+                            )]
+                        },
+                    );
+
+                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                        .textarea()
+                        .textarea_min_height(Px(web_textarea.rect.h))
+                        .a11y_label("Golden:input-group-textarea:textarea")
+                        .block_start_border_bottom(true)
+                        .block_start(vec![block_start_left, refresh_button, copy_button])
+                        .block_end_border_top(true)
+                        .block_end(vec![block_end_text, run_button])
+                        .into_element(cx);
+
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-textarea:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-textarea:root"),
+    )
+    .expect("fret input group root");
+    let textarea = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:input-group-textarea:textarea"),
+    )
+    .expect("fret textarea");
+    let js = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-textarea:js"),
+    )
+    .expect("fret js icon");
+    let refresh = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-textarea:refresh"),
+    )
+    .expect("fret refresh icon");
+    let copy = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-textarea:copy"),
+    )
+    .expect("fret copy icon");
+    let run = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-textarea:run"),
+    )
+    .expect("fret run icon");
+
+    assert_close_px(
+        "input-group-textarea group w",
+        group.bounds.size.width,
+        web_group.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea group h",
+        group.bounds.size.height,
+        web_group.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "input-group-textarea textarea x",
+        textarea.bounds.origin.x,
+        web_textarea.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea textarea y",
+        textarea.bounds.origin.y,
+        web_textarea.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea textarea w",
+        textarea.bounds.size.width,
+        web_textarea.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea textarea h",
+        textarea.bounds.size.height,
+        web_textarea.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "input-group-textarea js x",
+        js.bounds.origin.x,
+        web_js.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea js y",
+        js.bounds.origin.y,
+        web_js.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea js w",
+        js.bounds.size.width,
+        web_js.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea js h",
+        js.bounds.size.height,
+        web_js.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "input-group-textarea refresh x",
+        refresh.bounds.origin.x,
+        web_refresh.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea refresh y",
+        refresh.bounds.origin.y,
+        web_refresh.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea refresh w",
+        refresh.bounds.size.width,
+        web_refresh.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea refresh h",
+        refresh.bounds.size.height,
+        web_refresh.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "input-group-textarea copy x",
+        copy.bounds.origin.x,
+        web_copy.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea copy y",
+        copy.bounds.origin.y,
+        web_copy.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea copy w",
+        copy.bounds.size.width,
+        web_copy.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea copy h",
+        copy.bounds.size.height,
+        web_copy.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "input-group-textarea run y",
+        run.bounds.origin.y,
+        web_run.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea run w",
+        run.bounds.size.width,
+        web_run.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-textarea run h",
+        run.bounds.size.height,
+        web_run.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
     let web = read_web_golden("spinner-input-group");
     let theme = web_theme(&web);
