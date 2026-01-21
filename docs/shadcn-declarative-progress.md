@@ -166,6 +166,18 @@ let overlay = ui::stack(cx, move |cx| {
 .into_element(cx);
 ```
 
+Text (patchable):
+
+```rust
+let title = ui::text(cx, "Settings")
+    .text_base()
+    .font_semibold()
+    .truncate()
+    .into_element(cx);
+
+let field_label = ui::label(cx, "Username").into_element(cx);
+```
+
 ### Coverage Tracker (Update as we proceed)
 
 Legend:
