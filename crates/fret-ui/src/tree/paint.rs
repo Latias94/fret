@@ -67,6 +67,15 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        // Scroll offsets can change without triggering layout invalidations (e.g. wheel deltas that
+        // only affect hit-testing/paint, or programmatic scroll handle updates in frames that skip
+        // layout). Ensure we consume scroll-handle change invalidations before paint-cache replay
+        // so cached ancestors cannot replay stale ops.
+        self.invalidate_scroll_handle_bindings_for_changed_handles(
+            app,
+            crate::layout_pass::LayoutPassKind::Final,
+        );
+
         let cache_enabled = self.paint_cache_enabled();
         if cache_enabled {
             self.paint_cache.begin_frame();
