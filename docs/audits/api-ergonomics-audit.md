@@ -232,7 +232,7 @@ Line counts (worktree):
 - `apps/fret-examples/src/todo_demo.rs`: 536
 - `apps/fret-examples/src/todo_mvu_demo.rs`: 518
 - `apps/fret-examples/src/todo_interop_demo.rs`: 512
-- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 337
+- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 336
 
 Interpretation:
 
