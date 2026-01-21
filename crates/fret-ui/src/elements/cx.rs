@@ -530,63 +530,78 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn container(
+    pub fn container<I>(
         &mut self,
         props: ContainerProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Container(props), children)
         })
     }
 
     #[track_caller]
-    pub fn semantics(
+    pub fn semantics<I>(
         &mut self,
         props: crate::element::SemanticsProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Semantics(props), children)
         })
     }
 
     #[track_caller]
-    pub fn semantic_flex(
+    pub fn semantic_flex<I>(
         &mut self,
         props: crate::element::SemanticFlexProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::SemanticFlex(props), children)
         })
     }
 
     #[track_caller]
-    pub fn focus_scope(
+    pub fn focus_scope<I>(
         &mut self,
         props: crate::element::FocusScopeProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
     }
 
     #[track_caller]
-    pub fn view_cache(
+    pub fn view_cache<I>(
         &mut self,
         props: crate::element::ViewCacheProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             let should_reuse = cx
@@ -622,7 +637,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
             let reuse = should_reuse && key_matches;
 
-            let children = if reuse {
+            let children: Vec<AnyElement> = if reuse {
                 cx.window_state.mark_view_cache_reuse_root(id);
                 cx.window_state.touch_view_cache_state_keys_if_recorded(id);
                 cx.window_state
@@ -633,7 +648,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             } else {
                 cx.window_state.set_view_cache_key(id, key);
                 cx.window_state.begin_view_cache_scope(id);
-                let children = f(cx);
+                let children = f(cx).into_iter().collect();
                 cx.window_state.end_view_cache_scope(id);
                 children
             };
@@ -642,37 +657,42 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn focus_scope_with_id(
+    pub fn focus_scope_with_id<I>(
         &mut self,
         props: crate::element::FocusScopeProps,
-        f: impl FnOnce(&mut Self, GlobalElementId) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self, GlobalElementId) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx, id);
+            let children = f(cx, id).into_iter().collect();
             cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
     }
 
     #[track_caller]
-    pub fn semantics_with_id(
+    pub fn semantics_with_id<I>(
         &mut self,
         props: crate::element::SemanticsProps,
-        f: impl FnOnce(&mut Self, GlobalElementId) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self, GlobalElementId) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx, id);
+            let children = f(cx, id).into_iter().collect();
             cx.new_any_element(id, ElementKind::Semantics(props), children)
         })
     }
 
     #[track_caller]
-    pub fn opacity(
-        &mut self,
-        opacity: f32,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+    pub fn opacity<I>(&mut self, opacity: f32, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let props = OpacityProps {
             opacity: opacity.clamp(0.0, 1.0),
             ..Default::default()
@@ -681,25 +701,31 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn opacity_props(
+    pub fn opacity_props<I>(
         &mut self,
         props: OpacityProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Opacity(props), children)
         })
     }
 
     #[track_caller]
-    pub fn effect_layer(
+    pub fn effect_layer<I>(
         &mut self,
         mode: EffectMode,
         chain: EffectChain,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.effect_layer_props(
             EffectLayerProps {
                 mode,
@@ -711,24 +737,30 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn effect_layer_props(
+    pub fn effect_layer_props<I>(
         &mut self,
         props: EffectLayerProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::EffectLayer(props), children)
         })
     }
 
     #[track_caller]
-    pub fn visual_transform(
+    pub fn visual_transform<I>(
         &mut self,
         transform: fret_core::Transform2D,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.visual_transform_props(
             VisualTransformProps {
                 layout: LayoutStyle::default(),
@@ -739,11 +771,14 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn render_transform(
+    pub fn render_transform<I>(
         &mut self,
         transform: fret_core::Transform2D,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.render_transform_props(
             crate::element::RenderTransformProps {
                 layout: LayoutStyle::default(),
@@ -754,12 +789,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn fractional_render_transform(
+    pub fn fractional_render_transform<I>(
         &mut self,
         translate_x_fraction: f32,
         translate_y_fraction: f32,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.fractional_render_transform_props(
             crate::element::FractionalRenderTransformProps {
                 layout: LayoutStyle::default(),
@@ -771,64 +809,79 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn visual_transform_props(
+    pub fn visual_transform_props<I>(
         &mut self,
         props: VisualTransformProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::VisualTransform(props), children)
         })
     }
 
     #[track_caller]
-    pub fn render_transform_props(
+    pub fn render_transform_props<I>(
         &mut self,
         props: crate::element::RenderTransformProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::RenderTransform(props), children)
         })
     }
 
     #[track_caller]
-    pub fn fractional_render_transform_props(
+    pub fn fractional_render_transform_props<I>(
         &mut self,
         props: crate::element::FractionalRenderTransformProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::FractionalRenderTransform(props), children)
         })
     }
 
     #[track_caller]
-    pub fn anchored_props(
+    pub fn anchored_props<I>(
         &mut self,
         props: crate::element::AnchoredProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Anchored(props), children)
         })
     }
 
     #[track_caller]
-    pub fn interactivity_gate(
+    pub fn interactivity_gate<I>(
         &mut self,
         present: bool,
         interactive: bool,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.interactivity_gate_props(
             InteractivityGateProps {
                 present,
@@ -840,24 +893,30 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn interactivity_gate_props(
+    pub fn interactivity_gate_props<I>(
         &mut self,
         props: InteractivityGateProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::InteractivityGate(props), children)
         })
     }
 
     #[track_caller]
-    pub fn pressable(
+    pub fn pressable<I>(
         &mut self,
         props: PressableProps,
-        f: impl FnOnce(&mut Self, PressableState) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self, PressableState) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
@@ -872,17 +931,22 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     pressed,
                     focused,
                 },
-            );
+            )
+            .into_iter()
+            .collect();
             cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
 
     #[track_caller]
-    pub fn pressable_with_id(
+    pub fn pressable_with_id<I>(
         &mut self,
         props: PressableProps,
-        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
@@ -898,7 +962,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     focused,
                 },
                 id,
-            );
+            )
+            .into_iter()
+            .collect();
             cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
@@ -1219,11 +1285,14 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn pointer_region(
+    pub fn pointer_region<I>(
         &mut self,
         props: PointerRegionProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             cx.pointer_region_clear_on_pointer_down();
@@ -1231,20 +1300,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.pointer_region_clear_on_pointer_up();
             cx.pointer_region_clear_on_wheel();
             cx.pointer_region_clear_on_pinch_gesture();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::PointerRegion(props), children)
         })
     }
 
-    pub fn internal_drag_region(
+    pub fn internal_drag_region<I>(
         &mut self,
         props: crate::element::InternalDragRegionProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             cx.internal_drag_region_clear_on_internal_drag();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::InternalDragRegion(props), children)
         })
     }
@@ -1698,45 +1770,49 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn stack(&mut self, f: impl FnOnce(&mut Self) -> Vec<AnyElement>) -> AnyElement {
+    pub fn stack<I>(&mut self, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.stack_props(StackProps::default(), f)
     }
 
     #[track_caller]
-    pub fn stack_props(
+    pub fn stack_props<I>(
         &mut self,
         props: StackProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Stack(props), children)
         })
     }
 
     #[track_caller]
-    pub fn column(
-        &mut self,
-        props: ColumnProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+    pub fn column<I>(&mut self, props: ColumnProps, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Column(props), children)
         })
     }
 
     #[track_caller]
-    pub fn row(
-        &mut self,
-        props: RowProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+    pub fn row<I>(&mut self, props: RowProps, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Row(props), children)
         })
     }
@@ -1822,14 +1898,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn resizable_panel_group(
+    pub fn resizable_panel_group<I>(
         &mut self,
         props: ResizablePanelGroupProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::ResizablePanelGroup(props), children)
         })
     }
@@ -1920,41 +1999,46 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn hover_region(
+    pub fn hover_region<I>(
         &mut self,
         props: HoverRegionProps,
-        f: impl FnOnce(&mut Self, bool) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self, bool) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_hover_region == Some(id);
-            let children = f(cx, hovered);
+            let children = f(cx, hovered).into_iter().collect();
             cx.new_any_element(id, ElementKind::HoverRegion(props), children)
         })
     }
 
     #[track_caller]
-    pub fn wheel_region(
+    pub fn wheel_region<I>(
         &mut self,
         props: crate::element::WheelRegionProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::WheelRegion(props), children)
         })
     }
 
     #[track_caller]
-    pub fn scroll(
-        &mut self,
-        props: ScrollProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+    pub fn scroll<I>(&mut self, props: ScrollProps, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Scroll(props), children)
         })
     }
@@ -1968,25 +2052,33 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn virtual_list(
+    pub fn virtual_list<F, I>(
         &mut self,
         len: usize,
         options: VirtualListOptions,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
-        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: F,
+    ) -> AnyElement
+    where
+        F: FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.virtual_list_with_layout(LayoutStyle::default(), len, options, scroll_handle, f)
     }
 
     #[track_caller]
-    pub fn virtual_list_ex(
+    pub fn virtual_list_ex<F, I>(
         &mut self,
         len: usize,
         options: VirtualListOptions,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
         range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
-        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: F,
+    ) -> AnyElement
+    where
+        F: FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.virtual_list_with_layout_ex(
             LayoutStyle::default(),
             len,
@@ -1998,14 +2090,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn virtual_list_with_layout(
+    pub fn virtual_list_with_layout<F, I>(
         &mut self,
         layout: LayoutStyle,
         len: usize,
         options: VirtualListOptions,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
-        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: F,
+    ) -> AnyElement
+    where
+        F: FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.virtual_list_with_layout_ex(
             layout,
             len,
@@ -2017,15 +2113,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn virtual_list_with_layout_ex(
+    pub fn virtual_list_with_layout_ex<F, I>(
         &mut self,
         layout: LayoutStyle,
         len: usize,
         options: VirtualListOptions,
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
         range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
-        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: F,
+    ) -> AnyElement
+    where
+        F: FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.virtual_list_with_layout_and_keys(
             layout,
             len,
@@ -2038,7 +2138,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn virtual_list_with_layout_and_keys(
+    fn virtual_list_with_layout_and_keys<F, I>(
         &mut self,
         layout: LayoutStyle,
         len: usize,
@@ -2046,8 +2146,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         scroll_handle: &crate::scroll::VirtualListScrollHandle,
         mut item_key_at: impl FnMut(usize) -> crate::ItemKey,
         range_extractor: impl FnOnce(crate::virtual_list::VirtualRange) -> Vec<usize>,
-        f: impl FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: F,
+    ) -> AnyElement
+    where
+        F: FnOnce(&mut Self, &[crate::virtual_list::VirtualItem]) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
 
@@ -2209,7 +2313,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .collect::<Vec<_>>()
             });
 
-            let children = f(cx, &visible_items);
+            let children: Vec<AnyElement> = f(cx, &visible_items).into_iter().collect();
             cx.new_any_element(
                 id,
                 ElementKind::VirtualList(VirtualListProps {
@@ -2232,43 +2336,44 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn flex(
-        &mut self,
-        props: FlexProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+    pub fn flex<I>(&mut self, props: FlexProps, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Flex(props), children)
         })
     }
 
     #[track_caller]
-    pub fn roving_flex(
+    pub fn roving_flex<I>(
         &mut self,
         props: crate::element::RovingFlexProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             cx.roving_clear_on_active_change();
             cx.roving_clear_on_typeahead();
             cx.roving_clear_on_navigate();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::RovingFlex(props), children)
         })
     }
 
     #[track_caller]
-    pub fn grid(
-        &mut self,
-        props: GridProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+    pub fn grid<I>(&mut self, props: GridProps, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx);
+            let children = f(cx).into_iter().collect();
             cx.new_any_element(id, ElementKind::Grid(props), children)
         })
     }
@@ -2400,7 +2505,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .iter()
                     .copied()
                     .map(|item| cx.keyed(item.key, |cx| row(cx, item.index)))
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         )
     }

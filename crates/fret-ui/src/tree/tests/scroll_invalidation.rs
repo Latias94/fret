@@ -40,7 +40,9 @@ fn scroll_wheel_invalidation_is_hit_test_only() {
                 },
                 |cx| {
                     vec![cx.column(crate::element::ColumnProps::default(), |cx| {
-                        (0..100).map(|i| cx.text(format!("row-{i}"))).collect()
+                        (0..100)
+                            .map(|i| cx.text(format!("row-{i}")))
+                            .collect::<Vec<_>>()
                     })]
                 },
             )]

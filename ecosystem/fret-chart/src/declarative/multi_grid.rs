@@ -119,6 +119,6 @@ pub fn chart_canvas_multi_grid_panel<H: UiHost>(
                 panel.engine = engine;
                 chart_canvas_panel(cx, panel)
             })
-            .collect()
+            .collect::<Vec<_>>()
     })
 }

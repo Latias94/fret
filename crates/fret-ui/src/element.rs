@@ -1503,6 +1503,22 @@ pub trait IntoElement {
     fn into_element(self, id: GlobalElementId) -> AnyElement;
 }
 
+/// Authoring helper for collecting iterator-produced child elements.
+///
+/// This exists to reduce boilerplate after switching common `children: Vec<AnyElement>` APIs to
+/// accept `IntoIterator<Item = AnyElement>` (e.g. `ElementContext::{row,column}`), where the target
+/// collection type is no longer implied by the callee.
+///
+/// Example:
+/// `let children = (0..10).map(|i| cx.text(format!("row-{i}"))).elements();`
+pub trait AnyElementIterExt: Iterator<Item = AnyElement> + Sized {
+    fn elements(self) -> Vec<AnyElement> {
+        self.collect()
+    }
+}
+
+impl<T> AnyElementIterExt for T where T: Iterator<Item = AnyElement> + Sized {}
+
 impl IntoElement for AnyElement {
     fn into_element(self, _id: GlobalElementId) -> AnyElement {
         self

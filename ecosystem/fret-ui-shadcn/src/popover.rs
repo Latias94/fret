@@ -627,7 +627,8 @@ pub struct PopoverContent {
 }
 
 impl PopoverContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             chrome: ChromeRefinement::default(),
@@ -689,7 +690,8 @@ pub struct PopoverHeader {
 }
 
 impl PopoverHeader {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 

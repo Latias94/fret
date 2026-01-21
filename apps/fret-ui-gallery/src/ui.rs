@@ -1676,12 +1676,21 @@ fn preview_select(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     let select = shadcn::Select::new(value.clone(), open)
+        .trigger_test_id("ui-gallery-select-trigger")
         .placeholder("Pick a fruit")
-        .items([
-            shadcn::SelectItem::new("apple", "Apple"),
-            shadcn::SelectItem::new("banana", "Banana"),
-            shadcn::SelectItem::new("orange", "Orange"),
-        ])
+        .items(
+            [
+                shadcn::SelectItem::new("apple", "Apple"),
+                shadcn::SelectItem::new("banana", "Banana"),
+                shadcn::SelectItem::new("orange", "Orange"),
+            ]
+            .into_iter()
+            .chain((1..=40).map(|i| {
+                let value: Arc<str> = Arc::from(format!("item-{i:02}"));
+                let label: Arc<str> = Arc::from(format!("Item {i:02}"));
+                shadcn::SelectItem::new(value, label)
+            })),
+        )
         .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
         .into_element(cx);
 

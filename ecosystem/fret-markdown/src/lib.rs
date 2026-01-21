@@ -1797,7 +1797,7 @@ fn render_inline_line_with_layout<H: UiHost>(
         coalesce_link_runs(pieces)
             .into_iter()
             .map(|piece| render_inline_token(cx, theme, markdown_theme, components, base, piece))
-            .collect()
+            .collect::<Vec<_>>()
     })
 }
 

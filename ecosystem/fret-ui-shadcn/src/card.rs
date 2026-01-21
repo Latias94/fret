@@ -27,7 +27,8 @@ pub struct Card {
 }
 
 impl Card {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             chrome: ChromeRefinement::default(),
@@ -76,7 +77,8 @@ pub struct CardHeader {
 }
 
 impl CardHeader {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -105,7 +107,8 @@ pub struct CardContent {
 }
 
 impl CardContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -132,7 +135,8 @@ pub struct CardFooter {
 }
 
 impl CardFooter {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 

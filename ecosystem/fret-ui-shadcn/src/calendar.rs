@@ -293,7 +293,7 @@ impl Calendar {
                                 props.layout = layout;
                                 cx.text_props(props)
                             })
-                            .collect()
+                            .collect::<Vec<_>>()
                     },
                 );
 

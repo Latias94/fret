@@ -810,7 +810,8 @@ pub struct TooltipContent {
 }
 
 impl TooltipContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             chrome: ChromeRefinement::default(),

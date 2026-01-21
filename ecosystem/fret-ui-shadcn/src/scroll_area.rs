@@ -51,7 +51,8 @@ pub struct ScrollAreaViewport {
 }
 
 impl ScrollAreaViewport {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             axis: ScrollAxis::Y,
@@ -508,7 +509,8 @@ pub struct ScrollArea {
 }
 
 impl ScrollArea {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             axis: ScrollAxis::Y,
@@ -696,7 +698,7 @@ mod tests {
     ) -> fret_core::NodeId {
         render_with(ui, app, services, window, ty, |cx| {
             vec![cx.column(ColumnProps::default(), |cx| {
-                (0..50).map(|_| cx.text("Row")).collect()
+                (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
             })]
         })
     }
@@ -869,7 +871,7 @@ mod tests {
             |cx| {
                 vec![
                     ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect()
+                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
                     })])
                     .type_(ScrollAreaType::Scroll)
                     .scroll_hide_delay_ticks(4)
@@ -909,7 +911,7 @@ mod tests {
             |cx| {
                 vec![
                     ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect()
+                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
                     })])
                     .type_(ScrollAreaType::Scroll)
                     .scroll_hide_delay_ticks(4)
@@ -948,7 +950,7 @@ mod tests {
                 |cx| {
                     vec![
                         ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                            (0..50).map(|_| cx.text("Row")).collect()
+                            (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
                         })])
                         .type_(ScrollAreaType::Scroll)
                         .scroll_hide_delay_ticks(4)
@@ -971,7 +973,7 @@ mod tests {
             |cx| {
                 vec![
                     ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect()
+                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
                     })])
                     .type_(ScrollAreaType::Scroll)
                     .scroll_hide_delay_ticks(4)
@@ -1138,7 +1140,7 @@ mod tests {
             |cx| {
                 vec![
                     ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect()
+                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
                     })])
                     .type_(ScrollAreaType::Auto)
                     .scroll_handle(handle.clone())
@@ -1179,7 +1181,7 @@ mod tests {
             |cx| {
                 vec![
                     ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect()
+                        (0..50).map(|_| cx.text("Row")).collect::<Vec<_>>()
                     })])
                     .type_(ScrollAreaType::Auto)
                     .scroll_handle(handle.clone())
