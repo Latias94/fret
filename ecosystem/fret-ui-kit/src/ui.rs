@@ -320,7 +320,9 @@ impl UiIntoElement for TextBox {
 
         let mut layout = decl_style::layout_style(&theme, self.layout);
         if self.preset == TextPreset::Label && matches!(layout.size.height, Length::Auto) {
-            let (_, line_height) = decl_text::label_style(&theme);
+            let line_height = self
+                .line_height_override
+                .unwrap_or_else(|| decl_text::label_style(&theme).1);
             layout.size.height = Length::Px(line_height);
         }
 
