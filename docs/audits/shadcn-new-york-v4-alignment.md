@@ -202,6 +202,8 @@ Recent fixes:
     and block-end addons.
   - `InputGroupText` is now available as a first-class shadcn surface for spacing-focused tests.
   - `InputGroupButton` is now available (xs/sm/icon sizes) to support input-group compositions.
+  - `InputGroupButton` no longer forces a fill-width content row for text buttons, matching the
+    upstream shrink-to-fit behavior.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
@@ -209,12 +211,13 @@ Recent fixes:
     `web_vs_fret_layout_input_group_tooltip_geometry_matches`, `web_vs_fret_layout_spinner_input_group_geometry_matches`,
     `web_vs_fret_layout_empty_input_group_geometry_matches`, `web_vs_fret_layout_kbd_input_group_geometry_matches`,
     `web_vs_fret_layout_input_group_textarea_geometry_matches`,
+    `web_vs_fret_layout_input_group_custom_geometry_matches`,
+    `web_vs_fret_layout_input_group_demo_block_end_geometry_matches`,
     `web_vs_fret_layout_input_group_text_currency_geometry_matches`,
     `web_vs_fret_layout_input_group_text_url_geometry_matches`,
     `web_vs_fret_layout_input_group_text_email_geometry_matches`,
     `web_vs_fret_layout_input_group_text_textarea_count_geometry_matches`).
 - Gaps to check next:
-  - Remaining block layout cases (`input-group-custom` and `input-group-demo` compositions).
   - Error state (`aria-invalid`) ring/border behavior.
 
 ### `Breadcrumb`
