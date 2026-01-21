@@ -98,6 +98,8 @@ pub mod tags_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod todo_foreign_iced_style_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod todo_interop_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod todo_interop_kit_demo;
