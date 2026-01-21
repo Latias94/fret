@@ -37,6 +37,7 @@ pub struct InputGroup {
     trailing_has_button: bool,
     leading_has_kbd: bool,
     trailing_has_kbd: bool,
+    aria_invalid: bool,
     a11y_label: Option<Arc<str>>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
@@ -61,6 +62,7 @@ impl std::fmt::Debug for InputGroup {
             .field("trailing_has_button", &self.trailing_has_button)
             .field("leading_has_kbd", &self.leading_has_kbd)
             .field("trailing_has_kbd", &self.trailing_has_kbd)
+            .field("aria_invalid", &self.aria_invalid)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("submit_command", &self.submit_command)
             .field("cancel_command", &self.cancel_command)
@@ -87,6 +89,7 @@ impl InputGroup {
             trailing_has_button: false,
             leading_has_kbd: false,
             trailing_has_kbd: false,
+            aria_invalid: false,
             a11y_label: None,
             submit_command: None,
             cancel_command: None,
@@ -207,6 +210,12 @@ impl InputGroup {
         self
     }
 
+    /// Apply the upstream `aria-invalid` error state chrome (group border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -246,6 +255,7 @@ impl InputGroup {
         let trailing_has_button = self.trailing_has_button;
         let leading_has_kbd = self.leading_has_kbd;
         let trailing_has_kbd = self.trailing_has_kbd;
+        let aria_invalid = self.aria_invalid;
         let control = self.control;
         let a11y_label = self.a11y_label;
         let submit_command = self.submit_command;
@@ -253,13 +263,37 @@ impl InputGroup {
         let model = self.model;
         let textarea_min_height = self.textarea_min_height;
 
+        let (border_color, focus_border_color, focus_ring) = {
+            let mut ring = decl_style::focus_ring(&theme, resolved.radius);
+            let focus_border = Some(resolved.border_color_focused);
+
+            if aria_invalid {
+                let border_color = theme.color_required("destructive");
+                let ring_key = if theme.name.contains("/dark") {
+                    "destructive/40"
+                } else {
+                    "destructive/20"
+                };
+                ring.color = theme
+                    .color_by_key(ring_key)
+                    .or_else(|| theme.color_by_key("destructive/20"))
+                    .unwrap_or(border_color);
+                (border_color, None, Some(ring))
+            } else {
+                (resolved.border_color, focus_border, Some(ring))
+            }
+        };
+
         cx.container(
             fret_ui::element::ContainerProps {
                 layout: root_layout,
                 background: None,
                 shadow: Some(decl_style::shadow_xs(&theme, resolved.radius)),
                 border: Edges::all(resolved.border_width),
-                border_color: Some(resolved.border_color),
+                border_color: Some(border_color),
+                focus_ring,
+                focus_border_color,
+                focus_within: true,
                 corner_radii: Corners::all(resolved.radius),
                 ..Default::default()
             },

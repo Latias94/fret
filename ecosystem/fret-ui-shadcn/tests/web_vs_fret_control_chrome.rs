@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Corners, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+    AppWindowId, Color, Corners, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
 };
 use fret_icons::ids;
 use fret_ui::tree::UiTree;
@@ -12,6 +12,8 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+mod css_color;
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -102,6 +104,15 @@ fn contains_text(node: &WebNode, needle: &str) -> bool {
     node.children.iter().any(|c| contains_text(c, needle))
 }
 
+fn has_descendant_attr(node: &WebNode, key: &str, value: &str) -> bool {
+    if node.attrs.get(key).is_some_and(|v| v == value) {
+        return true;
+    }
+    node.children
+        .iter()
+        .any(|c| has_descendant_attr(c, key, value))
+}
+
 fn parse_px(s: &str) -> Option<f32> {
     let s = s.trim();
     let v = s.strip_suffix("px").unwrap_or(s);
@@ -147,6 +158,8 @@ struct PaintedQuad {
     #[allow(dead_code)]
     rect: Rect,
     border: [f32; 4],
+    border_color: Color,
+    background: Color,
     corners: [f32; 4],
 }
 
@@ -157,8 +170,10 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
     for op in scene.ops() {
         let SceneOp::Quad {
             rect,
+            background,
             border,
             corner_radii,
+            border_color,
             ..
         } = *op
         else {
@@ -174,7 +189,9 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             best_score = score;
             best = Some(PaintedQuad {
                 rect,
+                background,
                 border: [border.top.0, border.right.0, border.bottom.0, border.left.0],
+                border_color,
                 corners: [
                     corner_radii.top_left.0,
                     corner_radii.top_right.0,
@@ -186,6 +203,16 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
     }
 
     best
+}
+
+fn assert_color_close(label: &str, actual: Color, expected_css: &str, tol: f32) {
+    let expected = css_color::parse_css_color(expected_css)
+        .unwrap_or_else(|| panic!("{label}: failed to parse css color: {expected_css}"));
+    let actual = css_color::color_to_rgba(actual);
+    assert_close(&format!("{label}.r"), actual.r, expected.r, tol);
+    assert_close(&format!("{label}.g"), actual.g, expected.g, tol);
+    assert_close(&format!("{label}.b"), actual.b, expected.b, tol);
+    assert_close(&format!("{label}.a"), actual.a, expected.a, tol);
 }
 
 struct FakeServices;
@@ -2609,6 +2636,108 @@ fn web_vs_fret_input_demo_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_input_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("input-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && n.attrs.get("aria-invalid").is_some_and(|v| v == "true")
+    })
+    .or_else(|| {
+        find_first(&theme.root, &|n| {
+            n.tag == "input" && (n.rect.h - 36.0).abs() <= 0.1
+        })
+    })
+    .expect("web input node");
+
+    let web_border_color = web_input
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Input::new(model)
+                .a11y_label("Input")
+                .aria_invalid(true)
+                .into_element(cx),
+        ]
+    });
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::TextField && n.label.as_deref() == Some("Input"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::TextField)
+        })
+        .expect("fret input semantics node");
+
+    let quad = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_color_close(
+        "input aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("input-group-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("data-slot").is_some_and(|v| v == "input-group")
+            && has_descendant_attr(n, "aria-invalid", "true")
+    })
+    .expect("web input-group node");
+
+    let web_border_color = web_group
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let web_w = web_group.rect.w;
+    let web_h = web_group.rect.h;
+
+    let (_snap, scene) = render_and_paint_in_bounds(CoreSize::new(Px(web_w), Px(web_h)), |cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::InputGroup::new(model)
+                .aria_invalid(true)
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for input-group");
+    assert_color_close(
+        "input-group aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
+}
+
+#[test]
 fn web_vs_fret_badge_demo_chrome_matches() {
     let web = read_web_golden("badge-demo");
     let theme = web
@@ -3791,7 +3920,9 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
         for op in scene.ops() {
             let SceneOp::Quad {
                 rect,
+                background,
                 border,
+                border_color,
                 corner_radii,
                 ..
             } = *op
@@ -3806,6 +3937,8 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
                 candidates.push(PaintedQuad {
                     rect,
                     border: [border.top.0, border.right.0, border.bottom.0, border.left.0],
+                    border_color,
+                    background,
                     corners: [
                         corner_radii.top_left.0,
                         corner_radii.top_right.0,

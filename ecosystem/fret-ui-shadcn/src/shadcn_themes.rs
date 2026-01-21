@@ -276,6 +276,9 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         if let Some(v) = with_oklch_alpha(&destructive, 0.2) {
             colors.insert("destructive/20".to_string(), v);
         }
+        if let Some(v) = with_oklch_alpha(&destructive, 0.4) {
+            colors.insert("destructive/40".to_string(), v);
+        }
     }
 
     // new-york-v4 `ScrollArea` uses `bg-border` for the thumb.

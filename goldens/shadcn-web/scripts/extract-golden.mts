@@ -23,6 +23,7 @@ type OpenStep =
   | { action: "wait"; waitMs: number }
   | { action: "waitFor"; selector: string }
   | { action: "move"; x: number; y: number }
+  | { action: "attr"; selector: string; name: string; value: string }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
   | { action: "type"; selector: string; text: string }
@@ -497,13 +498,44 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "attr") {
+      const at = valueRaw.indexOf("@")
+      if (at === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "attr=<selector>@<name>=<value>")`
+        )
+      }
+      const selector = valueRaw.slice(0, at).trim()
+      const rest = valueRaw.slice(at + 1).trim()
+      if (!selector || !rest) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "attr=<selector>@<name>=<value>")`
+        )
+      }
+      const eq2 = rest.indexOf("=")
+      if (eq2 === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "attr=<selector>@<name>=<value>")`
+        )
+      }
+      const name = rest.slice(0, eq2).trim()
+      const value = rest.slice(eq2 + 1)
+      if (!name) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "attr=<selector>@<name>=<value>")`
+        )
+      }
+      out.push({ action: "attr", selector, name, value })
+      continue
+    }
+
     if (
       actionRaw !== "click" &&
       actionRaw !== "hover" &&
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|wait|waitFor|move)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|attr|wait|waitFor|move)`
       )
     }
 
@@ -558,6 +590,7 @@ async function extractOne(page: puppeteer.Page) {
       "aria-label",
       "aria-labelledby",
       "aria-describedby",
+      "aria-invalid",
       "aria-checked",
       "aria-selected",
       "aria-expanded",
@@ -1094,6 +1127,24 @@ async function applySteps(
       continue
     }
 
+    if (step.action === "attr") {
+      const expr = `(() => {
+        const sel = ${JSON.stringify(step.selector)};
+        const name = ${JSON.stringify(step.name)};
+        const value = ${JSON.stringify(step.value)};
+        const el = document.querySelector(sel);
+        if (!el || !(el instanceof Element)) return false;
+        el.setAttribute(name, value);
+        return true;
+      })()`
+      const ok = (await page.evaluate(expr)) as boolean
+      if (!ok) {
+        throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
     if (debug) {
       console.log(`- steps: ${name} step[${idx}] ${step.action} ${step.selector}`)
     }
@@ -1208,6 +1259,24 @@ async function applyOpenSteps(
         setter.call(el, text);
         el.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
         el.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
+        return true;
+      })()`
+      const ok = (await page.evaluate(expr)) as boolean
+      if (!ok) {
+        throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "attr") {
+      const expr = `(() => {
+        const sel = ${JSON.stringify(step.selector)};
+        const name = ${JSON.stringify(step.name)};
+        const value = ${JSON.stringify(step.value)};
+        const el = document.querySelector(sel);
+        if (!el || !(el instanceof Element)) return false;
+        el.setAttribute(name, value);
         return true;
       })()`
       const ok = (await page.evaluate(expr)) as boolean

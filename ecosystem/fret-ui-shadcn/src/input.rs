@@ -22,6 +22,7 @@ pub struct Input {
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
     placeholder: Option<Arc<str>>,
+    aria_invalid: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
     submit_command: Option<CommandId>,
@@ -40,6 +41,7 @@ impl Input {
             a11y_label: None,
             a11y_role: None,
             placeholder: None,
+            aria_invalid: false,
             active_descendant: None,
             expanded: None,
             submit_command: None,
@@ -64,6 +66,12 @@ impl Input {
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
         self
     }
 
@@ -141,6 +149,7 @@ impl Input {
             self.a11y_label,
             self.a11y_role,
             self.placeholder,
+            self.aria_invalid,
             self.active_descendant,
             self.expanded,
             self.submit_command,
@@ -171,6 +180,7 @@ pub fn input<H: UiHost>(
         a11y_label,
         a11y_role,
         placeholder,
+        false,
         active_descendant,
         expanded,
         submit_command,
@@ -189,6 +199,7 @@ fn input_with_style<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
     placeholder: Option<Arc<str>>,
+    aria_invalid: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
     submit_command: Option<CommandId>,
@@ -229,6 +240,24 @@ fn input_with_style<H: UiHost>(
         .unwrap_or(chrome.placeholder_color);
     chrome.caret_color = resolved.text_color;
     chrome.selection_color = resolved.selection_color;
+
+    if aria_invalid {
+        let border_color = theme.color_required("destructive");
+        chrome.border_color = border_color;
+        chrome.border_color_focused = border_color;
+        if let Some(mut ring) = chrome.focus_ring.take() {
+            let ring_key = if theme.name.contains("/dark") {
+                "destructive/40"
+            } else {
+                "destructive/20"
+            };
+            ring.color = theme
+                .color_by_key(ring_key)
+                .or_else(|| theme.color_by_key("destructive/20"))
+                .unwrap_or(border_color);
+            chrome.focus_ring = Some(ring);
+        }
+    }
 
     if let Some(corners) = corner_radii_override {
         chrome.corner_radii = corners;
