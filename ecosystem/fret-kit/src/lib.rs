@@ -46,6 +46,7 @@ pub use fret;
 pub mod prelude {
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop::embedded_viewport::{
+        EmbeddedViewportForeignMvuUiAppDriverExt, EmbeddedViewportForeignUiAppDriverExt,
         EmbeddedViewportMvuUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
     };
     #[cfg(feature = "shadcn")]
