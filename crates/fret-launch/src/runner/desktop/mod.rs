@@ -108,6 +108,7 @@ pub fn run_app_with_event_loop<D: WinitAppDriver + 'static>(
     app: App,
     driver: D,
 ) -> Result<(), RunnerError> {
+    crate::configure_stacksafe_from_env();
     let mut runner = WinitRunner::new_app(config, app, driver);
     runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(runner)?;

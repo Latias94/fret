@@ -1196,6 +1196,7 @@ dependencies = [
  "renderdog",
  "serde_json",
  "slotmap",
+ "stacksafe",
  "subsecond",
  "thiserror 2.0.17",
  "tracing",
