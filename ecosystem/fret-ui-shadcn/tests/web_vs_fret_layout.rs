@@ -6850,6 +6850,186 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
 }
 
 #[test]
+fn web_vs_fret_layout_input_group_button_geometry_matches() {
+    let web = read_web_golden("input-group-button");
+    let theme = web_theme(&web);
+    let web_group = web_find_by_class_tokens(&theme.root, &["group/input-group", "border-input"])
+        .expect("web input group root");
+
+    let web_input = web_group
+        .children
+        .iter()
+        .find(|n| n.tag == "input")
+        .expect("web input node");
+    let web_addon = web_group
+        .children
+        .iter()
+        .find(|n| {
+            n.tag == "div"
+                && n.computed_style
+                    .get("marginRight")
+                    .is_some_and(|v| v == "-7.2px")
+        })
+        .expect("web addon node");
+    let web_svg = find_first(web_addon, &|n| n.tag == "svg").expect("web svg node");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-input-group-button",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(384.0)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let icon = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-button:icon")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
+                    );
+
+                    let button = fret_ui_shadcn::Button::new("")
+                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                        .children(vec![icon])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
+                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                        )
+                        .into_element(cx);
+
+                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                        .a11y_label("Golden:input-group-button:input")
+                        .trailing_has_button(true)
+                        .trailing(vec![button])
+                        .into_element(cx);
+
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-button:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-button:root"),
+    )
+    .expect("fret input group root");
+    let input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:input-group-button:input"),
+    )
+    .expect("fret input");
+    let icon = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-button:icon"),
+    )
+    .expect("fret icon");
+
+    assert_close_px(
+        "input-group-button group w",
+        group.bounds.size.width,
+        web_group.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-button group h",
+        group.bounds.size.height,
+        web_group.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-button input x",
+        input.bounds.origin.x,
+        web_input.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-button input w",
+        input.bounds.size.width,
+        web_input.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-button svg x",
+        icon.bounds.origin.x,
+        web_svg.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-button svg y",
+        icon.bounds.origin.y,
+        web_svg.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-button svg w",
+        icon.bounds.size.width,
+        web_svg.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-button svg h",
+        icon.bounds.size.height,
+        web_svg.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_card_with_form_width() {
     let web = read_web_golden("card-with-form");
     let theme = web_theme(&web);
