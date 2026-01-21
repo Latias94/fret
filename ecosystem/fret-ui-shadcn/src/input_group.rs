@@ -2,11 +2,14 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, FlexProps, Length, SizeStyle, TextInputProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
+    TextInputProps,
+};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize};
 
 #[derive(Clone)]
 pub struct InputGroup {
@@ -98,33 +101,40 @@ impl InputGroup {
         let resolved =
             resolve_input_chrome(&theme, self.size, &self.chrome, InputTokenKeys::none());
 
-        let slot_w = Px(self.size.input_h(&theme).0.max(0.0));
         let base_px = resolved.padding.left;
         let base_py = resolved.padding.top;
-
-        let left_pad = if self.leading.is_empty() {
-            base_px
-        } else {
-            Px((base_px.0 + slot_w.0).max(0.0))
-        };
-        let right_pad = if self.trailing.is_empty() {
-            base_px
-        } else {
-            Px((base_px.0 + slot_w.0).max(0.0))
-        };
 
         let mut chrome = TextInputStyle::from_theme(theme.snapshot());
         chrome.padding = Edges {
             top: base_py,
-            right: right_pad,
+            right: if self.trailing.is_empty() {
+                base_px
+            } else {
+                // Tailwind/shadcn input-group uses `pr-2` when a trailing slot exists.
+                Px((base_px.0 - 4.0).max(0.0))
+            },
             bottom: base_py,
-            left: left_pad,
+            left: if self.leading.is_empty() {
+                base_px
+            } else {
+                // Tailwind/shadcn input-group uses `pl-2` when a leading slot exists.
+                Px((base_px.0 - 4.0).max(0.0))
+            },
         };
-        chrome.corner_radii = Corners::all(resolved.radius);
-        chrome.border = Edges::all(resolved.border_width);
-        chrome.background = resolved.background;
-        chrome.border_color = resolved.border_color;
-        chrome.border_color_focused = resolved.border_color_focused;
+        chrome.corner_radii = Corners::all(Px(0.0));
+        chrome.border = Edges::all(Px(0.0));
+        chrome.background = fret_core::Color {
+            a: 0.0,
+            ..resolved.background
+        };
+        chrome.border_color = fret_core::Color {
+            a: 0.0,
+            ..resolved.border_color
+        };
+        chrome.border_color_focused = fret_core::Color {
+            a: 0.0,
+            ..resolved.border_color_focused
+        };
         chrome.text_color = resolved.text_color;
         chrome.caret_color = resolved.text_color;
         chrome.selection_color = resolved.selection_color;
@@ -144,77 +154,104 @@ impl InputGroup {
         input.chrome = chrome;
         input.text_style = text_style;
         input.layout.size = SizeStyle {
-            width: Length::Fill,
+            width: Length::Auto,
             min_height: Some(resolved.min_height),
+            min_width: Some(Px(0.0)),
             ..Default::default()
         };
-
-        let root_layout = decl_style::layout_style(&theme, self.layout.relative().w_full());
+        input.layout.flex.grow = 1.0;
+        input.layout.flex.shrink = 1.0;
+        input.layout.flex.basis = Length::Px(Px(0.0));
 
         let leading = self.leading;
         let trailing = self.trailing;
 
+        let mut root_layout = decl_style::layout_style(&theme, self.layout.relative().w_full());
+        root_layout.size.height = Length::Px(resolved.min_height);
+
         cx.container(
-            fret_ui::element::ContainerProps {
+            ContainerProps {
                 layout: root_layout,
-                ..Default::default()
+                padding: Edges::all(Px(0.0)),
+                background: Some(resolved.background),
+                shadow: None,
+                border: Edges::all(resolved.border_width),
+                border_color: Some(resolved.border_color),
+                corner_radii: Corners::all(resolved.radius),
             },
-            |cx| {
-                let mut out = Vec::new();
-                out.push(cx.text_input(input));
+            move |cx| {
+                let mut children = Vec::new();
 
-                if !leading.is_empty() {
-                    let left_layout = decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default()
-                            .absolute()
-                            .left(Space::N0)
-                            .top(Space::N0)
-                            .bottom(Space::N0)
-                            .w_px(fret_ui_kit::MetricRef::Px(slot_w))
-                            .h_full(),
-                    );
-                    out.push(cx.flex(
-                        FlexProps {
-                            layout: left_layout,
-                            direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::symmetric(base_px, Px(0.0)),
-                            justify: fret_ui::element::MainAlign::Center,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
-                        },
-                        |_cx| leading,
-                    ));
-                }
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+                row_layout.size.height = Length::Fill;
+                row_layout.flex.grow = 1.0;
+                row_layout.flex.shrink = 1.0;
+                row_layout.flex.basis = Length::Px(Px(0.0));
 
-                if !trailing.is_empty() {
-                    let right_layout = decl_style::layout_style(
-                        &theme,
-                        LayoutRefinement::default()
-                            .absolute()
-                            .right(Space::N0)
-                            .top(Space::N0)
-                            .bottom(Space::N0)
-                            .w_px(fret_ui_kit::MetricRef::Px(slot_w))
-                            .h_full(),
-                    );
+                let row = cx.flex(
+                    FlexProps {
+                        layout: row_layout,
+                        direction: Axis::Horizontal,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let mut out = Vec::new();
 
-                    out.push(cx.flex(
-                        FlexProps {
-                            layout: right_layout,
-                            direction: Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::symmetric(base_px, Px(0.0)),
-                            justify: fret_ui::element::MainAlign::Center,
-                            align: fret_ui::element::CrossAlign::Center,
-                            wrap: false,
-                        },
-                        |_cx| trailing,
-                    ));
-                }
+                        if !leading.is_empty() {
+                            let slot_py = Px((base_py.0 + 2.0).max(0.0));
+                            out.push(cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: Axis::Horizontal,
+                                    gap: Px(8.0),
+                                    padding: Edges {
+                                        top: slot_py,
+                                        right: Px(0.0),
+                                        bottom: slot_py,
+                                        left: base_px,
+                                    },
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                |_cx| leading,
+                            ));
+                        }
 
-                out
+                        out.push(cx.text_input(input));
+
+                        if !trailing.is_empty() {
+                            let slot_py = Px((base_py.0 + 2.0).max(0.0));
+                            out.push(cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: Axis::Horizontal,
+                                    gap: Px(8.0),
+                                    padding: Edges {
+                                        top: slot_py,
+                                        right: base_px,
+                                        bottom: slot_py,
+                                        left: Px(0.0),
+                                    },
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                |_cx| trailing,
+                            ));
+                        }
+
+                        out
+                    },
+                );
+
+                children.push(row);
+                children
             },
         )
     }
