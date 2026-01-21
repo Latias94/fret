@@ -284,6 +284,69 @@ pub fn record_engine_frame<S: EmbeddedViewportRecord>(
     update
 }
 
+/// Boilerplate-free `record_engine_frame` hook for MVU window states.
+///
+/// This lets MVU apps embed a surface by:
+/// - implementing [`EmbeddedViewportRecord`] for their user state `S`,
+/// - wiring `viewport_input` to [`handle_viewport_input`],
+/// - wiring `record_engine_frame` to this function.
+pub fn record_engine_frame_mvu<S: EmbeddedViewportRecord, M: 'static>(
+    app: &mut App,
+    window: AppWindowId,
+    ui: &mut fret_ui::UiTree<App>,
+    st: &mut crate::mvu::MvuWindowState<S, M>,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+    tick_id: TickId,
+    frame_id: FrameId,
+) -> EngineFrameUpdate {
+    record_engine_frame(
+        app,
+        window,
+        ui,
+        &mut st.user,
+        context,
+        renderer,
+        scale_factor,
+        tick_id,
+        frame_id,
+    )
+}
+
+/// Extension helpers for `UiAppDriver<S>` applications embedding an [`EmbeddedViewportSurface`].
+pub trait EmbeddedViewportUiAppDriverExt: Sized {
+    /// Install the global input hook and the per-window frame recorder.
+    fn drive_embedded_viewport(self) -> Self;
+}
+
+impl<S> EmbeddedViewportUiAppDriverExt for crate::UiAppDriver<S>
+where
+    S: EmbeddedViewportRecord,
+{
+    fn drive_embedded_viewport(self) -> Self {
+        self.viewport_input(handle_viewport_input)
+            .record_engine_frame(record_engine_frame::<S>)
+    }
+}
+
+/// Extension helpers for MVU drivers embedding an [`EmbeddedViewportSurface`].
+pub trait EmbeddedViewportMvuUiAppDriverExt: Sized {
+    /// Install the global input hook and the per-window frame recorder.
+    fn drive_embedded_viewport(self) -> Self;
+}
+
+impl<S, M> EmbeddedViewportMvuUiAppDriverExt for crate::mvu::MvuUiAppDriver<S, M>
+where
+    S: EmbeddedViewportRecord,
+    M: 'static,
+{
+    fn drive_embedded_viewport(self) -> Self {
+        self.viewport_input(handle_viewport_input)
+            .record_engine_frame(record_engine_frame_mvu::<S, M>)
+    }
+}
+
 /// Convenience: record a simple clear pass.
 pub fn clear_pass(
     encoder: &mut wgpu::CommandEncoder,

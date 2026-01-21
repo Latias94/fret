@@ -232,7 +232,7 @@ Line counts (worktree):
 - `apps/fret-examples/src/todo_demo.rs`: 536
 - `apps/fret-examples/src/todo_mvu_demo.rs`: 518
 - `apps/fret-examples/src/todo_interop_demo.rs`: 512
-- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 336
+- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 308
 
 Interpretation:
 
@@ -244,3 +244,5 @@ Recent ergonomic improvement:
 
 - `fret-kit` now includes `interop::embedded_viewport` to reduce “isolated embedding” boilerplate
   (publish target id as models + global viewport input filtering + surface panel helper).
+- `interop::embedded_viewport::{EmbeddedViewportUiAppDriverExt, EmbeddedViewportMvuUiAppDriverExt}`
+  further reduce wiring boilerplate (install input + frame recording in one call).
