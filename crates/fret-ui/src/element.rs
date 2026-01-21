@@ -289,6 +289,15 @@ pub struct ContainerProps {
     pub shadow: Option<ShadowStyle>,
     pub border: Edges,
     pub border_color: Option<Color>,
+    /// Optional focus-visible ring decoration.
+    pub focus_ring: Option<RingStyle>,
+    /// Optional border-color override applied when focus-visible is active.
+    ///
+    /// This is primarily used for shadcn-style `focus-visible:border-ring` outcomes without
+    /// requiring a dedicated "border state" API at the layout layer.
+    pub focus_border_color: Option<Color>,
+    /// When true, focus state is derived from any focused descendant (focus-within).
+    pub focus_within: bool,
     pub corner_radii: Corners,
 }
 
@@ -301,6 +310,9 @@ impl Default for ContainerProps {
             shadow: None,
             border: Edges::all(Px(0.0)),
             border_color: None,
+            focus_ring: None,
+            focus_border_color: None,
+            focus_within: false,
             corner_radii: Corners::all(Px(0.0)),
         }
     }

@@ -863,6 +863,7 @@ fn checkable_menu_row_children<H: UiHost>(
                                         border: Edges::all(Px(0.0)),
                                         border_color: None,
                                         corner_radii: fret_core::Corners::all(Px(999.0)),
+                                        ..Default::default()
                                     },
                                     |_cx| Vec::new(),
                                 )],
@@ -1396,6 +1397,7 @@ impl DropdownMenu {
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
                                             corner_radii: fret_core::Corners::all(radius_md),
+                                            ..Default::default()
                                         },
                                         move |cx| {
                                     let scroll_layout = LayoutStyle {
@@ -2406,6 +2408,7 @@ impl DropdownMenu {
                                                     border: Edges::all(Px(1.0)),
                                                     border_color: Some(border),
                                                     corner_radii: fret_core::Corners::all(radius_sm),
+                                                    ..Default::default()
                                                 },
                                                 move |cx| {
                                                     let mut item_ix: usize = 0;

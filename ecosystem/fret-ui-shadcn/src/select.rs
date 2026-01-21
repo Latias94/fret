@@ -191,6 +191,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                                 border: Edges::all(Px(0.0)),
                                 border_color: None,
                                 corner_radii: Corners::all(Px(0.0)),
+                                ..Default::default()
                             },
                             |cx| {
                                 vec![cx.flex(
@@ -1852,6 +1853,7 @@ fn select_impl<H: UiHost>(
                                                                                     border: Edges::all(Px(0.0)),
                                                                                     border_color: None,
                                                                                     corner_radii: Corners::all(Px(0.0)),
+                                                                                    ..Default::default()
                                                                                 },
                                                                                 move |cx| {
                                                                                     vec![cx.text_props(TextProps {
@@ -2070,31 +2072,32 @@ fn select_impl<H: UiHost>(
 
                                                                                              vec![cx.container(
                                                                                                 ContainerProps {
-                                                                                            layout: {
-                                                                                                let mut layout =
-                                                                                                    LayoutStyle::default();
-                                                                                                layout.size.width = Length::Fill;
-                                                                                                layout.size.height = Length::Fill;
-                                                                                                layout
-                                                                                            },
-                                                                                            // new-york-v4: `py-1.5 pl-2 pr-8`
-                                                                                            padding: Edges {
-                                                                                                top: Px(6.0),
-                                                                                                right: Px(32.0),
-                                                                                                bottom: Px(6.0),
-                                                                                                left: Px(8.0),
-                                                                                            },
-                                                                                            background: Some(bg),
-                                                                                            shadow: None,
-                                                                                            border: Edges::all(Px(0.0)),
-                                                                                            border_color: None,
-                                                                                            corner_radii: Corners::all(
-                                                                                                theme.metric_required("metric.radius.sm"),
-                                                                                            ),
+                                                                                                    layout: {
+                                                                                                        let mut layout =
+                                                                                                            LayoutStyle::default();
+                                                                                                        layout.size.width = Length::Fill;
+                                                                                                        layout.size.height = Length::Fill;
+                                                                                                        layout
+                                                                                                    },
+                                                                                                    // new-york-v4: `py-1.5 pl-2 pr-8`
+                                                                                                    padding: Edges {
+                                                                                                        top: Px(6.0),
+                                                                                                        right: Px(32.0),
+                                                                                                        bottom: Px(6.0),
+                                                                                                        left: Px(8.0),
+                                                                                                    },
+                                                                                                    background: Some(bg),
+                                                                                                    shadow: None,
+                                                                                                    border: Edges::all(Px(0.0)),
+                                                                                                    border_color: None,
+                                                                                                    corner_radii: Corners::all(
+                                                                                                        theme.metric_required("metric.radius.sm"),
+                                                                                                    ),
+                                                                                                    ..Default::default()
                                                                                                 },
-                                                                                                |cx| {
-                                                                                            let text = cx.container(
-                                                                                                ContainerProps {
+                                                                                                 |cx| {
+                                                                                             let text = cx.container(
+                                                                                                 ContainerProps {
                                                                                                     layout: {
                                                                                                         let mut layout =
                                                                                                             LayoutStyle::default();
@@ -2131,37 +2134,38 @@ fn select_impl<H: UiHost>(
                                                                                                     * 0.5)
                                                                                                     .max(0.0),
                                                                                             );
-                                                                                            let indicator = cx.container(
-                                                                                                ContainerProps {
-                                                                                                    layout: LayoutStyle {
-                                                                                                        position: PositionStyle::Absolute,
-                                                                                                        inset: InsetStyle {
-                                                                                                            top: Some(indicator_top),
-                                                                                                            right: Some(Px(8.0)),
-                                                                                                            bottom: None,
-                                                                                                            left: None,
-                                                                                                        },
-                                                                                                        size: SizeStyle {
-                                                                                                            width: Length::Px(
-                                                                                                                indicator_size,
-                                                                                                            ),
-                                                                                                            height: Length::Px(
-                                                                                                                indicator_size,
-                                                                                                            ),
-                                                                                                            ..Default::default()
-                                                                                                        },
-                                                                                                        ..Default::default()
-                                                                                                    },
-                                                                                                    padding: Edges::all(Px(0.0)),
-                                                                                                    background: None,
-                                                                                                    shadow: None,
-                                                                                                    border: Edges::all(Px(0.0)),
-                                                                                                    border_color: None,
-                                                                                                    corner_radii: Corners::all(Px(0.0)),
-                                                                                                },
-                                                                                                |cx| {
-                                                                                                    vec![cx.flex(
-                                                                                                        FlexProps {
+                                                                                                 let indicator = cx.container(
+                                                                                                     ContainerProps {
+                                                                                                         layout: LayoutStyle {
+                                                                                                             position: PositionStyle::Absolute,
+                                                                                                             inset: InsetStyle {
+                                                                                                                 top: Some(indicator_top),
+                                                                                                                 right: Some(Px(8.0)),
+                                                                                                                 bottom: None,
+                                                                                                                 left: None,
+                                                                                                             },
+                                                                                                             size: SizeStyle {
+                                                                                                                 width: Length::Px(
+                                                                                                                     indicator_size,
+                                                                                                                 ),
+                                                                                                                 height: Length::Px(
+                                                                                                                     indicator_size,
+                                                                                                                 ),
+                                                                                                                 ..Default::default()
+                                                                                                             },
+                                                                                                             ..Default::default()
+                                                                                                         },
+                                                                                                         padding: Edges::all(Px(0.0)),
+                                                                                                         background: None,
+                                                                                                         shadow: None,
+                                                                                                         border: Edges::all(Px(0.0)),
+                                                                                                         border_color: None,
+                                                                                                         corner_radii: Corners::all(Px(0.0)),
+                                                                                                         ..Default::default()
+                                                                                                     },
+                                                                                                     |cx| {
+                                                                                                         vec![cx.flex(
+                                                                                                             FlexProps {
                                                                                                             layout: {
                                                                                                                 let mut layout =
                                                                                                                     LayoutStyle::default();
@@ -2246,6 +2250,7 @@ fn select_impl<H: UiHost>(
                                                 border: Edges::all(border_width),
                                                 border_color: Some(overlay_border),
                                                 corner_radii: Corners::all(radius),
+                                                ..Default::default()
                                             },
                                             move |_cx| vec![scroll],
                                         );

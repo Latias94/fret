@@ -653,6 +653,7 @@ fn menu_row_children<H: UiHost>(
             border: Edges::all(Px(0.0)),
             border_color: None,
             corner_radii: Corners::all(radius_sm),
+            ..Default::default()
         },
         move |cx| {
             let has_indicator = indicator_on.is_some();
@@ -980,6 +981,7 @@ impl Menubar {
                             border: Edges::all(border_width),
                             border_color: Some(border),
                             corner_radii: Corners::all(radius),
+                            ..Default::default()
                         },
                         move |cx| {
                             vec![roving_focus_group::roving_focus_group_apg(
@@ -1430,6 +1432,7 @@ impl MenubarMenuEntries {
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
                                             corner_radii: Corners::all(radius_md),
+                                            ..Default::default()
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -2374,6 +2377,7 @@ impl MenubarMenuEntries {
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
                                             corner_radii: Corners::all(radius_md),
+                                            ..Default::default()
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -2964,6 +2968,7 @@ impl MenubarMenuEntries {
                         border: Edges::all(Px(0.0)),
                         border_color: None,
                         corner_radii: Corners::all(radius),
+                        ..Default::default()
                     },
                     move |cx| {
                         let mut label_text = ui::text(cx, label.clone())

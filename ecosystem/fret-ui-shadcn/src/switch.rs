@@ -295,6 +295,7 @@ impl Switch {
                         border: Edges::all(Px(0.0)),
                         border_color: None,
                         corner_radii: Corners::all(Px((thumb.0 * 0.5).max(0.0))),
+                        ..Default::default()
                     };
 
                     vec![cx.container(thumb_props, |_cx| Vec::new())]

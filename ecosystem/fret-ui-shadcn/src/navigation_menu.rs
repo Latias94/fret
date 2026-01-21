@@ -759,6 +759,7 @@ impl NavigationMenu {
                                             border: Edges::all(Px(0.0)),
                                             border_color: None,
                                             corner_radii: Corners::all(trigger_radius),
+                                            ..Default::default()
                                         };
 
                                         let content_children =
@@ -864,6 +865,7 @@ impl NavigationMenu {
                         border: Edges::all(Px(1.0)),
                         border_color: Some(viewport_border),
                         corner_radii: Corners::all(viewport_radius),
+                        ..Default::default()
                     }
                 } else {
                     ContainerProps {
@@ -877,6 +879,7 @@ impl NavigationMenu {
                         border: Edges::all(Px(1.0)),
                         border_color: Some(viewport_border),
                         corner_radii: Corners::all(viewport_radius),
+                        ..Default::default()
                     }
                 };
 
@@ -1142,6 +1145,7 @@ impl NavigationMenu {
                                                     border: Edges::all(Px(1.0)),
                                                     border_color: Some(viewport_border),
                                                     corner_radii: Corners::all(Px(2.0)),
+                                                    ..Default::default()
                                                 },
                                                 |_cx| Vec::new(),
                                             )]

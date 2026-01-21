@@ -1870,6 +1870,7 @@ fn context_menu_submenu_panel<H: UiHost>(
             border: Edges::all(Px(1.0)),
             border_color: Some(border),
             corner_radii: fret_core::Corners::all(radius_md),
+            ..Default::default()
         },
         move |cx| {
             let render_env = ContextMenuRenderEnv {
@@ -2396,6 +2397,7 @@ impl ContextMenu {
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
                                             corner_radii: fret_core::Corners::all(radius_md),
+                                            ..Default::default()
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =

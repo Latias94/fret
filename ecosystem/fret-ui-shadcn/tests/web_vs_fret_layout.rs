@@ -12648,6 +12648,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
                                                 border: Edges::all(Px(0.0)),
                                                 border_color: None,
                                                 corner_radii: Default::default(),
+                                                ..Default::default()
                                             };
 
                                             vec![cx.container(row_props, move |cx| {
@@ -12719,6 +12720,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_light() {
                                                                         },
                                                                         border_color: Some(border),
                                                                         corner_radii: Default::default(),
+                                                                        ..Default::default()
                                                                     };
 
                                                                     vec![cx.container(
@@ -13015,6 +13017,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
                                                     border: Edges::all(Px(0.0)),
                                                     border_color: None,
                                                     corner_radii: Default::default(),
+                                                    ..Default::default()
                                                 };
 
                                                 vec![cx.container(row_props, move |cx| {
@@ -13087,6 +13090,7 @@ fn web_vs_fret_layout_typography_table_cell_geometry_dark() {
                                                                             },
                                                                             border_color: Some(border),
                                                                             corner_radii: Default::default(),
+                                                                            ..Default::default()
                                                                         };
 
                                                                         vec![cx.container(

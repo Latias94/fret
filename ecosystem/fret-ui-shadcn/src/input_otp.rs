@@ -218,6 +218,7 @@ impl InputOtp {
                             border: Edges::all(border),
                             border_color: Some(border_color),
                             corner_radii: Corners::all(radius),
+                            ..Default::default()
                         },
                         move |cx| {
                             vec![cx.flex(

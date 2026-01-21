@@ -433,6 +433,7 @@ fn combobox_with_patch<H: UiHost>(
                                 border: Edges::all(border_w),
                                 border_color: Some(border),
                                 corner_radii: Corners::all(radius),
+                                ..Default::default()
                             },
                             move |cx| {
                                 vec![cx.flex(

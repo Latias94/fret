@@ -354,6 +354,7 @@ impl RadioGroup {
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border_color),
                                             corner_radii: Corners::all(radius),
+                                            ..Default::default()
                                         };
 
                                         let row_layout = LayoutStyle {
@@ -381,6 +382,7 @@ impl RadioGroup {
                                             corner_radii: Corners::all(Px(
                                                 (indicator.0 * 0.5).max(0.0),
                                             )),
+                                            ..Default::default()
                                         };
 
                                         let label = a11y_label.clone();

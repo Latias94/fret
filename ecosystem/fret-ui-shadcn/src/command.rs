@@ -1180,6 +1180,7 @@ impl CommandList {
                                                     border: Edges::all(Px(0.0)),
                                                     border_color: None,
                                                     corner_radii: Corners::all(radius),
+                                                    ..Default::default()
                                                 };
 
                                                 vec![cx.container(props, move |cx| {
@@ -1947,6 +1948,7 @@ impl CommandPalette {
                                         border: Edges::all(Px(0.0)),
                                         border_color: None,
                                         corner_radii: Corners::all(radius),
+                                        ..Default::default()
                                     };
 
                                     vec![cx.container(props, move |cx| {

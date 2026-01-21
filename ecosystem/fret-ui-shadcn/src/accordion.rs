@@ -186,6 +186,7 @@ pub mod composable {
                                 border: props.border,
                                 border_color: props.border_color,
                                 corner_radii: props.corner_radii,
+                                ..Default::default()
                             },
                             move |cx| {
                                 let chevron_fg = theme
@@ -877,6 +878,7 @@ impl AccordionTrigger {
                             border: props.border,
                             border_color: props.border_color,
                             corner_radii: props.corner_radii,
+                            ..Default::default()
                         },
                         move |cx| {
                             let chevron_fg = theme

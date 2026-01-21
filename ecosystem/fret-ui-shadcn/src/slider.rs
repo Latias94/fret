@@ -419,6 +419,7 @@ pub fn slider<H: UiHost>(
                 border: style.track_border,
                 border_color: Some(style.track_border_color),
                 corner_radii: Corners::all(Px(style.track_height.0.max(0.0) * 0.5)),
+                ..Default::default()
             };
 
             let pointer = PointerRegionProps {
@@ -555,6 +556,7 @@ pub fn slider<H: UiHost>(
                             border: style.thumb_border,
                             border_color: Some(style.thumb_border_color),
                             corner_radii: Corners::all(thumb_r),
+                            ..Default::default()
                         };
 
                         out.push(cx.row(thumb_row, |cx| {

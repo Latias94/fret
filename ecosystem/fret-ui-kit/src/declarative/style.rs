@@ -176,6 +176,9 @@ pub fn container_props(
         shadow: None,
         border: Edges::all(border_width),
         border_color,
+        focus_ring: None,
+        focus_border_color: None,
+        focus_within: false,
         corner_radii: Corners::all(radius),
     }
 }
