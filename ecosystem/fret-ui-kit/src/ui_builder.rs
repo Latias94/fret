@@ -3,6 +3,7 @@ use crate::{
     ChromeRefinement, ColorRef, Edges4, Items, Justify, LayoutRefinement, LengthRefinement,
     MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
+use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
@@ -110,6 +111,80 @@ macro_rules! forward_layout_noargs {
             }
         )+
     };
+}
+
+impl UiBuilder<crate::ui::TextBox> {
+    pub fn text_sm(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Sm;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
+    pub fn text_base(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Base;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
+    pub fn text_prose(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Prose;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
+    pub fn font_weight(mut self, weight: FontWeight) -> Self {
+        self.inner.weight_override = Some(weight);
+        self
+    }
+
+    pub fn font_normal(self) -> Self {
+        self.font_weight(FontWeight::NORMAL)
+    }
+
+    pub fn font_medium(self) -> Self {
+        self.font_weight(FontWeight::MEDIUM)
+    }
+
+    pub fn font_semibold(self) -> Self {
+        self.font_weight(FontWeight::SEMIBOLD)
+    }
+
+    pub fn font_bold(self) -> Self {
+        self.font_weight(FontWeight::BOLD)
+    }
+
+    pub fn text_color(mut self, color: ColorRef) -> Self {
+        self.inner.color_override = Some(color);
+        self
+    }
+
+    pub fn text_size_px(mut self, size: Px) -> Self {
+        self.inner.size_override = Some(size);
+        self
+    }
+
+    pub fn line_height_px(mut self, height: Px) -> Self {
+        self.inner.line_height_override = Some(height);
+        self
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.inner.wrap = wrap;
+        self
+    }
+
+    pub fn overflow(mut self, overflow: TextOverflow) -> Self {
+        self.inner.overflow = overflow;
+        self
+    }
+
+    pub fn nowrap(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Clip)
+    }
+
+    pub fn truncate(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
 }
 
 impl<T: UiSupportsChrome> UiBuilder<T> {
