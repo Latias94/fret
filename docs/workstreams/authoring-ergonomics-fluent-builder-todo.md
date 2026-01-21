@@ -86,3 +86,48 @@ Related:
 - [x] AUE-text-070 Add a minimal patchable `ui::text(...)` / `ui::label(...)` authoring constructor with a small typed refinement surface.
   - Scope: size/weight/color + a shadcn-aligned default line-height.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`, `ecosystem/fret-ui-kit/src/declarative/text.rs`
+
+## H. Adoption Audit — `ui::text` in `fret-ui-shadcn`
+
+Goal: replace ad-hoc `cx.text_props(TextProps { ... })` callsites with `fret_ui_kit::ui::text(...)` / `ui::label(...)` builders,
+while keeping geometry/overflow semantics stable (verified via web goldens).
+
+Current state (as of 2026-01-21):
+
+- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`
+- Remaining: 96 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
+
+Top remaining hotspots (by callsite count):
+
+| Count | File |
+| ---: | --- |
+| 17 | `ecosystem/fret-ui-shadcn/src/tooltip.rs` |
+| 8 | `ecosystem/fret-ui-shadcn/src/command.rs` |
+| 6 | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` |
+| 5 | `ecosystem/fret-ui-shadcn/src/context_menu.rs` |
+| 5 | `ecosystem/fret-ui-shadcn/src/field.rs` |
+| 5 | `ecosystem/fret-ui-shadcn/src/menubar.rs` |
+
+Migration guidelines:
+
+- Prefer `ui::label(cx, ...)` for 1-line UI labels (defaults: `nowrap + clip`); prefer `ui::text(cx, ...)` for multi-line/body text.
+- When the old code set explicit layout height (e.g. badge), keep it with `.h_px(...)` plus `.line_height_px(...)`.
+- When the old code set wrap/overflow, keep it explicit with `.wrap(...)`, `.nowrap()`, `.truncate()` (avoid semantic drift).
+- Land changes component-by-component, gated by the relevant web-golden tests (avoid “big bang” refactors).
+
+Next TODOs (suggested order: low-risk → high-risk):
+
+- [ ] AUE-adopt-text-080 Migrate `CardTitle` / `CardDescription` text callsites.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/card.rs`
+- [ ] AUE-adopt-text-081 Migrate `Breadcrumb*` text callsites.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
+- [ ] AUE-adopt-text-082 Migrate `Button` label text callsites (ensure alignment/height matches web goldens).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/button.rs`
+- [ ] AUE-adopt-text-083 Migrate `Kbd` text callsites.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/kbd.rs`
+- [ ] AUE-adopt-text-084 Migrate `Empty` text callsites.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/empty.rs`
+- [ ] AUE-adopt-text-090 Migrate menu family text callsites after surface presets settle.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`
+- [ ] AUE-adopt-text-091 Migrate `Tooltip` text callsites (highest density; beware of placement + masking).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`
