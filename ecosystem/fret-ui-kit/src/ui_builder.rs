@@ -168,6 +168,11 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
+    pub fn letter_spacing_em(mut self, letter_spacing_em: f32) -> Self {
+        self.inner.letter_spacing_em_override = Some(letter_spacing_em);
+        self
+    }
+
     pub fn wrap(mut self, wrap: TextWrap) -> Self {
         self.inner.wrap = wrap;
         self

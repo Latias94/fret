@@ -254,6 +254,7 @@ pub struct TextBox {
     pub(crate) size_override: Option<Px>,
     pub(crate) line_height_override: Option<Px>,
     pub(crate) weight_override: Option<FontWeight>,
+    pub(crate) letter_spacing_em_override: Option<f32>,
     pub(crate) color_override: Option<crate::ColorRef>,
     pub(crate) wrap: TextWrap,
     pub(crate) overflow: TextOverflow,
@@ -273,6 +274,7 @@ impl TextBox {
             size_override: None,
             line_height_override: None,
             weight_override: None,
+            letter_spacing_em_override: None,
             color_override: None,
             wrap,
             overflow: TextOverflow::Clip,
@@ -311,6 +313,9 @@ impl UiIntoElement for TextBox {
         }
         if let Some(weight) = self.weight_override {
             style.weight = weight;
+        }
+        if let Some(letter_spacing_em) = self.letter_spacing_em_override {
+            style.letter_spacing_em = Some(letter_spacing_em);
         }
 
         let mut layout = decl_style::layout_style(&theme, self.layout);
