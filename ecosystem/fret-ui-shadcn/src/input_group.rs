@@ -1,13 +1,17 @@
 use std::sync::Arc;
 
+use crate::button::{ButtonVariant, variant_colors};
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, FlexProps, LayoutStyle, TextAreaProps, TextInputProps, TextProps,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
+    PressableProps, TextAreaProps, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
@@ -664,6 +668,233 @@ impl InputGroupText {
             color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InputGroupButtonSize {
+    #[default]
+    Xs,
+    Sm,
+    IconXs,
+    IconSm,
+}
+
+#[derive(Debug, Clone)]
+pub struct InputGroupButton {
+    label: Arc<str>,
+    children: Vec<AnyElement>,
+    command: Option<CommandId>,
+    disabled: bool,
+    variant: ButtonVariant,
+    size: InputGroupButtonSize,
+    a11y_label: Option<Arc<str>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl InputGroupButton {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            children: Vec::new(),
+            command: None,
+            disabled: false,
+            variant: ButtonVariant::Ghost,
+            size: InputGroupButtonSize::default(),
+            a11y_label: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
+        self.children = children;
+        self
+    }
+
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn size(mut self, size: InputGroupButtonSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.scope(|cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let (bg, bg_hover, bg_active, _border_color, fg) = variant_colors(&theme, self.variant);
+
+            let (size_px, padding_x, gap, radius) = match self.size {
+                InputGroupButtonSize::Xs => (
+                    Px(24.0),
+                    fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
+                    fret_ui_kit::MetricRef::space(Space::N1).resolve(&theme),
+                    Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
+                ),
+                InputGroupButtonSize::Sm => (
+                    Px(32.0),
+                    fret_ui_kit::MetricRef::space(Space::N2p5).resolve(&theme),
+                    fret_ui_kit::MetricRef::space(Space::N1p5).resolve(&theme),
+                    theme.metric_required("metric.radius.md"),
+                ),
+                InputGroupButtonSize::IconXs => (
+                    Px(24.0),
+                    Px(0.0),
+                    Px(0.0),
+                    Px((theme.metric_required("metric.radius.md").0 - 5.0).max(0.0)),
+                ),
+                InputGroupButtonSize::IconSm => (
+                    Px(32.0),
+                    Px(0.0),
+                    Px(0.0),
+                    theme.metric_required("metric.radius.md"),
+                ),
+            };
+
+            let command = self.command;
+            let disabled = self.disabled;
+            let _chrome = self.chrome;
+            let label = self.label;
+            let a11y_label = self.a11y_label;
+            let children = self.children;
+            let text_px = theme.metric_required("metric.font.size");
+            let line_height = theme.metric_required("metric.font.line_height");
+
+            let mut layout = self.layout;
+            layout = match self.size {
+                InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm => layout
+                    .w_px(fret_ui_kit::MetricRef::Px(size_px))
+                    .h_px(fret_ui_kit::MetricRef::Px(size_px))
+                    .min_w(fret_ui_kit::MetricRef::Px(size_px))
+                    .min_h(fret_ui_kit::MetricRef::Px(size_px)),
+                _ => layout.min_h(fret_ui_kit::MetricRef::Px(size_px)),
+            };
+            let pressable_layout = decl_style::layout_style(&theme, layout);
+
+            control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                cx.pressable_dispatch_command_opt(command);
+
+                let hovered = st.hovered && !disabled;
+                let pressed = st.pressed && !disabled;
+
+                let bg = if pressed {
+                    bg_active
+                } else if hovered {
+                    bg_hover
+                } else {
+                    bg
+                };
+
+                let mut pressable_props = PressableProps {
+                    layout: pressable_layout,
+                    enabled: !disabled,
+                    focusable: !disabled,
+                    focus_ring: None,
+                    a11y: PressableA11y {
+                        role: Some(fret_core::SemanticsRole::Button),
+                        label: Some(a11y_label.clone().unwrap_or_else(|| label.clone())),
+                        ..Default::default()
+                    },
+                };
+                pressable_props.layout.overflow = Overflow::Visible;
+
+                let chrome_props = ContainerProps {
+                    layout: LayoutStyle {
+                        overflow: Overflow::Clip,
+                        ..Default::default()
+                    },
+                    background: Some(bg),
+                    corner_radii: Corners::all(radius),
+                    padding: Edges {
+                        top: Px(0.0),
+                        right: padding_x,
+                        bottom: Px(0.0),
+                        left: padding_x,
+                    },
+                    ..Default::default()
+                };
+
+                let content = move |cx: &mut ElementContext<'_, H>| {
+                    let mut row = Vec::new();
+                    if !label.is_empty() {
+                        row.push(cx.text_props(TextProps {
+                            layout: LayoutStyle {
+                                size: fret_ui::element::SizeStyle {
+                                    width: Length::Auto,
+                                    height: Length::Px(line_height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            text: label,
+                            style: Some(TextStyle {
+                                font: FontId::default(),
+                                size: text_px,
+                                weight: FontWeight::MEDIUM,
+                                slant: Default::default(),
+                                line_height: Some(line_height),
+                                letter_spacing_em: None,
+                            }),
+                            color: Some(fg),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                        }));
+                    }
+                    row.extend(children);
+
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle {
+                                size: fret_ui::element::SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            direction: Axis::Horizontal,
+                            gap,
+                            padding: Edges::all(Px(0.0)),
+                            justify: fret_ui::element::MainAlign::Center,
+                            align: fret_ui::element::CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| row,
+                    )]
+                };
+
+                (pressable_props, chrome_props, content)
+            })
         })
     }
 }

@@ -161,7 +161,10 @@ pub use hover_card::{
     HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,
 };
 pub use input::{Input, input};
-pub use input_group::{InputGroup, InputGroupText, InputGroupTextSize, input_group};
+pub use input_group::{
+    InputGroup, InputGroupButton, InputGroupButtonSize, InputGroupText, InputGroupTextSize,
+    input_group,
+};
 pub use input_otp::{InputOtp, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
