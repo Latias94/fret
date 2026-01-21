@@ -44,6 +44,12 @@ Key upstream semantics:
 - Pass: Supports `CommandGroup` (optional heading) and `CommandSeparator`, and trims leading/trailing/consecutive separators after filtering.
 - Pass: Shows `empty_text` when no results; provides `CommandEmpty` as a convenience (`CommandPalette::empty(...)`).
 
+### Layout & geometry (new-york-v4)
+
+- Pass: `CommandDemo` matches the upstream split sizing: input wrapper uses `h-9` while the input uses `h-10`
+  (the input overflows the wrapper slightly in the web golden).
+- Pass: `CommandDialog` matches the upstream overrides (`h-12` wrapper + `h-12` input, and `pt-0` for sibling groups).
+
 ### Visual/content conventions (shadcn)
 
 - Pass: `CommandItem.checkmark(bool)` + `CommandShortcut` support the common "left check + right shortcut" row layout.

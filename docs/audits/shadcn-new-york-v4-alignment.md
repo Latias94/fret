@@ -23,6 +23,9 @@ for the `new-york-v4` preset, without expanding `fret-ui` mechanism scope.
   scroll/transform changes without invalidation.
 - Regression test: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs`
   (`scroll_offset_changes_do_not_replay_paint_cache`).
+- Web golden extractor notes:
+  - `goldens/shadcn-web/scripts/extract-golden.mts` exports `aria-invalid` and supports scripted
+    attribute injection steps for variant snapshots (e.g. `*.invalid.json`).
 
 ## Global baseline rules (new-york-v4)
 
@@ -180,6 +183,12 @@ Recent fixes:
   - Ensure `min-w-0` equivalent for flex layouts.
   - Focus ring thickness (`3px`) and border color keys.
   - Placeholder color and selection colors.
+- Recent fixes:
+  - `aria-invalid=true` border color now matches shadcn-web (`input-demo.invalid`) and is gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_demo_aria_invalid_border_color_matches`).
+- Note: shadcn's `aria-invalid:ring-*` is a ring color override; the ring only becomes visible when
+  `focus-visible:ring-[3px]` is also active.
 
 ### `InputGroup`
 
@@ -189,12 +198,15 @@ Recent fixes:
   - Upstream draws chrome (border + `shadow-xs`) on the group root and makes the inner control
     borderless (`border-0`, `rounded-none`, `bg-transparent`, `shadow-none`).
   - The group root uses `has-[[data-slot=input-group-control]:focus-visible]...` for focus-within
-    ring/border. Fret does not yet have a direct “subtree focus-visible” mechanism, so focus state
-    alignment is still a known gap.
+    ring/border. Fret maps this via container-level focus-within chrome:
+    `ContainerProps.focus_within=true` + `focus_border_color` + `focus_ring`.
 - Recent fixes:
   - Inline addon layout now matches shadcn-web geometry: addons participate in normal flex flow
     instead of absolute slots; input padding switches to `pl-2` / `pr-2` when an inline addon is
     present.
+  - `aria-invalid=true` border color now matches shadcn-web (`input-group-demo.invalid`) and is
+    gated via `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_group_demo_aria_invalid_border_color_matches`).
   - Block-end addons (`align=block-end`) are now supported for textarea-driven input groups, and
     `ml-auto` on flex children now produces the expected "push to end" outcome in declarative flex.
   - Kbd-in-addon negative margin outcomes (v4 `has-[>kbd]`) now match upstream via explicit hints.
