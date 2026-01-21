@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Edges, FontId, FontWeight, Point, Px, TextOverflow, TextStyle, TextWrap, Transform2D,
-};
+use fret_core::{Color, Edges, FontId, FontWeight, Point, Px, TextStyle, Transform2D};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutStyle, MainAlign,
-    OpacityProps, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
+    OpacityProps, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
     VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -16,7 +14,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::accordion as radix_accordion;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::primitives::direction::LayoutDirection;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::overlay_motion;
 
@@ -241,14 +239,21 @@ pub mod composable {
                                     },
                                     move |cx| {
                                         let left_children = if children.is_empty() {
-                                            vec![cx.text_props(TextProps {
-                                                layout: LayoutStyle::default(),
-                                                text: a11y_label.clone(),
-                                                style: Some(text_style),
-                                                color: Some(fg),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Clip,
-                                            })]
+                                            let mut label_text = ui::text(cx, a11y_label.clone())
+                                                .text_size_px(text_style.size)
+                                                .font_weight(text_style.weight)
+                                                .text_color(ColorRef::Color(fg))
+                                                .nowrap();
+                                            if let Some(line_height) = text_style.line_height {
+                                                label_text = label_text.line_height_px(line_height);
+                                            }
+                                            if let Some(letter_spacing_em) =
+                                                text_style.letter_spacing_em
+                                            {
+                                                label_text =
+                                                    label_text.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            vec![label_text.into_element(cx)]
                                         } else {
                                             children
                                         };
@@ -932,14 +937,21 @@ impl AccordionTrigger {
                                 },
                                 move |cx| {
                                     let left_children = if children.is_empty() {
-                                        vec![cx.text_props(TextProps {
-                                            layout: LayoutStyle::default(),
-                                            text: a11y_label.clone(),
-                                            style: Some(text_style),
-                                            color: Some(fg),
-                                            wrap: TextWrap::None,
-                                            overflow: TextOverflow::Clip,
-                                        })]
+                                        let mut label_text = ui::text(cx, a11y_label.clone())
+                                            .text_size_px(text_style.size)
+                                            .font_weight(text_style.weight)
+                                            .text_color(ColorRef::Color(fg))
+                                            .nowrap();
+                                        if let Some(line_height) = text_style.line_height {
+                                            label_text = label_text.line_height_px(line_height);
+                                        }
+                                        if let Some(letter_spacing_em) =
+                                            text_style.letter_spacing_em
+                                        {
+                                            label_text =
+                                                label_text.letter_spacing_em(letter_spacing_em);
+                                        }
+                                        vec![label_text.into_element(cx)]
                                     } else {
                                         children
                                     };
