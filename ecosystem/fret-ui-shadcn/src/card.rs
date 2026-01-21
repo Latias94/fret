@@ -1,19 +1,35 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
+use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 
 use crate::layout as shadcn_layout;
 
 fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme.color_required("card");
     let border = theme.color_required("border");
+
+    // shadcn/ui v4: Card uses `rounded-xl`, which is computed from the base `--radius`.
+    //
+    // In the shadcn token model:
+    // - `rounded-lg` ~= `--radius`
+    // - `rounded-md` ~= `--radius - 2px`
+    // - `rounded-xl` ~= `--radius + 4px`
+    //
+    // We model the base radius as `metric.radius.lg`, and derive `rounded-xl` from it to keep
+    // behavior stable when the theme radius changes.
+    let base_radius = theme.metric_required("metric.radius.lg");
+    let rounded_xl = Px(base_radius.0 + 4.0);
+
     ChromeRefinement::default()
-        .rounded(Radius::Lg)
+        .merge(ChromeRefinement {
+            radius: Some(MetricRef::Px(rounded_xl)),
+            ..Default::default()
+        })
         .border_1()
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
