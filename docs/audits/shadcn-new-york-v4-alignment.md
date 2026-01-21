@@ -190,13 +190,15 @@ Recent fixes:
   - Kbd-in-addon negative margin outcomes (v4 `has-[>kbd]`) now match upstream via explicit hints.
   - Block addon dividers (`border-b`/`border-t`) now match upstream padding outcomes for block-start
     and block-end addons.
+  - `InputGroupText` is now available as a first-class shadcn surface for spacing-focused tests.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
     `web_vs_fret_layout_input_group_spinner_geometry_matches`, `web_vs_fret_layout_input_group_button_geometry_matches`,
     `web_vs_fret_layout_input_group_tooltip_geometry_matches`, `web_vs_fret_layout_spinner_input_group_geometry_matches`,
     `web_vs_fret_layout_empty_input_group_geometry_matches`, `web_vs_fret_layout_kbd_input_group_geometry_matches`,
-    `web_vs_fret_layout_input_group_textarea_geometry_matches`).
+    `web_vs_fret_layout_input_group_textarea_geometry_matches`,
+    `web_vs_fret_layout_input_group_text_currency_geometry_matches`).
 - Gaps to check next:
   - Remaining block layout cases (`input-group-custom` and `input-group-demo` compositions).
   - Error state (`aria-invalid`) ring/border behavior.
