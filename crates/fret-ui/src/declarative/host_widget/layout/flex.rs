@@ -124,7 +124,14 @@ impl ElementHostWidget {
 
             match props.direction {
                 fret_core::Axis::Horizontal => {
-                    if single_child && (margin_left_auto || margin_right_auto) {
+                    if margin_left_auto || margin_right_auto {
+                        // Partial support for CSS-like auto margins in flex rows.
+                        //
+                        // - `ml-auto` (left auto) pushes the item to the end of the main axis
+                        //   while keeping the current sequential layout position as a floor (so we
+                        //   don't overlap previous siblings when space is tight).
+                        // - `mx-auto` (left+right auto) is treated as a centering hint, but only
+                        //   when there is a single child.
                         let left = if margin_left_auto {
                             0.0
                         } else {
@@ -135,14 +142,30 @@ impl ElementHostWidget {
                         } else {
                             margin_px(child_style.margin.right)
                         };
-                        let free =
-                            auto_margin_inner_size.width.0 - layout.size.width.0 - left - right;
+
                         if margin_left_auto && margin_right_auto {
-                            x = (left + (free.max(0.0) / 2.0)).max(0.0);
+                            if single_child {
+                                let free = auto_margin_inner_size.width.0
+                                    - layout.size.width.0
+                                    - left
+                                    - right;
+                                x = (left + (free.max(0.0) / 2.0)).max(0.0);
+                            }
                         } else if margin_left_auto {
-                            x = (left + free.max(0.0)).max(0.0);
+                            // Align to end (like `margin-left: auto`).
+                            let desired = (auto_margin_inner_size.width.0
+                                - layout.size.width.0
+                                - margin_px(child_style.margin.right))
+                            .max(0.0);
+                            x = x.max(desired);
                         } else if margin_right_auto {
-                            x = left.max(0.0);
+                            if single_child {
+                                let free = auto_margin_inner_size.width.0
+                                    - layout.size.width.0
+                                    - left
+                                    - right;
+                                x = left.max(0.0).min((left + free.max(0.0)).max(0.0));
+                            }
                         }
                     }
 
