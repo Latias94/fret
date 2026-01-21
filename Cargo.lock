@@ -956,6 +956,7 @@ dependencies = [
  "fret-icons-radix",
  "fret-launch",
  "fret-render",
+ "fret-runtime",
  "fret-ui",
  "fret-ui-app",
  "fret-ui-assets",
