@@ -204,6 +204,19 @@ Recent fixes:
   - Variant mapping: outline uses border + shadow-xs; destructive uses dedicated ring color.
   - Focus ring thickness (`3px`) and ring/border keys.
 
+### `ButtonGroup`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/button_group.rs`
+- Gaps to check:
+  - Nested group spacing: `has-[>[data-slot=button-group]]:gap-2` (8px) should be reflected in Fret flex gap.
+  - Border merge: `border-l-0` on non-first buttons (avoids double borders).
+  - Radius merge: `rounded-l-none` / `rounded-r-none` on middle buttons (keeps only outer corners rounded).
+  - Scope: do not introduce generic slot/asChild support (see ADR 0117).
+- Conformance gates:
+  - Chrome + layout gap: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_demo_button_chrome_matches`).
+
 ### `Tabs`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx`
