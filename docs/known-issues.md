@@ -67,7 +67,8 @@ Meaning:
 
 What to do:
 
-- Use fewer build jobs (this repo caps jobs by default via `.cargo/config.toml`).
+- Use fewer build jobs:
+  - `pwsh tools/windows/build-fret-demo-bins.ps1` (recommended).
 - If needed, override via `CARGO_BUILD_JOBS` or increase the system page file.
 
 ## Platform Limitations (Current)
