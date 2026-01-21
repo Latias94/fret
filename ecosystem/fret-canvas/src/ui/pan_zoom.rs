@@ -391,15 +391,10 @@ pub fn editor_pan_zoom_canvas_surface_panel<H: UiHost>(
                 return false;
             }
 
-            let zoom = host
-                .models_mut()
-                .read(&view_pan, |view| view.zoom)
-                .ok()
-                .unwrap_or(1.0);
-            let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0).max(1.0e-6);
-
             let _ = host.models_mut().update(&view_pan, |view| {
-                view.pan = Point::new(Px(view.pan.x.0 - dx / zoom), Px(view.pan.y.0 - dy / zoom));
+                let mut tmp = *view;
+                tmp.pan_by_screen_delta(-dx, -dy);
+                *view = tmp;
             });
 
             host.request_redraw(action_cx.window);
