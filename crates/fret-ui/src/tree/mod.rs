@@ -2744,7 +2744,16 @@ impl<H: UiHost> UiTree<H> {
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
                     || (n.view_cache.contained_layout
                         && n.view_cache.layout_definite
-                        && n.bounds.size != Size::default());
+                        && n.bounds.size != Size::default())
+                    // For auto-sized cache roots, allow descendant invalidations to truncate at
+                    // the first cache boundary we hit. A separate repair step
+                    // (`propagate_auto_sized_view_cache_root_invalidations`) will propagate a
+                    // single invalidation from the cache root to its ancestors so the root can be
+                    // placed before running contained relayouts.
+                    //
+                    // Importantly, do *not* truncate when the invalidation originates at the
+                    // cache root itself (e.g. the repair step), so it can still reach ancestors.
+                    || (n.view_cache.contained_layout && !n.view_cache.layout_definite && id != node);
                 if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
@@ -2882,7 +2891,10 @@ impl<H: UiHost> UiTree<H> {
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
                     || (n.view_cache.contained_layout
                         && n.view_cache.layout_definite
-                        && n.bounds.size != Size::default());
+                        && n.bounds.size != Size::default())
+                    || (n.view_cache.contained_layout
+                        && !n.view_cache.layout_definite
+                        && id != node);
                 if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
