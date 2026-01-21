@@ -191,6 +191,7 @@ Recent fixes:
   - Block addon dividers (`border-b`/`border-t`) now match upstream padding outcomes for block-start
     and block-end addons.
   - `InputGroupText` is now available as a first-class shadcn surface for spacing-focused tests.
+  - `InputGroupButton` is now available (xs/sm/icon sizes) to support input-group compositions.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
