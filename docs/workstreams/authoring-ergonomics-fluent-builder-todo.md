@@ -76,6 +76,8 @@ Related:
 
 - [x] AUE-parity-060 Add a shadcn-level `popover_style` preset that can be applied from the `ui()` chain (policy layer).
   - Evidence: `ecosystem/fret-ui-shadcn/src/ui_builder_ext/surfaces.rs`, `ecosystem/fret-ui-shadcn/src/popover.rs`
+- [x] AUE-parity-061 Add a shadcn-level `dialog_style` preset that can be applied from the `ui()` chain (policy layer).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/ui_builder_ext/surfaces.rs`, `ecosystem/fret-ui-shadcn/src/dialog.rs`
 - [x] AUE-layout-023 Add a patchable `ui::container(...)` constructor as the default “box” layout node.
   - Intent: reduce raw `cx.container(...)` usage in cookbook/recipes.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
