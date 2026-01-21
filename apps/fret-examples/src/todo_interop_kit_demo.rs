@@ -28,6 +28,43 @@ struct TodoInteropKitState {
     embedded: embedded::EmbeddedViewportSurface,
 }
 
+impl embedded::EmbeddedViewportRecord for TodoInteropKitState {
+    fn embedded_viewport_surface(&mut self) -> &mut embedded::EmbeddedViewportSurface {
+        &mut self.embedded
+    }
+
+    fn embedded_viewport_label(&self) -> Option<&'static str> {
+        Some("todo-interop-kit viewport")
+    }
+
+    fn record_embedded_viewport(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        _context: &WgpuContext,
+        _renderer: &mut Renderer,
+        _scale_factor: f32,
+        _tick_id: TickId,
+        frame_id: FrameId,
+        view: &wgpu::TextureView,
+        encoder: &mut wgpu::CommandEncoder,
+    ) {
+        let models = embedded::ensure_models(app, window);
+        let clicks = app.models().get_copied(&models.clicks).unwrap_or(0);
+
+        let t = (frame_id.0 as f32 * 0.02).sin() * 0.5 + 0.5;
+        let f = ((clicks % 8) as f32) / 8.0;
+        let clear = wgpu::Color {
+            r: (0.08 + 0.30 * t) as f64,
+            g: (0.08 + 0.25 * (1.0 - t)) as f64,
+            b: (0.10 + 0.35 * f) as f64,
+            a: 1.0,
+        };
+
+        embedded::clear_pass(encoder, view, Some("todo-interop-kit clear"), clear);
+    }
+}
+
 pub fn run() -> anyhow::Result<()> {
     fret_kit::app_with_hooks("todo-interop-kit-demo", init_window, view, |d| {
         d.on_command(on_command)
@@ -326,56 +363,18 @@ fn record_engine_frame(
     context: &WgpuContext,
     renderer: &mut Renderer,
     _scale_factor: f32,
-    _tick_id: TickId,
+    tick_id: TickId,
     frame_id: FrameId,
 ) -> EngineFrameUpdate {
-    let models = embedded::ensure_models(app, window);
-
-    let (_id, view) = st.embedded.ensure_size_owned_view(
+    embedded::record_engine_frame(
         app,
         window,
+        _ui,
+        st,
         context,
         renderer,
-        Some("todo-interop-kit viewport"),
-    );
-
-    let clicks = app.models().get_copied(&models.clicks).unwrap_or(0);
-
-    let t = (frame_id.0 as f32 * 0.02).sin() * 0.5 + 0.5;
-    let f = ((clicks % 8) as f32) / 8.0;
-    let clear = wgpu::Color {
-        r: (0.08 + 0.30 * t) as f64,
-        g: (0.08 + 0.25 * (1.0 - t)) as f64,
-        b: (0.10 + 0.35 * f) as f64,
-        a: 1.0,
-    };
-
-    let mut encoder = context
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("todo-interop-kit encoder"),
-        });
-    {
-        let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("todo-interop-kit clear"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &view,
-                resolve_target: None,
-                depth_slice: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(clear),
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-    }
-
-    let mut update = EngineFrameUpdate::default();
-    update.push_command_buffer(encoder.finish());
-    app.request_redraw(window);
-    update
+        _scale_factor,
+        tick_id,
+        frame_id,
+    )
 }
