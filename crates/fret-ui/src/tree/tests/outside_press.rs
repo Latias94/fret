@@ -323,7 +323,7 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
     let overlay_root = ui.create_node(RecordObserverDown {
         observer: observer_down.clone(),
     });
-    ui.set_node_view_cache_flags(overlay_root, true, false);
+    ui.set_node_view_cache_flags(overlay_root, true, false, false);
 
     let overlay_leaf = ui.create_node(CountNormalDown {
         normal: overlay_down.clone(),

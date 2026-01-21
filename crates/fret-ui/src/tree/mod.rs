@@ -85,6 +85,12 @@ impl InvalidationFlags {
 struct ViewCacheFlags {
     enabled: bool,
     contained_layout: bool,
+    /// Whether the cache root's own box is layout-definite (i.e. it does not size-to-content).
+    ///
+    /// This is used to decide whether layout/hit-test invalidations can be truncated at the cache
+    /// root when view caching is active. Auto-sized cache roots must allow invalidations to reach
+    /// ancestors so the root can be placed before running contained relayouts.
+    layout_definite: bool,
 }
 
 struct Node<H: UiHost> {
@@ -1237,11 +1243,13 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         enabled: bool,
         contained_layout: bool,
+        layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
             n.view_cache = ViewCacheFlags {
                 enabled,
                 contained_layout,
+                layout_definite,
             };
         }
     }
@@ -1253,6 +1261,43 @@ impl<H: UiHost> UiTree<H> {
         if !needs {
             self.dirty_cache_roots.remove(&node);
             self.dirty_cache_root_reasons.remove(&node);
+        }
+    }
+
+    /// Repair invalidation propagation for newly mounted auto-sized cache roots.
+    ///
+    /// During declarative mounting we may discover `ViewCache` roots before their parent pointers
+    /// are fully connected. When view caching is active, invalidation propagation can be
+    /// truncated at cache roots, and a cache root that is only marked dirty on itself may never be
+    /// laid out by its (still-clean) ancestors. This shows up as cache-root subtrees stuck at
+    /// `Rect::default()` origins (e.g. scripted clicks using semantics bounds land in the wrong
+    /// place).
+    ///
+    /// Call this after `repair_parent_pointers_from_layer_roots()` and before `layout_all` so the
+    /// next layout pass walks far enough to place newly mounted cache-root subtrees.
+    pub(crate) fn propagate_auto_sized_view_cache_root_invalidations(&mut self) {
+        if !self.view_cache_active() {
+            return;
+        }
+
+        let targets: Vec<NodeId> = self
+            .nodes
+            .iter()
+            .filter_map(|(id, n)| {
+                (n.view_cache.enabled
+                    && n.view_cache.contained_layout
+                    && !n.view_cache.layout_definite
+                    && (n.invalidation.layout || n.invalidation.hit_test))
+                    .then_some(id)
+            })
+            .collect();
+
+        for root in targets {
+            self.mark_invalidation_with_source(
+                root,
+                Invalidation::HitTest,
+                UiDebugInvalidationSource::Other,
+            );
         }
     }
 
@@ -1759,10 +1804,26 @@ impl<H: UiHost> UiTree<H> {
 
     #[track_caller]
     pub fn set_children(&mut self, parent: NodeId, children: Vec<NodeId>) {
-        let Some(existing_children) = self.nodes.get(parent).map(|n| n.children.as_slice()) else {
+        let Some(_old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
             return;
         };
-        if existing_children == children.as_slice() {
+
+        // Keep parent pointers consistent even when the child list is unchanged.
+        //
+        // This matters for view-cache reuse and GC/repair flows where a node may be temporarily
+        // detached and then re-attached without changing the parent's child list. Invalidation
+        // propagation relies on `parent` pointers even when semantics/debug traversals use the
+        // child lists.
+        let same_children = self
+            .nodes
+            .get(parent)
+            .is_some_and(|n| n.children.as_slice() == children.as_slice());
+        if same_children {
+            for &child in &children {
+                if let Some(n) = self.nodes.get_mut(child) {
+                    n.parent = Some(parent);
+                }
+            }
             return;
         }
 
@@ -1774,7 +1835,7 @@ impl<H: UiHost> UiTree<H> {
                 UiDebugSetChildrenWrite {
                     parent,
                     frame_id: self.debug_stats.frame_id,
-                    old_len: existing_children.len().min(u32::MAX as usize) as u32,
+                    old_len: _old_len.min(u32::MAX as usize) as u32,
                     new_len: children.len().min(u32::MAX as usize) as u32,
                     file: location.file(),
                     line: location.line(),
@@ -1805,11 +1866,24 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let mut propagate = false;
         if let Some(n) = self.nodes.get_mut(parent) {
             n.children = children;
             n.invalidation.hit_test = true;
             n.invalidation.layout = true;
             n.invalidation.paint = true;
+            propagate = true;
+        }
+
+        if propagate {
+            // Structural changes must invalidate ancestors so the next layout pass walks far
+            // enough to place newly mounted subtrees, even when view-cache invalidation
+            // truncation is enabled.
+            self.mark_invalidation_with_source(
+                parent,
+                Invalidation::HitTest,
+                UiDebugInvalidationSource::Other,
+            );
         }
     }
 
@@ -2652,10 +2726,11 @@ impl<H: UiHost> UiTree<H> {
             let mut mark_dirty = false;
             if let Some(n) = self.nodes.get_mut(id) {
                 n.invalidation.mark(inv);
-                if stop_at_view_cache
-                    && n.view_cache.enabled
-                    && (inv == Invalidation::Paint || n.view_cache.contained_layout)
-                {
+                let can_truncate_at_cache_root = inv == Invalidation::Paint
+                    || (n.view_cache.contained_layout
+                        && n.view_cache.layout_definite
+                        && n.bounds.size != Size::default());
+                if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
                             .debug_stats
@@ -2789,10 +2864,11 @@ impl<H: UiHost> UiTree<H> {
                     visited.insert(id, already | needed);
                 }
 
-                if stop_at_view_cache
-                    && n.view_cache.enabled
-                    && (inv == Invalidation::Paint || n.view_cache.contained_layout)
-                {
+                let can_truncate_at_cache_root = inv == Invalidation::Paint
+                    || (n.view_cache.contained_layout
+                        && n.view_cache.layout_definite
+                        && n.bounds.size != Size::default());
+                if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
                             .debug_stats

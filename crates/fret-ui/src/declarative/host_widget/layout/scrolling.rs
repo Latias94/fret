@@ -1,6 +1,7 @@
 use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
+use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
@@ -304,7 +305,12 @@ impl ElementHostWidget {
             // scroll handle change is consumed during layout (e.g. deferred scroll-to-item), we
             // must ensure the nearest view-cache root re-renders on the next frame so it can
             // rebuild the visible range.
-            cx.tree.invalidate(cx.node, Invalidation::Layout);
+            cx.tree.invalidate_with_source_and_detail(
+                cx.node,
+                Invalidation::Layout,
+                UiDebugInvalidationSource::Notify,
+                UiDebugInvalidationDetail::ScrollHandle,
+            );
         }
 
         if needs_redraw && let Some(window) = cx.window {
