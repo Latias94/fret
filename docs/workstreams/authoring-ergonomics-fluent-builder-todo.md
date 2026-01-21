@@ -94,8 +94,8 @@ while keeping geometry/overflow semantics stable (verified via web goldens).
 
 Current state (as of 2026-01-21):
 
-- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`
-- Remaining: 89 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
+- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/button.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`
+- Remaining: 88 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
 
 Top remaining hotspots (by callsite count):
 
@@ -121,7 +121,7 @@ Next TODOs (suggested order: low-risk → high-risk):
   - Evidence: `ecosystem/fret-ui-shadcn/src/card.rs`
 - [x] AUE-adopt-text-081 Migrate `Breadcrumb*` text callsites.
   - Evidence: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
-- [ ] AUE-adopt-text-082 Migrate `Button` label text callsites (ensure alignment/height matches web goldens).
+- [x] AUE-adopt-text-082 Migrate `Button` label text callsites (ensure alignment/height matches web goldens).
   - Evidence: `ecosystem/fret-ui-shadcn/src/button.rs`
 - [ ] AUE-adopt-text-083 Migrate `Kbd` text callsites.
   - Evidence: `ecosystem/fret-ui-shadcn/src/kbd.rs`
