@@ -151,7 +151,7 @@ This is not a 1:1 parity target; it is a “what should feel equally easy” che
 | `margins(Edges)` | batch edge edits | `UiBuilder::margins(Edges4<...>)` (token-aware + px-friendly, supports `auto`) | Done |
 | `debug_*()` | debug borders | `UiBuilder::debug_border_*` (debug-only gated) | Done (different palette) |
 | `focused_border(cx)` | focus border | `UiBuilder::focused_border()` | Done |
-| `popover_style(cx)` | common popover skin | no single preset (policy) | TODO: add a shadcn preset (extension trait or helper) |
+| `popover_style(cx)` | common popover skin | `UiBuilder::popover_style()` (shadcn policy preset) | Done |
 | `corner_radii(Corners)` | per-corner radii | `UiBuilder::corner_radii(Corners4<...>)` | Done |
 
 ---
@@ -190,7 +190,7 @@ This keeps the surface cohesive without turning `fret-ui-kit` into a general-pur
 
 These are the remaining items that most directly improve authoring density for editor-ish UI:
 
-1) **Shadcn surface presets** (`popover_style`, `menu_surface`, `dialog_surface`):
+1) **Shadcn surface presets** (`menu_surface`, `dialog_surface`):
    - keep these in `fret-ui-shadcn` (policy layer)
    - expose them as discoverable helpers, not ad-hoc per component
 2) **A patchable container constructor** (layout node, not a component):
