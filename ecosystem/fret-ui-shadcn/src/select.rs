@@ -418,6 +418,7 @@ impl From<SelectSide> for Side {
 pub struct SelectItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
+    pub test_id: Option<Arc<str>>,
     pub disabled: bool,
 }
 
@@ -426,8 +427,14 @@ impl SelectItem {
         Self {
             value: value.into(),
             label: label.into(),
+            test_id: None,
             disabled: false,
         }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -1879,6 +1886,7 @@ fn select_impl<H: UiHost>(
                                                                                     a11y: PressableA11y {
                                                                                         role: Some(SemanticsRole::ListBoxOption),
                                                                                         label: Some(item.label.clone()),
+                                                                                        test_id: item.test_id.clone(),
                                                                                         selected: is_selected,
                                                                                         ..Default::default()
                                                                                     }
