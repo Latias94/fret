@@ -102,6 +102,7 @@ patterns:
 - `input-group-dropdown` (root height)
 - `input-group-icon` (inline-start icon addon + input box geometry)
 - `input-group-spinner` (inline-end spinner addon + input box geometry)
+- `input-group-button` (inline-end button addon negative margin + icon centering)
 - `field-input`
 - `field-checkbox`
 - `field-group`
