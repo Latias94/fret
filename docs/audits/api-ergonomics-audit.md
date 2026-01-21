@@ -232,10 +232,15 @@ Line counts (worktree):
 - `apps/fret-examples/src/todo_demo.rs`: 536
 - `apps/fret-examples/src/todo_mvu_demo.rs`: 518
 - `apps/fret-examples/src/todo_interop_demo.rs`: 512
-- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 382
+- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 337
 
 Interpretation:
 
 - The MVU prototype currently reduces “command routing complexity” more than raw LOC.
 - The largest LOC savings still come from using `fret-kit` golden-path hooks instead of writing a
   full custom driver, which supports the “single default path” recommendation.
+
+Recent ergonomic improvement:
+
+- `fret-kit` now includes `interop::embedded_viewport` to reduce “isolated embedding” boilerplate
+  (publish target id as models + global viewport input filtering + surface panel helper).
