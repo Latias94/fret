@@ -88,6 +88,13 @@ fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Opt
     None
 }
 
+fn contains_text(node: &WebNode, needle: &str) -> bool {
+    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
+        return true;
+    }
+    node.children.iter().any(|c| contains_text(c, needle))
+}
+
 fn parse_px(s: &str) -> Option<f32> {
     let s = s.trim();
     let v = s.strip_suffix("px").unwrap_or(s);
@@ -439,6 +446,59 @@ fn web_vs_fret_badge_outline_chrome_matches() {
         "Outline",
         fret_ui_shadcn::BadgeVariant::Outline,
     );
+}
+
+#[test]
+fn web_vs_fret_card_demo_chrome_matches() {
+    let web = read_web_golden("card-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_card = find_first(&theme.root, &|n| {
+        if n.tag != "div" {
+            return false;
+        }
+        if !contains_text(n, "Login to your account") {
+            return false;
+        }
+        let border = web_border_width_px(n);
+        let radius = web_corner_radius_effective_px(n);
+        border.is_some_and(|v| (v - 1.0).abs() <= 0.1) && radius.is_some_and(|v| v >= 8.0)
+    })
+    .expect("web card container");
+
+    let web_border = web_border_width_px(web_card).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_card).expect("web radius px");
+    let web_w = web_card.rect.w;
+    let web_h = web_card.rect.h;
+
+    let (_snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Card::new(Vec::new())
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for card");
+
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("card border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("card radius[{idx}]"), *corner, web_radius, 1.0);
+    }
 }
 
 #[test]
