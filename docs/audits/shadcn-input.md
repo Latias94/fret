@@ -31,5 +31,7 @@ This audit compares Fret’s shadcn-aligned `Input` against the upstream shadcn/
   (`web_vs_fret_layout_input_demo_geometry`).
 - Invalid chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
   (`web_vs_fret_input_demo_aria_invalid_border_color_matches`).
+- Focus ring chrome gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
+  (`web_vs_fret_input_demo_focus_ring_matches`, `web_vs_fret_input_demo_aria_invalid_focus_ring_matches`).
 - Additional layout gate: `web_vs_fret_layout_input_with_label_geometry` (matches `gap-3`/`max-w-sm`
   form layout from `input-with-label`).

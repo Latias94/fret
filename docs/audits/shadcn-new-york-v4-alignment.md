@@ -187,6 +187,10 @@ Recent fixes:
   - `aria-invalid=true` border color now matches shadcn-web (`input-demo.invalid`) and is gated via
     `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_input_demo_aria_invalid_border_color_matches`).
+  - Focus ring (`ring-[3px]`) and ring color overrides now match shadcn-web focus variants
+    (`input-demo.focus`, `input-demo.invalid-focus`) and are gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_demo_focus_ring_matches`, `web_vs_fret_input_demo_aria_invalid_focus_ring_matches`).
 - Note: shadcn's `aria-invalid:ring-*` is a ring color override; the ring only becomes visible when
   `focus-visible:ring-[3px]` is also active.
 
@@ -207,6 +211,10 @@ Recent fixes:
   - `aria-invalid=true` border color now matches shadcn-web (`input-group-demo.invalid`) and is
     gated via `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_input_group_demo_aria_invalid_border_color_matches`).
+  - Focus ring (`ring-[3px]`) and ring color overrides now match shadcn-web focus variants
+    (`input-group-demo.focus`, `input-group-demo.invalid-focus`) and are gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_group_demo_focus_ring_matches`, `web_vs_fret_input_group_demo_aria_invalid_focus_ring_matches`).
   - Block-end addons (`align=block-end`) are now supported for textarea-driven input groups, and
     `ml-auto` on flex children now produces the expected "push to end" outcome in declarative flex.
   - Kbd-in-addon negative margin outcomes (v4 `has-[>kbd]`) now match upstream via explicit hints.

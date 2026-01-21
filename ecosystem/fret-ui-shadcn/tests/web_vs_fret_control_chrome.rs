@@ -1,6 +1,7 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Color, Corners, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+    AppWindowId, Color, Corners, Event, KeyCode, Modifiers, Point, Px, Rect, Scene, SceneOp,
+    SemanticsRole, Size as CoreSize,
 };
 use fret_icons::ids;
 use fret_ui::tree::UiTree;
@@ -159,6 +160,7 @@ struct PaintedQuad {
     rect: Rect,
     border: [f32; 4],
     border_color: Color,
+    #[allow(dead_code)]
     background: Color,
     corners: [f32; 4],
 }
@@ -310,12 +312,204 @@ fn render_and_paint_in_bounds(
     (snap, scene)
 }
 
+fn render_and_paint_with_focus_in_bounds(
+    size: CoreSize,
+    render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+    focus: impl FnOnce(&fret_core::SemanticsSnapshot) -> fret_core::NodeId,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-control-chrome",
+        render,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let focus_node = focus(&snap);
+
+    // Ensure focus-visible chrome is enabled (keyboard modality), then apply focus.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Tab,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.set_focus(Some(focus_node));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    (snap, scene)
+}
+
 fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
     let delta = (actual - expected).abs();
     assert!(
         delta <= tol,
         "{label}: expected≈{expected} (±{tol}) got={actual} (Δ={delta})"
     );
+}
+
+fn split_box_shadow_layers(s: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut depth = 0_u32;
+    let mut start = 0_usize;
+    for (idx, ch) in s.char_indices() {
+        match ch {
+            '(' => depth = depth.saturating_add(1),
+            ')' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                out.push(s[start..idx].trim());
+                start = idx + 1;
+            }
+            _ => {}
+        }
+    }
+    if start < s.len() {
+        out.push(s[start..].trim());
+    }
+    out.into_iter().filter(|p| !p.is_empty()).collect()
+}
+
+fn parse_box_shadow_layer(layer: &str) -> Option<(String, f32, f32, f32, f32)> {
+    let layer = layer.trim();
+    if layer.is_empty() || layer == "none" {
+        return None;
+    }
+
+    let (color, rest) = if layer.starts_with('#') {
+        let mut it = layer.splitn(2, char::is_whitespace);
+        let color = it.next()?.trim().to_string();
+        (color, it.next().unwrap_or("").trim())
+    } else if let Some(paren) = layer.find('(') {
+        let mut depth = 0_u32;
+        let mut end = None;
+        for (idx, ch) in layer.char_indices().skip(paren) {
+            match ch {
+                '(' => depth = depth.saturating_add(1),
+                ')' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        end = Some(idx);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let end = end?;
+        let color = layer[..=end].trim().to_string();
+        (color, layer[end + 1..].trim())
+    } else {
+        let mut it = layer.splitn(2, char::is_whitespace);
+        let color = it.next()?.trim().to_string();
+        (color, it.next().unwrap_or("").trim())
+    };
+
+    let parts: Vec<&str> = rest.split_whitespace().filter(|p| !p.is_empty()).collect();
+    if parts.len() < 4 {
+        return None;
+    }
+    let x = parse_px(parts[0])?;
+    let y = parse_px(parts[1])?;
+    let blur = parse_px(parts[2])?;
+    let spread = parse_px(parts[3])?;
+    Some((color, x, y, blur, spread))
+}
+
+fn web_box_shadow_focus_ring(node: &WebNode) -> Option<(String, f32)> {
+    let box_shadow = node.computed_style.get("boxShadow").map(String::as_str)?;
+
+    for layer in split_box_shadow_layers(box_shadow) {
+        let Some((color, x, y, blur, spread)) = parse_box_shadow_layer(layer) else {
+            continue;
+        };
+        if x.abs() <= 0.01 && y.abs() <= 0.01 && blur.abs() <= 0.01 && spread > 0.01 {
+            return Some((color, spread));
+        }
+    }
+
+    None
+}
+
+fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<PaintedQuad> {
+    let expected = Rect::new(
+        Point::new(
+            Px(target.origin.x.0 - spread),
+            Px(target.origin.y.0 - spread),
+        ),
+        CoreSize::new(
+            Px(target.size.width.0 + spread * 2.0),
+            Px(target.size.height.0 + spread * 2.0),
+        ),
+    );
+
+    let mut best: Option<PaintedQuad> = None;
+    let mut best_score = f32::INFINITY;
+
+    for op in scene.ops() {
+        let SceneOp::Quad {
+            rect,
+            background,
+            border,
+            corner_radii,
+            border_color,
+            ..
+        } = *op
+        else {
+            continue;
+        };
+
+        if background != Color::TRANSPARENT {
+            continue;
+        }
+        let bw = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+        if bw.iter().any(|v| (*v - spread).abs() > 0.15) {
+            continue;
+        }
+
+        let score = (rect.origin.x.0 - expected.origin.x.0).abs()
+            + (rect.origin.y.0 - expected.origin.y.0).abs()
+            + (rect.size.width.0 - expected.size.width.0).abs()
+            + (rect.size.height.0 - expected.size.height.0).abs();
+
+        if score < best_score {
+            best_score = score;
+            best = Some(PaintedQuad {
+                rect,
+                background,
+                border: bw,
+                border_color,
+                corners: [
+                    corner_radii.top_left.0,
+                    corner_radii.top_right.0,
+                    corner_radii.bottom_right.0,
+                    corner_radii.bottom_left.0,
+                ],
+            });
+        }
+    }
+
+    best
 }
 
 #[test]
@@ -2109,6 +2303,295 @@ fn web_vs_fret_button_group_input_geometry_and_chrome_match() {
         quad_button.corners[1],
         expected_button_r_tr,
         1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_demo_focus_ring_matches() {
+    let web = read_web_golden("input-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_input).expect("web input focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Input::new(model)
+                    .a11y_label("InputDemoInput")
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputDemoInput")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input semantics node")
+        },
+    );
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField && n.label.as_deref() == Some("InputDemoInput")
+        })
+        .expect("missing semantics for input");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, input.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("input-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_input).expect("web input invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Input::new(model)
+                    .a11y_label("InputDemoInputInvalid")
+                    .aria_invalid(true)
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputDemoInputInvalid")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input semantics node")
+        },
+    );
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField
+                && n.label.as_deref() == Some("InputDemoInputInvalid")
+        })
+        .expect("missing semantics for input");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, input.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_focus_ring_matches() {
+    let web = read_web_golden("input-group-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("data-slot").is_some_and(|v| v == "input-group")
+            && n.computed_style
+                .get("boxShadow")
+                .is_some_and(|v| v.contains(" 3px"))
+    })
+    .expect("web focused input-group node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_group).expect("web input-group focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+            let leading =
+                vec![cx.opacity(0.5, move |cx| vec![decl_icon::icon(cx, ids::ui::SEARCH)])];
+            let trailing = vec![cx.text_props(fret_ui::element::TextProps {
+                layout: fret_ui::element::LayoutStyle::default(),
+                text: Arc::from("12 results"),
+                style: None,
+                color: None,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+            })];
+
+            let group = fret_ui_shadcn::InputGroup::new(model)
+                .a11y_label("InputGroupControl")
+                .leading(leading)
+                .trailing(trailing)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.h))),
+                )
+                .into_element(cx);
+
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Group,
+                    label: Some(Arc::from("InputGroupRoot")),
+                    ..Default::default()
+                },
+                move |_cx| vec![group],
+            )]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputGroupControl")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input-group control semantics node")
+        },
+    );
+
+    let root = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("InputGroupRoot"))
+        .expect("missing semantics for group root");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, root.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-group-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("input-group-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("data-slot").is_some_and(|v| v == "input-group")
+            && n.computed_style
+                .get("boxShadow")
+                .is_some_and(|v| v.contains(" 3px"))
+    })
+    .expect("web focused invalid input-group node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_group).expect("web input-group invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+            let leading =
+                vec![cx.opacity(0.5, move |cx| vec![decl_icon::icon(cx, ids::ui::SEARCH)])];
+            let trailing = vec![cx.text_props(fret_ui::element::TextProps {
+                layout: fret_ui::element::LayoutStyle::default(),
+                text: Arc::from("12 results"),
+                style: None,
+                color: None,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+            })];
+
+            let group = fret_ui_shadcn::InputGroup::new(model)
+                .a11y_label("InputGroupControlInvalid")
+                .aria_invalid(true)
+                .leading(leading)
+                .trailing(trailing)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.h))),
+                )
+                .into_element(cx);
+
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Group,
+                    label: Some(Arc::from("InputGroupRootInvalid")),
+                    ..Default::default()
+                },
+                move |_cx| vec![group],
+            )]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputGroupControlInvalid")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input-group control semantics node")
+        },
+    );
+
+    let root = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group && n.label.as_deref() == Some("InputGroupRootInvalid")
+        })
+        .expect("missing semantics for group root");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, root.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-group-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
     );
 }
 
