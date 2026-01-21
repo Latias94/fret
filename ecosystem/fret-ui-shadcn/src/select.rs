@@ -1615,9 +1615,9 @@ fn select_impl<H: UiHost>(
                                                 layout: LayoutStyle::default(),
                                                 text: label,
                                                 style: Some(style),
+                                                color: None,
                                                 wrap: TextWrap::None,
                                                 overflow: TextOverflow::Clip,
-                                                color: None,
                                             })]
                                         },
                                     ));
@@ -1804,25 +1804,24 @@ fn select_impl<H: UiHost>(
                                                                                     corner_radii: Corners::all(Px(0.0)),
                                                                                 },
                                                                                 move |cx| {
-                                                                                    let mut layout =
-                                                                                        LayoutStyle::default();
-                                                                                    layout.size.width = Length::Fill;
                                                                                     vec![cx.text_props(TextProps {
-                                                                                        layout,
+                                                                                        layout: {
+                                                                                            let mut layout = LayoutStyle::default();
+                                                                                            layout.size.width = Length::Fill;
+                                                                                            layout
+                                                                                        },
                                                                                         text: label.text,
                                                                                         style: Some(TextStyle {
                                                                                             font: FontId::default(),
                                                                                             size: label_text_px,
                                                                                             weight: FontWeight::NORMAL,
                                                                                             slant: Default::default(),
-                                                                                            line_height: Some(
-                                                                                                label_line_height,
-                                                                                            ),
+                                                                                            line_height: Some(label_line_height),
                                                                                             letter_spacing_em: None,
                                                                                         }),
+                                                                                        color: Some(fg),
                                                                                         wrap: TextWrap::None,
                                                                                         overflow: TextOverflow::Clip,
-                                                                                        color: Some(fg),
                                                                                     })]
                                                                                 },
                                                                             ));
@@ -2058,17 +2057,15 @@ fn select_impl<H: UiHost>(
                                                                                                 |cx| {
                                                                                                     vec![cx.text_props(TextProps {
                                                                                                         layout: {
-                                                                                                            let mut layout =
-                                                                                                                LayoutStyle::default();
-                                                                                                            layout.size.width =
-                                                                                                                Length::Fill;
+                                                                                                            let mut layout = LayoutStyle::default();
+                                                                                                            layout.size.width = Length::Fill;
                                                                                                             layout
                                                                                                         },
                                                                                                         text: item_label.clone(),
                                                                                                         style: Some(text_style.clone()),
+                                                                                                        color: Some(fg),
                                                                                                         wrap: TextWrap::None,
                                                                                                         overflow: TextOverflow::Clip,
-                                                                                                        color: Some(fg),
                                                                                                     })]
                                                                                                 },
                                                                                             );
@@ -2370,21 +2367,20 @@ fn select_impl<H: UiHost>(
                                         ..Default::default()
                                     },
                                     move |cx| {
+                                        let text_layout = if auto_width_trigger {
+                                            LayoutStyle::default()
+                                        } else {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout
+                                        };
                                         vec![cx.text_props(TextProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = if auto_width_trigger {
-                                                    Length::Auto
-                                                } else {
-                                                    Length::Fill
-                                                };
-                                                layout
-                                            },
+                                            layout: text_layout,
                                             text: label,
                                             style: Some(text_style.clone()),
+                                            color: Some(if selected.is_some() { fg } else { fg_muted }),
                                             wrap: TextWrap::None,
                                             overflow: TextOverflow::Ellipsis,
-                                            color: Some(if selected.is_some() { fg } else { fg_muted }),
                                         })]
                                     },
                                 );
