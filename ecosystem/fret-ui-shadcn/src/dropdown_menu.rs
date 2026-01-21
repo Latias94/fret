@@ -2,16 +2,14 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{
-    Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SizeStyle, TextProps,
+    ScrollAxis, ScrollProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -28,7 +26,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
 };
 
 use crate::overlay_motion;
@@ -461,28 +459,15 @@ impl DropdownMenuShortcut {
             .metric_by_key("component.dropdown_menu.shortcut.line_height")
             .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
 
-        cx.text_props(TextProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
-                layout.margin.left = fret_ui::element::MarginEdge::Auto;
-                layout
-            },
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                // new-york-v4: `text-xs`.
-                size: font_size,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(font_line_height),
-                // new-york-v4: `tracking-widest`.
-                letter_spacing_em: Some(0.10),
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .layout(LayoutRefinement::default().ml_auto())
+            .text_size_px(font_size)
+            .line_height_px(font_line_height)
+            .font_normal()
+            .letter_spacing_em(0.10)
+            .nowrap()
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
     }
 }
 
@@ -885,22 +870,27 @@ fn checkable_menu_row_children<H: UiHost>(
                 row.push(menu_icon_slot_empty(cx));
             }
 
-            row.push(cx.text_props(TextProps {
-                layout: {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
-                    layout.size.min_width = Some(Px(0.0));
-                    layout.flex.grow = 1.0;
-                    layout.flex.shrink = 1.0;
-                    layout.flex.basis = Length::Px(Px(0.0));
-                    layout
-                },
-                text: label.clone(),
-                style: Some(text_style.clone()),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                color: Some(if disabled { text_disabled } else { row_fg }),
-            }));
+            let style = text_style.clone();
+            let mut text = ui::text(cx, label.clone())
+                .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                .text_size_px(style.size)
+                .font_weight(style.weight)
+                .nowrap()
+                .text_color(ColorRef::Color(if disabled {
+                    text_disabled
+                } else {
+                    row_fg
+                }));
+
+            if let Some(line_height) = style.line_height {
+                text = text.line_height_px(line_height);
+            }
+
+            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                text = text.letter_spacing_em(letter_spacing_em);
+            }
+
+            row.push(text.into_element(cx));
 
             if let Some(t) = trailing.clone() {
                 row.push(t);
@@ -1572,23 +1562,13 @@ impl DropdownMenu {
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
-                                                                vec![cx.text_props(TextProps {
-                                                                    layout: LayoutStyle::default(),
-                                                                    text,
-                                                                    style: Some(TextStyle {
-                                                                        font: FontId::default(),
-                                                                        size: font_size,
-                                                                        weight: FontWeight::MEDIUM,
-                                                                        slant: Default::default(),
-                                                                        line_height: Some(
-                                                                            font_line_height,
-                                                                        ),
-                                                                        letter_spacing_em: None,
-                                                                    }),
-                                                                    wrap: TextWrap::None,
-                                                                    overflow: TextOverflow::Clip,
-                                                                    color: Some(fg),
-                                                                })]
+                                                                vec![ui::text(cx, text)
+                                                                    .text_size_px(font_size)
+                                                                    .line_height_px(font_line_height)
+                                                                    .font_medium()
+                                                                    .nowrap()
+                                                                    .text_color(ColorRef::Color(fg))
+                                                                    .into_element(cx)]
                                                             },
                                                         ));
                                                     }
@@ -2086,22 +2066,23 @@ impl DropdownMenu {
                                                                         } else if reserve_leading_slot_enabled {
                                                                             row.push(menu_icon_slot_empty(cx));
                                                                         }
-                                                                        row.push(cx.text_props(TextProps {
-                                                                            layout: {
-                                                                                let mut layout = LayoutStyle::default();
-                                                                                layout.size.width = Length::Fill;
-                                                                                layout.size.min_width = Some(Px(0.0));
-                                                                                layout.flex.grow = 1.0;
-                                                                                layout.flex.shrink = 1.0;
-                                                                                layout.flex.basis = Length::Px(Px(0.0));
-                                                                                layout
-                                                                            },
-                                                                            text: label.clone(),
-                                                                            style: Some(text_style.clone()),
-                                                                            wrap: TextWrap::None,
-                                                                            overflow: TextOverflow::Clip,
-                                                                            color: Some(if disabled { text_disabled } else { row_fg }),
-                                                                        }));
+                                                                        let style = text_style.clone();
+                                                                        let mut text = ui::text(cx, label.clone())
+                                                                            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                                                                            .text_size_px(style.size)
+                                                                            .font_weight(style.weight)
+                                                                            .nowrap()
+                                                                            .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+
+                                                                        if let Some(line_height) = style.line_height {
+                                                                            text = text.line_height_px(line_height);
+                                                                        }
+
+                                                                        if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                                                            text = text.letter_spacing_em(letter_spacing_em);
+                                                                        }
+
+                                                                        row.push(text.into_element(cx));
 
                                                                         if let Some(t) = trailing.clone() {
                                                                             row.push(t);
@@ -2505,21 +2486,13 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     },
                                                                     move |cx| {
-                                                                        vec![cx.text_props(TextProps {
-                                                                            layout: LayoutStyle::default(),
-                                                                            text,
-                                                                            style: Some(TextStyle {
-                                                                                font: FontId::default(),
-                                                                                size: font_size,
-                                                                                weight: FontWeight::MEDIUM,
-                                                                                slant: Default::default(),
-                                                                                line_height: Some(font_line_height),
-                                                                                letter_spacing_em: None,
-                                                                            }),
-                                                                            wrap: TextWrap::None,
-                                                                            overflow: TextOverflow::Clip,
-                                                                            color: Some(label_fg),
-                                                                        })]
+                                                                        vec![ui::text(cx, text)
+                                                                            .text_size_px(font_size)
+                                                                            .line_height_px(font_line_height)
+                                                                            .font_medium()
+                                                                            .nowrap()
+                                                                            .text_color(ColorRef::Color(label_fg))
+                                                                            .into_element(cx)]
                                                                     },
                                                                 ));
                                                             }
@@ -2923,22 +2896,23 @@ impl DropdownMenu {
                                                                                     } else if reserve_leading_slot_enabled {
                                                                                         row.push(menu_icon_slot_empty(cx));
                                                                                     }
-                                                                                    row.push(cx.text_props(TextProps {
-                                                                                        layout: {
-                                                                                            let mut layout = LayoutStyle::default();
-                                                                                            layout.size.width = Length::Fill;
-                                                                                            layout.size.min_width = Some(Px(0.0));
-                                                                                            layout.flex.grow = 1.0;
-                                                                                            layout.flex.shrink = 1.0;
-                                                                                            layout.flex.basis = Length::Px(Px(0.0));
-                                                                                            layout
-                                                                                        },
-                                                                                        text: label.clone(),
-                                                                                        style: Some(text_style.clone()),
-                                                                                        wrap: TextWrap::None,
-                                                                                        overflow: TextOverflow::Clip,
-                                                                                        color: Some(if disabled { text_disabled } else { row_fg }),
-                                                                                    }));
+                                                                                    let style = text_style.clone();
+                                                                                    let mut text = ui::text(cx, label.clone())
+                                                                                        .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                                                                                        .text_size_px(style.size)
+                                                                                        .font_weight(style.weight)
+                                                                                        .nowrap()
+                                                                                        .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+
+                                                                                    if let Some(line_height) = style.line_height {
+                                                                                        text = text.line_height_px(line_height);
+                                                                                    }
+
+                                                                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                                                                        text = text.letter_spacing_em(letter_spacing_em);
+                                                                                    }
+
+                                                                                    row.push(text.into_element(cx));
 
                                                                                     if let Some(t) = trailing.clone() {
                                                                                         row.push(t);
