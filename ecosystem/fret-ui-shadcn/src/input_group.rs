@@ -792,6 +792,10 @@ impl InputGroupButton {
             let children = self.children;
             let text_px = theme.metric_required("metric.font.size");
             let line_height = theme.metric_required("metric.font.line_height");
+            let fill_content_width = matches!(
+                self.size,
+                InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm
+            );
 
             let mut layout = self.layout;
             layout = match self.size {
@@ -879,7 +883,11 @@ impl InputGroupButton {
                         FlexProps {
                             layout: LayoutStyle {
                                 size: fret_ui::element::SizeStyle {
-                                    width: Length::Fill,
+                                    width: if fill_content_width {
+                                        Length::Fill
+                                    } else {
+                                        Length::Auto
+                                    },
                                     height: Length::Fill,
                                     ..Default::default()
                                 },
