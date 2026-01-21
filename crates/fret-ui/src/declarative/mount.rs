@@ -195,10 +195,10 @@ pub fn render_root<H: UiHost>(
             ui.set_root(root_node);
         }
 
+        let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
-            let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
 
             window_frame.instances.insert(
                 root_node,
@@ -224,14 +224,19 @@ pub fn render_root<H: UiHost>(
             }
             ui.set_children(root_node, mounted_children.clone());
             window_frame.children.insert(root_node, mounted_children);
-
-            apply_pending_invalidations(ui, pending_invalidations);
         });
 
         // View-cache experiments rely on parent pointers for correct cache-root discovery and GC
-        // detachment checks. Repair any reachable inconsistencies before processing notifies/GC.
+        // detachment checks. Repair any reachable inconsistencies before applying invalidations
+        // that may need to propagate across cache-root boundaries.
         if ui.view_cache_enabled() {
             let _ = ui.repair_parent_pointers_from_layer_roots();
+        }
+
+        apply_pending_invalidations(ui, pending_invalidations);
+
+        if ui.view_cache_enabled() {
+            ui.propagate_auto_sized_view_cache_root_invalidations();
         }
 
         for element in window_state.take_notify_for_animation_frame() {
@@ -447,10 +452,10 @@ fn render_dismissible_root_impl<
             },
         );
 
+        let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
-            let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
 
             window_frame.instances.insert(
                 root_node,
@@ -475,14 +480,13 @@ fn render_dismissible_root_impl<
                 ));
             }
             ui.set_children(root_node, mounted_children);
-
-            apply_pending_invalidations(ui, pending_invalidations);
         });
 
-        // See `render_root`.
         if ui.view_cache_enabled() {
             let _ = ui.repair_parent_pointers_from_layer_roots();
         }
+
+        apply_pending_invalidations(ui, pending_invalidations);
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
             app,

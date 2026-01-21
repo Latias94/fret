@@ -137,6 +137,10 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
+            self.repair_view_cache_root_bounds_from_engine_if_needed(app);
+        }
+
+        if pass_kind == LayoutPassKind::Final {
             self.layout_contained_view_cache_roots_if_needed(
                 app,
                 services,
@@ -178,6 +182,79 @@ impl<H: UiHost> UiTree<H> {
                 .layout_engine
                 .last_solve_time()
                 .saturating_sub(layout_engine_solve_time_start);
+        }
+    }
+
+    fn repair_view_cache_root_bounds_from_engine_if_needed(&mut self, app: &mut H) {
+        if !self.view_cache_active() {
+            return;
+        }
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let mut targets: Vec<(NodeId, Rect, Point)> = Vec::new();
+        targets.reserve(16);
+        for (id, node) in self.nodes.iter() {
+            if !node.view_cache.enabled {
+                continue;
+            }
+            if node.bounds.size != Size::default() {
+                continue;
+            }
+            let Some(parent) = node.parent else {
+                continue;
+            };
+            let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds) else {
+                continue;
+            };
+            let Some(local) = self.layout_engine_child_local_rect(parent, id) else {
+                continue;
+            };
+
+            let origin = Point::new(
+                Px(parent_bounds.origin.x.0 + local.origin.x.0),
+                Px(parent_bounds.origin.y.0 + local.origin.y.0),
+            );
+            let new_bounds = Rect::new(origin, local.size);
+            targets.push((id, new_bounds, node.bounds.origin));
+        }
+
+        for (root, new_bounds, old_origin) in targets {
+            let delta = Point::new(
+                Px(new_bounds.origin.x.0 - old_origin.x.0),
+                Px(new_bounds.origin.y.0 - old_origin.y.0),
+            );
+
+            if let Some(node) = self.nodes.get_mut(root) {
+                node.bounds = new_bounds;
+            }
+            if let Some(element) = self.nodes.get(root).and_then(|n| n.element) {
+                crate::elements::record_bounds_for_element(app, window, element, new_bounds);
+            }
+
+            if delta.x.0 == 0.0 && delta.y.0 == 0.0 {
+                continue;
+            }
+
+            let mut stack: Vec<NodeId> = self
+                .nodes
+                .get(root)
+                .map(|n| n.children.clone())
+                .unwrap_or_default();
+            while let Some(id) = stack.pop() {
+                let Some(n) = self.nodes.get_mut(id) else {
+                    continue;
+                };
+                n.bounds.origin = Point::new(
+                    Px(n.bounds.origin.x.0 + delta.x.0),
+                    Px(n.bounds.origin.y.0 + delta.y.0),
+                );
+                if let Some(element) = n.element {
+                    crate::elements::record_bounds_for_element(app, window, element, n.bounds);
+                }
+                stack.extend(n.children.iter().copied());
+            }
         }
     }
 
