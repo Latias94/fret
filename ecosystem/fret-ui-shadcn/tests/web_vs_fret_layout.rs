@@ -7030,6 +7030,359 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
 }
 
 #[test]
+fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
+    let web = read_web_golden("input-group-tooltip");
+    let theme = web_theme(&web);
+
+    let mut web_groups: Vec<&WebNode> = Vec::new();
+    fn walk_collect<'a>(n: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if n.tag == "div"
+            && n.class_name.as_deref().is_some_and(|c| {
+                let mut has_group = false;
+                let mut has_border = false;
+                for t in c.split_whitespace() {
+                    has_group |= t == "group/input-group";
+                    has_border |= t == "border-input";
+                }
+                has_group && has_border
+            })
+        {
+            out.push(n);
+        }
+        for c in &n.children {
+            walk_collect(c, out);
+        }
+    }
+    walk_collect(&theme.root, &mut web_groups);
+    web_groups.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let web_group0 = *web_groups.get(0).expect("web group 0");
+    let web_group2 = *web_groups.get(2).expect("web group 2");
+
+    let web_group0_input = web_group0
+        .children
+        .iter()
+        .find(|n| n.tag == "input")
+        .expect("web group0 input");
+    let web_group0_svg = find_first(web_group0, &|n| n.tag == "svg").expect("web group0 svg");
+
+    let web_group2_input = web_group2
+        .children
+        .iter()
+        .find(|n| n.tag == "input")
+        .expect("web group2 input");
+    let web_group2_svg = find_first(web_group2, &|n| n.tag == "svg").expect("web group2 svg");
+
+    let expected_gap_y = web_groups[1].rect.y - (web_groups[0].rect.y + web_groups[0].rect.h);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model0: Model<String> = app.models_mut().insert(String::new());
+    let model1: Model<String> = app.models_mut().insert(String::new());
+    let model2: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-input-group-tooltip",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(384.0)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let button_icon0 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-tooltip:0:icon")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
+                    );
+                    let button0 = fret_ui_shadcn::Button::new("")
+                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                        .children(vec![button_icon0])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
+                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                        )
+                        .into_element(cx);
+
+                    let group0 = fret_ui_shadcn::InputGroup::new(model0.clone())
+                        .a11y_label("Golden:input-group-tooltip:0:input")
+                        .trailing_has_button(true)
+                        .trailing(vec![button0])
+                        .into_element(cx);
+                    let group0 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-tooltip:0:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group0],
+                    );
+
+                    let group1_button = fret_ui_shadcn::Button::new("")
+                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                        .children(vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
+                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                        )
+                        .into_element(cx);
+                    let group1 = fret_ui_shadcn::InputGroup::new(model1.clone())
+                        .a11y_label("Golden:input-group-tooltip:1:input")
+                        .trailing_has_button(true)
+                        .trailing(vec![group1_button])
+                        .into_element(cx);
+                    let group1 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-tooltip:1:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group1],
+                    );
+
+                    let button_icon2 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-tooltip:2:icon")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
+                    );
+                    let button2 = fret_ui_shadcn::Button::new("")
+                        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+                        .children(vec![button_icon2])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
+                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                        )
+                        .into_element(cx);
+
+                    let group2 = fret_ui_shadcn::InputGroup::new(model2.clone())
+                        .a11y_label("Golden:input-group-tooltip:2:input")
+                        .leading_has_button(true)
+                        .leading(vec![button2])
+                        .into_element(cx);
+                    let group2 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-tooltip:2:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group2],
+                    );
+
+                    vec![cx.column(
+                        ColumnProps {
+                            gap: Px(expected_gap_y),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group0, group1, group2],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let fret_group0 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-tooltip:0:root"),
+    )
+    .expect("fret group0");
+    let fret_input0 = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:input-group-tooltip:0:input"),
+    )
+    .expect("fret input0");
+    let fret_icon0 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-tooltip:0:icon"),
+    )
+    .expect("fret icon0");
+
+    assert_close_px(
+        "input-group-tooltip group0 y",
+        fret_group0.bounds.origin.y,
+        web_group0.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip group0 w",
+        fret_group0.bounds.size.width,
+        web_group0.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip group0 h",
+        fret_group0.bounds.size.height,
+        web_group0.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip input0 x",
+        fret_input0.bounds.origin.x,
+        web_group0_input.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip input0 y",
+        fret_input0.bounds.origin.y,
+        web_group0_input.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip input0 w",
+        fret_input0.bounds.size.width,
+        web_group0_input.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg0 x",
+        fret_icon0.bounds.origin.x,
+        web_group0_svg.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg0 y",
+        fret_icon0.bounds.origin.y,
+        web_group0_svg.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg0 w",
+        fret_icon0.bounds.size.width,
+        web_group0_svg.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg0 h",
+        fret_icon0.bounds.size.height,
+        web_group0_svg.rect.h,
+        1.0,
+    );
+
+    let fret_group2 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-tooltip:2:root"),
+    )
+    .expect("fret group2");
+    let fret_input2 = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:input-group-tooltip:2:input"),
+    )
+    .expect("fret input2");
+    let fret_icon2 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-tooltip:2:icon"),
+    )
+    .expect("fret icon2");
+
+    assert_close_px(
+        "input-group-tooltip group2 y",
+        fret_group2.bounds.origin.y,
+        web_group2.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip input2 x",
+        fret_input2.bounds.origin.x,
+        web_group2_input.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip input2 y",
+        fret_input2.bounds.origin.y,
+        web_group2_input.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip input2 w",
+        fret_input2.bounds.size.width,
+        web_group2_input.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg2 x",
+        fret_icon2.bounds.origin.x,
+        web_group2_svg.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg2 y",
+        fret_icon2.bounds.origin.y,
+        web_group2_svg.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg2 w",
+        fret_icon2.bounds.size.width,
+        web_group2_svg.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-tooltip svg2 h",
+        fret_icon2.bounds.size.height,
+        web_group2_svg.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_card_with_form_width() {
     let web = read_web_golden("card-with-form");
     let theme = web_theme(&web);
