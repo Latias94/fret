@@ -522,6 +522,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -545,6 +546,7 @@ impl Select {
             placeholder: Arc::from("Select..."),
             disabled: false,
             a11y_label: None,
+            trigger_test_id: None,
             on_dismiss_request: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -623,6 +625,11 @@ impl Select {
         self
     }
 
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
+        self
+    }
+
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
     /// When set, Escape/outside-press dismissals route through this handler. To "prevent
@@ -698,6 +705,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.a11y_label,
+            self.trigger_test_id,
             self.on_dismiss_request,
             self.chrome,
             self.layout,
@@ -734,6 +742,7 @@ pub fn select<H: UiHost>(
         disabled,
         a11y_label,
         None,
+        None,
         ChromeRefinement::default(),
         layout,
         SelectAlign::default(),
@@ -756,6 +765,7 @@ fn select_impl<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -776,6 +786,8 @@ fn select_impl<H: UiHost>(
         .merge(chrome);
 
     cx.scope(|cx| {
+        let trigger_test_id_for_trigger = trigger_test_id.clone();
+
         fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
             for entry in entries {
                 match entry {
@@ -1111,6 +1123,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
+            props.a11y.test_id = trigger_test_id_for_trigger.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
