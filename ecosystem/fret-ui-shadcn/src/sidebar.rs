@@ -1,18 +1,17 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, SpacerProps,
-    TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::hover_card::{HoverCard, HoverCardAlign};
 use crate::layout as shadcn_layout;
@@ -315,20 +314,13 @@ impl SidebarGroupLabel {
             .metric_by_key("component.sidebar.group_label_line_height")
             .unwrap_or(Px(16.0));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size,
-                weight: FontWeight::MEDIUM,
-                line_height: Some(line_height),
-                ..Default::default()
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(size)
+            .line_height_px(line_height)
+            .font_medium()
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx)
     }
 }
 
@@ -512,14 +504,19 @@ impl SidebarMenuButton {
                         out.push(decl_icon::icon(cx, icon));
                     }
                     if !collapsed {
-                        out.push(cx.text_props(TextProps {
-                            layout: Default::default(),
-                            text: label.clone(),
-                            style: Some(menu_button_style(&theme)),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                        }));
+                        let style = menu_button_style(&theme);
+                        let mut text = ui::text(cx, label.clone())
+                            .text_size_px(style.size)
+                            .font_weight(style.weight)
+                            .text_color(ColorRef::Color(fg))
+                            .truncate();
+                        if let Some(line_height) = style.line_height {
+                            text = text.line_height_px(line_height);
+                        }
+                        if let Some(letter_spacing_em) = style.letter_spacing_em {
+                            text = text.letter_spacing_em(letter_spacing_em);
+                        }
+                        out.push(text.into_element(cx));
                     } else {
                         out.push(cx.spacer(SpacerProps {
                             min: Px(0.0),
@@ -561,14 +558,19 @@ impl SidebarMenuButton {
         let mut props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
         props.layout.overflow = Overflow::Clip;
         let content = cx.container(props, move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: Default::default(),
-                text: label.clone(),
-                style: Some(menu_button_style(&theme)),
-                color: Some(sidebar_fg(&theme)),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })]
+            let style = menu_button_style(&theme);
+            let mut text = ui::text(cx, label.clone())
+                .text_size_px(style.size)
+                .font_weight(style.weight)
+                .text_color(ColorRef::Color(sidebar_fg(&theme)))
+                .nowrap();
+            if let Some(line_height) = style.line_height {
+                text = text.line_height_px(line_height);
+            }
+            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                text = text.letter_spacing_em(letter_spacing_em);
+            }
+            vec![text.into_element(cx)]
         });
 
         HoverCard::new(button, content)
