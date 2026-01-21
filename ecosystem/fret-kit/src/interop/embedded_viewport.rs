@@ -18,8 +18,8 @@ use std::sync::Arc;
 use crate::fret::render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_app::App;
 use fret_core::{AppWindowId, RenderTargetId, ViewportFit, ViewportInputEvent, ViewportInputKind};
-use fret_launch::ViewportRenderTarget;
-use fret_runtime::Model;
+use fret_launch::{EngineFrameUpdate, ViewportRenderTarget};
+use fret_runtime::{FrameId, Model, TickId};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative as kit_decl;
@@ -202,4 +202,109 @@ impl Default for EmbeddedViewportPanelProps {
             forward_input: true,
         }
     }
+}
+
+/// A small contract for recording a frame into an embedded surface.
+///
+/// This is meant to remove the boilerplate of:
+/// - ensuring the render target exists/resizes,
+/// - creating an encoder,
+/// - pushing the command buffer into `EngineFrameUpdate`,
+/// while keeping the escape hatch: apps can still provide a custom `record_engine_frame` hook.
+pub trait EmbeddedViewportRecord: 'static {
+    /// Return the embedded surface stored in your window state.
+    fn embedded_viewport_surface(&mut self) -> &mut EmbeddedViewportSurface;
+
+    /// Optional label used for the render target and encoder.
+    fn embedded_viewport_label(&self) -> Option<&'static str> {
+        None
+    }
+
+    /// Record wgpu commands into `encoder` targeting `view`.
+    fn record_embedded_viewport(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: TickId,
+        frame_id: FrameId,
+        view: &wgpu::TextureView,
+        encoder: &mut wgpu::CommandEncoder,
+    );
+
+    /// Whether to request another redraw after recording this frame.
+    fn request_redraw_after_record(&self) -> bool {
+        true
+    }
+}
+
+/// Boilerplate-free `record_engine_frame` hook for types implementing [`EmbeddedViewportRecord`].
+pub fn record_engine_frame<S: EmbeddedViewportRecord>(
+    app: &mut App,
+    window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    st: &mut S,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+    tick_id: TickId,
+    frame_id: FrameId,
+) -> EngineFrameUpdate {
+    ensure_models(app, window);
+
+    let label = st.embedded_viewport_label().unwrap_or("embedded viewport");
+    let surface = st.embedded_viewport_surface();
+    let (_id, view) = surface.ensure_size_owned_view(app, window, context, renderer, Some(label));
+
+    let mut encoder = context
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some(label) });
+
+    st.record_embedded_viewport(
+        app,
+        window,
+        context,
+        renderer,
+        scale_factor,
+        tick_id,
+        frame_id,
+        &view,
+        &mut encoder,
+    );
+
+    let mut update = EngineFrameUpdate::default();
+    update.push_command_buffer(encoder.finish());
+
+    if st.request_redraw_after_record() {
+        app.request_redraw(window);
+    }
+
+    update
+}
+
+/// Convenience: record a simple clear pass.
+pub fn clear_pass(
+    encoder: &mut wgpu::CommandEncoder,
+    view: &wgpu::TextureView,
+    label: Option<&str>,
+    color: wgpu::Color,
+) {
+    let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label,
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view,
+            resolve_target: None,
+            depth_slice: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(color),
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
 }
