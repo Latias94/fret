@@ -96,9 +96,7 @@ pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonSize, ButtonVariant};
-pub use button_group::{
-    ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
-};
+pub use button_group::{ButtonGroup, ButtonGroupItem};
 pub use calendar::Calendar;
 pub use calendar_range::CalendarRange;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
