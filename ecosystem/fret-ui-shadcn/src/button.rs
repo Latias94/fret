@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, TextProps};
@@ -164,6 +164,8 @@ pub struct Button {
     size: ButtonSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    border_override: Option<Edges>,
+    corner_radii_override: Option<Corners>,
 }
 
 impl std::fmt::Debug for Button {
@@ -180,6 +182,8 @@ impl std::fmt::Debug for Button {
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("border_override", &self.border_override)
+            .field("corner_radii_override", &self.corner_radii_override)
             .finish()
     }
 }
@@ -199,6 +203,8 @@ impl Button {
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
             layout: fret_ui_kit::LayoutRefinement::default(),
+            border_override: None,
+            corner_radii_override: None,
         }
     }
 
@@ -249,6 +255,23 @@ impl Button {
 
     pub fn refine_layout(mut self, layout: fret_ui_kit::LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// Overrides per-edge border widths (in px) for this button's chrome.
+    ///
+    /// This is primarily used by shadcn recipes like `button-group` (`border-l-0`).
+    pub fn border_override(mut self, border: Edges) -> Self {
+        self.border_override = Some(border);
+        self
+    }
+
+    /// Overrides per-corner radii (in px) for this button's chrome.
+    ///
+    /// This is primarily used by shadcn recipes like `button-group` (`rounded-l-none`,
+    /// `rounded-r-none`).
+    pub fn corner_radii_override(mut self, corners: Corners) -> Self {
+        self.corner_radii_override = Some(corners);
         self
     }
 
@@ -305,6 +328,8 @@ impl Button {
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
             let variant = self.variant;
+            let border_override = self.border_override;
+            let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(&theme, self.size);
             let is_icon = is_icon_button;
             let has_svg_icon_like_children =
@@ -377,6 +402,12 @@ impl Button {
                     decl_style::container_props(&theme, chrome, LayoutRefinement::default());
                 chrome_props.shadow = shadow;
                 chrome_props.layout.size = pressable_layout.size;
+                if let Some(border) = border_override {
+                    chrome_props.border = border;
+                }
+                if let Some(corners) = corner_radii_override {
+                    chrome_props.corner_radii = corners;
+                }
 
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
