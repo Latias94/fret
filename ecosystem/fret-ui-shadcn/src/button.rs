@@ -165,7 +165,16 @@ pub struct Button {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     border_override: Option<Edges>,
+    border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct BorderWidthOverride {
+    pub top: Option<Px>,
+    pub right: Option<Px>,
+    pub bottom: Option<Px>,
+    pub left: Option<Px>,
 }
 
 impl std::fmt::Debug for Button {
@@ -183,6 +192,7 @@ impl std::fmt::Debug for Button {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("border_override", &self.border_override)
+            .field("border_width_override", &self.border_width_override)
             .field("corner_radii_override", &self.corner_radii_override)
             .finish()
     }
@@ -204,6 +214,7 @@ impl Button {
             chrome: ChromeRefinement::default(),
             layout: fret_ui_kit::LayoutRefinement::default(),
             border_override: None,
+            border_width_override: BorderWidthOverride::default(),
             corner_radii_override: None,
         }
     }
@@ -255,6 +266,31 @@ impl Button {
 
     pub fn refine_layout(mut self, layout: fret_ui_kit::LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn border_width_override(mut self, border: BorderWidthOverride) -> Self {
+        self.border_width_override = border;
+        self
+    }
+
+    pub fn border_top_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.top = Some(border);
+        self
+    }
+
+    pub fn border_right_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.right = Some(border);
+        self
+    }
+
+    pub fn border_bottom_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.bottom = Some(border);
+        self
+    }
+
+    pub fn border_left_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.left = Some(border);
         self
     }
 
@@ -329,6 +365,7 @@ impl Button {
             let user_border_override = user_chrome.border_color.is_some();
             let variant = self.variant;
             let border_override = self.border_override;
+            let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(&theme, self.size);
             let is_icon = is_icon_button;
@@ -404,6 +441,18 @@ impl Button {
                 chrome_props.layout.size = pressable_layout.size;
                 if let Some(border) = border_override {
                     chrome_props.border = border;
+                }
+                if let Some(border) = border_width_override.top {
+                    chrome_props.border.top = border;
+                }
+                if let Some(border) = border_width_override.right {
+                    chrome_props.border.right = border;
+                }
+                if let Some(border) = border_width_override.bottom {
+                    chrome_props.border.bottom = border;
+                }
+                if let Some(border) = border_width_override.left {
+                    chrome_props.border.left = border;
                 }
                 if let Some(corners) = corner_radii_override {
                     chrome_props.corner_radii = corners;
