@@ -171,7 +171,9 @@ impl ButtonGroup {
                                 button.corner_radii_override(corners).into_element(cx)
                             }
                             ButtonGroupItem::Group(group) => group.into_element(cx),
-                            ButtonGroupItem::Separator(separator) => separator.into_element(cx),
+                            ButtonGroupItem::Separator(separator) => {
+                                separator.flex_stretch_cross_axis(true).into_element(cx)
+                            }
                         })
                         .collect()
                 })]

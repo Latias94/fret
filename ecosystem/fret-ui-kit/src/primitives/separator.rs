@@ -16,6 +16,7 @@ pub enum SeparatorOrientation {
 pub struct Separator {
     orientation: SeparatorOrientation,
     thickness: Option<Px>,
+    flex_stretch_cross_axis: bool,
     layout: LayoutRefinement,
 }
 
@@ -24,6 +25,7 @@ impl Separator {
         Self {
             orientation: SeparatorOrientation::default(),
             thickness: None,
+            flex_stretch_cross_axis: false,
             layout: LayoutRefinement::default(),
         }
     }
@@ -35,6 +37,11 @@ impl Separator {
 
     pub fn thickness(mut self, thickness: Px) -> Self {
         self.thickness = Some(thickness);
+        self
+    }
+
+    pub fn flex_stretch_cross_axis(mut self, stretch: bool) -> Self {
+        self.flex_stretch_cross_axis = stretch;
         self
     }
 
@@ -69,7 +76,15 @@ impl Separator {
             SeparatorOrientation::Vertical => {
                 layout.size = SizeStyle {
                     width: Length::Px(thickness),
-                    height: Length::Fill,
+                    // In shadcn/radix recipes the vertical separator is typically `self-stretch`
+                    // inside a flex row. Using `Fill` maps to `height: 100%`, which does not
+                    // resolve in an auto-height containing block. Keeping the height `Auto`
+                    // allows `align-items: stretch` to produce the desired outcome.
+                    height: if self.flex_stretch_cross_axis {
+                        Length::Auto
+                    } else {
+                        Length::Fill
+                    },
                     min_width: Some(thickness),
                     max_width: Some(thickness),
                     ..layout.size
