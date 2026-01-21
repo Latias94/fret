@@ -2,6 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize};
 use fret_icons::ids;
 use fret_ui::tree::UiTree;
+use fret_ui_kit::ChromeRefinement;
 use fret_ui_kit::Space;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack as decl_stack;
@@ -1666,6 +1667,127 @@ fn web_vs_fret_button_group_size_geometry_and_chrome_match() {
         "button-group-size large first radius tr (merged)",
         quad_lg_first.corners[1],
         expected_lg_first_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-dropdown");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div" && n.attrs.get("role").is_some_and(|v| v == "group")
+    })
+    .expect("web button-group node");
+
+    let web_follow = find_first(web_group, &|n| {
+        n.tag == "button" && contains_text(n, "Follow")
+    })
+    .expect("web Follow button");
+    let web_trigger = find_first(web_group, &|n| {
+        n.tag == "button" && n.attrs.get("aria-expanded").is_some()
+    })
+    .expect("web dropdown trigger button");
+
+    let expected_group_h = web_group.rect.h;
+    let expected_trigger_w = web_trigger.rect.w;
+    let expected_trigger_border_l = web_border_width_px_for(web_trigger, "borderLeftWidth")
+        .expect("web trigger borderLeftWidth");
+
+    let expected_follow_r_tl =
+        web_corner_radius_effective_px_for(web_follow, "borderTopLeftRadius")
+            .expect("web Follow borderTopLeftRadius");
+    let expected_follow_r_tr =
+        web_corner_radius_effective_px_for(web_follow, "borderTopRightRadius")
+            .expect("web Follow borderTopRightRadius");
+    let expected_trigger_r_tr =
+        web_corner_radius_effective_px_for(web_trigger, "borderTopRightRadius")
+            .expect("web trigger borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let follow = fret_ui_shadcn::Button::new("Follow")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+
+        // Upstream `button-group-dropdown` uses asymmetric padding (`pl-2 pr-3`) for the trigger.
+        // We express that via `ChromeRefinement` without changing global button sizing rules.
+        let trigger = fret_ui_shadcn::Button::new("")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .refine_style(ChromeRefinement::default().pl(Space::N2))
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
+            .test_id("button-group-dropdown.trigger")
+            .into();
+
+        let group = fret_ui_shadcn::ButtonGroup::new(vec![follow, trigger])
+            .a11y_label("ButtonGroupDropdown");
+        vec![group.into_element(cx)]
+    });
+
+    let group = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupDropdown")
+        })
+        .expect("missing semantics for dropdown button group");
+
+    assert_close(
+        "button-group-dropdown group height",
+        group.bounds.size.height.0,
+        expected_group_h,
+        1.0,
+    );
+
+    let trigger_bounds = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-dropdown.trigger"))
+        .expect("missing semantics for dropdown trigger")
+        .bounds;
+
+    assert_close(
+        "button-group-dropdown trigger width",
+        trigger_bounds.size.width.0,
+        expected_trigger_w,
+        1.0,
+    );
+
+    let follow_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Follow"))
+        .expect("missing semantics for Follow button");
+    let quad_follow = find_best_quad(&scene, follow_node.bounds).expect("painted quad for Follow");
+    assert_close(
+        "button-group-dropdown Follow radius tl",
+        quad_follow.corners[0],
+        expected_follow_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-dropdown Follow radius tr",
+        quad_follow.corners[1],
+        expected_follow_r_tr,
+        1.0,
+    );
+
+    let quad_trigger =
+        find_best_quad(&scene, trigger_bounds).expect("painted quad for dropdown trigger");
+    assert_close(
+        "button-group-dropdown trigger border-left",
+        quad_trigger.border[3],
+        expected_trigger_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-dropdown trigger radius tr",
+        quad_trigger.corners[1],
+        expected_trigger_r_tr,
         1.0,
     );
 }
