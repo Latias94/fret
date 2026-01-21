@@ -171,6 +171,29 @@ Recent fixes:
   - Focus ring thickness (`3px`) and border color keys.
   - Placeholder color and selection colors.
 
+### `InputGroup`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/input-group.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/input_group.rs`
+- Notes:
+  - Upstream draws chrome (border + `shadow-xs`) on the group root and makes the inner control
+    borderless (`border-0`, `rounded-none`, `bg-transparent`, `shadow-none`).
+  - The group root uses `has-[[data-slot=input-group-control]:focus-visible]...` for focus-within
+    ring/border. Fret does not yet have a direct “subtree focus-visible” mechanism, so focus state
+    alignment is still a known gap.
+- Recent fixes:
+  - Inline addon layout now matches shadcn-web geometry: addons participate in normal flex flow
+    instead of absolute slots; input padding switches to `pl-2` / `pr-2` when an inline addon is
+    present.
+- Conformance gates:
+  - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
+    `web_vs_fret_layout_input_group_spinner_geometry_matches`).
+- Gaps to check next:
+  - Block-start / block-end addons (column layout + `textarea` variants).
+  - Button-in-addon negative margin (`mr-[-0.45rem]`) outcomes (`input-group-button`, `input-group-tooltip`).
+  - Error state (`aria-invalid`) ring/border behavior.
+
 ### `Breadcrumb`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/breadcrumb.tsx`

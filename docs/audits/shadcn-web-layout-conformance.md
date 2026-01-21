@@ -99,6 +99,9 @@ patterns:
 - `input-demo`
 - `label-demo`
 - `input-with-label`
+- `input-group-dropdown` (root height)
+- `input-group-icon` (inline-start icon addon + input box geometry)
+- `input-group-spinner` (inline-end spinner addon + input box geometry)
 - `field-input`
 - `field-checkbox`
 - `field-group`
