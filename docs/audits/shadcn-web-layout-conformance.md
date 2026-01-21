@@ -103,6 +103,7 @@ patterns:
 - `input-group-icon` (inline-start icon addon + input box geometry)
 - `input-group-spinner` (inline-end spinner addon + input box geometry)
 - `input-group-button` (inline-end button addon negative margin + icon centering)
+- `input-group-tooltip` (inline-start and inline-end button addons + stack gap)
 - `field-input`
 - `field-checkbox`
 - `field-group`

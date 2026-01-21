@@ -188,7 +188,8 @@ Recent fixes:
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
-    `web_vs_fret_layout_input_group_spinner_geometry_matches`, `web_vs_fret_layout_input_group_button_geometry_matches`).
+    `web_vs_fret_layout_input_group_spinner_geometry_matches`, `web_vs_fret_layout_input_group_button_geometry_matches`,
+    `web_vs_fret_layout_input_group_tooltip_geometry_matches`).
 - Gaps to check next:
   - Block-start / block-end addons (column layout + `textarea` variants).
   - Button-in-addon negative margin (`mr-[-0.45rem]`) outcomes (`input-group-button`, `input-group-tooltip`).
