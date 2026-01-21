@@ -1418,7 +1418,7 @@ impl CommandPalette {
             placeholder: None,
             input_role: Some(SemanticsRole::ComboBox),
             input_expanded: None,
-            input_wrapper_h: MetricRef::Px(Px(36.0)),
+            input_wrapper_h: MetricRef::Px(Px(40.0)),
             input_icon_size: MetricRef::Px(Px(16.0)),
             item_pad_y: MetricRef::space(Space::N1p5),
             group_pad_x: MetricRef::space(Space::N1),
@@ -1756,7 +1756,10 @@ impl CommandPalette {
                             layout: {
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Fill;
-                                layout.size.height = Length::Px(group_pad_y);
+                                let group_gap_y = theme
+                                    .metric_by_key("component.command.group.gap_y")
+                                    .unwrap_or(Px(group_pad_y.0 * 2.0));
+                                layout.size.height = Length::Px(group_gap_y);
                                 layout
                             },
                             ..Default::default()
@@ -2001,7 +2004,7 @@ impl CommandPalette {
             wrapper.border_color = Some(border);
 
             if matches!(wrapper.layout.size.height, Length::Auto) {
-                wrapper.layout.size.height = Length::Px(wrapper_h);
+                wrapper.layout.size.height = Length::Px(Px(wrapper_h.0 + wrapper.border.bottom.0));
             }
             wrapper.padding = Edges {
                 top: Px(0.0),
