@@ -83,6 +83,6 @@ Related:
 - [x] AUE-layout-023 Add a patchable `ui::container(...)` constructor as the default “box” layout node.
   - Intent: reduce raw `cx.container(...)` usage in cookbook/recipes.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
-- [ ] AUE-text-070 Add a minimal patchable `ui::text(...)` / `ui::label(...)` authoring constructor with a small typed refinement surface.
+- [x] AUE-text-070 Add a minimal patchable `ui::text(...)` / `ui::label(...)` authoring constructor with a small typed refinement surface.
   - Scope: size/weight/color + a shadcn-aligned default line-height.
-  - Evidence target: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/declarative/text.rs`
+  - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`, `ecosystem/fret-ui-kit/src/declarative/text.rs`
