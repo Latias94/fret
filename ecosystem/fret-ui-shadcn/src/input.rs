@@ -1,12 +1,20 @@
 use std::sync::Arc;
 
-use fret_core::{Corners, FontId, NodeId, SemanticsRole, TextStyle};
+use fret_core::{Corners, FontId, NodeId, Px, SemanticsRole, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size};
+
+#[derive(Debug, Clone, Copy, Default)]
+struct BorderWidthOverride {
+    top: Option<Px>,
+    right: Option<Px>,
+    bottom: Option<Px>,
+    left: Option<Px>,
+}
 
 #[derive(Clone)]
 pub struct Input {
@@ -21,6 +29,8 @@ pub struct Input {
     size: Size,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    border_width_override: BorderWidthOverride,
+    corner_radii_override: Option<Corners>,
 }
 
 impl Input {
@@ -37,6 +47,8 @@ impl Input {
             size: Size::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            border_width_override: BorderWidthOverride::default(),
+            corner_radii_override: None,
         }
     }
 
@@ -90,6 +102,38 @@ impl Input {
         self
     }
 
+    /// Overrides per-edge border widths (in px) for this input's chrome.
+    ///
+    /// This is primarily used by shadcn recipe compositions that merge borders (e.g. input groups).
+    pub fn border_left_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.left = Some(border);
+        self
+    }
+
+    pub fn border_right_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.right = Some(border);
+        self
+    }
+
+    pub fn border_top_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.top = Some(border);
+        self
+    }
+
+    pub fn border_bottom_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.bottom = Some(border);
+        self
+    }
+
+    /// Overrides per-corner radii (in px) for this input's chrome.
+    ///
+    /// This is primarily used by shadcn recipe compositions that merge corner radii
+    /// (`rounded-l-none`, `rounded-r-none`).
+    pub fn corner_radii_override(mut self, corners: Corners) -> Self {
+        self.corner_radii_override = Some(corners);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         input_with_style(
             cx,
@@ -104,6 +148,8 @@ impl Input {
             self.size,
             self.chrome,
             self.layout,
+            self.border_width_override,
+            self.corner_radii_override,
         )
     }
 }
@@ -132,6 +178,8 @@ pub fn input<H: UiHost>(
         Size::default(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
+        BorderWidthOverride::default(),
+        None,
     )
 }
 
@@ -148,6 +196,8 @@ fn input_with_style<H: UiHost>(
     size: Size,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
+    border_width_override: BorderWidthOverride,
+    corner_radii_override: Option<Corners>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
@@ -179,6 +229,22 @@ fn input_with_style<H: UiHost>(
         .unwrap_or(chrome.placeholder_color);
     chrome.caret_color = resolved.text_color;
     chrome.selection_color = resolved.selection_color;
+
+    if let Some(corners) = corner_radii_override {
+        chrome.corner_radii = corners;
+    }
+    if let Some(border) = border_width_override.top {
+        chrome.border.top = border;
+    }
+    if let Some(border) = border_width_override.right {
+        chrome.border.right = border;
+    }
+    if let Some(border) = border_width_override.bottom {
+        chrome.border.bottom = border;
+    }
+    if let Some(border) = border_width_override.left {
+        chrome.border.left = border;
+    }
 
     let font_line_height = theme
         .metric_by_key("font.line_height")

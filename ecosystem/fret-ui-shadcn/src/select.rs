@@ -510,6 +510,14 @@ pub enum SelectPosition {
     Popper,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct BorderWidthOverride {
+    top: Option<Px>,
+    right: Option<Px>,
+    bottom: Option<Px>,
+    left: Option<Px>,
+}
+
 #[derive(Clone)]
 pub struct Select {
     model: Model<Option<Arc<str>>>,
@@ -530,6 +538,8 @@ pub struct Select {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    trigger_border_width_override: BorderWidthOverride,
+    trigger_corner_radii_override: Option<Corners>,
 }
 
 impl Select {
@@ -553,6 +563,8 @@ impl Select {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            trigger_border_width_override: BorderWidthOverride::default(),
+            trigger_corner_radii_override: None,
         }
     }
 
@@ -669,6 +681,38 @@ impl Select {
         self
     }
 
+    /// Overrides per-edge border widths (in px) for the Select trigger's chrome.
+    ///
+    /// This is primarily used by shadcn recipe compositions that merge borders (e.g. input groups).
+    pub fn border_left_width_override(mut self, border: Px) -> Self {
+        self.trigger_border_width_override.left = Some(border);
+        self
+    }
+
+    pub fn border_right_width_override(mut self, border: Px) -> Self {
+        self.trigger_border_width_override.right = Some(border);
+        self
+    }
+
+    pub fn border_top_width_override(mut self, border: Px) -> Self {
+        self.trigger_border_width_override.top = Some(border);
+        self
+    }
+
+    pub fn border_bottom_width_override(mut self, border: Px) -> Self {
+        self.trigger_border_width_override.bottom = Some(border);
+        self
+    }
+
+    /// Overrides per-corner radii (in px) for the Select trigger's chrome.
+    ///
+    /// This is primarily used by shadcn recipe compositions that merge corner radii
+    /// (`rounded-l-none`, `rounded-r-none`).
+    pub fn corner_radii_override(mut self, corners: Corners) -> Self {
+        self.trigger_corner_radii_override = Some(corners);
+        self
+    }
+
     /// Enables a Select arrow (Radix `SelectArrow`-style).
     pub fn arrow(mut self, arrow: bool) -> Self {
         self.arrow = arrow;
@@ -706,6 +750,8 @@ impl Select {
             self.arrow,
             self.arrow_size_override,
             self.arrow_padding_override,
+            self.trigger_border_width_override,
+            self.trigger_corner_radii_override,
         )
     }
 }
@@ -741,6 +787,8 @@ pub fn select<H: UiHost>(
         false,
         None,
         None,
+        BorderWidthOverride::default(),
+        None,
     )
 }
 
@@ -764,6 +812,8 @@ fn select_impl<H: UiHost>(
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    trigger_border_width_override: BorderWidthOverride,
+    trigger_corner_radii_override: Option<Corners>,
 ) -> AnyElement {
     let chrome = ChromeRefinement::default()
         .pl(Space::N2p5)
@@ -2308,7 +2358,7 @@ fn select_impl<H: UiHost>(
                 Length::Fill
             };
             let auto_width_trigger = matches!(content_width, Length::Auto);
-            let chrome = input_chrome_container_props(
+            let mut chrome = input_chrome_container_props(
                 {
                     let mut layout = LayoutStyle::default();
                     layout.size.width = chrome_width;
@@ -2317,6 +2367,21 @@ fn select_impl<H: UiHost>(
                 resolved,
                 border_color,
             );
+            if let Some(corners) = trigger_corner_radii_override {
+                chrome.corner_radii = corners;
+            }
+            if let Some(border) = trigger_border_width_override.top {
+                chrome.border.top = border;
+            }
+            if let Some(border) = trigger_border_width_override.right {
+                chrome.border.right = border;
+            }
+            if let Some(border) = trigger_border_width_override.bottom {
+                chrome.border.bottom = border;
+            }
+            if let Some(border) = trigger_border_width_override.left {
+                chrome.border.left = border;
+            }
 
             let state_for_value_node = trigger_state.clone();
 
