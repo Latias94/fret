@@ -112,6 +112,7 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
+    #[stacksafe::stacksafe]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn paint_node(
         &mut self,

@@ -113,3 +113,42 @@ fn hit_test_handles_deep_trees_on_small_stacks() {
         .join()
         .expect("join test thread");
 }
+
+#[test]
+fn remove_and_cleanup_handle_deep_trees_on_small_stacks() {
+    std::thread::Builder::new()
+        .name("remove_cleanup_stack_safety".to_string())
+        .stack_size(512 * 1024)
+        .spawn(|| {
+            let window = AppWindowId::default();
+
+            let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let root = ui.create_node(TestStack::default());
+            ui.set_root(root);
+
+            let first_child = ui.create_node(TestStack::default());
+            ui.add_child(root, first_child);
+
+            let mut current = first_child;
+            let depth = 20_000;
+            for _ in 0..depth {
+                let child = ui.create_node(TestStack::default());
+                ui.add_child(current, child);
+                current = child;
+            }
+
+            let mut services = FakeUiServices;
+            ui.cleanup_subtree(&mut services, first_child);
+            let removed = ui.remove_subtree(&mut services, first_child);
+            assert_eq!(
+                removed.len(),
+                depth + 1,
+                "expected to remove the full chain without recursion"
+            );
+        })
+        .expect("spawn test thread")
+        .join()
+        .expect("join test thread");
+}
