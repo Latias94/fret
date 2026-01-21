@@ -83,7 +83,8 @@ pub struct ItemGroup {
 }
 
 impl ItemGroup {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -152,7 +153,8 @@ pub struct ItemMedia {
 }
 
 impl ItemMedia {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             variant: ItemMediaVariant::default(),
             children,
@@ -225,7 +227,8 @@ pub struct ItemContent {
 }
 
 impl ItemContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -252,7 +255,8 @@ pub struct ItemActions {
 }
 
 impl ItemActions {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -285,7 +289,8 @@ pub struct ItemHeader {
 }
 
 impl ItemHeader {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -315,7 +320,8 @@ pub struct ItemFooter {
 }
 
 impl ItemFooter {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -421,7 +427,8 @@ pub struct Item {
 }
 
 impl Item {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             variant: ItemVariant::default(),
             size: ItemSize::default(),

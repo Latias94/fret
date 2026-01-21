@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -347,6 +347,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
+    let resolved_exit_path = {
+        let raw = std::env::var_os("FRET_DIAG_EXIT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| resolved_out_dir.join("exit.touch"));
+        resolve_path(&workspace_root, raw)
+    };
+
     let resolved_script_path = {
         let raw = script_path
             .or_else(|| {
@@ -515,6 +523,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &workspace_root,
                 &resolved_out_dir,
                 &resolved_ready_path,
+                &resolved_exit_path,
                 timeout_ms,
                 poll_ms,
             )?;
@@ -563,7 +572,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     )?;
                 }
             }
-            kill_launched_demo(&mut child);
+            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             report_result_and_exit(&result);
         }
         "suite" => {
@@ -601,6 +610,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
+                    &resolved_exit_path,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -615,6 +625,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
+                        &resolved_exit_path,
                         timeout_ms,
                         poll_ms,
                     )?;
@@ -648,7 +659,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let result = match result {
                     Ok(v) => v,
                     Err(e) => {
-                        kill_launched_demo(&mut child);
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                         return Err(e);
                     }
                 };
@@ -665,7 +676,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             result.reason.as_deref().unwrap_or("unknown"),
                             result.last_bundle_dir.as_deref().unwrap_or("")
                         );
-                        kill_launched_demo(&mut child);
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                         std::process::exit(1);
                     }
                     _ => {
@@ -674,7 +685,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             src.display(),
                             result
                         );
-                        kill_launched_demo(&mut child);
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                         std::process::exit(1);
                     }
                 }
@@ -704,11 +715,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
 
                 if !reuse_process {
-                    kill_launched_demo(&mut child);
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
             }
 
-            kill_launched_demo(&mut child);
+            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             std::process::exit(0);
         }
         "perf" => {
@@ -746,6 +757,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
+                    &resolved_exit_path,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -765,6 +777,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
+                        &resolved_exit_path,
                         timeout_ms,
                         poll_ms,
                     )?;
@@ -798,7 +811,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let result = match result {
                     Ok(v) => v,
                     Err(e) => {
-                        kill_launched_demo(&mut child);
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                         return Err(e);
                     }
                 };
@@ -814,7 +827,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             result.reason.as_deref().unwrap_or("unknown"),
                             result.last_bundle_dir.as_deref().unwrap_or("")
                         );
-                        kill_launched_demo(&mut child);
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                         std::process::exit(1);
                     }
                     _ => {
@@ -823,7 +836,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             src.display(),
                             result
                         );
-                        kill_launched_demo(&mut child);
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                         std::process::exit(1);
                     }
                 }
@@ -902,11 +915,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
 
                 if !reuse_process {
-                    kill_launched_demo(&mut child);
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
             }
 
-            kill_launched_demo(&mut child);
+            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
 
             if stats_json {
                 let worst = overall_worst.as_ref().map(|(us, src, bundle)| {
@@ -1271,6 +1284,7 @@ fn maybe_launch_demo(
     workspace_root: &Path,
     out_dir: &Path,
     ready_path: &Path,
+    exit_path: &Path,
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<Option<Child>, String> {
@@ -1292,9 +1306,10 @@ fn maybe_launch_demo(
     cmd.env("FRET_DIAG", "1");
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
+    cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
     for (key, value) in launch_env {
         match key.as_str() {
-            "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" => {
+            "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" | "FRET_DIAG_EXIT_PATH" => {
                 return Err(format!("--env cannot override reserved var: {key}"));
             }
             _ => cmd.env(key, value),
@@ -1329,24 +1344,56 @@ fn maybe_launch_demo(
 }
 
 fn kill_launched_demo(child: &mut Option<Child>) {
-    let Some(c) = child.as_mut() else {
+    let Some(mut child_proc) = child.take() else {
         return;
     };
 
     #[cfg(windows)]
     {
         let _ = Command::new("taskkill")
-            .args(["/PID", &c.id().to_string(), "/T", "/F"])
+            .args(["/PID", &child_proc.id().to_string(), "/T", "/F"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .status();
+        let _ = child_proc.kill();
     }
 
     #[cfg(not(windows))]
     {
-        let _ = c.kill();
+        let _ = child_proc.kill();
     }
 
-    let _ = c.wait();
-    *child = None;
+    let deadline = Instant::now() + Duration::from_millis(3_000);
+    while Instant::now() < deadline {
+        if child_proc.try_wait().ok().flatten().is_some() {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+fn stop_launched_demo(child: &mut Option<Child>, exit_path: &Path, poll_ms: u64) {
+    if child.is_none() {
+        return;
+    }
+
+    let _ = touch(exit_path);
+    let deadline = Instant::now() + Duration::from_millis(20_000);
+    while Instant::now() < deadline {
+        let exited = child
+            .as_mut()
+            .and_then(|c| c.try_wait().ok().flatten())
+            .is_some();
+        if exited {
+            if let Some(mut c) = child.take() {
+                let _ = c.wait();
+            }
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+
+    kill_launched_demo(child);
 }
 
 fn touch(path: &Path) -> Result<(), String> {

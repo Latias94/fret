@@ -53,13 +53,28 @@ impl<H: UiHost> UiTree<H> {
                     .unwrap_or(true),
                 dispatch_phase: InputDispatchPhase::Normal,
             };
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx);
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx);
+                    },
+                );
+            }
         }
+
+        // Scroll offsets can change without triggering layout invalidations (e.g. wheel deltas that
+        // only affect hit-testing/paint, or programmatic scroll handle updates in frames that skip
+        // layout). Ensure we consume scroll-handle change invalidations before paint-cache replay
+        // so cached ancestors cannot replay stale ops.
+        self.invalidate_scroll_handle_bindings_for_changed_handles(
+            app,
+            crate::layout_pass::LayoutPassKind::Final,
+        );
 
         let cache_enabled = self.paint_cache_enabled();
         if cache_enabled {
@@ -112,6 +127,7 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
+    #[stacksafe::stacksafe]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn paint_node(
         &mut self,

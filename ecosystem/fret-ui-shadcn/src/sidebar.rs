@@ -107,7 +107,8 @@ pub struct Sidebar {
 }
 
 impl Sidebar {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             collapsed: false,
@@ -164,7 +165,8 @@ pub struct SidebarHeader {
 }
 
 impl SidebarHeader {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -186,7 +188,8 @@ pub struct SidebarFooter {
 }
 
 impl SidebarFooter {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -209,7 +212,8 @@ pub struct SidebarContent {
 }
 
 impl SidebarContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             collapsed: false,
@@ -258,7 +262,8 @@ pub struct SidebarGroup {
 }
 
 impl SidebarGroup {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -333,7 +338,8 @@ pub struct SidebarMenu {
 }
 
 impl SidebarMenu {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 

@@ -8,7 +8,7 @@ use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
 impl<H: UiHost> UiTree<H> {
-    fn invalidate_scroll_handle_bindings_for_changed_handles(
+    pub(super) fn invalidate_scroll_handle_bindings_for_changed_handles(
         &mut self,
         app: &mut H,
         pass_kind: LayoutPassKind,
@@ -338,6 +338,7 @@ impl<H: UiHost> UiTree<H> {
         size
     }
 
+    #[stacksafe::stacksafe]
     pub fn layout_in_with_pass_kind(
         &mut self,
         app: &mut H,

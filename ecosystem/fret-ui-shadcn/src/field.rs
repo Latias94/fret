@@ -173,7 +173,8 @@ pub struct FieldSet {
 }
 
 impl FieldSet {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             layout: LayoutRefinement::default(),
@@ -264,7 +265,7 @@ impl FieldSet {
                                         child
                                     }
                                 })
-                                .collect()
+                                .collect::<Vec<_>>()
                         },
                     );
 
@@ -300,7 +301,7 @@ impl FieldSet {
                                 child
                             }
                         })
-                        .collect()
+                        .collect::<Vec<_>>()
                 },
             )
         }
@@ -423,7 +424,8 @@ pub struct FieldGroup {
 }
 
 impl FieldGroup {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             slot: FieldGroupSlot::default(),
@@ -504,7 +506,8 @@ pub struct FieldContent {
 }
 
 impl FieldContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -845,7 +848,8 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             orientation: FieldOrientation::default(),
             children,
@@ -923,7 +927,7 @@ impl Field {
                                     child
                                 }
                             })
-                            .collect()
+                            .collect::<Vec<_>>()
                     },
                 ),
                 FieldOrientation::Horizontal => cx.row(

@@ -40,7 +40,9 @@ fn scroll_wheel_invalidation_is_hit_test_only() {
                 },
                 |cx| {
                     vec![cx.column(crate::element::ColumnProps::default(), |cx| {
-                        (0..100).map(|i| cx.text(format!("row-{i}"))).collect()
+                        (0..100)
+                            .map(|i| cx.text(format!("row-{i}")))
+                            .collect::<Vec<_>>()
                     })]
                 },
             )]
@@ -88,5 +90,83 @@ fn scroll_wheel_invalidation_is_hit_test_only() {
     assert!(
         scroll_flags.hit_test && scroll_flags.paint,
         "expected scroll wheel to invalidate hit-test + paint"
+    );
+}
+
+#[test]
+fn scroll_offset_changes_do_not_replay_paint_cache() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "scroll",
+        |cx| {
+            let handle = scroll_handle.clone();
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = crate::element::Length::Fill;
+            scroll_layout.size.height = crate::element::Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(handle),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(crate::element::ColumnProps::default(), |cx| {
+                        (0..100)
+                            .map(|i| cx.text(format!("row-{i}")))
+                            .collect::<Vec<_>>()
+                    })]
+                },
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let fp1 = scene.fingerprint();
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    for (_, node) in ui.nodes.iter_mut() {
+        node.invalidation.clear();
+    }
+
+    scroll_handle.set_offset(Point::new(Px(0.0), Px(100.0)));
+    assert!(
+        ui.node_children_render_transform(scroll_node).is_some(),
+        "expected a non-identity children render transform after scrolling"
+    );
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let fp2 = scene.fingerprint();
+    assert_ne!(
+        fp1, fp2,
+        "expected scroll offset changes to avoid paint-cache replay"
     );
 }

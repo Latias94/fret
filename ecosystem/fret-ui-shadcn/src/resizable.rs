@@ -24,7 +24,8 @@ impl std::fmt::Debug for ResizablePanel {
 }
 
 impl ResizablePanel {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             min_px: Px(120.0),
             layout: LayoutRefinement::default(),

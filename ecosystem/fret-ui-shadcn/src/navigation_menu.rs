@@ -165,7 +165,8 @@ pub struct NavigationMenuTrigger {
 }
 
 impl NavigationMenuTrigger {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -197,7 +198,11 @@ pub struct NavigationMenuLink {
 }
 
 impl NavigationMenuLink {
-    pub fn new(model: Model<Option<Arc<str>>>, children: Vec<AnyElement>) -> Self {
+    pub fn new(
+        model: Model<Option<Arc<str>>>,
+        children: impl IntoIterator<Item = AnyElement>,
+    ) -> Self {
+        let children = children.into_iter().collect();
         Self {
             model,
             children,
@@ -314,7 +319,8 @@ pub struct NavigationMenuContent {
 }
 
 impl NavigationMenuContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -353,8 +359,8 @@ impl NavigationMenuItem {
         }
     }
 
-    pub fn trigger_children(mut self, children: Vec<AnyElement>) -> Self {
-        self.trigger = Some(children);
+    pub fn trigger_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.trigger = Some(children.into_iter().collect());
         self
     }
 
@@ -772,7 +778,7 @@ impl NavigationMenu {
                                 )
                         })
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             });
 
             let viewport = active_idx

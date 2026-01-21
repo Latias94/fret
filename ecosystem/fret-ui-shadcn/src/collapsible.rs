@@ -285,7 +285,8 @@ impl std::fmt::Debug for CollapsibleContent {
 }
 
 impl CollapsibleContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),

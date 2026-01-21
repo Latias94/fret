@@ -2061,40 +2061,52 @@ impl<H: UiHost> UiTree<H> {
     fn remove_subtree_inner(
         &mut self,
         services: &mut dyn UiServices,
-        node: NodeId,
+        root: NodeId,
         removed: &mut Vec<NodeId>,
     ) {
-        if self.root_to_layer.contains_key(&node) {
-            return;
-        }
-        let Some(n) = self.nodes.get(node) else {
-            return;
-        };
-        let parent = n.parent;
-        let children = n.children.clone();
+        // Avoid recursion: removing or cleaning up deep trees can overflow the stack.
+        //
+        // We remove nodes in a post-order traversal so children are removed before their parent.
+        let mut stack: Vec<(NodeId, bool)> = Vec::new();
+        stack.push((root, false));
 
-        for child in children {
-            self.remove_subtree_inner(services, child, removed);
-        }
+        while let Some((node, children_pushed)) = stack.pop() {
+            if self.root_to_layer.contains_key(&node) {
+                continue;
+            }
+            let Some(n) = self.nodes.get(node) else {
+                continue;
+            };
 
-        if let Some(parent) = parent
-            && let Some(p) = self.nodes.get_mut(parent)
-        {
-            p.children.retain(|&c| c != node);
-        }
+            if !children_pushed {
+                let children = n.children.clone();
+                stack.push((node, true));
+                for child in children {
+                    stack.push((child, false));
+                }
+                continue;
+            }
 
-        if self.focus == Some(node) {
-            self.focus = None;
-        }
-        self.captured.retain(|_, n| *n != node);
+            let parent = self.nodes.get(node).and_then(|n| n.parent);
+            if let Some(parent) = parent
+                && let Some(p) = self.nodes.get_mut(parent)
+            {
+                p.children.retain(|&c| c != node);
+            }
 
-        self.cleanup_subtree_inner(services, node);
-        self.nodes.remove(node);
-        self.observed_in_layout.remove_node(node);
-        self.observed_in_paint.remove_node(node);
-        self.observed_globals_in_layout.remove_node(node);
-        self.observed_globals_in_paint.remove_node(node);
-        removed.push(node);
+            if self.focus == Some(node) {
+                self.focus = None;
+            }
+            self.captured.retain(|_, n| *n != node);
+
+            self.cleanup_node_resources(services, node);
+            self.nodes.remove(node);
+            self.observed_in_layout.remove_node(node);
+            self.observed_in_paint.remove_node(node);
+            self.observed_globals_in_layout.remove_node(node);
+            self.observed_globals_in_paint.remove_node(node);
+            removed.push(node);
+        }
     }
 
     pub fn children(&self, parent: NodeId) -> Vec<NodeId> {
@@ -2477,15 +2489,22 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn cleanup_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) {
-        self.cleanup_subtree_inner(services, root);
+        // Avoid recursion: deep trees can overflow the stack during cleanup.
+        let mut stack: Vec<NodeId> = vec![root];
+        while let Some(node) = stack.pop() {
+            let Some(n) = self.nodes.get(node) else {
+                continue;
+            };
+            let children = n.children.clone();
+            for child in children {
+                stack.push(child);
+            }
+
+            self.cleanup_node_resources(services, node);
+        }
     }
 
-    fn cleanup_subtree_inner(&mut self, services: &mut dyn UiServices, node: NodeId) {
-        let Some(n) = self.nodes.get(node) else {
-            return;
-        };
-        let children = n.children.clone();
-
+    fn cleanup_node_resources(&mut self, services: &mut dyn UiServices, node: NodeId) {
         let widget = self.nodes.get_mut(node).and_then(|n| n.widget.take());
         if let Some(mut widget) = widget {
             widget.cleanup_resources(services);
@@ -2494,10 +2513,6 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 self.deferred_cleanup.push(widget);
             }
-        }
-
-        for child in children {
-            self.cleanup_subtree_inner(services, child);
         }
     }
 

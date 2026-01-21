@@ -524,6 +524,7 @@ pub struct Select {
     open: Model<bool>,
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
+    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -549,6 +550,7 @@ impl Select {
             open,
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
+            trigger_test_id: None,
             disabled: false,
             a11y_label: None,
             on_dismiss_request: None,
@@ -618,6 +620,11 @@ impl Select {
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = placeholder.into();
+        self
+    }
+
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
         self
     }
 
@@ -736,6 +743,7 @@ impl Select {
             self.open,
             &self.entries,
             self.placeholder,
+            self.trigger_test_id,
             self.disabled,
             self.a11y_label,
             self.on_dismiss_request,
@@ -773,6 +781,7 @@ pub fn select<H: UiHost>(
         open,
         &entries,
         placeholder,
+        None,
         disabled,
         a11y_label,
         None,
@@ -798,6 +807,7 @@ fn select_impl<H: UiHost>(
     open: Model<bool>,
     entries: &[SelectEntry],
     placeholder: Arc<str>,
+    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -1009,6 +1019,7 @@ fn select_impl<H: UiHost>(
         // `control_chrome_pressable_with_id_props` stores handlers; keep a dedicated `open` clone
         // for trigger-owned hooks.
         let open_for_trigger = open.clone();
+        let trigger_test_id_for_trigger = trigger_test_id.clone();
 
         let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
@@ -1157,6 +1168,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
+            props.a11y.test_id = trigger_test_id_for_trigger.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
@@ -1653,9 +1665,9 @@ fn select_impl<H: UiHost>(
                                                 layout: LayoutStyle::default(),
                                                 text: label,
                                                 style: Some(style),
+                                                color: None,
                                                 wrap: TextWrap::None,
                                                 overflow: TextOverflow::Clip,
-                                                color: None,
                                             })]
                                         },
                                     ));
@@ -1842,25 +1854,24 @@ fn select_impl<H: UiHost>(
                                                                                     corner_radii: Corners::all(Px(0.0)),
                                                                                 },
                                                                                 move |cx| {
-                                                                                    let mut layout =
-                                                                                        LayoutStyle::default();
-                                                                                    layout.size.width = Length::Fill;
                                                                                     vec![cx.text_props(TextProps {
-                                                                                        layout,
+                                                                                        layout: {
+                                                                                            let mut layout = LayoutStyle::default();
+                                                                                            layout.size.width = Length::Fill;
+                                                                                            layout
+                                                                                        },
                                                                                         text: label.text,
                                                                                         style: Some(TextStyle {
                                                                                             font: FontId::default(),
                                                                                             size: label_text_px,
                                                                                             weight: FontWeight::NORMAL,
                                                                                             slant: Default::default(),
-                                                                                            line_height: Some(
-                                                                                                label_line_height,
-                                                                                            ),
+                                                                                            line_height: Some(label_line_height),
                                                                                             letter_spacing_em: None,
                                                                                         }),
+                                                                                        color: Some(fg),
                                                                                         wrap: TextWrap::None,
                                                                                         overflow: TextOverflow::Clip,
-                                                                                        color: Some(fg),
                                                                                     })]
                                                                                 },
                                                                             ));
@@ -2096,17 +2107,15 @@ fn select_impl<H: UiHost>(
                                                                                                 |cx| {
                                                                                                     vec![cx.text_props(TextProps {
                                                                                                         layout: {
-                                                                                                            let mut layout =
-                                                                                                                LayoutStyle::default();
-                                                                                                            layout.size.width =
-                                                                                                                Length::Fill;
+                                                                                                            let mut layout = LayoutStyle::default();
+                                                                                                            layout.size.width = Length::Fill;
                                                                                                             layout
                                                                                                         },
                                                                                                         text: item_label.clone(),
                                                                                                         style: Some(text_style.clone()),
+                                                                                                        color: Some(fg),
                                                                                                         wrap: TextWrap::None,
                                                                                                         overflow: TextOverflow::Clip,
-                                                                                                        color: Some(fg),
                                                                                                     })]
                                                                                                 },
                                                                                             );
@@ -2423,21 +2432,20 @@ fn select_impl<H: UiHost>(
                                         ..Default::default()
                                     },
                                     move |cx| {
+                                        let text_layout = if auto_width_trigger {
+                                            LayoutStyle::default()
+                                        } else {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout
+                                        };
                                         vec![cx.text_props(TextProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = if auto_width_trigger {
-                                                    Length::Auto
-                                                } else {
-                                                    Length::Fill
-                                                };
-                                                layout
-                                            },
+                                            layout: text_layout,
                                             text: label,
                                             style: Some(text_style.clone()),
+                                            color: Some(if selected.is_some() { fg } else { fg_muted }),
                                             wrap: TextWrap::None,
                                             overflow: TextOverflow::Ellipsis,
-                                            color: Some(if selected.is_some() { fg } else { fg_muted }),
                                         })]
                                     },
                                 );

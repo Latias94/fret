@@ -101,8 +101,8 @@ impl RadioGroupItem {
     }
 
     /// Overrides the default item contents (icon + label text) to enable composable labels.
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = Some(children);
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
         self
     }
 

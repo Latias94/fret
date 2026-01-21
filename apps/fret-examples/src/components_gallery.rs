@@ -417,7 +417,7 @@ impl ComponentsGalleryDriver {
                                                         },
                                                     )
                                                 })
-                                                .collect()
+                                                .collect::<Vec<_>>()
                                         },
                                     ),
                                     cx.container(

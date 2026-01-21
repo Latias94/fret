@@ -355,3 +355,67 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
         paint(p, paint_cx);
     })
 }
+
+/// A common editor-friendly preset:
+/// - Wheel pans (consumed).
+/// - Ctrl/Cmd + wheel zooms about the pointer (consumed by the base pan/zoom policy).
+/// - Middle-drag pans.
+///
+/// This is intentionally conservative for embedding:
+/// - plain wheel does not zoom (to avoid fighting scroll containers),
+/// - zoom stays behind the modifier gate.
+#[track_caller]
+pub fn editor_pan_zoom_canvas_surface_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    mut props: PanZoomCanvasSurfacePanelProps,
+    paint: impl for<'p> Fn(&mut CanvasPainter<'p>, PanZoomCanvasPaintCx) + 'static,
+) -> AnyElement {
+    let view = use_controllable_model(cx, props.view.take(), || props.default_view).model();
+    props.view = Some(view.clone());
+
+    props.preset = PanZoomInputPreset::DefaultSafe;
+    props.pan_button = MouseButton::Middle;
+
+    let view_pan = view.clone();
+    let on_wheel_pan: OnWheel = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              wheel: fret_ui::action::WheelCx| {
+            if wheel.modifiers.ctrl || wheel.modifiers.meta {
+                return false;
+            }
+
+            let dx = wheel.delta.x.0;
+            let dy = wheel.delta.y.0;
+            if !dx.is_finite() || !dy.is_finite() || (dx.abs() <= 1.0e-9 && dy.abs() <= 1.0e-9) {
+                return false;
+            }
+
+            let zoom = host
+                .models_mut()
+                .read(&view_pan, |view| view.zoom)
+                .ok()
+                .unwrap_or(1.0);
+            let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0).max(1.0e-6);
+
+            let _ = host.models_mut().update(&view_pan, |view| {
+                view.pan = Point::new(Px(view.pan.x.0 - dx / zoom), Px(view.pan.y.0 - dy / zoom));
+            });
+
+            host.request_redraw(action_cx.window);
+            true
+        },
+    );
+
+    if let Some(extra) = props.on_wheel.take() {
+        let inner = on_wheel_pan.clone();
+        props.on_wheel = Some(Arc::new(move |host, cx, wheel| {
+            let used = inner(host, cx, wheel);
+            used || extra(host, cx, wheel)
+        }));
+    } else {
+        props.on_wheel = Some(on_wheel_pan);
+    }
+
+    pan_zoom_canvas_surface_panel(cx, props, paint)
+}

@@ -175,7 +175,7 @@ impl ButtonGroup {
                                 separator.flex_stretch_cross_axis(true).into_element(cx)
                             }
                         })
-                        .collect()
+                        .collect::<Vec<_>>()
                 })]
             },
         )

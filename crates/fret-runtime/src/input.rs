@@ -38,7 +38,7 @@ impl Default for Platform {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InputContext {
     pub platform: Platform,
     pub caps: PlatformCapabilities,

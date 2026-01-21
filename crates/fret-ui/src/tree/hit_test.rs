@@ -63,75 +63,112 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
-        let n = self.nodes.get(node)?;
-        let widget = n.widget.as_ref();
-
-        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
-            .then_some(n.prepaint_hit_test)
-            .flatten();
-        let render_transform_inv = prepaint.as_ref().and_then(|p| p.render_transform_inv);
-        let children_render_transform_inv = prepaint
-            .as_ref()
-            .and_then(|p| p.children_render_transform_inv);
-        let clips_hit_test = prepaint
-            .as_ref()
-            .map(|p| p.clips_hit_test)
-            .unwrap_or_else(|| widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true));
-        let corner_radii = prepaint
-            .as_ref()
-            .and_then(|p| p.clip_hit_test_corner_radii)
-            .or_else(|| widget.and_then(|w| w.clip_hit_test_corner_radii(n.bounds)));
-
-        let position = if let Some(inv) = render_transform_inv {
-            inv.apply_point(position)
-        } else if let Some(w) = widget
-            && let Some(t) = w.render_transform(n.bounds)
-            && let Some(inv) = t.inverse()
-        {
-            inv.apply_point(position)
-        } else {
-            position
-        };
-        if clips_hit_test {
-            if !n.bounds.contains(position) {
-                return None;
-            }
-            if let Some(radii) = corner_radii
-                && !Self::point_in_rounded_rect(n.bounds, radii, position)
-            {
-                return None;
-            }
+        // Avoid recursion: deep UI trees can overflow the stack during hit testing.
+        enum Frame {
+            Visit(NodeId, Point),
+            SelfCheck(NodeId, Point),
         }
 
-        let hit_test_children = n
-            .widget
-            .as_ref()
-            .map(|w| w.hit_test_children(n.bounds, position))
-            .unwrap_or(true);
-        if hit_test_children {
-            let child_position = if let Some(inv) = children_render_transform_inv {
-                inv.apply_point(position)
-            } else if let Some(w) = widget
-                && let Some(t) = w.children_render_transform(n.bounds)
-                && let Some(inv) = t.inverse()
-            {
-                inv.apply_point(position)
-            } else {
-                position
-            };
-            for &child in n.children.iter().rev() {
-                if let Some(hit) = self.hit_test_node(child, child_position) {
-                    return Some(hit);
+        let mut stack: Vec<Frame> = Vec::new();
+        stack.push(Frame::Visit(node, position));
+
+        while let Some(frame) = stack.pop() {
+            match frame {
+                Frame::Visit(node, position) => {
+                    let Some(n) = self.nodes.get(node) else {
+                        continue;
+                    };
+                    let widget = n.widget.as_ref();
+
+                    let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+                        .then_some(n.prepaint_hit_test)
+                        .flatten();
+                    let render_transform_inv =
+                        prepaint.as_ref().and_then(|p| p.render_transform_inv);
+                    let children_render_transform_inv = prepaint
+                        .as_ref()
+                        .and_then(|p| p.children_render_transform_inv);
+                    let clips_hit_test = prepaint
+                        .as_ref()
+                        .map(|p| p.clips_hit_test)
+                        .unwrap_or_else(|| {
+                            widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true)
+                        });
+                    let corner_radii = prepaint
+                        .as_ref()
+                        .and_then(|p| p.clip_hit_test_corner_radii)
+                        .or_else(|| widget.and_then(|w| w.clip_hit_test_corner_radii(n.bounds)));
+
+                    let position_local = if let Some(inv) = render_transform_inv {
+                        inv.apply_point(position)
+                    } else if let Some(w) = widget
+                        && let Some(t) = w.render_transform(n.bounds)
+                        && let Some(inv) = t.inverse()
+                    {
+                        inv.apply_point(position)
+                    } else {
+                        position
+                    };
+
+                    if clips_hit_test {
+                        if !n.bounds.contains(position_local) {
+                            continue;
+                        }
+                        if let Some(radii) = corner_radii
+                            && !Self::point_in_rounded_rect(n.bounds, radii, position_local)
+                        {
+                            continue;
+                        }
+                    }
+
+                    let hit_test_children = widget
+                        .map(|w| w.hit_test_children(n.bounds, position_local))
+                        .unwrap_or(true);
+                    if hit_test_children && !n.children.is_empty() {
+                        let child_position = if let Some(inv) = children_render_transform_inv {
+                            inv.apply_point(position_local)
+                        } else if let Some(w) = widget
+                            && let Some(t) = w.children_render_transform(n.bounds)
+                            && let Some(inv) = t.inverse()
+                        {
+                            inv.apply_point(position_local)
+                        } else {
+                            position_local
+                        };
+
+                        // Children should be hit-tested before the node itself.
+                        stack.push(Frame::SelfCheck(node, position_local));
+                        for &child in n.children.iter() {
+                            stack.push(Frame::Visit(child, child_position));
+                        }
+                        continue;
+                    }
+
+                    let hit = n.bounds.contains(position_local)
+                        && widget
+                            .map(|w| w.hit_test(n.bounds, position_local))
+                            .unwrap_or(true);
+                    if hit {
+                        return Some(node);
+                    }
+                }
+                Frame::SelfCheck(node, position_local) => {
+                    let Some(n) = self.nodes.get(node) else {
+                        continue;
+                    };
+                    let widget = n.widget.as_ref();
+                    let hit = n.bounds.contains(position_local)
+                        && widget
+                            .map(|w| w.hit_test(n.bounds, position_local))
+                            .unwrap_or(true);
+                    if hit {
+                        return Some(node);
+                    }
                 }
             }
         }
 
-        let hit = n.bounds.contains(position)
-            && n.widget
-                .as_ref()
-                .map(|w| w.hit_test(n.bounds, position))
-                .unwrap_or(true);
-        hit.then_some(node)
+        None
     }
 
     fn update_hit_test_path_cache(&mut self, layer_root: NodeId, hit: Option<NodeId>) {

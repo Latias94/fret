@@ -25,10 +25,8 @@ These defaults are intentionally “cache-root-first” to maximize performance 
 - `request_animation_frame()` requested from within a view implies `notify()` for the nearest cache root on the next
   tick (GPUI-aligned), so view-cache reuse cannot replay stale output indefinitely during animations.
 - Dirty cache roots propagate to ancestor cache roots (nested boundaries must not replay stale ranges).
-- `request_animation_frame()` parity note (Zed/GPUI): in GPUI, RAF requested from within a view effectively `notify`s
-  that view on the next frame. In Fret today, RAF guarantees a paint pass (blocks paint replay) but does not
-  necessarily force a declarative rerender for cache roots unless the caller explicitly `notify()`s or triggers a
-  layout invalidation. Track this gap explicitly (see MVP2 tasks below).
+- `request_animation_frame()` parity note: implemented as `request_animation_frame() -> (next tick) notify(nearest cache root)`
+  (see `GPUI-MVP2-rt-003` evidence below).
 
 ## Tracking Format
 
@@ -72,6 +70,9 @@ Keep this list short and evidence-backed:
 - [x] GPUI-MVP0-diag-010 Add scroll + stale-paint regression hooks.
   - Touches: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json`
   - Notes: scripts support `wheel` steps; bundles export `scene_fingerprint`; `fretboard diag stats --check-stale-paint <test_id>` flags “bounds moved but scene fingerprint did not change”.
+- [x] GPUI-MVP0-diag-011 Gracefully stop launched diag targets.
+  - Touches: `apps/fretboard/src/diag.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+  - Notes: `fretboard diag run/suite/perf --launch` sets `FRET_DIAG_EXIT_PATH` and touches it on completion; the target polls it and requests `Effect::QuitApp`.
 - [x] GPUI-MVP0-perf-006 Avoid false global-change churn from stable “service globals”.
   - Touches: `ecosystem/fret-ui-kit/src/dnd/service.rs`
   - Notes: use `with_global_mut_untracked` for lazy init + stable read paths (prevents global-change tracking from firing on every frame).
@@ -191,6 +192,22 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
 
 Goal: make caching a closed loop across paint + interaction (+ semantics later), not “paint-only” (ADR 0182).
 
+- [ ] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
+  - Motivation: `ui-gallery-virtual-list-torture.json` remains layout-dominated even with view-cache + shell reuse.
+  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`):
+    - Baseline: `sum.total_time_us=225911` / 10 frames; `max.total_time_us=30585` (layout `29252`).
+    - ViewCache+Shell: `sum.total_time_us=214260` / 10 frames; `max.total_time_us=28999` (layout `27545`).
+    - Smooth wheel (new harness: `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
+      - Baseline: `max.total_time_us=27219` (layout `26948`, prepaint `23`, paint `248`).
+      - ViewCache+Shell: `max.total_time_us=26890` (layout `26205`, prepaint `19`, paint `666`).
+  - Commands:
+    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-baseline --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-cache-shell --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --warmup-frames 5 --sort time --top 15 --dir target/fret-diag-perf-vlist-smooth-scroll-baseline --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --warmup-frames 5 --sort time --top 15 --dir target/fret-diag-perf-vlist-smooth-scroll-cache-shell --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+  - Sketch:
+    - Move “visible range / scroll_to_item” work toward `prepaint` (GPUI-style), so steady-state scroll can reuse paint + interaction ranges without rebuilding large declarative subtrees.
+    - Keep per-item identity stable (do not recycle cells) while making the “range delta” path cheap.
 - [~] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.
   - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-core/src/*` (data-only shapes as needed)

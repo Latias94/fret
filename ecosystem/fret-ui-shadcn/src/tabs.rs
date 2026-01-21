@@ -156,8 +156,8 @@ impl TabsTrigger {
 
     /// Overrides the default trigger contents (the label text) to match shadcn usage patterns where
     /// triggers can include icons/badges.
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = Some(children);
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
         self
     }
 

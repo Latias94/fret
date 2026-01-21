@@ -1,6 +1,7 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
+    #[stacksafe::stacksafe]
     pub fn dispatch_command(
         &mut self,
         app: &mut H,

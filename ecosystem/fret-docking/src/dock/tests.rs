@@ -979,7 +979,7 @@ fn docking_viewport_panels_keep_scroll_and_virtual_list_extents_constraint_corre
                         })
                     })
                 })
-                .collect()
+                .collect::<Vec<_>>()
         })]
     }
 

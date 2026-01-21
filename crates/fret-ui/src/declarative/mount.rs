@@ -33,11 +33,14 @@ impl<'a, H: UiHost> RenderRootContext<'a, H> {
         }
     }
 
-    pub fn render_root(
+    pub fn render_root<I>(
         self,
         root_name: &str,
-        render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> NodeId {
+        render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> NodeId
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         crate::declarative::render_root(
             self.ui,
             self.app,
@@ -49,11 +52,14 @@ impl<'a, H: UiHost> RenderRootContext<'a, H> {
         )
     }
 
-    pub fn render_dismissible_root_with_hooks(
+    pub fn render_dismissible_root_with_hooks<I>(
         self,
         root_name: &str,
-        render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> NodeId {
+        render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> NodeId
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         crate::declarative::render_dismissible_root_with_hooks(
             self.ui,
             self.app,
@@ -112,15 +118,18 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
 /// Render a declarative element tree into an existing `UiTree` root.
 ///
 /// Call this once per frame *before* `layout_all`/`paint_all`, for the relevant window.
-pub fn render_root<H: UiHost>(
+pub fn render_root<H: UiHost, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> NodeId {
+    render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> NodeId
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let frame_id = app.frame_id();
     let focused = ui.focus();
     ui.begin_debug_frame_if_needed(frame_id);
@@ -132,7 +141,7 @@ pub fn render_root<H: UiHost>(
     });
 
     let ui_ref: &UiTree<H> = &*ui;
-    let children =
+    let children: Vec<AnyElement> =
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
             runtime.prepare_window_for_frame(window, frame_id);
             let mut should_reuse_view_cache =
@@ -144,7 +153,7 @@ pub fn render_root<H: UiHost>(
             cx.sync_focused_element_from_focused_node(focused);
             cx.dismissible_clear_on_dismiss_request();
             cx.dismissible_clear_on_pointer_move();
-            render(&mut cx)
+            render(&mut cx).into_iter().collect()
         });
 
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -370,23 +379,23 @@ pub fn render_root<H: UiHost>(
 /// - Escape dismissal (bubbling from any focused descendant).
 /// - Outside-press dismissal via the runtime outside-press observer pass (ADR 0069).
 #[allow(clippy::too_many_arguments)]
-pub fn render_dismissible_root_with_hooks<H: UiHost>(
+pub fn render_dismissible_root_with_hooks<H: UiHost, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> NodeId {
+    render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> NodeId
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     render_dismissible_root_impl(ui, app, services, window, bounds, root_name, render)
 }
 
 #[allow(clippy::too_many_arguments)]
-fn render_dismissible_root_impl<
-    H: UiHost,
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
->(
+fn render_dismissible_root_impl<H: UiHost, F, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -394,13 +403,17 @@ fn render_dismissible_root_impl<
     bounds: Rect,
     root_name: &str,
     render: F,
-) -> NodeId {
+) -> NodeId
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     let frame_id = app.frame_id();
     let focused = ui.focus();
     ui.begin_debug_frame_if_needed(frame_id);
 
     let ui_ref: &UiTree<H> = &*ui;
-    let children =
+    let children: Vec<AnyElement> =
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
             runtime.prepare_window_for_frame(window, frame_id);
             let mut should_reuse_view_cache =
@@ -412,7 +425,7 @@ fn render_dismissible_root_impl<
             cx.sync_focused_element_from_focused_node(focused);
             cx.dismissible_clear_on_dismiss_request();
             cx.dismissible_clear_on_pointer_move();
-            render(&mut cx)
+            render(&mut cx).into_iter().collect()
         });
 
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
