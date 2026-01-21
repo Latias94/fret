@@ -77,6 +77,7 @@ patterns:
 - `button-group-separator` (separator sizing + merged radii)
 - `button-group-nested` (nested group gap + merged borders/radii)
 - `button-group-orientation` (vertical border/radius merge via `border-t-0`)
+- `button-group-size` (group height scale + icon sizing + `space-y-8` stacking gap)
 - `aspect-ratio-demo`
 - `breadcrumb-separator` (custom separator icon sizing)
 - `breadcrumb-ellipsis` (ellipsis box + icon centering)
