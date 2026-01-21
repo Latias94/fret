@@ -2085,7 +2085,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                                     |_| Vec::new(),
                                                                                                                 )
                                                                                                             })
-                                                                                                            .collect()
+                                                                                                            .collect::<Vec<_>>()
                                                                                                     },
                                                                                                 );
 
@@ -2184,7 +2184,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                                         },
                                                                                                                     )
                                                                                                                 })
-                                                                                                                .collect()
+                                                                                                                .collect::<Vec<_>>()
                                                                                                         },
                                                                                                     )]
                                                                                                 },
@@ -2285,7 +2285,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                         },
                                                                                                     )
                                                                                                 })
-                                                                                                .collect()
+                                                                                                .collect::<Vec<_>>()
                                                                                         },
                                                                                     )
                                                                                 };
@@ -2599,7 +2599,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     |_| Vec::new(),
                                                                                                 )
                                                                                             })
-                                                                                            .collect()
+                                                                                            .collect::<Vec<_>>()
                                                                                     },
                                                                                 );
 
@@ -2659,7 +2659,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             },
                                                                                                         )
                                                                                                     })
-                                                                                                    .collect()
+                                                                                                    .collect::<Vec<_>>()
                                                                                             },
                                                                                         )]
                                                                                     },
@@ -2719,7 +2719,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                             },
                                                                                         )
                                                                                     })
-                                                                                    .collect()
+                                                                                    .collect::<Vec<_>>()
                                                                             },
                                                                         )
                                                                     };

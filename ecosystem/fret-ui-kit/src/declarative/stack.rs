@@ -104,6 +104,27 @@ pub fn hstack<H: UiHost>(
     )
 }
 
+/// Variant of [`hstack`] that accepts any iterable children.
+pub fn hstack_iter<H: UiHost, C: IntoIterator<Item = AnyElement>>(
+    cx: &mut ElementContext<'_, H>,
+    props: HStackProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> C,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let gap = style::space(theme, props.gap);
+    let layout = style::layout_style(theme, props.layout);
+    cx.row(
+        RowProps {
+            layout,
+            gap,
+            justify: props.justify.to_main_align(),
+            align: props.items.to_cross_align(),
+            ..Default::default()
+        },
+        f,
+    )
+}
+
 #[derive(Debug, Clone)]
 pub struct VStackProps {
     pub layout: LayoutRefinement,
@@ -188,6 +209,27 @@ pub fn vstack<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: VStackProps,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let gap = style::space(theme, props.gap);
+    let layout = style::layout_style(theme, props.layout);
+    cx.column(
+        ColumnProps {
+            layout,
+            gap,
+            justify: props.justify.to_main_align(),
+            align: props.items.to_cross_align(),
+            ..Default::default()
+        },
+        f,
+    )
+}
+
+/// Variant of [`vstack`] that accepts any iterable children.
+pub fn vstack_iter<H: UiHost, C: IntoIterator<Item = AnyElement>>(
+    cx: &mut ElementContext<'_, H>,
+    props: VStackProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> C,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let gap = style::space(theme, props.gap);
