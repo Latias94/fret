@@ -1197,6 +1197,7 @@ pub struct CommandPalette {
     item_pad_y: MetricRef,
     group_pad_x: MetricRef,
     group_pad_y: MetricRef,
+    group_gap_y: Option<MetricRef>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     scroll: LayoutRefinement,
@@ -1423,6 +1424,7 @@ impl CommandPalette {
             item_pad_y: MetricRef::space(Space::N1p5),
             group_pad_x: MetricRef::space(Space::N1),
             group_pad_y: MetricRef::space(Space::N1),
+            group_gap_y: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
@@ -1459,6 +1461,7 @@ impl CommandPalette {
         self.item_pad_y = MetricRef::space(Space::N3);
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
+        self.group_gap_y = Some(MetricRef::space(Space::N1));
         self
     }
 
@@ -1551,6 +1554,7 @@ impl CommandPalette {
             let item_pad_y = self.item_pad_y.resolve(&theme);
             let group_pad_x = self.group_pad_x.resolve(&theme);
             let group_pad_y = self.group_pad_y.resolve(&theme);
+            let group_gap_y_fallback = self.group_gap_y.clone();
 
             let disabled = self.disabled;
             let wrap = self.wrap;
@@ -1758,7 +1762,12 @@ impl CommandPalette {
                                 layout.size.width = Length::Fill;
                                 let group_gap_y = theme
                                     .metric_by_key("component.command.group.gap_y")
-                                    .unwrap_or(Px(group_pad_y.0 * 2.0));
+                                    .unwrap_or_else(|| {
+                                        group_gap_y_fallback
+                                            .as_ref()
+                                            .map(|m| m.resolve(&theme))
+                                            .unwrap_or(Px(group_pad_y.0 * 2.0))
+                                    });
                                 layout.size.height = Length::Px(group_gap_y);
                                 layout
                             },
