@@ -1,13 +1,10 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
-};
+use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    RenderTransformProps, SemanticsProps, SizeStyle, TextProps,
+    RenderTransformProps, SemanticsProps, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -15,7 +12,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    Radius, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -450,21 +447,14 @@ impl AlertDialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let title = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::SEMIBOLD,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: Some(-0.02),
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        });
+        let title = ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_semibold()
+            .letter_spacing_em(-0.02)
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx);
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title
     }
@@ -497,21 +487,14 @@ impl AlertDialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let description = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        });
+        let description = ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .into_element(cx);
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
     }
@@ -625,9 +608,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{
-        Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
