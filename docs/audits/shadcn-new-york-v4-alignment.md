@@ -226,6 +226,8 @@ Recent fixes:
     (`web_vs_fret_button_group_separator_geometry_and_chrome_match`).
   - Size variants: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_size_geometry_and_chrome_match`).
+  - Dropdown split: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_dropdown_geometry_and_chrome_match`).
 
 ### `Tabs`
 
