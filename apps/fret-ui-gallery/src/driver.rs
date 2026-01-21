@@ -325,7 +325,19 @@ impl UiGalleryDriver {
         let alert_dialog_open = app.models_mut().insert(false);
         let sheet_open = app.models_mut().insert(false);
 
-        let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let mut settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let is_diag = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
+        if is_diag {
+            settings.menu_bar.os = MenuBarIntegrationModeV1::Off;
+            settings.menu_bar.in_window = MenuBarIntegrationModeV1::On;
+            Self::apply_menu_bar_settings(
+                app,
+                window,
+                settings.menu_bar.os,
+                settings.menu_bar.in_window,
+            );
+        }
         let settings_open = app.models_mut().insert(false);
         let settings_menu_bar_os = app
             .models_mut()
@@ -756,11 +768,11 @@ impl UiGalleryDriver {
         os: MenuBarIntegrationModeV1,
         in_window: MenuBarIntegrationModeV1,
     ) {
-        app.with_global_mut(SettingsFileV1::default, |settings, app| {
+        app.with_global_mut(SettingsFileV1::default, |settings, _app| {
             settings.menu_bar.os = os;
             settings.menu_bar.in_window = in_window;
-            fret_app::sync_os_menu_bar(app);
         });
+        fret_app::sync_os_menu_bar(app);
         app.request_redraw(window);
     }
 
