@@ -94,8 +94,8 @@ while keeping geometry/overflow semantics stable (verified via web goldens).
 
 Current state (as of 2026-01-21):
 
-- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/button.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`
-- Remaining: 88 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
+- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/button.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/empty.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`
+- Remaining: 86 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
 
 Top remaining hotspots (by callsite count):
 
@@ -125,7 +125,7 @@ Next TODOs (suggested order: low-risk → high-risk):
   - Evidence: `ecosystem/fret-ui-shadcn/src/button.rs`
 - [ ] AUE-adopt-text-083 Migrate `Kbd` text callsites.
   - Evidence: `ecosystem/fret-ui-shadcn/src/kbd.rs`
-- [ ] AUE-adopt-text-084 Migrate `Empty` text callsites.
+- [x] AUE-adopt-text-084 Migrate `Empty` text callsites.
   - Evidence: `ecosystem/fret-ui-shadcn/src/empty.rs`
 - [ ] AUE-adopt-text-090 Migrate menu family text callsites after surface presets settle.
   - Evidence: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`
