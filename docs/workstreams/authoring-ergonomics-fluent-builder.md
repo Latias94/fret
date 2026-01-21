@@ -119,6 +119,7 @@ Fret today:
 - The patch chain (`ui()`) assumes you already have a component/type to patch.
 - Layout constructors are available via `fret-ui-kit::ui::{h_flex, v_flex}` which return a patchable builder (plus
   gap/alignment shorthands), and can be re-exported by shadcn prelude for app code.
+- `fret-ui-kit::ui::stack` exists for overlay/layer composition (patchable builder).
 
 ---
 
@@ -145,13 +146,13 @@ This is not a 1:1 parity target; it is a “what should feel equally easy” che
 | gpui-component | Intent | Fret today | v1 action |
 | --- | --- | --- | --- |
 | `refine_style(&StyleRefinement)` | apply a patch | `ui().style(ChromeRefinement)` / `ui().layout(LayoutRefinement)` | Keep; add more shorthands |
-| `h_flex()` / `v_flex()` | start a flex layout | `fret-ui-kit::ui::h_flex/v_flex` (patchable builder) | Done; consider adding `ui::grid`/`ui::stack` |
-| `paddings(Edges)` | batch edge edits | no single helper | Add `UiBuilder::paddings(Edges4<...>)` (token-aware + px-friendly) |
-| `margins(Edges)` | batch edge edits | no single helper | Add `UiBuilder::margins(Edges4<...>)` (token-aware + px-friendly, supports `auto`) |
-| `debug_*()` | debug borders | ad-hoc per component | Add builder debug helpers (debug-only gated) |
-| `focused_border(cx)` | focus ring/border | component-local focus ring logic | Add a `ChromeRefinement` preset in kit |
-| `popover_style(cx)` | common popover skin | component-local popover recipes | Add a preset in `fret-ui-shadcn` (policy layer) |
-| `corner_radii(Corners)` | per-corner radii | not first-class | Add per-corner radius refinement in kit |
+| `h_flex()` / `v_flex()` | start a flex layout | `fret-ui-kit::ui::h_flex/v_flex` (patchable builder) | Done |
+| `paddings(Edges)` | batch edge edits | `UiBuilder::paddings(Edges4<...>)` (token-aware + px-friendly) | Done |
+| `margins(Edges)` | batch edge edits | `UiBuilder::margins(Edges4<...>)` (token-aware + px-friendly, supports `auto`) | Done |
+| `debug_*()` | debug borders | `UiBuilder::debug_border_*` (debug-only gated) | Done (different palette) |
+| `focused_border(cx)` | focus border | `UiBuilder::focused_border()` | Done |
+| `popover_style(cx)` | common popover skin | no single preset (policy) | TODO: add a shadcn preset (extension trait or helper) |
+| `corner_radii(Corners)` | per-corner radii | `UiBuilder::corner_radii(Corners4<...>)` | Done |
 
 ---
 
@@ -162,3 +163,39 @@ Execute the TODO tracker in small, reviewable slices:
 - Start with **helpers** (edges, debug helpers, per-corner radii).
 - Then expand the **layout constructors** surface (e.g. `ui::stack`, `ui::grid`, plus more shorthands).
 - Keep `docs/shadcn-declarative-progress.md` updated when the authoring surface changes.
+
+---
+
+## 8. What “Full Coverage” Should Mean (v1)
+
+Avoid measuring parity by “number of fluent methods”.
+
+Instead, v1 “coverage” is:
+
+1) **A single, boring golden path** for 90% of shadcn-style authoring:
+   - patch components via `ui()`
+   - author layout nodes via `fret-ui-kit::ui::*` constructors returning `UiBuilder<...>`
+2) **Token-aligned geometry without repetition**:
+   - `Edges4` / `Corners4` batch edits
+   - common shorthands (`p_2`, `mx_2`, `rounded_md`, `shadow_sm`, etc.)
+3) **Layer-correct presets**:
+   - kit-level “mechanical” presets (debug borders, focused border)
+   - shadcn-level “policy” presets (popover/dialog/menu surfaces)
+
+This keeps the surface cohesive without turning `fret-ui-kit` into a general-purpose Tailwind port.
+
+---
+
+## 9. Proposed v1 Backlog (Highest ROI)
+
+These are the remaining items that most directly improve authoring density for editor-ish UI:
+
+1) **Shadcn surface presets** (`popover_style`, `menu_surface`, `dialog_surface`):
+   - keep these in `fret-ui-shadcn` (policy layer)
+   - expose them as discoverable helpers, not ad-hoc per component
+2) **A patchable container constructor** (layout node, not a component):
+   - `ui::container(cx, |cx| ...) -> UiBuilder<...>` as the “default box”
+   - lets authors write layered barriers/underlays without dropping to raw `cx.container(...)`
+3) **Text authoring v1** (minimal, but ergonomic):
+   - `ui::text(...)` / `ui::label(...)` constructors with a small, typed text refinement surface
+   - keep the scope narrow: size/weight/color + a default shadcn-aligned line-height
