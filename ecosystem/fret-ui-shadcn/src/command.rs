@@ -6,8 +6,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
 };
 use fret_icons::ids;
 use fret_runtime::{
@@ -19,7 +18,7 @@ use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SizeStyle,
-    TextInputProps, TextProps,
+    TextInputProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
@@ -35,7 +34,7 @@ use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::layout as shadcn_layout;
 use crate::{Dialog, DialogContent, ScrollArea};
@@ -245,23 +244,30 @@ fn cmdk_highlighted_label<H: UiHost>(
     fg: Color,
     text_style: TextStyle,
 ) -> AnyElement {
+    let text_px = text_style.size;
+    let text_weight = text_style.weight;
+    let text_line_height = text_style.line_height;
+    let text_letter_spacing_em = text_style.letter_spacing_em;
+
+    let apply_text_style = |mut text: fret_ui_kit::UiBuilder<fret_ui_kit::ui::TextBox>| {
+        text = text.text_size_px(text_px).font_weight(text_weight).nowrap();
+
+        if let Some(line_height) = text_line_height {
+            text = text.line_height_px(line_height);
+        }
+
+        if let Some(letter_spacing_em) = text_letter_spacing_em {
+            text = text.letter_spacing_em(letter_spacing_em);
+        }
+
+        text
+    };
+
     if query.is_empty() {
-        return cx.text_props(TextProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout.size.min_width = Some(Px(0.0));
-                layout.flex.grow = 1.0;
-                layout.flex.shrink = 1.0;
-                layout.flex.basis = Length::Px(Px(0.0));
-                layout
-            },
-            text: label,
-            style: Some(text_style),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        });
+        return apply_text_style(ui::text(cx, label))
+            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx);
     }
 
     let theme = Theme::global(&*cx.app).clone();
@@ -269,22 +275,10 @@ fn cmdk_highlighted_label<H: UiHost>(
 
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
-        return cx.text_props(TextProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout.size.min_width = Some(Px(0.0));
-                layout.flex.grow = 1.0;
-                layout.flex.shrink = 1.0;
-                layout.flex.basis = Length::Px(Px(0.0));
-                layout
-            },
-            text: label,
-            style: Some(text_style),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        });
+        return apply_text_style(ui::text(cx, label))
+            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx);
     }
 
     let label_chars: Vec<char> = label.chars().collect();
@@ -300,14 +294,11 @@ fn cmdk_highlighted_label<H: UiHost>(
                 .copied()
                 .collect::<String>()
                 .into();
-            pieces.push(cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text,
-                style: Some(text_style.clone()),
-                color: Some(muted_fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            }));
+            pieces.push(
+                apply_text_style(ui::text(cx, text))
+                    .text_color(ColorRef::Color(muted_fg))
+                    .into_element(cx),
+            );
         }
         if start < end {
             let text: Arc<str> = label_chars[start..end]
@@ -315,14 +306,11 @@ fn cmdk_highlighted_label<H: UiHost>(
                 .copied()
                 .collect::<String>()
                 .into();
-            pieces.push(cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text,
-                style: Some(text_style.clone()),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            }));
+            pieces.push(
+                apply_text_style(ui::text(cx, text))
+                    .text_color(ColorRef::Color(fg))
+                    .into_element(cx),
+            );
         }
         cursor = end;
     }
@@ -333,14 +321,11 @@ fn cmdk_highlighted_label<H: UiHost>(
             .copied()
             .collect::<String>()
             .into();
-        pieces.push(cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text,
-            style: Some(text_style),
-            color: Some(muted_fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        }));
+        pieces.push(
+            apply_text_style(ui::text(cx, text))
+                .text_color(ColorRef::Color(muted_fg))
+                .into_element(cx),
+        );
     }
 
     cx.row(
@@ -446,20 +431,23 @@ impl CommandShortcut {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.color_required("muted-foreground");
-        cx.text_props(TextProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.flex.shrink = 0.0;
-                // new-york-v4: `ml-auto`.
-                layout.margin.left = fret_ui::element::MarginEdge::Auto;
-                layout
-            },
-            text: self.text,
-            style: Some(shortcut_text_style(&theme)),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        let style = shortcut_text_style(&theme);
+        let mut text = ui::text(cx, self.text)
+            .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
+            .text_size_px(style.size)
+            .font_weight(style.weight)
+            .nowrap()
+            .text_color(ColorRef::Color(fg));
+
+        if let Some(line_height) = style.line_height {
+            text = text.line_height_px(line_height);
+        }
+
+        if let Some(letter_spacing_em) = style.letter_spacing_em {
+            text = text.letter_spacing_em(letter_spacing_em);
+        }
+
+        text.into_element(cx)
     }
 }
 
@@ -909,14 +897,21 @@ impl CommandEmpty {
                         align: CrossAlign::Center,
                     },
                     move |cx| {
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: self.text,
-                            style: Some(text_style),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                        })]
+                        let mut text = ui::text(cx, self.text)
+                            .text_size_px(text_style.size)
+                            .font_weight(text_style.weight)
+                            .nowrap()
+                            .text_color(ColorRef::Color(fg));
+
+                        if let Some(line_height) = text_style.line_height {
+                            text = text.line_height_px(line_height);
+                        }
+
+                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                            text = text.letter_spacing_em(letter_spacing_em);
+                        }
+
+                        vec![text.into_element(cx)]
                     },
                 )]
             },
@@ -1738,14 +1733,21 @@ impl CommandPalette {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![cx.text_props(TextProps {
-                                    layout: LayoutStyle::default(),
-                                    text: heading,
-                                    style: Some(style),
-                                    color: Some(fg),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                })]
+                                let mut text = ui::text(cx, heading)
+                                    .text_size_px(style.size)
+                                    .font_weight(style.weight)
+                                    .nowrap()
+                                    .text_color(ColorRef::Color(fg));
+
+                                if let Some(line_height) = style.line_height {
+                                    text = text.line_height_px(line_height);
+                                }
+
+                                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                    text = text.letter_spacing_em(letter_spacing_em);
+                                }
+
+                                vec![text.into_element(cx)]
                             },
                         )
                     }
