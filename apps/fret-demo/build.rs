@@ -1,17 +1,26 @@
+use std::env;
+
 fn main() {
-    // Subsecond uses `GetProcAddress(..., "main")` on Windows to compute an ASLR anchor.
-    // Export `main` explicitly when the `hotpatch` feature is enabled so `subsecond::aslr_reference()`
-    // can return a non-zero address.
-    //
-    // Note: `dx serve --hotpatch` also configures the toolchain for hotpatching, but keeping this
-    // local to `fret-demo` makes the smoke demos less fragile and easier to run via plain Cargo.
-    let hotpatch_enabled = std::env::var_os("CARGO_FEATURE_HOTPATCH").is_some();
-    if !hotpatch_enabled {
+    println!("cargo:rerun-if-env-changed=FRET_WINDOWS_STACK_RESERVE_BYTES");
+
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target_os != "windows" {
         return;
     }
 
-    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    if target_os == "windows" {
-        println!("cargo:rustc-link-arg=/EXPORT:main");
+    // Windows defaults to a small main-thread stack reserve (often 1 MiB), which can overflow
+    // in deep recursive layout (e.g. taffy).
+    //
+    // This sets a larger reserve for demo binaries (MSVC /STACK or GNU ld --stack).
+    let reserve_bytes = env::var("FRET_WINDOWS_STACK_RESERVE_BYTES")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(8 * 1024 * 1024);
+
+    let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+    if target_env == "msvc" {
+        println!("cargo:rustc-link-arg=/STACK:{reserve_bytes}");
+    } else {
+        println!("cargo:rustc-link-arg=-Wl,--stack,{reserve_bytes}");
     }
 }
