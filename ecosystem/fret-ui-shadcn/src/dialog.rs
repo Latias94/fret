@@ -23,7 +23,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -345,19 +345,7 @@ impl DialogContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme.color_required("background");
-        let border = theme.color_required("border");
-
-        let radius = theme.metric_required("metric.radius.lg");
-        let shadow = decl_style::shadow_lg(&theme, radius);
-
-        let chrome = ChromeRefinement::default()
-            .rounded(Radius::Lg)
-            .border_1()
-            .bg(ColorRef::Color(bg))
-            .border_color(ColorRef::Color(border))
-            .p(Space::N6)
-            .merge(self.chrome);
+        let chrome = crate::ui_builder_ext::surfaces::dialog_style_chrome().merge(self.chrome);
 
         let layout = LayoutRefinement::default()
             .w_full()
@@ -375,15 +363,7 @@ impl DialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
-        let container = shadcn_layout::container_vstack_gap(
-            cx,
-            ContainerProps {
-                shadow: Some(shadow),
-                ..props
-            },
-            Space::N4,
-            children,
-        );
+        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
 
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);
