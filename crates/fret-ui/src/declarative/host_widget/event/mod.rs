@@ -18,6 +18,7 @@ pub(super) fn invalidate_scroll_handle_bindings<H: UiHost>(
     cx: &mut EventCx<'_, H>,
     window: AppWindowId,
     handle_key: usize,
+    inv: Invalidation,
 ) {
     let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
         &mut *cx.app,
@@ -40,8 +41,7 @@ pub(super) fn invalidate_scroll_handle_bindings<H: UiHost>(
         ) else {
             continue;
         };
-        cx.invalidate(node, Invalidation::Layout);
-        cx.invalidate(node, Invalidation::Paint);
+        cx.invalidate(node, inv);
     }
 }
 

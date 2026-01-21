@@ -85,6 +85,12 @@ impl InvalidationFlags {
 struct ViewCacheFlags {
     enabled: bool,
     contained_layout: bool,
+    /// Whether the cache root's own box is layout-definite (i.e. it does not size-to-content).
+    ///
+    /// This is used to decide whether layout/hit-test invalidations can be truncated at the cache
+    /// root when view caching is active. Auto-sized cache roots must allow invalidations to reach
+    /// ancestors so the root can be placed before running contained relayouts.
+    layout_definite: bool,
 }
 
 struct Node<H: UiHost> {
@@ -1237,11 +1243,13 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
         enabled: bool,
         contained_layout: bool,
+        layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
             n.view_cache = ViewCacheFlags {
                 enabled,
                 contained_layout,
+                layout_definite,
             };
         }
     }
@@ -1805,11 +1813,24 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let mut propagate = false;
         if let Some(n) = self.nodes.get_mut(parent) {
             n.children = children;
             n.invalidation.hit_test = true;
             n.invalidation.layout = true;
             n.invalidation.paint = true;
+            propagate = true;
+        }
+
+        if propagate {
+            // Structural changes must invalidate ancestors so the next layout pass walks far
+            // enough to place newly mounted subtrees, even when view-cache invalidation
+            // truncation is enabled.
+            self.mark_invalidation_with_source(
+                parent,
+                Invalidation::HitTest,
+                UiDebugInvalidationSource::Other,
+            );
         }
     }
 
@@ -2654,7 +2675,8 @@ impl<H: UiHost> UiTree<H> {
                 n.invalidation.mark(inv);
                 if stop_at_view_cache
                     && n.view_cache.enabled
-                    && (inv == Invalidation::Paint || n.view_cache.contained_layout)
+                    && (inv == Invalidation::Paint
+                        || (n.view_cache.contained_layout && n.view_cache.layout_definite))
                 {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
@@ -2791,7 +2813,8 @@ impl<H: UiHost> UiTree<H> {
 
                 if stop_at_view_cache
                     && n.view_cache.enabled
-                    && (inv == Invalidation::Paint || n.view_cache.contained_layout)
+                    && (inv == Invalidation::Paint
+                        || (n.view_cache.contained_layout && n.view_cache.layout_definite))
                 {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self

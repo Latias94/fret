@@ -310,7 +310,33 @@ impl<H: UiHost> UiTree<H> {
             if !node.invalidation.layout {
                 continue;
             }
-            targets.push((id, node.bounds));
+
+            // Contained relayouts run after the main layout pass. If a cache root was newly
+            // mounted (or skipped by an engine-backed parent) its retained bounds can still be
+            // the default `Rect::default()`, which would incorrectly relayout the subtree at the
+            // origin and desynchronize semantics/hit-testing from the painted output.
+            //
+            // Prefer the parent's solved layout-engine rect when available so the contained pass
+            // runs in the same coordinate space as the parent placement.
+            let mut bounds = node.bounds;
+            if (bounds.size == Size::default() || bounds.origin == Point::default())
+                && let Some(parent) = node.parent
+                && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
+                && let Some(local) = self.layout_engine_child_local_rect(parent, id)
+            {
+                let resolved = Rect::new(
+                    Point::new(
+                        Px(parent_bounds.origin.x.0 + local.origin.x.0),
+                        Px(parent_bounds.origin.y.0 + local.origin.y.0),
+                    ),
+                    local.size,
+                );
+                if resolved.size != Size::default() {
+                    bounds = resolved;
+                }
+            }
+
+            targets.push((id, bounds));
         }
 
         for (root, bounds) in targets {

@@ -1,6 +1,9 @@
 use super::ElementHostWidget;
+use crate::declarative::frame::element_record_for_node;
 use crate::declarative::mount::node_for_element_in_window_frame;
 use crate::declarative::prelude::*;
+
+const SCROLL_CONSUMED_EPS: f32 = 0.001;
 
 pub(super) fn handle_wheel_region<H: UiHost>(
     _this: &mut ElementHostWidget,
@@ -32,21 +35,36 @@ pub(super) fn handle_wheel_region<H: UiHost>(
     let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
     props.scroll_handle.set_offset(desired);
     let next = props.scroll_handle.offset();
-    let consumed = (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01;
+    let consumed = (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
+        || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS;
     if !consumed {
         return true;
     }
 
-    super::invalidate_scroll_handle_bindings(cx, window, props.scroll_handle.binding_key());
+    super::invalidate_scroll_handle_bindings(
+        cx,
+        window,
+        props.scroll_handle.binding_key(),
+        Invalidation::HitTestOnly,
+    );
 
     if let Some(target) = props.scroll_target
         && let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target)
     {
-        cx.invalidate(node, Invalidation::Layout);
-        cx.invalidate(node, Invalidation::Paint);
+        let inv = element_record_for_node(&mut *cx.app, window, node)
+            .map(|r| {
+                matches!(
+                    r.instance,
+                    crate::declarative::frame::ElementInstance::VirtualList(_)
+                )
+            })
+            .unwrap_or(false)
+            .then_some(Invalidation::Layout)
+            .unwrap_or(Invalidation::HitTestOnly);
+        cx.invalidate(node, inv);
     }
 
-    cx.invalidate_self(Invalidation::Paint);
+    cx.invalidate_self(Invalidation::HitTestOnly);
     cx.request_redraw();
     cx.stop_propagation();
 

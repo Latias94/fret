@@ -1,6 +1,8 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 
+const SCROLL_CONSUMED_EPS: f32 = 0.001;
+
 pub(super) fn handle_virtual_list<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
@@ -52,7 +54,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         }
                     };
                     let next = state.metrics.clamp_offset(Px(offset.0 - delta.0), viewport);
-                    if (prev_offset.0 - next.0).abs() > 0.01 {
+                    if (prev_offset.0 - next.0).abs() > SCROLL_CONSUMED_EPS {
                         match axis {
                             fret_core::Axis::Vertical => {
                                 props
@@ -76,9 +78,9 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                     cx,
                     window,
                     props.scroll_handle.base_handle().binding_key(),
+                    Invalidation::Layout,
                 );
                 cx.invalidate_self(Invalidation::Layout);
-                cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
             }
@@ -148,7 +150,8 @@ pub(super) fn handle_scroll<H: UiHost>(
                     max.y.0,
                 );
             }
-            (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01
+            (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
+                || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS
         } else {
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -160,17 +163,22 @@ pub(super) fn handle_scroll<H: UiHost>(
                     let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
                     state.scroll_handle.set_offset(desired);
                     let next = state.scroll_handle.offset();
-                    (prev.x.0 - next.x.0).abs() > 0.01 || (prev.y.0 - next.y.0).abs() > 0.01
+                    (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
+                        || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS
                 },
             )
         };
 
         if consumed {
             if let Some(handle) = props.scroll_handle.as_ref() {
-                super::invalidate_scroll_handle_bindings(cx, window, handle.binding_key());
+                super::invalidate_scroll_handle_bindings(
+                    cx,
+                    window,
+                    handle.binding_key(),
+                    Invalidation::HitTestOnly,
+                );
             }
-            cx.invalidate_self(Invalidation::Layout);
-            cx.invalidate_self(Invalidation::Paint);
+            cx.invalidate_self(Invalidation::HitTestOnly);
             cx.request_redraw();
             cx.stop_propagation();
         }

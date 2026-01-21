@@ -1,9 +1,12 @@
 use super::ElementHostWidget;
+use crate::declarative::frame::element_record_for_node;
 use crate::declarative::mount::node_for_element_in_window_frame;
 use crate::declarative::paint_helpers::scrollbar_thumb_rect;
 use crate::declarative::paint_helpers::scrollbar_thumb_rect_horizontal;
 use crate::declarative::paint_helpers::scrollbar_track_padding_px;
 use crate::declarative::prelude::*;
+
+const SCROLL_CONSUMED_EPS: f32 = 0.001;
 
 pub(super) fn handle_scrollbar<H: UiHost>(
     this: &mut ElementHostWidget,
@@ -19,6 +22,27 @@ pub(super) fn handle_scrollbar<H: UiHost>(
     let handle = props.scroll_handle.clone();
     let handle_key = handle.binding_key();
     let scroll_target = props.scroll_target;
+
+    let invalidate_scroll_target = |cx: &mut EventCx<'_, H>| {
+        let Some(target) = scroll_target else {
+            return;
+        };
+        let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target) else {
+            return;
+        };
+        let inv = element_record_for_node(&mut *cx.app, window, node)
+            .map(|r| {
+                matches!(
+                    r.instance,
+                    crate::declarative::frame::ElementInstance::VirtualList(_)
+                )
+            })
+            .unwrap_or(false)
+            .then_some(Invalidation::Layout)
+            .unwrap_or(Invalidation::HitTestOnly);
+        cx.invalidate(node, inv);
+    };
+
     match pe {
         fret_core::PointerEvent::Wheel { delta, .. } => {
             let prev = handle.offset();
@@ -32,24 +56,27 @@ pub(super) fn handle_scrollbar<H: UiHost>(
             } else {
                 handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
             }
-
-            super::invalidate_scroll_handle_bindings(cx, window, handle_key);
-
-            if let Some(target) = scroll_target
-                && let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target)
-            {
-                cx.invalidate(node, Invalidation::Layout);
-                cx.invalidate(node, Invalidation::Paint);
+            let next = handle.offset();
+            let consumed = (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
+                || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS;
+            if !consumed {
+                return true;
             }
 
-            cx.invalidate_self(Invalidation::Layout);
+            super::invalidate_scroll_handle_bindings(
+                cx,
+                window,
+                handle_key,
+                Invalidation::HitTestOnly,
+            );
+            invalidate_scroll_target(cx);
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
             cx.stop_propagation();
         }
         fret_core::PointerEvent::PinchGesture { .. } => {}
         fret_core::PointerEvent::Move { position, .. } => {
-            let mut needs_layout = false;
+            let mut did_change_offset = false;
             let mut needs_paint = false;
 
             let bounds = cx.bounds;
@@ -114,7 +141,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 if (handle.offset().x.0 - next.0).abs() > 0.01 {
                                     let prev = handle.offset();
                                     handle.set_offset(Point::new(next, prev.y));
-                                    needs_layout = true;
+                                    did_change_offset = true;
                                     needs_paint = true;
                                 }
                                 state.hovered = true;
@@ -135,7 +162,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 if (handle.offset().y.0 - next.0).abs() > 0.01 {
                                     let prev = handle.offset();
                                     handle.set_offset(Point::new(prev.x, next));
-                                    needs_layout = true;
+                                    did_change_offset = true;
                                     needs_paint = true;
                                 }
                                 state.hovered = true;
@@ -145,16 +172,14 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                 },
             );
 
-            if needs_layout {
-                super::invalidate_scroll_handle_bindings(cx, window, handle_key);
-                cx.invalidate_self(Invalidation::Layout);
-                if let Some(target) = scroll_target
-                    && let Some(node) =
-                        node_for_element_in_window_frame(&mut *cx.app, window, target)
-                {
-                    cx.invalidate(node, Invalidation::Layout);
-                    cx.invalidate(node, Invalidation::Paint);
-                }
+            if did_change_offset {
+                super::invalidate_scroll_handle_bindings(
+                    cx,
+                    window,
+                    handle_key,
+                    Invalidation::HitTestOnly,
+                );
+                invalidate_scroll_target(cx);
             }
             if needs_paint {
                 cx.invalidate_self(Invalidation::Paint);
@@ -282,18 +307,15 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                 if did_start_drag {
                     cx.capture_pointer(cx.node);
                 }
-                if did_change_offset
-                    && let Some(target) = scroll_target
-                    && let Some(node) =
-                        node_for_element_in_window_frame(&mut *cx.app, window, target)
-                {
-                    cx.invalidate(node, Invalidation::Layout);
-                    cx.invalidate(node, Invalidation::Paint);
-                }
                 if did_change_offset {
-                    super::invalidate_scroll_handle_bindings(cx, window, handle_key);
+                    super::invalidate_scroll_handle_bindings(
+                        cx,
+                        window,
+                        handle_key,
+                        Invalidation::HitTestOnly,
+                    );
+                    invalidate_scroll_target(cx);
                 }
-                cx.invalidate_self(Invalidation::Layout);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();

@@ -15,7 +15,7 @@ fn prepaint_interaction_cache_replays_for_clean_view_cache_root() {
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);
 
-    ui.set_node_view_cache_flags(cache_root, true, false);
+    ui.set_node_view_cache_flags(cache_root, true, false, false);
 
     let mut services = FakeUiServices;
     let bounds = Rect::new(
