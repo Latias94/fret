@@ -104,6 +104,8 @@ patterns:
 - `input-group-spinner` (inline-end spinner addon + input box geometry)
 - `input-group-button` (inline-end button addon negative margin + icon centering)
 - `input-group-tooltip` (inline-start and inline-end button addons + stack gap)
+- `empty-input-group` (inline-start icon + inline-end kbd addon geometry)
+- `kbd-input-group` (inline-end multi-kbd addon geometry)
 - `spinner-input-group` (textarea + block-end addon + `ml-auto` send button)
 - `field-input`
 - `field-checkbox`
