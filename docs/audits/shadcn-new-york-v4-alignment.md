@@ -212,6 +212,7 @@ Recent fixes:
   - Nested group spacing: `has-[>[data-slot=button-group]]:gap-2` (8px) should be reflected in Fret flex gap.
   - Border merge: `border-l-0` on non-first buttons (avoids double borders).
   - Radius merge: `rounded-l-none` / `rounded-r-none` on middle buttons (keeps only outer corners rounded).
+  - Input/select compositions: group-style merges that include non-button controls require per-edge border and per-corner radius overrides without introducing generic slot/asChild (see ADR 0117).
   - Scope: do not introduce generic slot/asChild support (see ADR 0117).
 - Conformance gates:
   - Chrome + layout gap: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
@@ -228,6 +229,14 @@ Recent fixes:
     (`web_vs_fret_button_group_size_geometry_and_chrome_match`).
   - Dropdown split: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_dropdown_geometry_and_chrome_match`).
+  - Popover split: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_popover_geometry_and_chrome_match`).
+  - Input + button: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_input_geometry_and_chrome_match`).
+  - Select + input: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_select_geometry_and_chrome_match`).
+  - Input group: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_input_group_geometry_matches`).
 
 ### `Tabs`
 

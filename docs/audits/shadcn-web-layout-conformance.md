@@ -79,6 +79,10 @@ patterns:
 - `button-group-orientation` (vertical border/radius merge via `border-t-0`)
 - `button-group-size` (group height scale + icon sizing + `space-y-8` stacking gap)
 - `button-group-dropdown` (asymmetric trigger padding + merged borders/radii)
+- `button-group-popover` (fixed-width lead button + merged borders/radii)
+- `button-group-input` (input/button merge via `border-l-0` + `rounded-r-none`)
+- `button-group-select` (select trigger + input merge; right icon button separated by `gap-2`)
+- `button-group-input-group` (pill wrapper border-box geometry + trailing inline control)
 - `aspect-ratio-demo`
 - `breadcrumb-separator` (custom separator icon sizing)
 - `breadcrumb-ellipsis` (ellipsis box + icon centering)
