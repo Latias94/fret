@@ -1,6 +1,8 @@
 use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize};
+use fret_icons::ids;
 use fret_ui::tree::UiTree;
+use fret_ui_kit::declarative::icon as decl_icon;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -104,6 +106,13 @@ fn parse_px(s: &str) -> Option<f32> {
 fn web_border_width_px(node: &WebNode) -> Option<f32> {
     node.computed_style
         .get("borderTopWidth")
+        .map(String::as_str)
+        .and_then(parse_px)
+}
+
+fn web_border_width_px_for(node: &WebNode, key: &str) -> Option<f32> {
+    node.computed_style
+        .get(key)
         .map(String::as_str)
         .and_then(parse_px)
 }
@@ -274,6 +283,241 @@ fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
     assert!(
         delta <= tol,
         "{label}: expected≈{expected} (±{tol}) got={actual} (Δ={delta})"
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_button_chrome_matches() {
+    let web = read_web_golden("button-group-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_top_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "group")
+            && n.computed_style.get("gap").is_some_and(|v| v == "8px")
+    })
+    .expect("web top-level button group");
+    let web_gap = web_top_group
+        .computed_style
+        .get("gap")
+        .map(String::as_str)
+        .and_then(parse_px)
+        .expect("web button-group gap px");
+
+    let web_go_back = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Go Back")
+    })
+    .expect("web go back button");
+    let web_archive = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Archive")
+    })
+    .expect("web archive button");
+    let web_report = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Report")
+    })
+    .expect("web report button");
+    let web_snooze = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Snooze")
+    })
+    .expect("web snooze button");
+    let web_more_options = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "More Options")
+    })
+    .expect("web more options button");
+
+    let expected_archive_border_l = web_border_width_px_for(web_archive, "borderLeftWidth")
+        .expect("web Archive borderLeftWidth");
+    let expected_archive_r_tl =
+        web_corner_radius_effective_px_for(web_archive, "borderTopLeftRadius")
+            .expect("web Archive borderTopLeftRadius");
+    let expected_archive_r_tr =
+        web_corner_radius_effective_px_for(web_archive, "borderTopRightRadius")
+            .expect("web Archive borderTopRightRadius");
+
+    let expected_report_border_l =
+        web_border_width_px_for(web_report, "borderLeftWidth").expect("web Report borderLeftWidth");
+    let expected_report_r_tl =
+        web_corner_radius_effective_px_for(web_report, "borderTopLeftRadius")
+            .expect("web Report borderTopLeftRadius");
+    let expected_report_r_tr =
+        web_corner_radius_effective_px_for(web_report, "borderTopRightRadius")
+            .expect("web Report borderTopRightRadius");
+
+    let expected_snooze_border_l =
+        web_border_width_px_for(web_snooze, "borderLeftWidth").expect("web Snooze borderLeftWidth");
+
+    let expected_more_border_l = web_border_width_px_for(web_more_options, "borderLeftWidth")
+        .expect("web More Options borderLeftWidth");
+    let expected_more_r_tl =
+        web_corner_radius_effective_px_for(web_more_options, "borderTopLeftRadius")
+            .expect("web More Options borderTopLeftRadius");
+    let expected_more_r_tr =
+        web_corner_radius_effective_px_for(web_more_options, "borderTopRightRadius")
+            .expect("web More Options borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let go_back = fret_ui_shadcn::Button::new("Go Back")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .size(fret_ui_shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+            .into();
+
+        let archive = fret_ui_shadcn::Button::new("Archive")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+        let report = fret_ui_shadcn::Button::new("Report")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+
+        let snooze = fret_ui_shadcn::Button::new("Snooze")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+        let more_options = fret_ui_shadcn::Button::new("More Options")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .size(fret_ui_shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+            .into();
+
+        let top = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::ButtonGroup::new(vec![go_back]).into(),
+            fret_ui_shadcn::ButtonGroup::new(vec![archive, report]).into(),
+            fret_ui_shadcn::ButtonGroup::new(vec![snooze, more_options]).into(),
+        ]);
+
+        vec![top.into_element(cx)]
+    });
+
+    let go_back = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Go Back"))
+        .expect("fret Go Back button semantics node");
+    let archive = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Archive"))
+        .expect("fret Archive button semantics node");
+    let report = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Report"))
+        .expect("fret Report button semantics node");
+    let snooze = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Snooze"))
+        .expect("fret Snooze button semantics node");
+    let more_options = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("More Options"))
+        .expect("fret More Options button semantics node");
+
+    let actual_gap =
+        archive.bounds.origin.x.0 - (go_back.bounds.origin.x.0 + go_back.bounds.size.width.0);
+    assert_close(
+        "button-group-demo gap (go back → archive)",
+        actual_gap,
+        web_gap,
+        1.0,
+    );
+
+    assert_close(
+        "Go Back width",
+        go_back.bounds.size.width.0,
+        web_go_back.rect.w,
+        1.0,
+    );
+    assert_close(
+        "Go Back height",
+        go_back.bounds.size.height.0,
+        web_go_back.rect.h,
+        1.0,
+    );
+
+    let quad_archive = find_best_quad(&scene, archive.bounds).expect("painted quad for Archive");
+    assert_close(
+        "Archive border-left width",
+        quad_archive.border[3],
+        expected_archive_border_l,
+        0.2,
+    );
+    assert_close(
+        "Archive top-left radius",
+        quad_archive.corners[0],
+        expected_archive_r_tl,
+        1.0,
+    );
+    assert_close(
+        "Archive top-right radius",
+        quad_archive.corners[1],
+        expected_archive_r_tr,
+        1.0,
+    );
+
+    let quad_report = find_best_quad(&scene, report.bounds).expect("painted quad for Report");
+    assert_close(
+        "Report border-left width",
+        quad_report.border[3],
+        expected_report_border_l,
+        0.2,
+    );
+    assert_close(
+        "Report top-left radius",
+        quad_report.corners[0],
+        expected_report_r_tl,
+        1.0,
+    );
+    assert_close(
+        "Report top-right radius",
+        quad_report.corners[1],
+        expected_report_r_tr,
+        1.0,
+    );
+
+    let quad_snooze = find_best_quad(&scene, snooze.bounds).expect("painted quad for Snooze");
+    let quad_more =
+        find_best_quad(&scene, more_options.bounds).expect("painted quad for More Options");
+    assert_close(
+        "More Options border-left width",
+        quad_more.border[3],
+        expected_more_border_l,
+        0.2,
+    );
+    assert_close(
+        "More Options top-left radius",
+        quad_more.corners[0],
+        expected_more_r_tl,
+        1.0,
+    );
+    assert_close(
+        "More Options top-right radius",
+        quad_more.corners[1],
+        expected_more_r_tr,
+        1.0,
+    );
+
+    // The `button-group` recipe should merge borders inside the leaf group:
+    // - the last button removes the left border (`border-l-0`),
+    // - intermediate buttons remove both corner radii (`rounded-*-none`).
+    assert_close(
+        "Snooze border-left width",
+        quad_snooze.border[3],
+        expected_snooze_border_l,
+        0.2,
+    );
+    assert_close(
+        "More Options border-left width",
+        quad_more.border[3],
+        expected_more_border_l,
+        0.2,
     );
 }
 
