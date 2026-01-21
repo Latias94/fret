@@ -207,7 +207,7 @@ impl TodoInteropDriver {
                             ext.last_input,
                         );
 
-                        vec![cx.flex(flex, move |_cx| [left, right])]
+                        [cx.flex(flex, move |_cx| [left, right])]
                     },
                 );
 
@@ -436,13 +436,13 @@ fn todo_panel(
         shadcn::CardHeader::new([shadcn::CardTitle::new("Todo").into_element(cx)]).into_element(cx);
 
     let body = shadcn::CardContent::new([
-        stack::hstack(
+        stack::hstack_iter(
             cx,
             stack::HStackProps::default()
                 .gap(Space::N2)
                 .items_center()
                 .layout(LayoutRefinement::default().w_full()),
-            move |_cx| vec![draft, add, clear_done],
+            move |_cx| [draft, add, clear_done],
         ),
         cx.column(fret_ui::element::ColumnProps::default(), move |_cx| list),
     ])
@@ -476,13 +476,13 @@ fn todo_row(
 
     let text = cx.text(item.text.clone());
 
-    let row = stack::hstack(
+    let row = stack::hstack_iter(
         cx,
         stack::HStackProps::default()
             .gap(Space::N2)
             .items_center()
             .layout(LayoutRefinement::default().w_full()),
-        move |_cx| vec![checkbox, text, remove],
+        move |_cx| [checkbox, text, remove],
     );
 
     let props = decl_style::container_props(

@@ -161,7 +161,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> Vec<A
             let left = todo_panel(cx, &theme, st, &todos);
             let right = external_panel(cx, target, st.external_target_px_size, clicks, last_input);
 
-            vec![cx.flex(flex, move |_cx| [left, right])]
+            [cx.flex(flex, move |_cx| [left, right])]
         },
     );
 
@@ -193,13 +193,13 @@ fn todo_panel(
     let list = todos.iter().map(|t| todo_row(cx, theme, t)).elements();
 
     let body = shadcn::CardContent::new([
-        stack::hstack(
+        stack::hstack_iter(
             cx,
             stack::HStackProps::default()
                 .gap(Space::N2)
                 .items_center()
                 .layout(LayoutRefinement::default().w_full()),
-            move |_cx| vec![draft, add, clear_done],
+            move |_cx| [draft, add, clear_done],
         ),
         cx.column(fret_ui::element::ColumnProps::default(), move |_cx| list),
     ]);
@@ -224,13 +224,13 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
         .on_click(CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", item.id)))
         .into_element(cx);
 
-    let row = stack::hstack(
+    let row = stack::hstack_iter(
         cx,
         stack::HStackProps::default()
             .gap(Space::N2)
             .items_center()
             .layout(LayoutRefinement::default().w_full()),
-        move |_cx| vec![checkbox, text, remove],
+        move |_cx| [checkbox, text, remove],
     );
 
     let props = shadcn::decl_style::container_props(
@@ -241,7 +241,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
             .p(Space::N2),
         LayoutRefinement::default().w_full(),
     );
-    cx.container(props, move |_cx| vec![row])
+    cx.container(props, move |_cx| [row])
 }
 
 fn external_panel(
