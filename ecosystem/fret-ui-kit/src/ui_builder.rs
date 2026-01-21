@@ -192,6 +192,31 @@ impl UiBuilder<crate::ui::TextBox> {
     }
 }
 
+impl UiBuilder<crate::ui::RawTextBox> {
+    pub fn text_color(mut self, color: ColorRef) -> Self {
+        self.inner.color_override = Some(color);
+        self
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.inner.wrap = wrap;
+        self
+    }
+
+    pub fn overflow(mut self, overflow: TextOverflow) -> Self {
+        self.inner.overflow = overflow;
+        self
+    }
+
+    pub fn nowrap(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Clip)
+    }
+
+    pub fn truncate(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
+}
+
 impl<T: UiSupportsChrome> UiBuilder<T> {
     pub fn paddings(self, paddings: impl Into<Edges4<MetricRef>>) -> Self {
         self.style_with(|mut c| {

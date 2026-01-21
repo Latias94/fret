@@ -364,6 +364,63 @@ pub fn label<H: UiHost>(
     UiBuilder::new(TextBox::new(text, TextPreset::Label))
 }
 
+/// A patchable unstyled text builder matching `TextProps::new(...)` defaults.
+#[derive(Debug, Clone)]
+pub struct RawTextBox {
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) text: Arc<str>,
+    pub(crate) color_override: Option<crate::ColorRef>,
+    pub(crate) wrap: TextWrap,
+    pub(crate) overflow: TextOverflow,
+}
+
+impl RawTextBox {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            layout: LayoutRefinement::default(),
+            text: text.into(),
+            color_override: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+        }
+    }
+}
+
+impl UiPatchTarget for RawTextBox {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl UiSupportsLayout for RawTextBox {}
+
+impl UiIntoElement for RawTextBox {
+    fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let layout = decl_style::layout_style(&theme, self.layout);
+        let color = self.color_override.map(|c| c.resolve(&theme));
+
+        cx.text_props(TextProps {
+            layout,
+            text: self.text,
+            style: None,
+            color,
+            wrap: self.wrap,
+            overflow: self.overflow,
+        })
+    }
+}
+
+/// Returns a patchable unstyled text builder matching `TextProps::new(...)` defaults.
+pub fn raw_text<H: UiHost>(
+    _cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> UiBuilder<RawTextBox> {
+    UiBuilder::new(RawTextBox::new(text))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
