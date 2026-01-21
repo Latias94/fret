@@ -19,9 +19,7 @@ use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
-use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
-};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, OverlayPresence, Space};
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
@@ -605,16 +603,8 @@ impl PopoverAnchor {
     }
 }
 
-fn popover_content_chrome(theme: &Theme) -> ChromeRefinement {
-    let bg = theme.color_required("popover.background");
-    let border = theme.color_required("border");
-
-    ChromeRefinement::default()
-        .rounded(Radius::Md)
-        .border_1()
-        .bg(ColorRef::Color(bg))
-        .border_color(ColorRef::Color(border))
-        .p(Space::N4)
+fn popover_content_chrome() -> ChromeRefinement {
+    crate::ui_builder_ext::surfaces::popover_style_chrome()
 }
 
 /// shadcn/ui `PopoverContent` (v4).
@@ -653,24 +643,13 @@ impl PopoverContent {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let radius = theme.metric_required("metric.radius.md");
-        let shadow = decl_style::shadow_md(&theme, radius);
-
-        let chrome = popover_content_chrome(&theme).merge(self.chrome);
-        let props = decl_style::container_props(&theme, chrome, self.layout);
+        let theme = Theme::global(&*cx.app);
+        let chrome = popover_content_chrome().merge(self.chrome);
+        let props = decl_style::container_props(theme, chrome, self.layout);
         let children = self.children;
         let label = self.a11y_label;
 
-        let container = shadcn_layout::container_vstack_gap(
-            cx,
-            ContainerProps {
-                shadow: Some(shadow),
-                ..props
-            },
-            Space::N4,
-            children,
-        );
+        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
 
         cx.semantics(
             SemanticsProps {
