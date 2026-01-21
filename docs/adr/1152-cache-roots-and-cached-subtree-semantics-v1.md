@@ -81,11 +81,18 @@ This flag:
   layout pass.
 - MUST NOT be used to suppress correctness-critical invalidation propagation across cache roots.
 
-### 6) Inspection/probe modes disable view caching
+### 6) Inspection/probe modes disable view caching by default
 
-When the UI runtime is in an inspection/probe mode (picking, semantics inspection, scripted
-interaction diagnostics), view caching MUST be disabled, consistent with ADR 0055 and GPUI's
-approach ("cache is an optimization; introspection correctness comes first").
+When the UI runtime is in an inspection/probe mode (picking, semantics inspection), view caching
+MUST be disabled by default, consistent with ADR 0055 and GPUI's approach ("cache is an
+optimization; introspection correctness comes first").
+
+However, Fret's scripted diagnostics are also used as a regression harness for view-cache
+correctness and performance. The diagnostics runner MAY explicitly enable view caching for the
+launched target process.
+
+When view caching is explicitly enabled during diagnostics, the runtime MUST preserve inspection
+correctness (stable debug identity paths and accurate semantics bounds) even on cache-hit frames.
 
 ### 7) Cache root reuse is gated by an explicit cache key
 

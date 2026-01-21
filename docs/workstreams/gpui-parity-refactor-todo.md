@@ -25,10 +25,8 @@ These defaults are intentionally “cache-root-first” to maximize performance 
 - `request_animation_frame()` requested from within a view implies `notify()` for the nearest cache root on the next
   tick (GPUI-aligned), so view-cache reuse cannot replay stale output indefinitely during animations.
 - Dirty cache roots propagate to ancestor cache roots (nested boundaries must not replay stale ranges).
-- `request_animation_frame()` parity note (Zed/GPUI): in GPUI, RAF requested from within a view effectively `notify`s
-  that view on the next frame. In Fret today, RAF guarantees a paint pass (blocks paint replay) but does not
-  necessarily force a declarative rerender for cache roots unless the caller explicitly `notify()`s or triggers a
-  layout invalidation. Track this gap explicitly (see MVP2 tasks below).
+- `request_animation_frame()` parity note: implemented as `request_animation_frame() -> (next tick) notify(nearest cache root)`
+  (see `GPUI-MVP2-rt-003` evidence below).
 
 ## Tracking Format
 
