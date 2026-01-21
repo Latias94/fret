@@ -370,26 +370,16 @@ impl MenubarShortcut {
         let font_size = theme.metric_required("font.size");
         let font_line_height = theme.metric_required("font.line_height");
 
-        cx.text_props(TextProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
-                layout.margin.left = fret_ui::element::MarginEdge::Auto;
-                layout
-            },
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: font_size,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(font_line_height),
-                letter_spacing_em: Some(0.12),
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
+            .ml_auto()
+            .text_size_px(font_size)
+            .line_height_px(font_line_height)
+            .font_normal()
+            .letter_spacing_em(0.12)
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx)
     }
 }
 
@@ -713,21 +703,22 @@ fn menu_row_children<H: UiHost>(
                 row.push(menu_icon_slot_empty(cx));
             }
 
-            row.push(cx.text_props(TextProps {
-                layout: {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
-                    layout.size.min_width = Some(Px(0.0));
-                    layout.flex.grow = 1.0;
-                    layout.flex.basis = Length::Px(Px(0.0));
-                    layout
-                },
-                text: label.clone(),
-                style: Some(text_style.clone()),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            }));
+            let mut label_text = ui::text(cx, label.clone())
+                .w_full()
+                .min_w_0()
+                .flex_1()
+                .basis_0()
+                .text_size_px(text_style.size)
+                .font_weight(text_style.weight)
+                .text_color(ColorRef::Color(fg))
+                .nowrap();
+            if let Some(line_height) = text_style.line_height {
+                label_text = label_text.line_height_px(line_height);
+            }
+            if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                label_text = label_text.letter_spacing_em(letter_spacing_em);
+            }
+            row.push(label_text.into_element(cx));
 
             if let Some(t) = trailing.clone() {
                 row.push(t);
@@ -1518,21 +1509,13 @@ impl MenubarMenuEntries {
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx| {
-                                                                    vec![cx.text_props(TextProps {
-                                                                        layout: LayoutStyle::default(),
-                                                                        text,
-                                                                        style: Some(TextStyle {
-                                                                            font: FontId::default(),
-                                                                            size: font_size,
-                                                                            weight: FontWeight::MEDIUM,
-                                                                            slant: Default::default(),
-                                                                            line_height: Some(font_line_height),
-                                                                            letter_spacing_em: None,
-                                                                        }),
-                                                                        color: Some(fg),
-                                                                        wrap: TextWrap::None,
-                                                                        overflow: TextOverflow::Clip,
-                                                                    })]
+                                                                    vec![ui::text(cx, text)
+                                                                        .text_size_px(font_size)
+                                                                        .line_height_px(font_line_height)
+                                                                        .font_medium()
+                                                                        .text_color(ColorRef::Color(fg))
+                                                                        .nowrap()
+                                                                        .into_element(cx)]
                                                                 },
                                                             ));
                                                         }
@@ -2134,14 +2117,25 @@ impl MenubarMenuEntries {
                                                                             ),
                                                                         },
                                                                         move |cx| {
-                                                                            vec![cx.text_props(TextProps {
-                                                                                layout: LayoutStyle::default(),
-                                                                                text: label.clone(),
-                                                                                style: Some(text_style.clone()),
-                                                                                color: Some(fg),
-                                                                                wrap: TextWrap::None,
-                                                                                overflow: TextOverflow::Clip,
-                                                                            })]
+                                                                            let mut label_text =
+                                                                                ui::text(cx, label.clone())
+                                                                                    .text_size_px(text_style.size)
+                                                                                    .font_weight(text_style.weight)
+                                                                                    .text_color(ColorRef::Color(fg))
+                                                                                    .nowrap();
+                                                                            if let Some(line_height) =
+                                                                                text_style.line_height
+                                                                            {
+                                                                                label_text =
+                                                                                    label_text.line_height_px(line_height);
+                                                                            }
+                                                                            if let Some(letter_spacing_em) =
+                                                                                text_style.letter_spacing_em
+                                                                            {
+                                                                                label_text = label_text
+                                                                                    .letter_spacing_em(letter_spacing_em);
+                                                                            }
+                                                                            vec![label_text.into_element(cx)]
                                                                         },
                                                                     )]
                                                                 },
@@ -2457,21 +2451,13 @@ impl MenubarMenuEntries {
                                                                                 ..Default::default()
                                                                             },
                                                                             move |cx| {
-                                                                                vec![cx.text_props(TextProps {
-                                                                                    layout: LayoutStyle::default(),
-                                                                                    text,
-                                                                                    style: Some(TextStyle {
-                                                                                        font: FontId::default(),
-                                                                                        size: font_size,
-                                                                                        weight: FontWeight::MEDIUM,
-                                                                                        slant: Default::default(),
-                                                                                        line_height: Some(font_line_height),
-                                                                                        letter_spacing_em: None,
-                                                                                    }),
-                                                                                    color: Some(fg),
-                                                                                    wrap: TextWrap::None,
-                                                                                    overflow: TextOverflow::Clip,
-                                                                                })]
+                                                                                vec![ui::text(cx, text)
+                                                                                    .text_size_px(font_size)
+                                                                                    .line_height_px(font_line_height)
+                                                                                    .font_medium()
+                                                                                    .text_color(ColorRef::Color(fg))
+                                                                                    .nowrap()
+                                                                                    .into_element(cx)]
                                                                             },
                                                                         ));
                                                                     }
@@ -2980,14 +2966,18 @@ impl MenubarMenuEntries {
                         corner_radii: Corners::all(radius),
                     },
                     move |cx| {
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: label.clone(),
-                            style: Some(text_style.clone()),
-                            color: Some(if enabled { fg } else { fg_muted }),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                        })]
+                        let mut label_text = ui::text(cx, label.clone())
+                            .text_size_px(text_style.size)
+                            .font_weight(text_style.weight)
+                            .text_color(ColorRef::Color(if enabled { fg } else { fg_muted }))
+                            .nowrap();
+                        if let Some(line_height) = text_style.line_height {
+                            label_text = label_text.line_height_px(line_height);
+                        }
+                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                            label_text = label_text.letter_spacing_em(letter_spacing_em);
+                        }
+                        vec![label_text.into_element(cx)]
                     },
                 );
 
