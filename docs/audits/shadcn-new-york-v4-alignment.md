@@ -220,6 +220,10 @@ Recent fixes:
     (`web_vs_fret_button_group_split_chrome_matches`).
   - Vertical orientation: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_orientation_vertical_chrome_matches`).
+  - Nested groups: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_nested_geometry_and_chrome_match`).
+  - Group separators: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_separator_geometry_and_chrome_match`).
 
 ### `Tabs`
 
