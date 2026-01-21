@@ -38,8 +38,8 @@ pub use corners4::Corners4;
 pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement, MetricRef,
-    OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
+    MetricRef, OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
@@ -70,8 +70,8 @@ pub mod prelude {
     pub use fret_icons::IconId;
 
     pub use crate::{
-        ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
-        Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+        ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge,
+        MetricRef, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
     };
     pub use crate::{OverlayController, OverlayKind, OverlayPresence, OverlayRequest};
 
