@@ -23,6 +23,7 @@ type OpenStep =
   | { action: "wait"; waitMs: number }
   | { action: "waitFor"; selector: string }
   | { action: "move"; x: number; y: number }
+  | { action: "tabTo"; selector: string; maxTabs: number }
   | { action: "attr"; selector: string; name: string; value: string }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
@@ -414,6 +415,25 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       throw new Error(
         `invalid --openSteps entry "${part}" (empty value for action=${actionRaw})`
       )
+    }
+
+    if (actionRaw === "tabTo") {
+      const at = valueRaw.indexOf("@")
+      const selector = (at === -1 ? valueRaw : valueRaw.slice(0, at)).trim()
+      const maxTabsRaw = at === -1 ? "" : valueRaw.slice(at + 1).trim()
+      if (!selector) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "tabTo=<selector>[@<maxTabs>]")`
+        )
+      }
+      const maxTabs = maxTabsRaw ? Number(maxTabsRaw) : 20
+      if (!Number.isFinite(maxTabs) || maxTabs <= 0) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected positive maxTabs for tabTo)`
+        )
+      }
+      out.push({ action: "tabTo", selector, maxTabs })
+      continue
     }
 
     if (actionRaw === "keys") {
@@ -1077,6 +1097,36 @@ async function applySteps(
       await page.mouse.move(step.x, step.y, { steps: 4 })
       continue
     }
+    if (step.action === "tabTo") {
+      if (debug) {
+        console.log(
+          `- steps: ${name} step[${idx}] tabTo ${step.selector} (maxTabs=${step.maxTabs})`
+        )
+      }
+      await page.evaluate(() => {
+        const active = document.activeElement
+        if (active instanceof HTMLElement) active.blur()
+      })
+      for (let attempt = 0; attempt < step.maxTabs; attempt++) {
+        const ok = (await page.evaluate((selector) => {
+          const el = document.activeElement
+          return el instanceof Element && el.matches(selector)
+        }, step.selector)) as boolean
+        if (ok) break
+        await page.keyboard.press("Tab")
+      }
+      const ok = (await page.evaluate((selector) => {
+        const el = document.activeElement
+        return el instanceof Element && el.matches(selector)
+      }, step.selector)) as boolean
+      if (!ok) {
+        throw new Error(
+          `steps failed for ${name}: tabTo did not reach ${step.selector} within ${step.maxTabs} tabs`
+        )
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
     if (step.action === "scroll") {
       const expr = `(() => {
         const sel = ${JSON.stringify(step.selector)};
@@ -1218,6 +1268,36 @@ async function applyOpenSteps(
     if (step.action === "move") {
       if (debug) console.log(`- openSteps: ${name} step[${idx}] move ${step.x},${step.y}`)
       await page.mouse.move(step.x, step.y, { steps: 4 })
+      continue
+    }
+    if (step.action === "tabTo") {
+      if (debug) {
+        console.log(
+          `- openSteps: ${name} step[${idx}] tabTo ${step.selector} (maxTabs=${step.maxTabs})`
+        )
+      }
+      await page.evaluate(() => {
+        const active = document.activeElement
+        if (active instanceof HTMLElement) active.blur()
+      })
+      for (let attempt = 0; attempt < step.maxTabs; attempt++) {
+        const ok = (await page.evaluate((selector) => {
+          const el = document.activeElement
+          return el instanceof Element && el.matches(selector)
+        }, step.selector)) as boolean
+        if (ok) break
+        await page.keyboard.press("Tab")
+      }
+      const ok = (await page.evaluate((selector) => {
+        const el = document.activeElement
+        return el instanceof Element && el.matches(selector)
+      }, step.selector)) as boolean
+      if (!ok) {
+        throw new Error(
+          `openSteps failed for ${name}: tabTo did not reach ${step.selector} within ${step.maxTabs} tabs`
+        )
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
       continue
     }
     if (step.action === "scroll") {
