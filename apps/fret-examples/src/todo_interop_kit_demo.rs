@@ -2,44 +2,16 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::ViewportFit;
+use fret_kit::interop::embedded_viewport as embedded;
 use fret_kit::prelude::*;
-use fret_launch::{EngineFrameUpdate, ViewportRenderTarget};
+use fret_launch::EngineFrameUpdate;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
 use fret_ui::element::AnyElementIterExt as _;
-use fret_ui_kit::declarative as kit_decl;
 
 const CMD_ADD: &str = "todo-interop-kit.add";
 const CMD_CLEAR_DONE: &str = "todo-interop-kit.clear_done";
 const CMD_REMOVE_PREFIX: &str = "todo-interop-kit.remove.";
-
-#[derive(Debug, Clone)]
-struct ExternalInteropModels {
-    clicks: Model<u32>,
-    last_input: Model<Arc<str>>,
-    target: Model<fret_core::RenderTargetId>,
-}
-
-fn install_external_interop_models(app: &mut App) {
-    let clicks = app.models_mut().insert(0u32);
-    let last_input = app.models_mut().insert(Arc::<str>::from(
-        "Click inside the embedded viewport surface.",
-    ));
-    let target = app
-        .models_mut()
-        .insert(fret_core::RenderTargetId::default());
-    app.set_global(ExternalInteropModels {
-        clicks,
-        last_input,
-        target,
-    });
-}
-
-fn external_models(app: &App) -> ExternalInteropModels {
-    app.global::<ExternalInteropModels>()
-        .cloned()
-        .expect("ExternalInteropModels must be installed in init_app")
-}
 
 #[derive(Clone)]
 struct TodoItem {
@@ -53,8 +25,7 @@ struct TodoInteropKitState {
     draft: Model<String>,
     next_id: u64,
 
-    external_target: ViewportRenderTarget,
-    external_target_px_size: (u32, u32),
+    embedded: embedded::EmbeddedViewportSurface,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -65,7 +36,6 @@ pub fn run() -> anyhow::Result<()> {
     })?
     .with_main_window("todo_interop_kit_demo", (980.0, 640.0))
     .init_app(|app| {
-        install_external_interop_models(app);
         shadcn::shadcn_themes::apply_shadcn_new_york_v4(
             app,
             shadcn::shadcn_themes::ShadcnBaseColor::Slate,
@@ -76,7 +46,9 @@ pub fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> TodoInteropKitState {
+fn init_window(app: &mut App, window: AppWindowId) -> TodoInteropKitState {
+    embedded::ensure_models(app, window);
+
     let done_1 = app.models_mut().insert(false);
     let done_2 = app.models_mut().insert(true);
 
@@ -99,11 +71,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoInteropKitState {
         todos,
         draft,
         next_id: 3,
-        external_target: ViewportRenderTarget::new(
+        embedded: embedded::EmbeddedViewportSurface::new(
             wgpu::TextureFormat::Bgra8UnormSrgb,
             RenderTargetColorSpace::Srgb,
+            (640, 360),
         ),
-        external_target_px_size: (640, 360),
     }
 }
 
@@ -111,7 +83,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> Vec<A
     cx.observe_model(&st.todos, Invalidation::Layout);
     cx.observe_model(&st.draft, Invalidation::Layout);
 
-    let models = external_models(&*cx.app);
+    let Some(models) = embedded::models(&*cx.app, cx.window) else {
+        return vec![cx.text("Embedded viewport models are not installed.")];
+    };
     cx.observe_model(&models.clicks, Invalidation::Paint);
     cx.observe_model(&models.last_input, Invalidation::Paint);
     cx.observe_model(&models.target, Invalidation::Paint);
@@ -159,7 +133,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> Vec<A
             };
 
             let left = todo_panel(cx, &theme, st, &todos);
-            let right = external_panel(cx, target, st.external_target_px_size, clicks, last_input);
+            let right = external_panel(cx, &st.embedded, target, clicks, last_input);
 
             [cx.flex(flex, move |_cx| [left, right])]
         },
@@ -246,11 +220,12 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
 
 fn external_panel(
     cx: &mut ElementContext<'_, App>,
+    surface: &embedded::EmbeddedViewportSurface,
     target: fret_core::RenderTargetId,
-    target_px_size: (u32, u32),
     clicks: u32,
     last_input: Arc<str>,
 ) -> AnyElement {
+    let target_px_size = surface.target_px_size();
     let title = shadcn::CardTitle::new("External viewport (stub)").into_element(cx);
     let desc = shadcn::CardDescription::new(format!(
         "Clicks: {clicks} | Target: {target:?} | {}x{}",
@@ -263,16 +238,14 @@ fn external_panel(
 
     let header = shadcn::CardHeader::new([title, desc, last]).into_element(cx);
 
-    let viewport = {
-        let props = kit_decl::viewport_surface::ViewportSurfacePanelProps {
-            target,
-            target_px_size,
+    let viewport = surface.panel(
+        cx,
+        embedded::EmbeddedViewportPanelProps {
             fit: ViewportFit::Contain,
             opacity: 1.0,
             forward_input: true,
-        };
-        kit_decl::viewport_surface::viewport_surface_panel(cx, props)
-    };
+        },
+    );
 
     let body = shadcn::CardContent::new([viewport]).into_element(cx);
 
@@ -342,30 +315,7 @@ fn on_command(
 }
 
 fn on_viewport_input(app: &mut App, event: fret_core::ViewportInputEvent) {
-    let Some(models) = app.global::<ExternalInteropModels>().cloned() else {
-        return;
-    };
-
-    let target = app
-        .models()
-        .read(&models.target, |v| *v)
-        .unwrap_or_default();
-    if target == fret_core::RenderTargetId::default() || event.target != target {
-        return;
-    }
-
-    if matches!(event.kind, fret_core::ViewportInputKind::PointerDown { .. }) {
-        let _ = app
-            .models_mut()
-            .update(&models.clicks, |v| *v = v.saturating_add(1));
-    }
-
-    let msg: Arc<str> = Arc::from(format!(
-        "kind={:?} uv=({:.3},{:.3}) target_px={:?}",
-        event.kind, event.uv.0, event.uv.1, event.target_px
-    ));
-    let _ = app.models_mut().update(&models.last_input, |v| *v = msg);
-    app.request_redraw(event.window);
+    embedded::handle_viewport_input(app, event);
 }
 
 fn record_engine_frame(
@@ -379,17 +329,17 @@ fn record_engine_frame(
     _tick_id: TickId,
     frame_id: FrameId,
 ) -> EngineFrameUpdate {
-    let models = external_models(app);
+    let models = embedded::ensure_models(app, window);
 
-    let (id, view) = st.external_target.ensure_size_owned_view(
+    let (_id, view) = st.embedded.ensure_size_owned_view(
+        app,
+        window,
         context,
         renderer,
-        st.external_target_px_size,
         Some("todo-interop-kit viewport"),
     );
-    let _ = app.models_mut().update(&models.target, |v| *v = id);
 
-    let clicks = app.models().read(&models.clicks, |v| *v).unwrap_or(0);
+    let clicks = app.models().get_copied(&models.clicks).unwrap_or(0);
 
     let t = (frame_id.0 as f32 * 0.02).sin() * 0.5 + 0.5;
     let f = ((clicks % 8) as f32) / 8.0;
