@@ -7383,6 +7383,391 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
 }
 
 #[test]
+fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
+    let web = read_web_golden("spinner-input-group");
+    let theme = web_theme(&web);
+
+    let mut web_groups: Vec<&WebNode> = Vec::new();
+    fn walk_collect<'a>(n: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if n.tag == "div"
+            && n.class_name.as_deref().is_some_and(|c| {
+                let mut has_group = false;
+                let mut has_border = false;
+                for t in c.split_whitespace() {
+                    has_group |= t == "group/input-group";
+                    has_border |= t == "border-input";
+                }
+                has_group && has_border
+            })
+        {
+            out.push(n);
+        }
+        for c in &n.children {
+            walk_collect(c, out);
+        }
+    }
+    walk_collect(&theme.root, &mut web_groups);
+    web_groups.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let web_group0 = *web_groups.get(0).expect("web group 0");
+    let web_group1 = *web_groups.get(1).expect("web group 1");
+
+    let expected_gap_y = web_group1.rect.y - (web_group0.rect.y + web_group0.rect.h);
+
+    let web_input0 = web_group0
+        .children
+        .iter()
+        .find(|n| n.tag == "input")
+        .expect("web input0");
+    let web_svg0 = find_first(web_group0, &|n| n.tag == "svg").expect("web svg0");
+
+    let web_textarea1 = web_group1
+        .children
+        .iter()
+        .find(|n| n.tag == "textarea")
+        .expect("web textarea1");
+    let web_svg1a = find_first(web_group1, &|n| {
+        n.tag == "svg" && (n.rect.w - 16.0).abs() <= 0.1
+    })
+    .expect("web svg1a (spinner)");
+    let web_svg1b = find_first(web_group1, &|n| {
+        n.tag == "svg" && (n.rect.w - 14.0).abs() <= 0.1
+    })
+    .expect("web svg1b (arrow)");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model0: Model<String> = app.models_mut().insert(String::new());
+    let model1: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-spinner-input-group",
+        |cx| {
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(MetricRef::Px(Px(web_group0.rect.w)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let spinner0 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:spinner-input-group:0:spinner")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)],
+                    );
+
+                    let group0 = fret_ui_shadcn::InputGroup::new(model0.clone())
+                        .a11y_label("Golden:spinner-input-group:0:input")
+                        .trailing(vec![spinner0])
+                        .into_element(cx);
+                    let group0 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:spinner-input-group:0:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group0],
+                    );
+
+                    let spinner1 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:spinner-input-group:1:spinner")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)],
+                    );
+                    let arrow = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:spinner-input-group:1:arrow")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![decl_icon::icon_with(
+                                cx,
+                                fret_icons::ids::ui::CHEVRON_UP,
+                                Some(Px(14.0)),
+                                None,
+                            )]
+                        },
+                    );
+                    let send_button = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: fret_ui_kit::declarative::style::layout_style(
+                                &fret_ui::Theme::global(&*cx.app),
+                                fret_ui_kit::LayoutRefinement::default()
+                                    .ml_auto()
+                                    .w_px(MetricRef::Px(Px(30.0)))
+                                    .h_px(MetricRef::Px(Px(24.0))),
+                            ),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: Px(0.0),
+                                    padding: Edges::symmetric(Px(8.0), Px(0.0)),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |_cx| vec![arrow],
+                            )]
+                        },
+                    );
+
+                    let group1_addon = vec![spinner1, cx.text("Validating..."), send_button];
+                    let group1 = fret_ui_shadcn::InputGroup::new(model1.clone())
+                        .textarea()
+                        .a11y_label("Golden:spinner-input-group:1:textarea")
+                        .block_end(group1_addon)
+                        .into_element(cx);
+                    let group1 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:spinner-input-group:1:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group1],
+                    );
+
+                    vec![cx.column(
+                        ColumnProps {
+                            gap: Px(expected_gap_y),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group0, group1],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group0 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:spinner-input-group:0:root"),
+    )
+    .expect("fret group0");
+    let input0 = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:spinner-input-group:0:input"),
+    )
+    .expect("fret input0");
+    let spinner0 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:spinner-input-group:0:spinner"),
+    )
+    .expect("fret spinner0");
+
+    assert_close_px(
+        "spinner-input-group group0 y",
+        group0.bounds.origin.y,
+        web_group0.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group group0 w",
+        group0.bounds.size.width,
+        web_group0.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group group0 h",
+        group0.bounds.size.height,
+        web_group0.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group input0 x",
+        input0.bounds.origin.x,
+        web_input0.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group input0 w",
+        input0.bounds.size.width,
+        web_input0.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group spinner0 x",
+        spinner0.bounds.origin.x,
+        web_svg0.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group spinner0 y",
+        spinner0.bounds.origin.y,
+        web_svg0.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group spinner0 w",
+        spinner0.bounds.size.width,
+        web_svg0.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group spinner0 h",
+        spinner0.bounds.size.height,
+        web_svg0.rect.h,
+        1.0,
+    );
+
+    let group1 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:spinner-input-group:1:root"),
+    )
+    .expect("fret group1");
+    let textarea1 = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:spinner-input-group:1:textarea"),
+    )
+    .expect("fret textarea1");
+    let spinner1 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:spinner-input-group:1:spinner"),
+    )
+    .expect("fret spinner1");
+    let arrow = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:spinner-input-group:1:arrow"),
+    )
+    .expect("fret arrow");
+
+    assert_close_px(
+        "spinner-input-group group1 y",
+        group1.bounds.origin.y,
+        web_group1.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group group1 w",
+        group1.bounds.size.width,
+        web_group1.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group group1 h",
+        group1.bounds.size.height,
+        web_group1.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group textarea1 x",
+        textarea1.bounds.origin.x,
+        web_textarea1.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group textarea1 y",
+        textarea1.bounds.origin.y,
+        web_textarea1.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group textarea1 w",
+        textarea1.bounds.size.width,
+        web_textarea1.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group textarea1 h",
+        textarea1.bounds.size.height,
+        web_textarea1.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group spinner1 x",
+        spinner1.bounds.origin.x,
+        web_svg1a.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group spinner1 y",
+        spinner1.bounds.origin.y,
+        web_svg1a.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group arrow x",
+        arrow.bounds.origin.x,
+        web_svg1b.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group arrow y",
+        arrow.bounds.origin.y,
+        web_svg1b.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group arrow w",
+        arrow.bounds.size.width,
+        web_svg1b.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "spinner-input-group arrow h",
+        arrow.bounds.size.height,
+        web_svg1b.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_card_with_form_width() {
     let web = read_web_golden("card-with-form");
     let theme = web_theme(&web);
