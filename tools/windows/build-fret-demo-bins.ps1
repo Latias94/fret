@@ -9,11 +9,11 @@ $ErrorActionPreference = "Stop"
 #   pwsh tools/windows/build-fret-demo-bins.ps1
 #
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Push-Location $repoRoot
 try {
   if (-not $env:CARGO_TARGET_DIR) {
-    $env:CARGO_TARGET_DIR = "target"
+    $env:CARGO_TARGET_DIR = (Join-Path $repoRoot "target")
   }
 
   if (-not $env:CARGO_BUILD_JOBS) {
@@ -24,4 +24,3 @@ try {
 } finally {
   Pop-Location
 }
-
