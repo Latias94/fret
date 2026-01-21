@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, FlexProps, TextAreaProps, TextInputProps};
+use fret_ui::element::{AnyElement, FlexProps, LayoutStyle, TextAreaProps, TextInputProps};
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
@@ -23,6 +23,8 @@ pub struct InputGroup {
     trailing: Vec<AnyElement>,
     block_start: Vec<AnyElement>,
     block_end: Vec<AnyElement>,
+    block_start_border_bottom: bool,
+    block_end_border_top: bool,
     leading_has_button: bool,
     trailing_has_button: bool,
     leading_has_kbd: bool,
@@ -45,6 +47,8 @@ impl std::fmt::Debug for InputGroup {
             .field("trailing_len", &self.trailing.len())
             .field("block_start_len", &self.block_start.len())
             .field("block_end_len", &self.block_end.len())
+            .field("block_start_border_bottom", &self.block_start_border_bottom)
+            .field("block_end_border_top", &self.block_end_border_top)
             .field("leading_has_button", &self.leading_has_button)
             .field("trailing_has_button", &self.trailing_has_button)
             .field("leading_has_kbd", &self.leading_has_kbd)
@@ -69,6 +73,8 @@ impl InputGroup {
             trailing: Vec::new(),
             block_start: Vec::new(),
             block_end: Vec::new(),
+            block_start_border_bottom: false,
+            block_end_border_top: false,
             leading_has_button: false,
             trailing_has_button: false,
             leading_has_kbd: false,
@@ -109,6 +115,16 @@ impl InputGroup {
 
     pub fn block_end(mut self, children: Vec<AnyElement>) -> Self {
         self.block_end = children;
+        self
+    }
+
+    pub fn block_start_border_bottom(mut self, value: bool) -> Self {
+        self.block_start_border_bottom = value;
+        self
+    }
+
+    pub fn block_end_border_top(mut self, value: bool) -> Self {
+        self.block_end_border_top = value;
         self
     }
 
@@ -216,6 +232,8 @@ impl InputGroup {
         let trailing = self.trailing;
         let block_start = self.block_start;
         let block_end = self.block_end;
+        let block_start_border_bottom = self.block_start_border_bottom;
+        let block_end_border_top = self.block_end_border_top;
         let leading_has_button = self.leading_has_button;
         let trailing_has_button = self.trailing_has_button;
         let leading_has_kbd = self.leading_has_kbd;
@@ -313,48 +331,112 @@ impl InputGroup {
                     };
 
                     let block_start = (!block_start.is_empty()).then(|| {
-                        cx.flex(
-                            FlexProps {
+                        let px_3 = addon_pl;
+                        let py_3 = addon_pl;
+                        let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
+                        let input_pt = fret_ui_kit::MetricRef::space(Space::N2p5).resolve(&theme);
+                        let pt = if control == InputGroupControlKind::Input {
+                            input_pt
+                        } else {
+                            py_3
+                        };
+                        let pb = if block_start_border_bottom {
+                            py_3
+                        } else {
+                            addon_py
+                        };
+
+                        cx.container(
+                            fret_ui::element::ContainerProps {
                                 layout: decl_style::layout_style(
                                     &theme,
                                     LayoutRefinement::default().w_full().min_w_0(),
                                 ),
-                                direction: Axis::Horizontal,
-                                gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
-                                padding: Edges {
-                                    top: addon_py,
-                                    right: addon_pl,
-                                    bottom: addon_py,
-                                    left: addon_pl,
+                                border: Edges {
+                                    top: Px(0.0),
+                                    right: Px(0.0),
+                                    bottom: if block_start_border_bottom {
+                                        resolved.border_width
+                                    } else {
+                                        Px(0.0)
+                                    },
+                                    left: Px(0.0),
                                 },
-                                justify: fret_ui::element::MainAlign::Start,
-                                align: fret_ui::element::CrossAlign::Center,
-                                wrap: false,
+                                border_color: Some(resolved.border_color),
+                                ..Default::default()
                             },
-                            |_cx| block_start,
+                            move |cx| {
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: Axis::Horizontal,
+                                        gap,
+                                        padding: Edges {
+                                            top: pt,
+                                            right: px_3,
+                                            bottom: pb,
+                                            left: px_3,
+                                        },
+                                        justify: fret_ui::element::MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| block_start,
+                                )]
+                            },
                         )
                     });
 
                     let block_end = (!block_end.is_empty()).then(|| {
-                        cx.flex(
-                            FlexProps {
+                        let px_3 = addon_pl;
+                        let py_3 = addon_pl;
+                        let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
+                        let input_pb = fret_ui_kit::MetricRef::space(Space::N2p5).resolve(&theme);
+                        let pt = if block_end_border_top { py_3 } else { addon_py };
+                        let pb = if control == InputGroupControlKind::Input {
+                            input_pb
+                        } else {
+                            py_3
+                        };
+
+                        cx.container(
+                            fret_ui::element::ContainerProps {
                                 layout: decl_style::layout_style(
                                     &theme,
                                     LayoutRefinement::default().w_full().min_w_0(),
                                 ),
-                                direction: Axis::Horizontal,
-                                gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
-                                padding: Edges {
-                                    top: addon_py,
-                                    right: addon_pl,
-                                    bottom: addon_pl,
-                                    left: addon_pl,
+                                border: Edges {
+                                    top: if block_end_border_top {
+                                        resolved.border_width
+                                    } else {
+                                        Px(0.0)
+                                    },
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                    left: Px(0.0),
                                 },
-                                justify: fret_ui::element::MainAlign::Start,
-                                align: fret_ui::element::CrossAlign::Center,
-                                wrap: false,
+                                border_color: Some(resolved.border_color),
+                                ..Default::default()
                             },
-                            |_cx| block_end,
+                            move |cx| {
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: Axis::Horizontal,
+                                        gap,
+                                        padding: Edges {
+                                            top: pt,
+                                            right: px_3,
+                                            bottom: pb,
+                                            left: px_3,
+                                        },
+                                        justify: fret_ui::element::MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| block_end,
+                                )]
+                            },
                         )
                     });
 
