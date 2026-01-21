@@ -655,12 +655,15 @@ impl InputGroupText {
         };
 
         cx.text_props(TextProps {
-            layout: decl_style::layout_style(&theme, self.layout),
+            layout: decl_style::layout_style(
+                &theme,
+                self.layout.h_px(fret_ui_kit::MetricRef::Px(line_height)),
+            ),
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
                 size: px,
-                weight: FontWeight::MEDIUM,
+                weight: FontWeight::NORMAL,
                 slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: None,
