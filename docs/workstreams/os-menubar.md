@@ -195,6 +195,29 @@ Evidence anchors:
 - OS publish/clear helper: `crates/fret-app/src/menu_bar.rs` (`sync_os_menu_bar`).
 - In-window fallback uses the effective layered menu: `apps/fret-ui-gallery/src/driver.rs` (`effective_menu_bar` + `should_render_in_window_menu_bar`).
 
+### MVP 2.6: In-window Menubar Keyboard Focus (F10) (Done)
+
+Problem: Editor-grade UX expects a "focus the menu bar" command (Windows convention: F10) that works
+consistently across in-window menubars and respects keymap + command enablement.
+
+Goal: add a single command (`focus.menu_bar`) that in-window shells can handle to move focus to the
+first enabled menubar trigger (or the active trigger when closing an open menu).
+
+Acceptance:
+
+- [x] Default keybinding on Windows/Linux: `F10` (disabled while typing in a text input).
+- [x] When no menu is open, `focus.menu_bar` focuses the first enabled trigger.
+- [x] When a menu is open, `focus.menu_bar` closes it and focuses the active trigger.
+- [x] Scriptable diagnostics can press `F10` to validate the flow.
+
+Evidence anchors:
+
+- Command + default keybindings: `crates/fret-app/src/core_commands.rs` (`FOCUS_MENU_BAR`).
+- Declarative command hooks: `crates/fret-ui/src/{action.rs,elements/cx.rs,declarative/host_widget.rs}`.
+- In-window menubar focus wiring: `ecosystem/fret-kit/src/{workspace_menu.rs,workspace_shell.rs}`.
+- Demo wiring: `apps/fret-ui-gallery/src/driver.rs`.
+- Diagnostics script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json`.
+
 ### MVP 3: macOS `NSMenu` Mapping (Done)
 
 Goal: implement macOS `NSMenu` mapping with a minimal set of platform semantics, matching Zed’s
