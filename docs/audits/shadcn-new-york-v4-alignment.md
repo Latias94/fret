@@ -14,6 +14,16 @@ for the `new-york-v4` preset, without expanding `fret-ui` mechanism scope.
 - Validate controls at multiple DPIs and with a “weird metrics” UI font (e.g. a Nerd Font) to catch
   baseline/centering issues.
 
+## Infra notes (golden + scroll + paint cache)
+
+- Scroll offsets are applied as a children-only render transform. `PaintCx::paint()` must see the
+  parent node's children transform even while the widget is temporarily removed from the node
+  (during `with_widget_mut`).
+- `PaintCacheKey` includes the node's children render transform so cache replay cannot cross
+  scroll/transform changes without invalidation.
+- Regression test: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs`
+  (`scroll_offset_changes_do_not_replay_paint_cache`).
+
 ## Global baseline rules (new-york-v4)
 
 These patterns appear repeatedly across upstream components:
