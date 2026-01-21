@@ -6,7 +6,6 @@ use fret_kit::interop::embedded_viewport as embedded;
 use fret_kit::prelude::*;
 use fret_render::RenderTargetColorSpace;
 use fret_runtime::{FrameId, TickId};
-use fret_ui::element::AnyElementIterExt as _;
 
 #[derive(Clone)]
 struct TodoItem {
@@ -68,8 +67,6 @@ impl embedded::EmbeddedViewportRecord for TodoMvuInteropState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    use embedded::EmbeddedViewportMvuUiAppDriverExt as _;
-
     fret_kit::mvu::app_with_hooks::<TodoMvuInteropProgram>("todo-mvu-interop-demo", |d| {
         d.drive_embedded_viewport()
     })?
