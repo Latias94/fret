@@ -1,15 +1,14 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, Px, TextOverflow, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
-    TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemVariant {
@@ -354,21 +353,13 @@ impl ItemTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_medium()
+            .text_color(ColorRef::Color(fg))
+            .truncate()
+            .into_element(cx)
     }
 }
 
@@ -397,21 +388,14 @@ impl ItemDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .into_element(cx)
     }
 }
 
