@@ -10,15 +10,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> Point {
         let rect = context_menu_rect_at(&self.style, desired, item_count, snapshot.zoom);
 
-        let viewport_w = bounds.size.width.0 / snapshot.zoom;
-        let viewport_h = bounds.size.height.0 / snapshot.zoom;
-        let viewport_origin_x = -snapshot.pan.x;
-        let viewport_origin_y = -snapshot.pan.y;
+        let viewport = CanvasViewport2D::new(
+            bounds,
+            PanZoom2D {
+                pan: Point::new(Px(snapshot.pan.x), Px(snapshot.pan.y)),
+                zoom: snapshot.zoom,
+            },
+        );
+        let vis = viewport.visible_canvas_rect();
 
-        let min_x = viewport_origin_x;
-        let min_y = viewport_origin_y;
-        let max_x = viewport_origin_x + (viewport_w - rect.size.width.0).max(0.0);
-        let max_y = viewport_origin_y + (viewport_h - rect.size.height.0).max(0.0);
+        let min_x = vis.origin.x.0;
+        let min_y = vis.origin.y.0;
+        let max_x = vis.origin.x.0 + (vis.size.width.0 - rect.size.width.0).max(0.0);
+        let max_y = vis.origin.y.0 + (vis.size.height.0 - rect.size.height.0).max(0.0);
 
         Point::new(
             Px(desired.x.0.clamp(min_x, max_x)),
@@ -35,15 +39,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> Point {
         let rect = searcher_rect_at(&self.style, desired, visible_rows, snapshot.zoom);
 
-        let viewport_w = bounds.size.width.0 / snapshot.zoom;
-        let viewport_h = bounds.size.height.0 / snapshot.zoom;
-        let viewport_origin_x = -snapshot.pan.x;
-        let viewport_origin_y = -snapshot.pan.y;
+        let viewport = CanvasViewport2D::new(
+            bounds,
+            PanZoom2D {
+                pan: Point::new(Px(snapshot.pan.x), Px(snapshot.pan.y)),
+                zoom: snapshot.zoom,
+            },
+        );
+        let vis = viewport.visible_canvas_rect();
 
-        let min_x = viewport_origin_x;
-        let min_y = viewport_origin_y;
-        let max_x = viewport_origin_x + (viewport_w - rect.size.width.0).max(0.0);
-        let max_y = viewport_origin_y + (viewport_h - rect.size.height.0).max(0.0);
+        let min_x = vis.origin.x.0;
+        let min_y = vis.origin.y.0;
+        let max_x = vis.origin.x.0 + (vis.size.width.0 - rect.size.width.0).max(0.0);
+        let max_y = vis.origin.y.0 + (vis.size.height.0 - rect.size.height.0).max(0.0);
 
         Point::new(
             Px(desired.x.0.clamp(min_x, max_x)),

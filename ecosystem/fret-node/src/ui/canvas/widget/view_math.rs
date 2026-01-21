@@ -1,4 +1,5 @@
 use super::*;
+use fret_canvas::view::{PanZoomConstraints2D, clamp_pan_zoom_view};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn close_button_rect(pan: CanvasPoint, zoom: f32) -> Rect {
@@ -85,36 +86,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         bounds: Rect,
         extent: crate::core::CanvasRect,
     ) -> CanvasPoint {
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return pan;
-        }
-        if !bounds.size.width.0.is_finite()
-            || !bounds.size.height.0.is_finite()
-            || bounds.size.width.0 <= 0.0
-            || bounds.size.height.0 <= 0.0
-        {
-            return pan;
-        }
-        let ew = extent.size.width;
-        let eh = extent.size.height;
-        if !ew.is_finite() || !eh.is_finite() || ew <= 0.0 || eh <= 0.0 {
-            return pan;
-        }
+        let extent_rect = Rect::new(
+            Point::new(Px(extent.origin.x), Px(extent.origin.y)),
+            Size::new(Px(extent.size.width), Px(extent.size.height)),
+        );
 
-        let view_w = bounds.size.width.0 / zoom;
-        let view_h = bounds.size.height.0 / zoom;
-
-        let min_x = extent.origin.x;
-        let min_y = extent.origin.y;
-        let max_x = extent.origin.x + (extent.size.width - view_w).max(0.0);
-        let max_y = extent.origin.y + (extent.size.height - view_h).max(0.0);
-
-        let view_origin_x = (-pan.x).clamp(min_x, max_x);
-        let view_origin_y = (-pan.y).clamp(min_y, max_y);
+        let view = clamp_pan_zoom_view(
+            bounds,
+            PanZoom2D {
+                pan: Point::new(Px(pan.x), Px(pan.y)),
+                zoom,
+            },
+            PanZoomConstraints2D {
+                min_zoom: zoom,
+                max_zoom: zoom,
+                translate_extent_canvas: Some(extent_rect),
+            },
+        );
 
         CanvasPoint {
-            x: -view_origin_x,
-            y: -view_origin_y,
+            x: view.pan.x.0,
+            y: view.pan.y.0,
         }
     }
 
