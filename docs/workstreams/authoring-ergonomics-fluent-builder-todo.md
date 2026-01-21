@@ -94,17 +94,17 @@ while keeping geometry/overflow semantics stable (verified via web goldens).
 
 Current state (as of 2026-01-21):
 
-- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/button.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/command.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/empty.rs`, `ecosystem/fret-ui-shadcn/src/field.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`, `ecosystem/fret-ui-shadcn/src/select.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`
-- Remaining: 36 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
+- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/button.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/command.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/empty.rs`, `ecosystem/fret-ui-shadcn/src/field.rs`, `ecosystem/fret-ui-shadcn/src/hover_card.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`, `ecosystem/fret-ui-shadcn/src/select.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`
+- Remaining: 32 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
 
 Top remaining hotspots (by callsite count):
 
 | Count | File |
 | ---: | --- |
-| 4 | `ecosystem/fret-ui-shadcn/src/hover_card.rs` |
 | 3 | `ecosystem/fret-ui-shadcn/src/sidebar.rs` |
 | 2 | `ecosystem/fret-ui-shadcn/src/table.rs` |
 | 2 | `ecosystem/fret-ui-shadcn/src/sheet.rs` |
+| 2 | `ecosystem/fret-ui-shadcn/src/popover.rs` |
 
 Migration guidelines:
 
@@ -138,3 +138,5 @@ Next TODOs (suggested order: low-risk → high-risk):
   - Evidence: `ecosystem/fret-ui-shadcn/src/field.rs`
 - [x] AUE-adopt-text-093 Migrate `Select` text callsites (trigger + listbox options; verify overlay goldens).
   - Evidence: `ecosystem/fret-ui-shadcn/src/select.rs`
+- [x] AUE-adopt-text-094 Migrate `HoverCard` text callsites (unstyled content uses `ui::raw_text`).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/hover_card.rs`
