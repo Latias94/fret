@@ -39,6 +39,37 @@ Reference:
 
 - `docs/adr/0028-declarative-elements-and-element-state.md`
 
+### Windows: `thread 'main' has overflowed its stack` when launching demos
+
+Meaning:
+
+- Windows executables may default to a small **main-thread stack reserve** (commonly 1 MiB).
+- Deep recursive layout/hit-testing paths (e.g. taffy traversal, large trees) can overflow that stack.
+
+What to do:
+
+- Ensure demo executables are rebuilt after pulling:
+  - We bump the Windows stack reserve for native `apps/` binaries via per-crate `build.rs`.
+- Optional runtime fallback (desktop-only):
+  - Set `FRET_STACKSAFE=1` to configure `stacksafe` early in `fret-launch` (defaults: `min=2MiB`, `alloc=8MiB`).
+
+Related env vars:
+
+- `FRET_WINDOWS_STACK_RESERVE_BYTES`: override the linker stack reserve for `apps/` binaries.
+- `FRET_STACKSAFE_MIN_BYTES` / `FRET_STACKSAFE_ALLOC_BYTES`: tune `stacksafe` sizes.
+
+### Windows: `cargo build -p fret-demo --bins` fails with OOM / invalid metadata
+
+Meaning:
+
+- Building many statically-linked wgpu demo binaries in parallel can exhaust virtual memory on Windows.
+- Symptoms include `LNK1102: out of memory` and Rustc metadata mmap failures (`os error 1455`).
+
+What to do:
+
+- Use fewer build jobs (this repo caps jobs by default via `.cargo/config.toml`).
+- If needed, override via `CARGO_BUILD_JOBS` or increase the system page file.
+
 ## Platform Limitations (Current)
 
 ### External OS file drag & drop on macOS (winit)
