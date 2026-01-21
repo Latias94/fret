@@ -16,6 +16,7 @@ pub struct UiDiagnosticsConfig {
     pub out_dir: PathBuf,
     pub trigger_path: PathBuf,
     pub ready_path: PathBuf,
+    pub exit_path: PathBuf,
     pub max_events: usize,
     pub max_snapshots: usize,
     pub capture_semantics: bool,
@@ -50,6 +51,10 @@ impl Default for UiDiagnosticsConfig {
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("ready.touch"));
+        let exit_path = std::env::var_os("FRET_DIAG_EXIT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("exit.touch"));
 
         let max_events = std::env::var("FRET_DIAG_MAX_EVENTS")
             .ok()
@@ -109,6 +114,7 @@ impl Default for UiDiagnosticsConfig {
             out_dir,
             trigger_path,
             ready_path,
+            exit_path,
             max_events,
             max_snapshots,
             capture_semantics,
@@ -137,6 +143,8 @@ pub struct UiDiagnosticsService {
     last_script_trigger_stamp: Option<u64>,
     last_pick_trigger_mtime: Option<std::time::SystemTime>,
     last_inspect_trigger_mtime: Option<std::time::SystemTime>,
+    exit_armed: bool,
+    exit_last_mtime: Option<std::time::SystemTime>,
     ready_written: bool,
     inspect_enabled: bool,
     inspect_consume_clicks: bool,
@@ -180,6 +188,33 @@ struct InspectToast {
 impl UiDiagnosticsService {
     pub fn is_enabled(&self) -> bool {
         self.cfg.enabled
+    }
+
+    pub fn poll_exit_trigger(&mut self) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+
+        let current_mtime = std::fs::metadata(&self.cfg.exit_path)
+            .and_then(|m| m.modified())
+            .ok();
+
+        if !self.exit_armed {
+            self.exit_last_mtime = current_mtime;
+            self.exit_armed = true;
+            return false;
+        }
+
+        let Some(current_mtime) = current_mtime else {
+            return false;
+        };
+
+        let triggered = match self.exit_last_mtime {
+            Some(prev) => current_mtime > prev,
+            None => true,
+        };
+        self.exit_last_mtime = Some(current_mtime);
+        triggered
     }
 
     pub fn redact_text(&self) -> bool {

@@ -1733,7 +1733,9 @@ fn ui_app_render<S>(
                 #[cfg(feature = "tracing")]
                 tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");
             }
-            if svc.is_enabled() {
+            if svc.poll_exit_trigger() {
+                app.push_effect(Effect::QuitApp);
+            } else if svc.is_enabled() {
                 app.push_effect(Effect::RequestAnimationFrame(window));
             }
         });
