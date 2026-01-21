@@ -12,6 +12,12 @@ pub trait SurfaceUiBuilderExt {
     /// Applies the standard shadcn dialog surface chrome (background, border, radius, padding,
     /// and shadow).
     fn dialog_style(self) -> Self;
+
+    /// Applies the standard shadcn menu surface chrome (dropdown/context/menubar panel).
+    fn menu_style(self) -> Self;
+
+    /// Applies the standard shadcn submenu surface chrome.
+    fn menu_sub_style(self) -> Self;
 }
 
 pub(crate) fn popover_style_chrome() -> ChromeRefinement {
@@ -46,6 +52,41 @@ pub(crate) fn dialog_style_chrome() -> ChromeRefinement {
         .shadow(ShadowPreset::Lg)
 }
 
+pub(crate) fn menu_style_chrome() -> ChromeRefinement {
+    ChromeRefinement::default()
+        .rounded(Radius::Md)
+        .border_1()
+        .bg(ColorRef::Token {
+            key: "popover.background",
+            fallback: ColorFallback::ThemePanelBackground,
+        })
+        .border_color(ColorRef::Token {
+            key: "border",
+            fallback: ColorFallback::ThemePanelBorder,
+        })
+        // new-york-v4: menu panels typically use `p-1`.
+        .p(Space::N1)
+        // new-york-v4: dropdown menu uses `shadow-md`.
+        .shadow(ShadowPreset::Md)
+}
+
+pub(crate) fn menu_sub_style_chrome() -> ChromeRefinement {
+    ChromeRefinement::default()
+        .rounded(Radius::Sm)
+        .border_1()
+        .bg(ColorRef::Token {
+            key: "popover.background",
+            fallback: ColorFallback::ThemePanelBackground,
+        })
+        .border_color(ColorRef::Token {
+            key: "border",
+            fallback: ColorFallback::ThemePanelBorder,
+        })
+        .p(Space::N1)
+        // new-york-v4: submenus typically use `shadow-lg`.
+        .shadow(ShadowPreset::Lg)
+}
+
 impl<T> SurfaceUiBuilderExt for UiBuilder<T>
 where
     T: UiSupportsChrome,
@@ -56,6 +97,14 @@ where
 
     fn dialog_style(self) -> Self {
         self.style(dialog_style_chrome())
+    }
+
+    fn menu_style(self) -> Self {
+        self.style(menu_style_chrome())
+    }
+
+    fn menu_sub_style(self) -> Self {
+        self.style(menu_sub_style_chrome())
     }
 }
 
@@ -115,6 +164,20 @@ mod tests {
 
         assert!(dummy.chrome.border_width.is_some());
         assert!(dummy.chrome.radius.is_some());
+        assert_eq!(dummy.chrome.shadow, Some(ShadowPreset::Lg));
+        assert!(dummy.chrome.padding.is_some());
+    }
+
+    #[test]
+    fn menu_style_sets_expected_chrome_fields() {
+        let dummy = Dummy::default().ui().menu_style().build();
+        assert_eq!(dummy.chrome.shadow, Some(ShadowPreset::Md));
+        assert!(dummy.chrome.padding.is_some());
+    }
+
+    #[test]
+    fn menu_sub_style_sets_expected_chrome_fields() {
+        let dummy = Dummy::default().ui().menu_sub_style().build();
         assert_eq!(dummy.chrome.shadow, Some(ShadowPreset::Lg));
         assert!(dummy.chrome.padding.is_some());
     }

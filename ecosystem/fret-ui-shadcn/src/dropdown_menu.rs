@@ -27,7 +27,9 @@ use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
+use fret_ui_kit::{
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+};
 
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
@@ -1310,20 +1312,18 @@ impl DropdownMenu {
 
                     let border = theme.color_required("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-                    let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
-                    // new-york-v4:
-                    // - `DropdownMenuContent`: `shadow-md`
-                    // - `DropdownMenuSubContent`: `shadow-lg`
-                    let shadow = decl_style::shadow_md(&theme, radius_md);
-                    let shadow_submenu = decl_style::shadow_lg(&theme, radius_md);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     // new-york-v4: item rows use `px-2`.
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                    let bg = theme.color_required("popover");
-                    let fg = theme.color_required("popover-foreground");
+                    let bg = theme.color_required("popover.background");
+                    let fg = theme.color_required("popover.foreground");
                     let accent = theme.color_required("accent");
                     let accent_fg = theme.color_required("accent-foreground");
+
+                    let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
+                    let submenu_chrome =
+                        crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Sm);
 
                     let entries_for_submenu = entries.clone();
                     let open_for_menu = open_for_overlay.clone();
@@ -1385,17 +1385,19 @@ impl DropdownMenu {
                                         })
                                         .flatten();
 
+                                    let theme_for_panel = theme.clone();
+                                    let panel_chrome_for_panel = panel_chrome.clone();
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,
                                         Rect::new(Point::new(extra_left, extra_top), placed.size),
-                                        move |layout| ContainerProps {
-                                            layout,
-                                            padding: Edges::all(Px(4.0)),
-                                            background: Some(bg),
-                                            shadow: Some(shadow),
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(border),
-                                            corner_radii: fret_core::Corners::all(radius_md),
+                                        move |layout| {
+                                            let mut props = decl_style::container_props(
+                                                &theme_for_panel,
+                                                panel_chrome_for_panel.clone(),
+                                                LayoutRefinement::default(),
+                                            );
+                                            props.layout = layout;
+                                            props
                                         },
                                         move |cx| {
                                     let scroll_layout = LayoutStyle {
@@ -2393,19 +2395,21 @@ impl DropdownMenu {
                                                 .read(&submenu_models_for_panel.trigger, |v| *v)
                                                 .ok()
                                                 .flatten();
+                                            let theme_for_submenu_panel = theme.clone();
+                                            let submenu_chrome_for_panel = submenu_chrome.clone();
                                             let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                                 cx,
                                                 open_value.clone(),
                                                 geometry.floating,
                                                 labelled_by_element,
-                                                move |layout| ContainerProps {
-                                                    layout,
-                                                    padding: Edges::all(Px(4.0)),
-                                                    background: Some(bg),
-                                                    shadow: Some(shadow_submenu),
-                                                    border: Edges::all(Px(1.0)),
-                                                    border_color: Some(border),
-                                                    corner_radii: fret_core::Corners::all(radius_sm),
+                                                move |layout| {
+                                                    let mut props = decl_style::container_props(
+                                                        &theme_for_submenu_panel,
+                                                        submenu_chrome_for_panel.clone(),
+                                                        LayoutRefinement::default(),
+                                                    );
+                                                    props.layout = layout;
+                                                    props
                                                 },
                                                 move |cx| {
                                                     let mut item_ix: usize = 0;

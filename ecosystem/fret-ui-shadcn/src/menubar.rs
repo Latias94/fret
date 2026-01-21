@@ -1370,16 +1370,16 @@ impl MenubarMenuEntries {
 
                         let border = theme.color_required("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-                        let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
-                        let shadow = decl_style::shadow_md(&theme, radius_md);
-                        let shadow_submenu = decl_style::shadow_lg(&theme, radius_md);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                         let font_size = theme.metric_required("font.size");
                         let destructive_fg = theme.color_required("destructive");
                         let destructive_bg = alpha_mul(destructive_fg, 0.12);
-                        let panel_bg = theme.color_required("popover");
+
+                        let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
+                        let submenu_chrome =
+                            crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Md);
 
                         let open_for_submenu = open_for_overlay.clone();
                         let submenu_for_content = submenu.clone();
@@ -1419,17 +1419,19 @@ impl MenubarMenuEntries {
                                         fret_core::Point::new(Px(0.0), Px(0.0)),
                                         placed.size,
                                     );
+                                    let theme_for_panel_layout = theme.clone();
+                                    let panel_chrome_for_panel = panel_chrome.clone();
                                     vec![menu::content_panel::menu_panel_container_at(
                                         cx,
                                         local_placed,
-                                        move |layout| ContainerProps {
-                                            layout,
-                                            padding: Edges::all(Px(4.0)),
-                                            background: Some(panel_bg),
-                                            shadow: Some(shadow),
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(border),
-                                            corner_radii: Corners::all(radius_md),
+                                        move |layout| {
+                                            let mut props = decl_style::container_props(
+                                                &theme_for_panel_layout,
+                                                panel_chrome_for_panel.clone(),
+                                                LayoutRefinement::default(),
+                                            );
+                                            props.layout = layout;
+                                            props
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -2361,19 +2363,21 @@ impl MenubarMenuEntries {
                                         .flatten();
                                     let item_ring = item_ring;
 
+                                    let theme_for_panel_layout = theme.clone();
+                                    let submenu_chrome_for_panel = submenu_chrome.clone();
                                     let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                         cx,
                                         open_value.clone(),
                                         placed,
                                         labelled_by_element,
-                                        move |layout| ContainerProps {
-                                            layout,
-                                            padding: Edges::all(Px(4.0)),
-                                            background: Some(panel_bg),
-                                            shadow: Some(shadow_submenu),
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(border),
-                                            corner_radii: Corners::all(radius_md),
+                                        move |layout| {
+                                            let mut props = decl_style::container_props(
+                                                &theme_for_panel_layout,
+                                                submenu_chrome_for_panel.clone(),
+                                                LayoutRefinement::default(),
+                                            );
+                                            props.layout = layout;
+                                            props
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =

@@ -26,7 +26,9 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
+use fret_ui_kit::{
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
@@ -1825,8 +1827,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 
     let border = theme.color_required("border");
     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-    let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
-    let shadow = decl_style::shadow_lg(&theme, radius_md);
+    let panel_chrome = crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Md);
     let ring = decl_style::focus_ring(&theme, radius_sm);
     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
@@ -1848,7 +1849,6 @@ fn context_menu_submenu_panel<H: UiHost>(
     let fg = theme.color_required("foreground");
     let destructive_fg = theme.color_required("destructive");
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
-    let panel_bg = theme.color_required("popover");
 
     let labelled_by_element = cx
         .app
@@ -1862,14 +1862,14 @@ fn context_menu_submenu_panel<H: UiHost>(
         open_value,
         placed,
         labelled_by_element,
-        move |layout| ContainerProps {
-            layout,
-            padding: Edges::all(Px(4.0)),
-            background: Some(panel_bg),
-            shadow: Some(shadow),
-            border: Edges::all(Px(1.0)),
-            border_color: Some(border),
-            corner_radii: fret_core::Corners::all(radius_md),
+        move |layout| {
+            let mut props = decl_style::container_props(
+                &theme,
+                panel_chrome.clone(),
+                LayoutRefinement::default(),
+            );
+            props.layout = layout;
+            props
         },
         move |cx| {
             let render_env = ContextMenuRenderEnv {
@@ -2308,8 +2308,6 @@ impl ContextMenu {
 
                     let border = theme.color_required("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-                    let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
-                    let shadow = decl_style::shadow_md(&theme, radius_md);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
@@ -2331,7 +2329,8 @@ impl ContextMenu {
                     let fg = theme.color_required("foreground");
                     let destructive_fg = theme.color_required("destructive");
                     let destructive_bg = alpha_mul(destructive_fg, 0.12);
-                    let panel_bg = theme.color_required("popover");
+                    let panel_bg = theme.color_required("popover.background");
+                    let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
 
                     let entries_for_submenu = entries_tree.clone();
                     let entries = entries_tree.clone();
@@ -2388,14 +2387,14 @@ impl ContextMenu {
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,
                                         Rect::new(Point::new(extra_left, extra_top), placed.size),
-                                        move |layout| ContainerProps {
-                                            layout,
-                                            padding: Edges::all(Px(4.0)),
-                                            background: Some(panel_bg),
-                                            shadow: Some(shadow),
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(border),
-                                            corner_radii: fret_core::Corners::all(radius_md),
+                                        move |layout| {
+                                            let mut props = decl_style::container_props(
+                                                &theme,
+                                                panel_chrome.clone(),
+                                                LayoutRefinement::default(),
+                                            );
+                                            props.layout = layout;
+                                            props
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
