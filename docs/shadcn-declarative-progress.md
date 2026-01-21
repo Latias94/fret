@@ -155,7 +155,10 @@ Overlay stack (layered children):
 let overlay = ui::stack(cx, move |cx| {
     vec![
         // Underlay (e.g. modal barrier)
-        cx.container(Default::default(), |_cx| Vec::new()),
+        ui::container(cx, |_cx| Vec::new())
+            .absolute()
+            .inset(Space::N0)
+            .into_element(cx),
         // Foreground content
         DialogContent::new(vec![]).ui().into_element(cx),
     ]
