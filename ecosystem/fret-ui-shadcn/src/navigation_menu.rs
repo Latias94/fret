@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
+use fret_core::Transform2D;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
-use fret_core::{TextWrap, Transform2D};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
-    PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps, TextProps,
+    PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
     VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
@@ -16,8 +16,8 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::{
-    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius,
-    Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Radius, Space, ui,
 };
 
 use crate::overlay_motion;
@@ -764,14 +764,21 @@ impl NavigationMenu {
 
                                         let content_children =
                                             trigger_children.clone().unwrap_or_else(|| {
-                                                vec![cx.text_props(TextProps {
-                                                    layout: LayoutStyle::default(),
-                                                    text: item_label.clone(),
-                                                    style: Some(trigger_text_style.clone()),
-                                                    color: Some(fg),
-                                                    wrap: TextWrap::None,
-                                                    overflow: fret_core::TextOverflow::Clip,
-                                                })]
+                                                let style = trigger_text_style.clone();
+                                                let mut label = ui::label(cx, item_label.clone())
+                                                    .text_size_px(style.size)
+                                                    .font_weight(style.weight)
+                                                    .text_color(ColorRef::Color(fg))
+                                                    .nowrap();
+                                                if let Some(line_height) = style.line_height {
+                                                    label = label.line_height_px(line_height);
+                                                }
+                                                if let Some(letter_spacing_em) =
+                                                    style.letter_spacing_em
+                                                {
+                                                    label = label.letter_spacing_em(letter_spacing_em);
+                                                }
+                                                vec![label.into_element(cx)]
                                             });
 
                                         vec![cx.container(wrapper, move |_cx| content_children)]

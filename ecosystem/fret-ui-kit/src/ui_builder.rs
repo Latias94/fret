@@ -1,6 +1,9 @@
+use crate::Corners4;
 use crate::{
-    ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorRef, Edges4, Items, Justify, LayoutRefinement, LengthRefinement,
+    MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
+use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
@@ -110,7 +113,189 @@ macro_rules! forward_layout_noargs {
     };
 }
 
+impl UiBuilder<crate::ui::TextBox> {
+    pub fn text_sm(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Sm;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
+    pub fn text_base(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Base;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
+    pub fn text_prose(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Prose;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
+    pub fn font_weight(mut self, weight: FontWeight) -> Self {
+        self.inner.weight_override = Some(weight);
+        self
+    }
+
+    pub fn font_normal(self) -> Self {
+        self.font_weight(FontWeight::NORMAL)
+    }
+
+    pub fn font_medium(self) -> Self {
+        self.font_weight(FontWeight::MEDIUM)
+    }
+
+    pub fn font_semibold(self) -> Self {
+        self.font_weight(FontWeight::SEMIBOLD)
+    }
+
+    pub fn font_bold(self) -> Self {
+        self.font_weight(FontWeight::BOLD)
+    }
+
+    pub fn text_color(mut self, color: ColorRef) -> Self {
+        self.inner.color_override = Some(color);
+        self
+    }
+
+    pub fn text_size_px(mut self, size: Px) -> Self {
+        self.inner.size_override = Some(size);
+        self
+    }
+
+    pub fn line_height_px(mut self, height: Px) -> Self {
+        self.inner.line_height_override = Some(height);
+        self
+    }
+
+    pub fn letter_spacing_em(mut self, letter_spacing_em: f32) -> Self {
+        self.inner.letter_spacing_em_override = Some(letter_spacing_em);
+        self
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.inner.wrap = wrap;
+        self
+    }
+
+    pub fn overflow(mut self, overflow: TextOverflow) -> Self {
+        self.inner.overflow = overflow;
+        self
+    }
+
+    pub fn nowrap(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Clip)
+    }
+
+    pub fn truncate(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
+}
+
+impl UiBuilder<crate::ui::RawTextBox> {
+    pub fn text_color(mut self, color: ColorRef) -> Self {
+        self.inner.color_override = Some(color);
+        self
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.inner.wrap = wrap;
+        self
+    }
+
+    pub fn overflow(mut self, overflow: TextOverflow) -> Self {
+        self.inner.overflow = overflow;
+        self
+    }
+
+    pub fn nowrap(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Clip)
+    }
+
+    pub fn truncate(self) -> Self {
+        self.wrap(TextWrap::None).overflow(TextOverflow::Ellipsis)
+    }
+}
+
 impl<T: UiSupportsChrome> UiBuilder<T> {
+    pub fn paddings(self, paddings: impl Into<Edges4<MetricRef>>) -> Self {
+        self.style_with(|mut c| {
+            let Edges4 {
+                top,
+                right,
+                bottom,
+                left,
+            } = paddings.into();
+            let mut padding = c.padding.unwrap_or_default();
+            padding.top = Some(top);
+            padding.right = Some(right);
+            padding.bottom = Some(bottom);
+            padding.left = Some(left);
+            c.padding = Some(padding);
+            c
+        })
+    }
+
+    pub fn focused_border(self) -> Self {
+        self.style_with(ChromeRefinement::focused_border)
+    }
+
+    pub fn corner_radii(self, radii: impl Into<Corners4<MetricRef>>) -> Self {
+        self.style_with(|c| c.corner_radii(radii))
+    }
+
+    pub fn rounded_tl(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_tl(radius))
+    }
+
+    pub fn rounded_tr(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_tr(radius))
+    }
+
+    pub fn rounded_br(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_br(radius))
+    }
+
+    pub fn rounded_bl(self, radius: Radius) -> Self {
+        self.style_with(|c| c.rounded_bl(radius))
+    }
+
+    pub fn shadow_none(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_none)
+    }
+
+    pub fn shadow_xs(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_xs)
+    }
+
+    pub fn shadow_sm(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_sm)
+    }
+
+    pub fn shadow_md(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_md)
+    }
+
+    pub fn shadow_lg(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_lg)
+    }
+
+    pub fn debug_border(self, color: ColorRef) -> Self {
+        self.style_with(|c| c.debug_border(color))
+    }
+
+    pub fn debug_border_primary(self) -> Self {
+        self.style_with(ChromeRefinement::debug_border_primary)
+    }
+
+    pub fn debug_border_destructive(self) -> Self {
+        self.style_with(ChromeRefinement::debug_border_destructive)
+    }
+
+    pub fn debug_border_ring(self) -> Self {
+        self.style_with(ChromeRefinement::debug_border_ring)
+    }
+
     pub fn px(self, space: Space) -> Self {
         self.style_with(|c| c.px(space))
     }
@@ -162,6 +347,42 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
 }
 
 impl<T: UiSupportsLayout> UiBuilder<T> {
+    pub fn insets(self, insets: impl Into<Edges4<SignedMetricRef>>) -> Self {
+        self.layout_with(|mut l| {
+            let Edges4 {
+                top,
+                right,
+                bottom,
+                left,
+            } = insets.into();
+            let mut inset = l.inset.unwrap_or_default();
+            inset.top = Some(top);
+            inset.right = Some(right);
+            inset.bottom = Some(bottom);
+            inset.left = Some(left);
+            l.inset = Some(inset);
+            l
+        })
+    }
+
+    pub fn margins(self, margins: impl Into<Edges4<MarginEdge>>) -> Self {
+        self.layout_with(|mut l| {
+            let Edges4 {
+                top,
+                right,
+                bottom,
+                left,
+            } = margins.into();
+            let mut margin = l.margin.unwrap_or_default();
+            margin.top = Some(top.into());
+            margin.right = Some(right.into());
+            margin.bottom = Some(bottom.into());
+            margin.left = Some(left.into());
+            l.margin = Some(margin);
+            l
+        })
+    }
+
     pub fn aspect_ratio(self, ratio: f32) -> Self {
         self.layout_with(|l| l.aspect_ratio(ratio))
     }
@@ -440,8 +661,94 @@ impl<T: UiPatchTarget> UiBuilder<T> {
     }
 }
 
+impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
+    pub fn gap(mut self, space: Space) -> Self {
+        self.inner.gap = space;
+        self
+    }
+
+    pub fn justify(mut self, justify: Justify) -> Self {
+        self.inner.justify = justify;
+        self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
+    pub fn items(mut self, items: Items) -> Self {
+        self.inner.items = items;
+        self
+    }
+
+    pub fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
+    }
+
+    pub fn wrap(mut self) -> Self {
+        self.inner.wrap = true;
+        self
+    }
+
+    pub fn no_wrap(mut self) -> Self {
+        self.inner.wrap = false;
+        self
+    }
+}
+
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, F> UiBuilder<crate::ui::FlexBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, F> UiBuilder<crate::ui::ContainerBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, F> UiBuilder<crate::ui::StackBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
 }
@@ -459,6 +766,7 @@ impl<T: UiPatchTarget> UiExt for T {}
 mod tests {
     use super::*;
     use crate::{LengthRefinement, MetricRef};
+    use fret_core::Axis;
     use fret_core::Color;
     use fret_core::Px;
 
@@ -525,10 +833,91 @@ mod tests {
     }
 
     #[test]
+    fn ui_builder_edges4_helpers_write_fields() {
+        let dummy = Dummy::default()
+            .ui()
+            .paddings(Edges4::trbl(Space::N1, Space::N2, Space::N3, Space::N4))
+            .margins(Edges4::trbl(
+                MarginEdge::auto(),
+                Space::N2.into(),
+                Space::N3.into(),
+                Space::N4.into(),
+            ))
+            .insets(Edges4::all(Space::N1).neg())
+            .focused_border()
+            .corner_radii(Corners4::tltrbrbl(
+                Radius::Sm,
+                Radius::Md,
+                Radius::Lg,
+                Radius::Full,
+            ))
+            .rounded_tl(Radius::Lg)
+            .shadow_md()
+            .debug_border_primary()
+            .debug_border_destructive()
+            .build();
+
+        let padding = dummy.chrome.padding.expect("expected padding refinement");
+        match padding.top {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N1.token_key()),
+            other => panic!("expected top padding token, got {other:?}"),
+        }
+        match padding.right {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N2.token_key()),
+            other => panic!("expected right padding token, got {other:?}"),
+        }
+        match padding.bottom {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N3.token_key()),
+            other => panic!("expected bottom padding token, got {other:?}"),
+        }
+        match padding.left {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, Space::N4.token_key()),
+            other => panic!("expected left padding token, got {other:?}"),
+        }
+
+        let margin = dummy.layout.margin.expect("expected margin refinement");
+        assert!(matches!(
+            margin.top,
+            Some(crate::style::MarginEdgeRefinement::Auto)
+        ));
+        match margin.right {
+            Some(crate::style::MarginEdgeRefinement::Px(SignedMetricRef::Pos(
+                MetricRef::Token { key, .. },
+            ))) => assert_eq!(key, Space::N2.token_key()),
+            other => panic!("expected right margin token, got {other:?}"),
+        }
+
+        let inset = dummy.layout.inset.expect("expected inset refinement");
+        match inset.left {
+            Some(SignedMetricRef::Neg(MetricRef::Token { key, .. })) => {
+                assert_eq!(key, Space::N1.token_key())
+            }
+            other => panic!("expected left inset negative token, got {other:?}"),
+        }
+
+        match dummy.chrome.border_color {
+            Some(ColorRef::Token { key, .. }) => assert_eq!(key, "destructive"),
+            other => panic!("expected debug_border_destructive to set border_color, got {other:?}"),
+        }
+
+        assert_eq!(dummy.chrome.shadow, Some(crate::style::ShadowPreset::Md));
+
+        let radii = dummy
+            .chrome
+            .corner_radii
+            .expect("expected corner radii refinement");
+        match radii.top_left {
+            Some(MetricRef::Token { key, .. }) => assert_eq!(key, "component.radius.lg"),
+            other => panic!("expected top_left token radius, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn ui_builder_forwards_full_vocabulary_smoke() {
         let _ = Dummy::default()
             .ui()
             // ChromeRefinement
+            .paddings(Edges4::all(Space::N1))
             .px(Space::N1)
             .py(Space::N2)
             .p(Space::N3)
@@ -589,6 +978,8 @@ mod tests {
             .overflow_visible()
             .overflow_x_hidden()
             .overflow_y_hidden()
+            .margins(Edges4::all(Space::N1))
+            .insets(Edges4::all(Space::N1))
             .inset(Space::N2)
             .top(Space::N3)
             .top_neg(Space::N3)
@@ -729,5 +1120,21 @@ mod tests {
             .max_w_11()
             .max_h_11()
             .build();
+    }
+
+    #[test]
+    fn ui_flex_box_builder_records_gap_and_alignment() {
+        let flex = crate::ui::FlexBox::<(), ()>::new(Axis::Horizontal, ())
+            .ui()
+            .gap(Space::N2)
+            .justify_between()
+            .items_center()
+            .wrap()
+            .build();
+
+        assert_eq!(flex.gap, Space::N2);
+        assert_eq!(flex.justify, Justify::Between);
+        assert_eq!(flex.items, Items::Center);
+        assert!(flex.wrap);
     }
 }

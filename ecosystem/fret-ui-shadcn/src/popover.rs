@@ -2,12 +2,12 @@ use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Px, SemanticsRole, Size};
 use fret_runtime::Model;
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, Length,
-    OpacityProps, Overflow, SemanticsProps, TextProps, VisualTransformProps,
+    OpacityProps, Overflow, SemanticsProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -20,7 +20,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -605,16 +605,8 @@ impl PopoverAnchor {
     }
 }
 
-fn popover_content_chrome(theme: &Theme) -> ChromeRefinement {
-    let bg = theme.color_required("popover.background");
-    let border = theme.color_required("border");
-
-    ChromeRefinement::default()
-        .rounded(Radius::Md)
-        .border_1()
-        .bg(ColorRef::Color(bg))
-        .border_color(ColorRef::Color(border))
-        .p(Space::N4)
+fn popover_content_chrome() -> ChromeRefinement {
+    crate::ui_builder_ext::surfaces::popover_style_chrome()
 }
 
 /// shadcn/ui `PopoverContent` (v4).
@@ -653,24 +645,13 @@ impl PopoverContent {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let radius = theme.metric_required("metric.radius.md");
-        let shadow = decl_style::shadow_md(&theme, radius);
-
-        let chrome = popover_content_chrome(&theme).merge(self.chrome);
-        let props = decl_style::container_props(&theme, chrome, self.layout);
+        let theme = Theme::global(&*cx.app);
+        let chrome = popover_content_chrome().merge(self.chrome);
+        let props = decl_style::container_props(theme, chrome, self.layout);
         let children = self.children;
         let label = self.a11y_label;
 
-        let container = shadcn_layout::container_vstack_gap(
-            cx,
-            ContainerProps {
-                shadow: Some(shadow),
-                ..props
-            },
-            Space::N4,
-            children,
-        );
+        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
 
         cx.semantics(
             SemanticsProps {
@@ -730,21 +711,14 @@ impl PopoverTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::SEMIBOLD,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: Some(-0.02),
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_semibold()
+            .letter_spacing_em(-0.02)
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx)
     }
 }
 
@@ -775,21 +749,12 @@ impl PopoverDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
     }
 }
 

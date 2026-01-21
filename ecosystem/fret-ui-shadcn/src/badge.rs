@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SizeStyle, TextProps};
+use fret_core::Color;
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BadgeVariant {
@@ -129,30 +129,16 @@ fn badge_with_patch<H: UiHost>(
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-    let text_layout = LayoutStyle {
-        size: SizeStyle {
-            width: Length::Auto,
-            height: Length::Px(line_height),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
     cx.container(props, |cx| {
-        vec![cx.text_props(TextProps {
-            layout: text_layout,
-            text: label,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: text_px,
-                weight: FontWeight::SEMIBOLD,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })]
+        vec![
+            ui::text(cx, label)
+                .text_size_px(text_px)
+                .line_height_px(line_height)
+                .font_semibold()
+                .nowrap()
+                .text_color(ColorRef::Color(fg))
+                .h_px(MetricRef::Px(line_height))
+                .into_element(cx),
+        ]
     })
 }

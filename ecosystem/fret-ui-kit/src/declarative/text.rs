@@ -18,7 +18,7 @@ fn font_line_height(theme: &Theme) -> Px {
         .unwrap_or_else(|| theme.metric_required("font.line_height"))
 }
 
-fn text_sm_style(theme: &Theme) -> TextStyle {
+pub(crate) fn text_sm_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
         .unwrap_or_else(|| font_size(theme));
@@ -34,7 +34,7 @@ fn text_sm_style(theme: &Theme) -> TextStyle {
     }
 }
 
-fn text_base_style(theme: &Theme) -> TextStyle {
+pub(crate) fn text_base_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_PX)
         .unwrap_or_else(|| Px(font_size(theme).0 + 1.0));
@@ -50,7 +50,7 @@ fn text_base_style(theme: &Theme) -> TextStyle {
     }
 }
 
-fn text_prose_style(theme: &Theme) -> TextStyle {
+pub(crate) fn text_prose_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_PROSE_PX)
         .unwrap_or_else(|| Px(font_size(theme).0 + 2.0));
@@ -174,6 +174,30 @@ pub fn text_prose_bold<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
     })
+}
+
+/// Returns the default label style and line-height baseline used by `primitives::label`.
+pub(crate) fn label_style(theme: &Theme) -> (TextStyle, Px) {
+    let px = theme
+        .metric_by_key("component.label.text_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_required("font.size"));
+    let line_height = theme
+        .metric_by_key("component.label.line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+
+    (
+        TextStyle {
+            font: FontId::default(),
+            size: px,
+            weight: fret_core::FontWeight::MEDIUM,
+            slant: Default::default(),
+            line_height: Some(line_height),
+            letter_spacing_em: None,
+        },
+        line_height,
+    )
 }
 
 /// `text_prose` variant that forces single-line layout (`whitespace-nowrap`-like behavior).

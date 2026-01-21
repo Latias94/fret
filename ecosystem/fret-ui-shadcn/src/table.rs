@@ -4,12 +4,12 @@ use fret_core::geometry::Edges;
 use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 use crate::layout as shadcn_layout;
 
@@ -410,14 +410,18 @@ impl TableHead {
                     wrap: false,
                 },
                 move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: text.clone(),
-                        style: Some(style.clone()),
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    })]
+                    let mut head_text = ui::text(cx, text.clone())
+                        .text_size_px(style.size)
+                        .font_weight(style.weight)
+                        .text_color(ColorRef::Color(fg))
+                        .nowrap();
+                    if let Some(line_height) = style.line_height {
+                        head_text = head_text.line_height_px(line_height);
+                    }
+                    if let Some(letter_spacing_em) = style.letter_spacing_em {
+                        head_text = head_text.letter_spacing_em(letter_spacing_em);
+                    }
+                    vec![head_text.into_element(cx)]
                 },
             )]
         })
@@ -517,14 +521,19 @@ impl TableCaption {
         let text = self.text;
 
         cx.container(props, move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: Default::default(),
-                text,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::Word,
-                overflow: TextOverflow::Clip,
-            })]
+            let mut caption_text = ui::text(cx, text)
+                .text_size_px(style.size)
+                .font_weight(style.weight)
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip);
+            if let Some(line_height) = style.line_height {
+                caption_text = caption_text.line_height_px(line_height);
+            }
+            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                caption_text = caption_text.letter_spacing_em(letter_spacing_em);
+            }
+            vec![caption_text.into_element(cx)]
         })
     }
 }

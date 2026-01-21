@@ -5,8 +5,8 @@ use fret_ui::element::{
 };
 
 use crate::style::{
-    ChromeRefinement, InsetRefinement, LayoutRefinement, LengthRefinement, MarginRefinement,
-    PaddingRefinement, SizeRefinement,
+    ChromeRefinement, CornerRadiiRefinement, InsetRefinement, LayoutRefinement, LengthRefinement,
+    MarginRefinement, PaddingRefinement, ShadowPreset, SizeRefinement,
 };
 use crate::{ColorRef, MetricRef, Radius, Space};
 
@@ -48,6 +48,46 @@ fn resolve_padding(theme: &Theme, padding: Option<&PaddingRefinement>) -> Edges 
             .unwrap_or(Px(0.0)),
         left: p.left.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0)),
     }
+}
+
+fn resolve_corner_radii(
+    theme: &Theme,
+    radii: Option<&CornerRadiiRefinement>,
+    fallback_radius: Px,
+) -> Corners {
+    let Some(r) = radii else {
+        return Corners::all(fallback_radius);
+    };
+    Corners {
+        top_left: r
+            .top_left
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+        top_right: r
+            .top_right
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+        bottom_right: r
+            .bottom_right
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+        bottom_left: r
+            .bottom_left
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+    }
+}
+
+fn max_corner_radius(corners: Corners) -> Px {
+    let mut max = corners.top_left.0;
+    max = max.max(corners.top_right.0);
+    max = max.max(corners.bottom_right.0);
+    max = max.max(corners.bottom_left.0);
+    Px(max)
 }
 
 pub fn layout_style(theme: &Theme, refinement: LayoutRefinement) -> LayoutStyle {
@@ -161,25 +201,38 @@ pub fn container_props(
         .unwrap_or(Px(0.0));
     let border_color = chrome.border_color.as_ref().map(|c| c.resolve(theme));
 
-    let radius = chrome
+    let uniform_radius = chrome
         .radius
         .as_ref()
         .map(|m| m.resolve(theme))
         .unwrap_or(Px(0.0));
 
+    let corner_radii = resolve_corner_radii(theme, chrome.corner_radii.as_ref(), uniform_radius);
+
+    let shadow_radius = max_corner_radius(corner_radii);
+
     let layout = layout_style(theme, layout_refinement);
+
+    let shadow = match chrome.shadow {
+        Some(ShadowPreset::None) => None,
+        Some(ShadowPreset::Xs) => Some(shadow_xs(theme, shadow_radius)),
+        Some(ShadowPreset::Sm) => Some(shadow_sm(theme, shadow_radius)),
+        Some(ShadowPreset::Md) => Some(shadow_md(theme, shadow_radius)),
+        Some(ShadowPreset::Lg) => Some(shadow_lg(theme, shadow_radius)),
+        None => None,
+    };
 
     ContainerProps {
         layout,
         padding,
         background,
-        shadow: None,
+        shadow,
         border: Edges::all(border_width),
         border_color,
         focus_ring: None,
         focus_border_color: None,
         focus_within: false,
-        corner_radii: Corners::all(radius),
+        corner_radii,
     }
 }
 

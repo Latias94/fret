@@ -1,7 +1,8 @@
 use fret_core::Px;
 use fret_ui::Theme;
 
-use super::{ColorRef, MetricRef, Radius, SignedMetricRef, Space};
+use super::{ColorFallback, ColorRef, MetricRef, Radius, SignedMetricRef, Space};
+use crate::Corners4;
 
 #[derive(Debug, Clone, Default)]
 pub struct PaddingRefinement {
@@ -105,10 +106,47 @@ pub struct ChromeRefinement {
     pub padding: Option<PaddingRefinement>,
     pub min_height: Option<MetricRef>,
     pub radius: Option<MetricRef>,
+    pub corner_radii: Option<CornerRadiiRefinement>,
+    pub shadow: Option<ShadowPreset>,
     pub border_width: Option<MetricRef>,
     pub background: Option<ColorRef>,
     pub border_color: Option<ColorRef>,
     pub text_color: Option<ColorRef>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CornerRadiiRefinement {
+    pub top_left: Option<MetricRef>,
+    pub top_right: Option<MetricRef>,
+    pub bottom_right: Option<MetricRef>,
+    pub bottom_left: Option<MetricRef>,
+}
+
+impl CornerRadiiRefinement {
+    pub fn merge(mut self, other: CornerRadiiRefinement) -> Self {
+        if other.top_left.is_some() {
+            self.top_left = other.top_left;
+        }
+        if other.top_right.is_some() {
+            self.top_right = other.top_right;
+        }
+        if other.bottom_right.is_some() {
+            self.bottom_right = other.bottom_right;
+        }
+        if other.bottom_left.is_some() {
+            self.bottom_left = other.bottom_left;
+        }
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShadowPreset {
+    None,
+    Xs,
+    Sm,
+    Md,
+    Lg,
 }
 
 impl ChromeRefinement {
@@ -121,6 +159,12 @@ impl ChromeRefinement {
         }
         if other.radius.is_some() {
             self.radius = other.radius;
+        }
+        if let Some(r) = other.corner_radii {
+            self.corner_radii = Some(self.corner_radii.unwrap_or_default().merge(r));
+        }
+        if other.shadow.is_some() {
+            self.shadow = other.shadow;
         }
         if other.border_width.is_some() {
             self.border_width = other.border_width;
@@ -197,6 +241,70 @@ impl ChromeRefinement {
     pub fn rounded(mut self, radius: Radius) -> Self {
         self.radius = Some(MetricRef::radius(radius));
         self
+    }
+
+    pub fn corner_radii(mut self, radii: impl Into<Corners4<MetricRef>>) -> Self {
+        let radii = radii.into();
+        self.corner_radii = Some(CornerRadiiRefinement {
+            top_left: Some(radii.top_left),
+            top_right: Some(radii.top_right),
+            bottom_right: Some(radii.bottom_right),
+            bottom_left: Some(radii.bottom_left),
+        });
+        self
+    }
+
+    pub fn rounded_tl(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.top_left = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
+        self
+    }
+
+    pub fn rounded_tr(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.top_right = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
+        self
+    }
+
+    pub fn rounded_br(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.bottom_right = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
+        self
+    }
+
+    pub fn rounded_bl(mut self, radius: Radius) -> Self {
+        let mut radii = self.corner_radii.unwrap_or_default();
+        radii.bottom_left = Some(MetricRef::radius(radius));
+        self.corner_radii = Some(radii);
+        self
+    }
+
+    pub fn shadow(mut self, shadow: ShadowPreset) -> Self {
+        self.shadow = Some(shadow);
+        self
+    }
+
+    pub fn shadow_none(self) -> Self {
+        self.shadow(ShadowPreset::None)
+    }
+
+    pub fn shadow_xs(self) -> Self {
+        self.shadow(ShadowPreset::Xs)
+    }
+
+    pub fn shadow_sm(self) -> Self {
+        self.shadow(ShadowPreset::Sm)
+    }
+
+    pub fn shadow_md(self) -> Self {
+        self.shadow(ShadowPreset::Md)
+    }
+
+    pub fn shadow_lg(self) -> Self {
+        self.shadow(ShadowPreset::Lg)
     }
 
     // Tailwind-like spacing scale, backed by namespaced tokens.
@@ -318,5 +426,46 @@ impl ChromeRefinement {
     pub fn text_color(mut self, color: ColorRef) -> Self {
         self.text_color = Some(color);
         self
+    }
+
+    pub fn focused_border(self) -> Self {
+        self.border_1().border_color(ColorRef::Token {
+            key: "ring",
+            fallback: ColorFallback::ThemeFocusRing,
+        })
+    }
+
+    pub fn debug_border(self, color: ColorRef) -> Self {
+        if cfg!(debug_assertions) {
+            self.border_1().border_color(color)
+        } else {
+            self
+        }
+    }
+
+    pub fn debug_border_primary(self) -> Self {
+        self.debug_border(ColorRef::Token {
+            key: "primary",
+            fallback: ColorFallback::ThemeAccent,
+        })
+    }
+
+    pub fn debug_border_destructive(self) -> Self {
+        self.debug_border(ColorRef::Token {
+            key: "destructive",
+            fallback: ColorFallback::Color(fret_core::Color {
+                r: 0.937,
+                g: 0.267,
+                b: 0.267,
+                a: 1.0,
+            }),
+        })
+    }
+
+    pub fn debug_border_ring(self) -> Self {
+        self.debug_border(ColorRef::Token {
+            key: "ring",
+            fallback: ColorFallback::ThemeFocusRing,
+        })
     }
 }

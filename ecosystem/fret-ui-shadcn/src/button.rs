@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, TextProps};
+use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
 };
 
 fn contains_svg_icon_like(el: &AnyElement) -> bool {
@@ -368,6 +368,11 @@ impl Button {
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(&theme, self.size);
+            let text_px = text_style.size;
+            let text_weight = text_style.weight;
+            let text_line_height = text_style
+                .line_height
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
             let is_icon = is_icon_button;
             let has_svg_icon_like_children =
                 !is_icon_button && self.children.iter().any(contains_svg_icon_like);
@@ -482,14 +487,15 @@ impl Button {
                     };
 
                     let content = if children.is_empty() {
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: a11y_label.clone(),
-                            style: Some(text_style),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                        })]
+                        vec![
+                            ui::text(cx, a11y_label.clone())
+                                .text_size_px(text_px)
+                                .line_height_px(text_line_height)
+                                .font_weight(text_weight)
+                                .nowrap()
+                                .text_color(ColorRef::Color(fg))
+                                .into_element(cx),
+                        ]
                     } else {
                         children.clone()
                     };

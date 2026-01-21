@@ -30,131 +30,11 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    Radius, Space, ui,
 };
 
 use crate::overlay_motion;
 use crate::shortcut_display::command_shortcut_label;
-
-mod ui {
-    use std::sync::Arc;
-
-    use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
-    use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
-    use fret_ui::{ElementContext, Theme, UiHost};
-
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ColorRef, LayoutRefinement};
-
-    #[derive(Debug, Clone)]
-    pub(crate) struct TextBuilder {
-        text: Arc<str>,
-        layout: LayoutRefinement,
-        style: TextStyle,
-        color: Option<ColorRef>,
-        wrap: TextWrap,
-        overflow: TextOverflow,
-    }
-
-    impl TextBuilder {
-        pub(crate) fn w_full(mut self) -> Self {
-            self.layout = self.layout.w_full();
-            self
-        }
-
-        pub(crate) fn min_w_0(mut self) -> Self {
-            self.layout = self.layout.min_w_0();
-            self
-        }
-
-        pub(crate) fn ml_auto(mut self) -> Self {
-            self.layout = self.layout.ml_auto();
-            self
-        }
-
-        pub(crate) fn flex_1(mut self) -> Self {
-            self.layout = self.layout.flex_1();
-            self
-        }
-
-        pub(crate) fn basis_0(mut self) -> Self {
-            self.layout = self.layout.basis_0();
-            self
-        }
-
-        pub(crate) fn text_size_px(mut self, size: Px) -> Self {
-            self.style.size = size;
-            self
-        }
-
-        pub(crate) fn line_height_px(mut self, line_height: Px) -> Self {
-            self.style.line_height = Some(line_height);
-            self
-        }
-
-        pub(crate) fn font_weight(mut self, weight: FontWeight) -> Self {
-            self.style.weight = weight;
-            self
-        }
-
-        pub(crate) fn font_normal(self) -> Self {
-            self.font_weight(FontWeight::NORMAL)
-        }
-
-        pub(crate) fn font_medium(self) -> Self {
-            self.font_weight(FontWeight::MEDIUM)
-        }
-
-        pub(crate) fn letter_spacing_em(mut self, letter_spacing_em: f32) -> Self {
-            self.style.letter_spacing_em = Some(letter_spacing_em);
-            self
-        }
-
-        pub(crate) fn text_color(mut self, color: ColorRef) -> Self {
-            self.color = Some(color);
-            self
-        }
-
-        pub(crate) fn nowrap(mut self) -> Self {
-            self.wrap = TextWrap::None;
-            self.overflow = TextOverflow::Clip;
-            self
-        }
-
-        pub(crate) fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-            let theme = Theme::global(&*cx.app).clone();
-
-            let mut layout = LayoutStyle::default();
-            decl_style::apply_layout_refinement(&theme, self.layout, &mut layout);
-
-            cx.text_props(TextProps {
-                layout,
-                text: self.text,
-                style: Some(self.style),
-                color: self.color.map(|c| c.resolve(&theme)),
-                wrap: self.wrap,
-                overflow: self.overflow,
-            })
-        }
-    }
-
-    pub(crate) fn text<H: UiHost>(
-        _cx: &mut ElementContext<'_, H>,
-        text: impl Into<Arc<str>>,
-    ) -> TextBuilder {
-        TextBuilder {
-            text: text.into(),
-            layout: LayoutRefinement::default(),
-            style: TextStyle {
-                font: FontId::default(),
-                ..Default::default()
-            },
-            color: None,
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        }
-    }
-}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -1372,16 +1252,16 @@ impl MenubarMenuEntries {
 
                         let border = theme.color_required("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
-                        let radius_md = MetricRef::radius(Radius::Md).resolve(&theme);
-                        let shadow = decl_style::shadow_md(&theme, radius_md);
-                        let shadow_submenu = decl_style::shadow_lg(&theme, radius_md);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                         let font_size = theme.metric_required("font.size");
                         let destructive_fg = theme.color_required("destructive");
                         let destructive_bg = alpha_mul(destructive_fg, 0.12);
-                        let panel_bg = theme.color_required("popover");
+
+                        let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
+                        let submenu_chrome =
+                            crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Md);
 
                         let open_for_submenu = open_for_overlay.clone();
                         let submenu_for_content = submenu.clone();
@@ -1421,18 +1301,19 @@ impl MenubarMenuEntries {
                                         fret_core::Point::new(Px(0.0), Px(0.0)),
                                         placed.size,
                                     );
+                                    let theme_for_panel_layout = theme.clone();
+                                    let panel_chrome_for_panel = panel_chrome.clone();
                                     vec![menu::content_panel::menu_panel_container_at(
                                         cx,
                                         local_placed,
-                                        move |layout| ContainerProps {
-                                            layout,
-                                            padding: Edges::all(Px(4.0)),
-                                            background: Some(panel_bg),
-                                            shadow: Some(shadow),
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(border),
-                                            corner_radii: Corners::all(radius_md),
-                                            ..Default::default()
+                                        move |layout| {
+                                            let mut props = decl_style::container_props(
+                                                &theme_for_panel_layout,
+                                                panel_chrome_for_panel.clone(),
+                                                LayoutRefinement::default(),
+                                            );
+                                            props.layout = layout;
+                                            props
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -2120,23 +2001,16 @@ impl MenubarMenuEntries {
                                                                             ),
                                                                         },
                                                                         move |cx| {
-                                                                            let mut label_text =
-                                                                                ui::text(cx, label.clone())
-                                                                                    .text_size_px(text_style.size)
-                                                                                    .font_weight(text_style.weight)
-                                                                                    .text_color(ColorRef::Color(fg))
-                                                                                    .nowrap();
-                                                                            if let Some(line_height) =
-                                                                                text_style.line_height
-                                                                            {
-                                                                                label_text =
-                                                                                    label_text.line_height_px(line_height);
+                                                                            let mut label_text = ui::text(cx, label.clone())
+                                                                                .text_size_px(text_style.size)
+                                                                                .font_weight(text_style.weight)
+                                                                                .text_color(ColorRef::Color(fg))
+                                                                                .nowrap();
+                                                                            if let Some(line_height) = text_style.line_height {
+                                                                                label_text = label_text.line_height_px(line_height);
                                                                             }
-                                                                            if let Some(letter_spacing_em) =
-                                                                                text_style.letter_spacing_em
-                                                                            {
-                                                                                label_text = label_text
-                                                                                    .letter_spacing_em(letter_spacing_em);
+                                                                            if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                                                                                label_text = label_text.letter_spacing_em(letter_spacing_em);
                                                                             }
                                                                             vec![label_text.into_element(cx)]
                                                                         },
@@ -2364,20 +2238,21 @@ impl MenubarMenuEntries {
                                         .flatten();
                                     let item_ring = item_ring;
 
+                                    let theme_for_panel_layout = theme.clone();
+                                    let submenu_chrome_for_panel = submenu_chrome.clone();
                                     let submenu_panel = menu::sub_content::submenu_panel_scroll_y_for_value_at(
                                         cx,
                                         open_value.clone(),
                                         placed,
                                         labelled_by_element,
-                                        move |layout| ContainerProps {
-                                            layout,
-                                            padding: Edges::all(Px(4.0)),
-                                            background: Some(panel_bg),
-                                            shadow: Some(shadow_submenu),
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(border),
-                                            corner_radii: Corners::all(radius_md),
-                                            ..Default::default()
+                                        move |layout| {
+                                            let mut props = decl_style::container_props(
+                                                &theme_for_panel_layout,
+                                                submenu_chrome_for_panel.clone(),
+                                                LayoutRefinement::default(),
+                                            );
+                                            props.layout = layout;
+                                            props
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =

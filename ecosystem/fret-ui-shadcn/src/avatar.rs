@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, ImageId, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{ImageId, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, ImageProps,
-    InteractivityGateProps, MainAlign, Overflow, TextProps,
+    InteractivityGateProps, MainAlign, Overflow,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::avatar as radix_avatar;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 /// shadcn/ui `Avatar` root.
 ///
@@ -294,21 +294,13 @@ impl AvatarFallback {
                 .or_else(|| theme.metric_by_key("font.line_height"))
                 .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-            let label = cx.text_props(TextProps {
-                layout: Default::default(),
-                text: self.text,
-                style: Some(TextStyle {
-                    font: FontId::default(),
-                    size: text_px,
-                    weight: FontWeight::MEDIUM,
-                    slant: Default::default(),
-                    line_height: Some(line_height),
-                    letter_spacing_em: None,
-                }),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            });
+            let label = ui::label(cx, self.text)
+                .text_size_px(text_px)
+                .line_height_px(line_height)
+                .font_medium()
+                .text_color(ColorRef::Color(fg))
+                .nowrap()
+                .into_element(cx);
 
             let flex_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().size_full());

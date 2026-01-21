@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
-};
+use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_icons::ids;
 #[cfg(test)]
 use fret_runtime::Effect;
@@ -12,7 +9,7 @@ use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
-    SizeStyle, TextProps,
+    SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -23,7 +20,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -346,19 +343,7 @@ impl DialogContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme.color_required("background");
-        let border = theme.color_required("border");
-
-        let radius = theme.metric_required("metric.radius.lg");
-        let shadow = decl_style::shadow_lg(&theme, radius);
-
-        let chrome = ChromeRefinement::default()
-            .rounded(Radius::Lg)
-            .border_1()
-            .bg(ColorRef::Color(bg))
-            .border_color(ColorRef::Color(border))
-            .p(Space::N6)
-            .merge(self.chrome);
+        let chrome = crate::ui_builder_ext::surfaces::dialog_style_chrome().merge(self.chrome);
 
         let layout = LayoutRefinement::default()
             .w_full()
@@ -376,15 +361,7 @@ impl DialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
-        let container = shadcn_layout::container_vstack_gap(
-            cx,
-            ContainerProps {
-                shadow: Some(shadow),
-                ..props
-            },
-            Space::N4,
-            children,
-        );
+        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
 
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);
@@ -614,21 +591,14 @@ impl DialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let title = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::SEMIBOLD,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: Some(-0.02),
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        });
+        let title = ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_semibold()
+            .letter_spacing_em(-0.02)
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx);
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title
     }
@@ -661,21 +631,14 @@ impl DialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let description = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        });
+        let description = ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .into_element(cx);
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
     }
@@ -691,7 +654,6 @@ mod tests {
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{
         KeyCode, Modifiers, Px, TextBlobId, TextConstraints, TextMetrics, TextService,
-        TextStyle as CoreTextStyle,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::Effect;

@@ -73,6 +73,8 @@ Implementation anchors:
 - Builder substrate: `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - shadcn opt-in glue: `ecosystem/fret-ui-shadcn/src/ui_ext/mod.rs`
 - ADR: `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- Coverage audit note: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
+- TODO tracker: `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
 
 ### Status
 
@@ -81,6 +83,100 @@ Implementation anchors:
   component does not yet support chrome/layout refinements).
 - Dev note (Windows worktrees): if incremental builds pick up stale artifacts from another worktree,
   run `cargo clean -p fret-ui-kit -p fret-ui-shadcn` (or set a per-worktree `CARGO_TARGET_DIR`).
+
+### Authoring Golden Path
+
+Recommended imports for app code:
+
+```rust
+use fret_ui_shadcn::prelude::*;
+```
+
+Guidelines:
+
+- Prefer `ui()` for all authoring (chrome + layout + debug helpers).
+- Prefer composing shadcn components over introducing new wrapper nodes.
+- `StyledExt` exists in `fret-ui-kit` but is intentionally not part of the shadcn prelude to avoid splitting the
+  ecosystem into competing patterns.
+
+Before (low density; props structs + wrappers):
+
+```rust
+let ok = Button::new("OK").into_element(cx);
+let root = cx.container(Default::default(), move |_cx| vec![ok]);
+```
+
+After (golden path; fluent patch chain):
+
+```rust
+let ok = Button::new("OK")
+    .ui()
+    .paddings(Edges4::symmetric(Space::N3, Space::N2))
+    .shadow_md()
+    .focused_border()
+    .into_element(cx);
+```
+
+### Layout-Only Cookbook (Stack / Flex)
+
+Layout-only code can use `ui::h_flex` / `ui::v_flex` for a patchable builder (so layout nodes participate in the
+same fluent `ui()` vocabulary as components). `stack::hstack/vstack` remain available as a lower-level helper.
+
+Horizontal row:
+
+```rust
+let row = ui::h_flex(cx, move |cx| {
+    vec![
+        Button::new("Cancel").ui().into_element(cx),
+        Button::new("OK").ui().into_element(cx),
+    ]
+})
+.gap(Space::N2)
+.w_full()
+.into_element(cx);
+```
+
+Vertical column:
+
+```rust
+let col = ui::v_flex(cx, move |cx| {
+    vec![
+        Input::new().ui().w_full().into_element(cx),
+        Textarea::new().ui().w_full().into_element(cx),
+    ]
+})
+.gap(Space::N2)
+.into_element(cx);
+```
+
+Overlay stack (layered children):
+
+```rust
+let overlay = ui::stack(cx, move |cx| {
+    vec![
+        // Underlay (e.g. modal barrier)
+        ui::container(cx, |_cx| Vec::new())
+            .absolute()
+            .inset(Space::N0)
+            .into_element(cx),
+        // Foreground content
+        DialogContent::new(vec![]).ui().into_element(cx),
+    ]
+})
+.into_element(cx);
+```
+
+Text (patchable):
+
+```rust
+let title = ui::text(cx, "Settings")
+    .text_base()
+    .font_semibold()
+    .truncate()
+    .into_element(cx);
+
+let field_label = ui::label(cx, "Username").into_element(cx);
+```
 
 ### Coverage Tracker (Update as we proceed)
 

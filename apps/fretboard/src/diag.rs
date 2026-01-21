@@ -52,6 +52,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut warmup_frames: u64 = 0;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
+    let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
@@ -249,6 +250,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_stale_paint_eps = v
                     .parse::<f32>()
                     .map_err(|_| "invalid value for --check-stale-paint-eps".to_string())?;
+                i += 1;
+            }
+            "--check-wheel-scroll" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-wheel-scroll".to_string());
+                };
+                check_wheel_scroll_test_id = Some(v);
                 i += 1;
             }
             "--check-hover-layout" => {
@@ -551,7 +560,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             let result = result?;
             if result.stage.as_deref() == Some("passed") {
-                if check_stale_paint_test_id.is_some() || check_hover_layout_max.is_some() {
+                if check_stale_paint_test_id.is_some()
+                    || check_wheel_scroll_test_id.is_some()
+                    || check_hover_layout_max.is_some()
+                {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
                         &result,
@@ -567,6 +579,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &bundle_path,
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
+                        check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
                         warmup_frames,
                     )?;
@@ -691,7 +704,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
 
                 if result.stage.as_deref() == Some("passed")
-                    && (check_stale_paint_test_id.is_some() || check_hover_layout_max.is_some())
+                    && (check_stale_paint_test_id.is_some()
+                        || check_wheel_scroll_test_id.is_some()
+                        || check_hover_layout_max.is_some())
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -709,6 +724,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &bundle_path,
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
+                        check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
                         warmup_frames,
                     )?;
@@ -989,6 +1005,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if let Some(test_id) = check_stale_paint_test_id.as_deref() {
                 check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
             }
+            if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
+                check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
+            }
             if let Some(max_allowed) = check_hover_layout_max {
                 check_report_for_hover_layout_invalidations(&report, max_allowed)?;
             }
@@ -1226,11 +1245,15 @@ fn apply_post_run_checks(
     bundle_path: &Path,
     check_stale_paint_test_id: Option<&str>,
     check_stale_paint_eps: f32,
+    check_wheel_scroll_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
         check_bundle_for_stale_paint(bundle_path, test_id, check_stale_paint_eps)?;
+    }
+    if let Some(test_id) = check_wheel_scroll_test_id {
+        check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
     }
     if let Some(max_allowed) = check_hover_layout_max {
         let report = bundle_stats_from_path(
@@ -2819,6 +2842,210 @@ fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> 
     node.get("bounds")
         .and_then(|v| v.get("y"))
         .and_then(|v| v.as_f64())
+}
+
+fn first_wheel_frame_id_for_window(window: &serde_json::Value) -> Option<u64> {
+    window
+        .get("events")
+        .and_then(|v| v.as_array())?
+        .iter()
+        .filter(|e| e.get("kind").and_then(|v| v.as_str()) == Some("pointer.wheel"))
+        .filter_map(|e| e.get("frame_id").and_then(|v| v.as_u64()))
+        .min()
+}
+
+fn semantics_node_id_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> Option<u64> {
+    let nodes = snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array())?;
+    nodes
+        .iter()
+        .find(|n| {
+            n.get("test_id")
+                .and_then(|v| v.as_str())
+                .is_some_and(|id| id == test_id)
+        })?
+        .get("id")
+        .and_then(|v| v.as_u64())
+}
+
+fn hit_test_node_id(snapshot: &serde_json::Value) -> Option<u64> {
+    snapshot
+        .get("debug")
+        .and_then(|v| v.get("hit_test"))
+        .and_then(|v| v.get("hit"))
+        .and_then(|v| v.as_u64())
+}
+
+fn is_descendant(
+    mut node: u64,
+    ancestor: u64,
+    parents: &std::collections::HashMap<u64, u64>,
+) -> bool {
+    if node == ancestor {
+        return true;
+    }
+    while let Some(parent) = parents.get(&node).copied() {
+        if parent == ancestor {
+            return true;
+        }
+        node = parent;
+    }
+    false
+}
+
+fn semantics_parent_map(snapshot: &serde_json::Value) -> std::collections::HashMap<u64, u64> {
+    let mut parents = std::collections::HashMap::new();
+    let nodes = snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array());
+    let Some(nodes) = nodes else {
+        return parents;
+    };
+    for node in nodes {
+        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        let Some(parent) = node.get("parent").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        parents.insert(id, parent);
+    }
+    parents
+}
+
+fn check_bundle_for_wheel_scroll(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_wheel_scroll_json(&bundle, bundle_path, test_id, warmup_frames)
+}
+
+fn check_bundle_for_wheel_scroll_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_wheel = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
+            continue;
+        };
+        any_wheel = true;
+
+        let after_frame = wheel_frame.max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut before: Option<&serde_json::Value> = None;
+        let mut before_frame: u64 = 0;
+        let mut after: Option<&serde_json::Value> = None;
+        let mut after_frame_id: u64 = 0;
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                if frame_id >= before_frame && frame_id < after_frame {
+                    before = Some(s);
+                    before_frame = frame_id;
+                }
+                continue;
+            }
+            after = Some(s);
+            after_frame_id = frame_id;
+            break;
+        }
+
+        let (Some(before), Some(after)) = (before, after) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} error=missing_before_or_after_snapshot"
+            ));
+            continue;
+        };
+
+        let Some(hit_before) = hit_test_node_id(before) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} error=missing_hit_before"
+            ));
+            continue;
+        };
+        let Some(hit_after) = hit_test_node_id(after) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} error=missing_hit_after"
+            ));
+            continue;
+        };
+
+        let Some(target_before) = semantics_node_id_for_test_id(before, test_id) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
+            ));
+            continue;
+        };
+        let Some(target_after) = semantics_node_id_for_test_id(after, test_id) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
+            ));
+            continue;
+        };
+
+        let before_parents = semantics_parent_map(before);
+        let after_parents = semantics_parent_map(after);
+
+        if !is_descendant(hit_before, target_before, &before_parents) {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=hit_not_within_target_before hit={hit_before} target={target_before}"
+            ));
+            continue;
+        }
+
+        if is_descendant(hit_after, target_after, &after_parents) {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_still_within_target_after hit={hit_after} target={target_after}"
+            ));
+        }
+    }
+
+    if !any_wheel {
+        return Err(format!(
+            "wheel scroll check requires at least one pointer.wheel event in the bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("wheel scroll check failed (expected hit-test result to move after wheel)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
 }
 
 fn bundle_stats_from_json_with_options(

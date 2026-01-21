@@ -1,20 +1,17 @@
 use std::cell::Cell;
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SpinnerProps, SvgIconProps,
-    TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
@@ -854,14 +851,23 @@ impl Tabs {
                                             move |cx| {
                                                 let base =
                                                     trigger_children.clone().unwrap_or_else(|| {
-                                                        vec![cx.text_props(TextProps {
-                                                            layout: Default::default(),
-                                                            text: label.clone(),
-                                                            style: Some(text_style.clone()),
-                                                            color: Some(fg),
-                                                            wrap: TextWrap::None,
-                                                            overflow: TextOverflow::Clip,
-                                                        })]
+                                                        let style = text_style.clone();
+                                                        let mut text = ui::label(cx, label.clone())
+                                                            .text_size_px(style.size)
+                                                            .font_weight(style.weight)
+                                                            .text_color(ColorRef::Color(fg))
+                                                            .nowrap();
+                                                        if let Some(line_height) = style.line_height
+                                                        {
+                                                            text = text.line_height_px(line_height);
+                                                        }
+                                                        if let Some(letter_spacing_em) =
+                                                            style.letter_spacing_em
+                                                        {
+                                                            text =
+                                                                text.letter_spacing_em(letter_spacing_em);
+                                                        }
+                                                        vec![text.into_element(cx)]
                                                     });
 
                                                 let styled: Vec<AnyElement> = base

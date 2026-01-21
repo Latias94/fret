@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -11,6 +11,7 @@ use fret_ui_kit::declarative::style as decl_style;
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space,
+    ui,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -365,14 +366,18 @@ impl Toggle {
                         let mut out = Vec::new();
                         out.extend(children);
                         if let Some(label) = label {
-                            out.push(cx.text_props(TextProps {
-                                layout: Default::default(),
-                                text: label,
-                                style: Some(text_style),
-                                color: Some(fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                            }));
+                            let mut text = ui::label(cx, label)
+                                .text_size_px(text_style.size)
+                                .font_weight(text_style.weight)
+                                .text_color(ColorRef::Color(fg))
+                                .nowrap();
+                            if let Some(line_height) = text_style.line_height {
+                                text = text.line_height_px(line_height);
+                            }
+                            if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                                text = text.letter_spacing_em(letter_spacing_em);
+                            }
+                            out.push(text.into_element(cx));
                         }
                         out
                     },
