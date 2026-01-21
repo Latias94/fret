@@ -185,11 +185,13 @@ Recent fixes:
   - Inline addon layout now matches shadcn-web geometry: addons participate in normal flex flow
     instead of absolute slots; input padding switches to `pl-2` / `pr-2` when an inline addon is
     present.
+  - Block-end addons (`align=block-end`) are now supported for textarea-driven input groups, and
+    `ml-auto` on flex children now produces the expected "push to end" outcome in declarative flex.
 - Conformance gates:
   - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
     `web_vs_fret_layout_input_group_spinner_geometry_matches`, `web_vs_fret_layout_input_group_button_geometry_matches`,
-    `web_vs_fret_layout_input_group_tooltip_geometry_matches`).
+    `web_vs_fret_layout_input_group_tooltip_geometry_matches`, `web_vs_fret_layout_spinner_input_group_geometry_matches`).
 - Gaps to check next:
   - Block-start / block-end addons (column layout + `textarea` variants).
   - Button-in-addon negative margin (`mr-[-0.45rem]`) outcomes (`input-group-button`, `input-group-tooltip`).
