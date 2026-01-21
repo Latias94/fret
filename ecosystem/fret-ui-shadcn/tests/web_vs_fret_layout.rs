@@ -7383,6 +7383,459 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
 }
 
 #[test]
+fn web_vs_fret_layout_empty_input_group_geometry_matches() {
+    let web = read_web_golden("empty-input-group");
+    let theme = web_theme(&web);
+    let web_group = web_find_by_class_tokens(&theme.root, &["group/input-group", "border-input"])
+        .expect("web input group root");
+    let web_input = find_first(web_group, &|n| n.tag == "input").expect("web input");
+    let web_svg = find_first(web_group, &|n| n.tag == "svg").expect("web icon");
+    let web_kbd = find_first(web_group, &|n| n.tag == "kbd").expect("web kbd");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-empty-input-group",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let icon = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:empty-input-group:icon")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
+                    );
+
+                    let kbd = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:empty-input-group:kbd")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![fret_ui_shadcn::Kbd::new("/").into_element(cx)],
+                    );
+
+                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                        .a11y_label("Golden:empty-input-group:input")
+                        .leading(vec![icon])
+                        .trailing_has_kbd(true)
+                        .trailing(vec![kbd])
+                        .into_element(cx);
+
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:empty-input-group:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:empty-input-group:root"),
+    )
+    .expect("fret input group root");
+    let input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:empty-input-group:input"),
+    )
+    .expect("fret input");
+    let icon = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:empty-input-group:icon"),
+    )
+    .expect("fret icon");
+    let kbd = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:empty-input-group:kbd"),
+    )
+    .expect("fret kbd");
+
+    assert_close_px(
+        "empty-input-group group w",
+        group.bounds.size.width,
+        web_group.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group group h",
+        group.bounds.size.height,
+        web_group.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "empty-input-group input x",
+        Px(input.bounds.origin.x.0 - group.bounds.origin.x.0),
+        web_input.rect.x - web_group.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group input y",
+        Px(input.bounds.origin.y.0 - group.bounds.origin.y.0),
+        web_input.rect.y - web_group.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group input w",
+        input.bounds.size.width,
+        web_input.rect.w,
+        1.0,
+    );
+
+    assert_close_px(
+        "empty-input-group svg x",
+        Px(icon.bounds.origin.x.0 - group.bounds.origin.x.0),
+        web_svg.rect.x - web_group.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group svg y",
+        Px(icon.bounds.origin.y.0 - group.bounds.origin.y.0),
+        web_svg.rect.y - web_group.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group svg w",
+        icon.bounds.size.width,
+        web_svg.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group svg h",
+        icon.bounds.size.height,
+        web_svg.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "empty-input-group kbd x",
+        Px(kbd.bounds.origin.x.0 - group.bounds.origin.x.0),
+        web_kbd.rect.x - web_group.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group kbd y",
+        Px(kbd.bounds.origin.y.0 - group.bounds.origin.y.0),
+        web_kbd.rect.y - web_group.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group kbd w",
+        kbd.bounds.size.width,
+        web_kbd.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "empty-input-group kbd h",
+        kbd.bounds.size.height,
+        web_kbd.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
+    let web = read_web_golden("kbd-input-group");
+    let theme = web_theme(&web);
+    let web_group = web_find_by_class_tokens(&theme.root, &["group/input-group", "border-input"])
+        .expect("web input group root");
+    let web_input = find_first(web_group, &|n| n.tag == "input").expect("web input");
+    let web_svg = find_first(web_group, &|n| n.tag == "svg").expect("web icon");
+
+    let mut web_kbds = Vec::new();
+    web_collect_tag(web_group, "kbd", &mut web_kbds);
+    web_kbds.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let web_kbd0 = *web_kbds.get(0).expect("web kbd0");
+    let web_kbd1 = *web_kbds.get(1).expect("web kbd1");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-kbd-input-group",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let icon = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:kbd-input-group:icon")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
+                    );
+
+                    let kbd0 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:kbd-input-group:kbd0")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![fret_ui_shadcn::Kbd::new("⌘").into_element(cx)],
+                    );
+                    let kbd1 = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:kbd-input-group:kbd1")),
+                            ..Default::default()
+                        },
+                        move |cx| vec![fret_ui_shadcn::Kbd::new("K").into_element(cx)],
+                    );
+
+                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                        .a11y_label("Golden:kbd-input-group:input")
+                        .leading(vec![icon])
+                        .trailing_has_kbd(true)
+                        .trailing(vec![kbd0, kbd1])
+                        .into_element(cx);
+
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:kbd-input-group:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:kbd-input-group:root"),
+    )
+    .expect("fret input group root");
+    let input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:kbd-input-group:input"),
+    )
+    .expect("fret input");
+    let icon = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:kbd-input-group:icon"),
+    )
+    .expect("fret icon");
+    let kbd0 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:kbd-input-group:kbd0"),
+    )
+    .expect("fret kbd0");
+    let kbd1 = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:kbd-input-group:kbd1"),
+    )
+    .expect("fret kbd1");
+
+    assert_close_px(
+        "kbd-input-group group w",
+        group.bounds.size.width,
+        web_group.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group group h",
+        group.bounds.size.height,
+        web_group.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "kbd-input-group input x",
+        Px(input.bounds.origin.x.0 - group.bounds.origin.x.0),
+        web_input.rect.x - web_group.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group input w",
+        input.bounds.size.width,
+        web_input.rect.w,
+        1.0,
+    );
+
+    assert_close_px(
+        "kbd-input-group svg x",
+        Px(icon.bounds.origin.x.0 - group.bounds.origin.x.0),
+        web_svg.rect.x - web_group.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group svg y",
+        Px(icon.bounds.origin.y.0 - group.bounds.origin.y.0),
+        web_svg.rect.y - web_group.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group svg w",
+        icon.bounds.size.width,
+        web_svg.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group svg h",
+        icon.bounds.size.height,
+        web_svg.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "kbd-input-group kbd0 x",
+        Px(kbd0.bounds.origin.x.0 - group.bounds.origin.x.0),
+        web_kbd0.rect.x - web_group.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group kbd0 y",
+        Px(kbd0.bounds.origin.y.0 - group.bounds.origin.y.0),
+        web_kbd0.rect.y - web_group.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group kbd0 w",
+        kbd0.bounds.size.width,
+        web_kbd0.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group kbd0 h",
+        kbd0.bounds.size.height,
+        web_kbd0.rect.h,
+        1.0,
+    );
+
+    assert_close_px(
+        "kbd-input-group kbd1 x",
+        Px(kbd1.bounds.origin.x.0 - group.bounds.origin.x.0),
+        web_kbd1.rect.x - web_group.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group kbd1 y",
+        Px(kbd1.bounds.origin.y.0 - group.bounds.origin.y.0),
+        web_kbd1.rect.y - web_group.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group kbd1 w",
+        kbd1.bounds.size.width,
+        web_kbd1.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "kbd-input-group kbd1 h",
+        kbd1.bounds.size.height,
+        web_kbd1.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
     let web = read_web_golden("spinner-input-group");
     let theme = web_theme(&web);
