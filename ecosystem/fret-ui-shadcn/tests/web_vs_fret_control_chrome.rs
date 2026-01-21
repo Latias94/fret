@@ -2,7 +2,9 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize};
 use fret_icons::ids;
 use fret_ui::tree::UiTree;
+use fret_ui_kit::Space;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::stack as decl_stack;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -1201,6 +1203,470 @@ fn web_vs_fret_button_group_separator_geometry_and_chrome_match() {
         actual_paste_gap,
         0.0,
         0.5,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_size_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-size");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let mut web_groups: Vec<&WebNode> = Vec::new();
+    fn collect_groups<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if node.tag == "div" && node.attrs.get("role").is_some_and(|v| v == "group") {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect_groups(child, out);
+        }
+    }
+    collect_groups(&theme.root, &mut web_groups);
+    web_groups.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    assert_eq!(web_groups.len(), 3, "expected 3 button groups in golden");
+
+    let web_sm = web_groups[0];
+    let web_md = web_groups[1];
+    let web_lg = web_groups[2];
+
+    fn collect_buttons<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if node.tag == "button" {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect_buttons(child, out);
+        }
+    }
+
+    let mut web_sm_buttons = Vec::new();
+    collect_buttons(web_sm, &mut web_sm_buttons);
+    assert_eq!(
+        web_sm_buttons.len(),
+        4,
+        "expected 4 buttons in small button group golden"
+    );
+    let web_sm_first = web_sm_buttons[0];
+    let web_sm_mid = web_sm_buttons[1];
+    let web_sm_icon = web_sm_buttons[3];
+
+    let mut web_md_buttons = Vec::new();
+    collect_buttons(web_md, &mut web_md_buttons);
+    assert_eq!(
+        web_md_buttons.len(),
+        4,
+        "expected 4 buttons in default button group golden"
+    );
+    let web_md_first = web_md_buttons[0];
+    let web_md_mid = web_md_buttons[1];
+    let web_md_icon = web_md_buttons[3];
+
+    let mut web_lg_buttons = Vec::new();
+    collect_buttons(web_lg, &mut web_lg_buttons);
+    assert_eq!(
+        web_lg_buttons.len(),
+        4,
+        "expected 4 buttons in large button group golden"
+    );
+    let web_lg_first = web_lg_buttons[0];
+    let web_lg_mid = web_lg_buttons[1];
+    let web_lg_icon = web_lg_buttons[3];
+
+    let expected_gap_sm_to_md = web_md.rect.y - (web_sm.rect.y + web_sm.rect.h);
+    let expected_gap_md_to_lg = web_lg.rect.y - (web_md.rect.y + web_md.rect.h);
+
+    let expected_sm_first_r_tl =
+        web_corner_radius_effective_px_for(web_sm_first, "borderTopLeftRadius")
+            .expect("web small first borderTopLeftRadius");
+    let expected_sm_first_r_tr =
+        web_corner_radius_effective_px_for(web_sm_first, "borderTopRightRadius")
+            .expect("web small first borderTopRightRadius");
+    let expected_sm_icon_r_tr =
+        web_corner_radius_effective_px_for(web_sm_icon, "borderTopRightRadius")
+            .expect("web small icon borderTopRightRadius");
+
+    let expected_md_first_r_tl =
+        web_corner_radius_effective_px_for(web_md_first, "borderTopLeftRadius")
+            .expect("web default first borderTopLeftRadius");
+    let expected_md_first_r_tr =
+        web_corner_radius_effective_px_for(web_md_first, "borderTopRightRadius")
+            .expect("web default first borderTopRightRadius");
+    let expected_md_icon_r_tr =
+        web_corner_radius_effective_px_for(web_md_icon, "borderTopRightRadius")
+            .expect("web default icon borderTopRightRadius");
+
+    let expected_lg_first_r_tl =
+        web_corner_radius_effective_px_for(web_lg_first, "borderTopLeftRadius")
+            .expect("web large first borderTopLeftRadius");
+    let expected_lg_first_r_tr =
+        web_corner_radius_effective_px_for(web_lg_first, "borderTopRightRadius")
+            .expect("web large first borderTopRightRadius");
+    let expected_lg_icon_r_tr =
+        web_corner_radius_effective_px_for(web_lg_icon, "borderTopRightRadius")
+            .expect("web large icon borderTopRightRadius");
+
+    let expected_sm_mid_border_l =
+        web_border_width_px_for(web_sm_mid, "borderLeftWidth").expect("web small mid borderLeft");
+    let expected_sm_icon_border_l =
+        web_border_width_px_for(web_sm_icon, "borderLeftWidth").expect("web small icon borderLeft");
+
+    let expected_md_mid_border_l =
+        web_border_width_px_for(web_md_mid, "borderLeftWidth").expect("web default mid borderLeft");
+    let expected_md_icon_border_l = web_border_width_px_for(web_md_icon, "borderLeftWidth")
+        .expect("web default icon borderLeft");
+
+    let expected_lg_mid_border_l =
+        web_border_width_px_for(web_lg_mid, "borderLeftWidth").expect("web large mid borderLeft");
+    let expected_lg_icon_border_l =
+        web_border_width_px_for(web_lg_icon, "borderLeftWidth").expect("web large icon borderLeft");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group_sm = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Small")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .test_id("button-group-size.sm.first")
+                .into(),
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .test_id("button-group-size.sm.mid")
+                .into(),
+            fret_ui_shadcn::Button::new("Group")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .test_id("button-group-size.sm.last_text")
+                .into(),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconSm)
+                .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+                .test_id("button-group-size.sm.icon")
+                .into(),
+        ])
+        .a11y_label("ButtonGroupSizeSm");
+
+        let group_md = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Default")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Default)
+                .test_id("button-group-size.md.first")
+                .into(),
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Default)
+                .test_id("button-group-size.md.mid")
+                .into(),
+            fret_ui_shadcn::Button::new("Group")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Default)
+                .test_id("button-group-size.md.last_text")
+                .into(),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+                .test_id("button-group-size.md.icon")
+                .into(),
+        ])
+        .a11y_label("ButtonGroupSizeMd");
+
+        let group_lg = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Large")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Lg)
+                .test_id("button-group-size.lg.first")
+                .into(),
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Lg)
+                .test_id("button-group-size.lg.mid")
+                .into(),
+            fret_ui_shadcn::Button::new("Group")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Lg)
+                .test_id("button-group-size.lg.last_text")
+                .into(),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconLg)
+                .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+                .test_id("button-group-size.lg.icon")
+                .into(),
+        ])
+        .a11y_label("ButtonGroupSizeLg");
+
+        vec![decl_stack::vstack(
+            cx,
+            decl_stack::VStackProps::default()
+                .gap(Space::N8)
+                .items_start(),
+            move |cx| {
+                vec![
+                    group_sm.into_element(cx),
+                    group_md.into_element(cx),
+                    group_lg.into_element(cx),
+                ]
+            },
+        )]
+    });
+
+    let group_sm = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupSizeSm"))
+        .expect("missing semantics for small button group");
+    let group_md = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupSizeMd"))
+        .expect("missing semantics for default button group");
+    let group_lg = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupSizeLg"))
+        .expect("missing semantics for large button group");
+
+    assert_close(
+        "button-group-size small group y",
+        group_sm.bounds.origin.y.0,
+        web_sm.rect.y,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small group height",
+        group_sm.bounds.size.height.0,
+        web_sm.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default group y",
+        group_md.bounds.origin.y.0,
+        web_md.rect.y,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default group height",
+        group_md.bounds.size.height.0,
+        web_md.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large group y",
+        group_lg.bounds.origin.y.0,
+        web_lg.rect.y,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large group height",
+        group_lg.bounds.size.height.0,
+        web_lg.rect.h,
+        1.0,
+    );
+
+    let actual_gap_sm_to_md =
+        group_md.bounds.origin.y.0 - (group_sm.bounds.origin.y.0 + group_sm.bounds.size.height.0);
+    assert_close(
+        "button-group-size gap (small → default)",
+        actual_gap_sm_to_md,
+        expected_gap_sm_to_md,
+        1.0,
+    );
+    let actual_gap_md_to_lg =
+        group_lg.bounds.origin.y.0 - (group_md.bounds.origin.y.0 + group_md.bounds.size.height.0);
+    assert_close(
+        "button-group-size gap (default → large)",
+        actual_gap_md_to_lg,
+        expected_gap_md_to_lg,
+        1.0,
+    );
+
+    let by_id = |id: &str| {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(id))
+            .unwrap_or_else(|| panic!("missing semantics node {id}"))
+            .bounds
+    };
+
+    let sm_first_bounds = by_id("button-group-size.sm.first");
+    let sm_mid_bounds = by_id("button-group-size.sm.mid");
+    let sm_icon_bounds = by_id("button-group-size.sm.icon");
+
+    let md_first_bounds = by_id("button-group-size.md.first");
+    let md_mid_bounds = by_id("button-group-size.md.mid");
+    let md_icon_bounds = by_id("button-group-size.md.icon");
+
+    let lg_first_bounds = by_id("button-group-size.lg.first");
+    let lg_mid_bounds = by_id("button-group-size.lg.mid");
+    let lg_icon_bounds = by_id("button-group-size.lg.icon");
+
+    assert_close(
+        "button-group-size small icon width",
+        sm_icon_bounds.size.width.0,
+        web_sm_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small icon height",
+        sm_icon_bounds.size.height.0,
+        web_sm_icon.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default icon width",
+        md_icon_bounds.size.width.0,
+        web_md_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default icon height",
+        md_icon_bounds.size.height.0,
+        web_md_icon.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large icon width",
+        lg_icon_bounds.size.width.0,
+        web_lg_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large icon height",
+        lg_icon_bounds.size.height.0,
+        web_lg_icon.rect.h,
+        1.0,
+    );
+
+    let quad_sm_first = find_best_quad(&scene, sm_first_bounds).expect("painted quad for sm first");
+    let quad_sm_mid = find_best_quad(&scene, sm_mid_bounds).expect("painted quad for sm mid");
+    let quad_sm_icon = find_best_quad(&scene, sm_icon_bounds).expect("painted quad for sm icon");
+
+    assert_close(
+        "button-group-size small first radius tl",
+        quad_sm_first.corners[0],
+        expected_sm_first_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small first radius tr",
+        quad_sm_first.corners[1],
+        expected_sm_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small icon radius tr",
+        quad_sm_icon.corners[1],
+        expected_sm_icon_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small mid border-left",
+        quad_sm_mid.border[3],
+        expected_sm_mid_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-size small icon border-left",
+        quad_sm_icon.border[3],
+        expected_sm_icon_border_l,
+        0.2,
+    );
+
+    let quad_md_first = find_best_quad(&scene, md_first_bounds).expect("painted quad for md first");
+    let quad_md_mid = find_best_quad(&scene, md_mid_bounds).expect("painted quad for md mid");
+    let quad_md_icon = find_best_quad(&scene, md_icon_bounds).expect("painted quad for md icon");
+
+    assert_close(
+        "button-group-size default first radius tl",
+        quad_md_first.corners[0],
+        expected_md_first_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default first radius tr",
+        quad_md_first.corners[1],
+        expected_md_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default icon radius tr",
+        quad_md_icon.corners[1],
+        expected_md_icon_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default mid border-left",
+        quad_md_mid.border[3],
+        expected_md_mid_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-size default icon border-left",
+        quad_md_icon.border[3],
+        expected_md_icon_border_l,
+        0.2,
+    );
+
+    let quad_lg_first = find_best_quad(&scene, lg_first_bounds).expect("painted quad for lg first");
+    let quad_lg_mid = find_best_quad(&scene, lg_mid_bounds).expect("painted quad for lg mid");
+    let quad_lg_icon = find_best_quad(&scene, lg_icon_bounds).expect("painted quad for lg icon");
+
+    assert_close(
+        "button-group-size large first radius tl",
+        quad_lg_first.corners[0],
+        expected_lg_first_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large first radius tr",
+        quad_lg_first.corners[1],
+        expected_lg_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large icon radius tr",
+        quad_lg_icon.corners[1],
+        expected_lg_icon_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large mid border-left",
+        quad_lg_mid.border[3],
+        expected_lg_mid_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-size large icon border-left",
+        quad_lg_icon.border[3],
+        expected_lg_icon_border_l,
+        0.2,
+    );
+
+    assert_close(
+        "button-group-size small first radius tr (merged)",
+        quad_sm_first.corners[1],
+        expected_sm_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default first radius tr (merged)",
+        quad_md_first.corners[1],
+        expected_md_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large first radius tr (merged)",
+        quad_lg_first.corners[1],
+        expected_lg_first_r_tr,
+        1.0,
     );
 }
 
