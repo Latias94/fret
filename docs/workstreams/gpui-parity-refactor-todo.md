@@ -197,9 +197,14 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Perf snapshot (release, `--warmup-frames 5`, `--sort time`):
     - Baseline: `sum.total_time_us=225911` / 10 frames; `max.total_time_us=30585` (layout `29252`).
     - ViewCache+Shell: `sum.total_time_us=214260` / 10 frames; `max.total_time_us=28999` (layout `27545`).
+    - Smooth wheel (new harness: `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
+      - Baseline: `max.total_time_us=27219` (layout `26948`, prepaint `23`, paint `248`).
+      - ViewCache+Shell: `max.total_time_us=26890` (layout `26205`, prepaint `19`, paint `666`).
   - Commands:
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-baseline --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-cache-shell --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --warmup-frames 5 --sort time --top 15 --dir target/fret-diag-perf-vlist-smooth-scroll-baseline --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --warmup-frames 5 --sort time --top 15 --dir target/fret-diag-perf-vlist-smooth-scroll-cache-shell --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
   - Sketch:
     - Move “visible range / scroll_to_item” work toward `prepaint` (GPUI-style), so steady-state scroll can reuse paint + interaction ranges without rebuilding large declarative subtrees.
     - Keep per-item identity stable (do not recycle cells) while making the “range delta” path cheap.
