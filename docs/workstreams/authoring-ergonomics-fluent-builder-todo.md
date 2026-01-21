@@ -94,15 +94,14 @@ while keeping geometry/overflow semantics stable (verified via web goldens).
 
 Current state (as of 2026-01-21):
 
-- Adopted: `ecosystem/fret-ui-shadcn/src/accordion.rs`, `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/button.rs`, `ecosystem/fret-ui-shadcn/src/calendar.rs`, `ecosystem/fret-ui-shadcn/src/calendar_range.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/combobox.rs`, `ecosystem/fret-ui-shadcn/src/command.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/data_table.rs`, `ecosystem/fret-ui-shadcn/src/dialog.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/empty.rs`, `ecosystem/fret-ui-shadcn/src/field.rs`, `ecosystem/fret-ui-shadcn/src/hover_card.rs`, `ecosystem/fret-ui-shadcn/src/input_otp.rs`, `ecosystem/fret-ui-shadcn/src/item.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`, `ecosystem/fret-ui-shadcn/src/popover.rs`, `ecosystem/fret-ui-shadcn/src/select.rs`, `ecosystem/fret-ui-shadcn/src/sheet.rs`, `ecosystem/fret-ui-shadcn/src/sidebar.rs`, `ecosystem/fret-ui-shadcn/src/table.rs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/toggle.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`
-- Remaining: 2 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
+- Adopted: `ecosystem/fret-ui-shadcn/src/accordion.rs`, `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`, `ecosystem/fret-ui-shadcn/src/avatar.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`, `ecosystem/fret-ui-shadcn/src/button.rs`, `ecosystem/fret-ui-shadcn/src/calendar.rs`, `ecosystem/fret-ui-shadcn/src/calendar_range.rs`, `ecosystem/fret-ui-shadcn/src/card.rs`, `ecosystem/fret-ui-shadcn/src/combobox.rs`, `ecosystem/fret-ui-shadcn/src/command.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/src/data_table.rs`, `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`, `ecosystem/fret-ui-shadcn/src/dialog.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/empty.rs`, `ecosystem/fret-ui-shadcn/src/field.rs`, `ecosystem/fret-ui-shadcn/src/hover_card.rs`, `ecosystem/fret-ui-shadcn/src/input_otp.rs`, `ecosystem/fret-ui-shadcn/src/item.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`, `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`, `ecosystem/fret-ui-shadcn/src/popover.rs`, `ecosystem/fret-ui-shadcn/src/select.rs`, `ecosystem/fret-ui-shadcn/src/sheet.rs`, `ecosystem/fret-ui-shadcn/src/sidebar.rs`, `ecosystem/fret-ui-shadcn/src/table.rs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/toggle.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`
+- Remaining: 0 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
 
 Top remaining hotspots (by callsite count):
 
 | Count | File |
 | ---: | --- |
-| 1 | `ecosystem/fret-ui-shadcn/src/avatar.rs` |
-| 1 | `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` |
+| 0 | _none_ |
 
 Migration guidelines:
 
@@ -179,4 +178,10 @@ Next TODOs (suggested order: low-risk → high-risk):
   - Tests: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
 - [x] AUE-adopt-text-110 Migrate `TabsTrigger` fallback label text callsites.
   - Evidence: `ecosystem/fret-ui-shadcn/src/tabs.rs`
+  - Tests: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+- [x] AUE-adopt-text-111 Migrate `AvatarFallback` text callsites.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/avatar.rs`
+  - Tests: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+- [x] AUE-adopt-text-112 Migrate `DataTable` recipe text callsites.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`
   - Tests: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
