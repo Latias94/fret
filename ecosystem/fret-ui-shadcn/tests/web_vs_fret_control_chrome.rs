@@ -522,6 +522,320 @@ fn web_vs_fret_button_group_demo_button_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_button_group_split_chrome_matches() {
+    let web = read_web_golden("button-group-split");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_primary = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Button")
+    })
+    .expect("web split primary button");
+    let web_sep = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "none")
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "vertical")
+            && (n.rect.w - 1.0).abs() <= 0.1
+    })
+    .expect("web split separator");
+    let web_icon = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.text.is_none() && (n.rect.w - 36.0).abs() <= 0.1
+    })
+    .expect("web split icon button");
+
+    let expected_primary_border_top =
+        web_border_width_px_for(web_primary, "borderTopWidth").expect("web primary borderTopWidth");
+    let expected_primary_r_tl =
+        web_corner_radius_effective_px_for(web_primary, "borderTopLeftRadius")
+            .expect("web primary borderTopLeftRadius");
+    let expected_primary_r_tr =
+        web_corner_radius_effective_px_for(web_primary, "borderTopRightRadius")
+            .expect("web primary borderTopRightRadius");
+
+    let expected_icon_border_top =
+        web_border_width_px_for(web_icon, "borderTopWidth").expect("web icon borderTopWidth");
+    let expected_icon_r_tl = web_corner_radius_effective_px_for(web_icon, "borderTopLeftRadius")
+        .expect("web icon borderTopLeftRadius");
+    let expected_icon_r_tr = web_corner_radius_effective_px_for(web_icon, "borderTopRightRadius")
+        .expect("web icon borderTopRightRadius");
+
+    let sep_h = web_sep.rect.h;
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let split = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .into(),
+            fret_ui_shadcn::Separator::new()
+                .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            fret_ui_shadcn::Button::new("Menu")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
+                .into(),
+        ])
+        // Ensure the vertical separator can resolve its cross-axis fill size in the layout engine.
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default().h_px(fret_ui_kit::MetricRef::Px(Px(sep_h))),
+        );
+
+        vec![split.into_element(cx)]
+    });
+
+    let primary = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+        .expect("fret split primary semantics node");
+    let icon = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Menu"))
+        .expect("fret split icon semantics node");
+
+    assert_close(
+        "split primary height",
+        primary.bounds.size.height.0,
+        web_primary.rect.h,
+        1.0,
+    );
+    assert_close(
+        "split icon width",
+        icon.bounds.size.width.0,
+        web_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "split icon height",
+        icon.bounds.size.height.0,
+        web_icon.rect.h,
+        1.0,
+    );
+
+    let quad_primary = find_best_quad(&scene, primary.bounds).expect("painted quad for primary");
+    assert_close(
+        "split primary border-top width",
+        quad_primary.border[0],
+        expected_primary_border_top,
+        0.2,
+    );
+    assert_close(
+        "split primary top-left radius",
+        quad_primary.corners[0],
+        expected_primary_r_tl,
+        1.0,
+    );
+    assert_close(
+        "split primary top-right radius",
+        quad_primary.corners[1],
+        expected_primary_r_tr,
+        1.0,
+    );
+
+    let quad_icon = find_best_quad(&scene, icon.bounds).expect("painted quad for icon");
+    assert_close(
+        "split icon border-top width",
+        quad_icon.border[0],
+        expected_icon_border_top,
+        0.2,
+    );
+    assert_close(
+        "split icon top-left radius",
+        quad_icon.corners[0],
+        expected_icon_r_tl,
+        1.0,
+    );
+    assert_close(
+        "split icon top-right radius",
+        quad_icon.corners[1],
+        expected_icon_r_tr,
+        1.0,
+    );
+
+    // Text shaping is intentionally stubbed in `FakeServices`, so we can't reliably assert the
+    // intrinsic text-driven width of the primary button. Instead, gate:
+    // - separator thickness,
+    // - separator/chevron button placement (no gap),
+    // - merged border/corner radii outcomes.
+    let sep_w = web_sep.rect.w;
+    let sep_target = Rect::new(
+        Point::new(
+            Px(primary.bounds.origin.x.0 + primary.bounds.size.width.0),
+            primary.bounds.origin.y,
+        ),
+        CoreSize::new(Px(sep_w), Px(sep_h)),
+    );
+    let quad_sep = find_best_quad(&scene, sep_target).expect("painted quad for separator");
+    assert_close(
+        "split separator width",
+        quad_sep.rect.size.width.0,
+        sep_w,
+        0.2,
+    );
+    assert_close(
+        "split separator height",
+        quad_sep.rect.size.height.0,
+        sep_h,
+        0.2,
+    );
+
+    let actual_icon_gap =
+        icon.bounds.origin.x.0 - (quad_sep.rect.origin.x.0 + quad_sep.rect.size.width.0);
+    assert_close("split separator → icon gap", actual_icon_gap, 0.0, 0.5);
+}
+
+#[test]
+fn web_vs_fret_button_group_orientation_vertical_chrome_matches() {
+    let web = read_web_golden("button-group-orientation");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "vertical")
+    })
+    .expect("web vertical button group");
+
+    let web_top = find_first(web_group, &|n| {
+        n.tag == "button" && (n.rect.y - 0.0).abs() <= 0.1
+    })
+    .expect("web top button");
+    let web_bottom = find_first(web_group, &|n| {
+        n.tag == "button" && (n.rect.y - 36.0).abs() <= 0.1
+    })
+    .expect("web bottom button");
+
+    let expected_top_border_bottom =
+        web_border_width_px_for(web_top, "borderBottomWidth").expect("web top borderBottomWidth");
+    let expected_top_r_tl = web_corner_radius_effective_px_for(web_top, "borderTopLeftRadius")
+        .expect("web top borderTopLeftRadius");
+    let expected_top_r_bl = web_corner_radius_effective_px_for(web_top, "borderBottomLeftRadius")
+        .expect("web top borderBottomLeftRadius");
+
+    let expected_bottom_border_top =
+        web_border_width_px_for(web_bottom, "borderTopWidth").expect("web bottom borderTopWidth");
+    let expected_bottom_r_tl =
+        web_corner_radius_effective_px_for(web_bottom, "borderTopLeftRadius")
+            .expect("web bottom borderTopLeftRadius");
+    let expected_bottom_r_bl =
+        web_corner_radius_effective_px_for(web_bottom, "borderBottomLeftRadius")
+            .expect("web bottom borderBottomLeftRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Play")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::PLAY)])
+                .into(),
+            fret_ui_shadcn::Button::new("Stop")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::CLOSE)])
+                .into(),
+        ])
+        .a11y_label("Media controls")
+        .orientation(fret_ui_shadcn::ButtonGroupOrientation::Vertical);
+
+        vec![group.into_element(cx)]
+    });
+
+    let top = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Play"))
+        .expect("fret top button semantics node");
+    let bottom = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Stop"))
+        .expect("fret bottom button semantics node");
+
+    assert_close(
+        "vertical top width",
+        top.bounds.size.width.0,
+        web_top.rect.w,
+        1.0,
+    );
+    assert_close(
+        "vertical top height",
+        top.bounds.size.height.0,
+        web_top.rect.h,
+        1.0,
+    );
+    assert_close(
+        "vertical bottom width",
+        bottom.bounds.size.width.0,
+        web_bottom.rect.w,
+        1.0,
+    );
+    assert_close(
+        "vertical bottom height",
+        bottom.bounds.size.height.0,
+        web_bottom.rect.h,
+        1.0,
+    );
+    assert_close(
+        "vertical button stacking y",
+        bottom.bounds.origin.y.0 - top.bounds.origin.y.0,
+        web_bottom.rect.y - web_top.rect.y,
+        1.0,
+    );
+
+    let quad_top = find_best_quad(&scene, top.bounds).expect("painted quad for top button");
+    assert_close(
+        "vertical top border-bottom width",
+        quad_top.border[2],
+        expected_top_border_bottom,
+        0.2,
+    );
+    assert_close(
+        "vertical top top-left radius",
+        quad_top.corners[0],
+        expected_top_r_tl,
+        1.0,
+    );
+    assert_close(
+        "vertical top bottom-left radius",
+        quad_top.corners[3],
+        expected_top_r_bl,
+        1.0,
+    );
+
+    let quad_bottom =
+        find_best_quad(&scene, bottom.bounds).expect("painted quad for bottom button");
+    assert_close(
+        "vertical bottom border-top width",
+        quad_bottom.border[0],
+        expected_bottom_border_top,
+        0.2,
+    );
+    assert_close(
+        "vertical bottom top-left radius",
+        quad_bottom.corners[0],
+        expected_bottom_r_tl,
+        1.0,
+    );
+    assert_close(
+        "vertical bottom bottom-left radius",
+        quad_bottom.corners[3],
+        expected_bottom_r_bl,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_input_demo_control_chrome_matches() {
     let web = read_web_golden("input-demo");
     let theme = web
