@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Modifiers, MouseButton, Point, Px};
+use fret_core::{Modifiers, MouseButton, Point};
 use fret_runtime::Model;
 use fret_ui::action::{OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
 use fret_ui::canvas::CanvasPainter;
@@ -174,9 +174,7 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
             let dy = mv.position.y.0 - drag.last_pos.y.0;
 
             let _ = host.models_mut().update(&view_c, |view| {
-                let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0);
-                view.pan.x = Px(view.pan.x.0 + dx / zoom);
-                view.pan.y = Px(view.pan.y.0 + dy / zoom);
+                view.pan_by_screen_delta(dx, dy);
             });
             let _ = host.models_mut().update(&drag_c, |st| {
                 if let Some(st) = st.as_mut() {
