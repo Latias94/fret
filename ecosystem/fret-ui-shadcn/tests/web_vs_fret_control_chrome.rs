@@ -564,8 +564,6 @@ fn web_vs_fret_button_group_split_chrome_matches() {
     let expected_icon_r_tr = web_corner_radius_effective_px_for(web_icon, "borderTopRightRadius")
         .expect("web icon borderTopRightRadius");
 
-    let sep_h = web_sep.rect.h;
-
     let (snap, scene) = render_and_paint(|cx| {
         let split = fret_ui_shadcn::ButtonGroup::new(vec![
             fret_ui_shadcn::Button::new("Button")
@@ -579,11 +577,7 @@ fn web_vs_fret_button_group_split_chrome_matches() {
                 .size(fret_ui_shadcn::ButtonSize::Icon)
                 .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
                 .into(),
-        ])
-        // Ensure the vertical separator can resolve its cross-axis fill size in the layout engine.
-        .refine_layout(
-            fret_ui_kit::LayoutRefinement::default().h_px(fret_ui_kit::MetricRef::Px(Px(sep_h))),
-        );
+        ]);
 
         vec![split.into_element(cx)]
     });
@@ -664,6 +658,7 @@ fn web_vs_fret_button_group_split_chrome_matches() {
     // - separator/chevron button placement (no gap),
     // - merged border/corner radii outcomes.
     let sep_w = web_sep.rect.w;
+    let sep_h = web_sep.rect.h;
     let sep_target = Rect::new(
         Point::new(
             Px(primary.bounds.origin.x.0 + primary.bounds.size.width.0),
@@ -832,6 +827,380 @@ fn web_vs_fret_button_group_orientation_vertical_chrome_matches() {
         quad_bottom.corners[3],
         expected_bottom_r_bl,
         1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_nested_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-nested");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_outer = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "group")
+            && n.computed_style.get("gap").is_some_and(|v| v == "8px")
+            && (n.rect.h - 32.0).abs() <= 0.1
+    })
+    .expect("web outer button group");
+
+    let web_groups: Vec<&WebNode> = web_outer
+        .children
+        .iter()
+        .filter(|c| c.tag == "div" && c.attrs.get("role").is_some_and(|v| v == "group"))
+        .collect();
+    assert!(
+        web_groups.len() >= 2,
+        "expected at least 2 nested groups, got {}",
+        web_groups.len()
+    );
+    let web_group_a = web_groups[0];
+    let web_group_b = web_groups[1];
+    let expected_gap = web_group_b.rect.x - (web_group_a.rect.x + web_group_a.rect.w);
+
+    let web_one = find_first(web_group_a, &|n| n.tag == "button" && contains_text(n, "1"))
+        .expect("web button 1");
+    let web_two = find_first(web_group_a, &|n| n.tag == "button" && contains_text(n, "2"))
+        .expect("web button 2");
+    let web_prev = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Previous")
+    })
+    .expect("web previous button");
+    let web_next = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Next")
+    })
+    .expect("web next button");
+
+    let expected_one_border_l =
+        web_border_width_px_for(web_one, "borderLeftWidth").expect("web 1 borderLeftWidth");
+    let expected_one_r_tl = web_corner_radius_effective_px_for(web_one, "borderTopLeftRadius")
+        .expect("web 1 borderTopLeftRadius");
+    let expected_one_r_tr = web_corner_radius_effective_px_for(web_one, "borderTopRightRadius")
+        .expect("web 1 borderTopRightRadius");
+
+    let expected_two_border_l =
+        web_border_width_px_for(web_two, "borderLeftWidth").expect("web 2 borderLeftWidth");
+    let expected_two_r_tl = web_corner_radius_effective_px_for(web_two, "borderTopLeftRadius")
+        .expect("web 2 borderTopLeftRadius");
+    let expected_two_r_tr = web_corner_radius_effective_px_for(web_two, "borderTopRightRadius")
+        .expect("web 2 borderTopRightRadius");
+
+    let expected_prev_border_l =
+        web_border_width_px_for(web_prev, "borderLeftWidth").expect("web Previous borderLeftWidth");
+    let expected_prev_r_tr = web_corner_radius_effective_px_for(web_prev, "borderTopRightRadius")
+        .expect("web Previous borderTopRightRadius");
+    let expected_next_border_l =
+        web_border_width_px_for(web_next, "borderLeftWidth").expect("web Next borderLeftWidth");
+    let expected_next_r_tl = web_corner_radius_effective_px_for(web_next, "borderTopLeftRadius")
+        .expect("web Next borderTopLeftRadius");
+    let expected_next_r_tr = web_corner_radius_effective_px_for(web_next, "borderTopRightRadius")
+        .expect("web Next borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group_a = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("1")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("2")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("3")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("4")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("5")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+        ])
+        .a11y_label("NestedGroupA")
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group_a.rect.w))),
+        );
+
+        let group_b = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Previous")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconSm)
+                .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+                .into(),
+            fret_ui_shadcn::Button::new("Next")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconSm)
+                .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+                .into(),
+        ])
+        .a11y_label("NestedGroupB")
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group_b.rect.w))),
+        );
+
+        let outer = fret_ui_shadcn::ButtonGroup::new(vec![group_a.into(), group_b.into()])
+            .a11y_label("OuterGroup");
+
+        vec![outer.into_element(cx)]
+    });
+
+    let group_a = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("NestedGroupA"))
+        .expect("fret nested group A semantics node");
+    let group_b = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("NestedGroupB"))
+        .expect("fret nested group B semantics node");
+
+    let actual_gap =
+        group_b.bounds.origin.x.0 - (group_a.bounds.origin.x.0 + group_a.bounds.size.width.0);
+    assert_close("button-group-nested gap", actual_gap, expected_gap, 1.0);
+
+    let one = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("1"))
+        .expect("fret button 1 semantics node");
+    let two = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("2"))
+        .expect("fret button 2 semantics node");
+    let prev = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Previous"))
+        .expect("fret previous semantics node");
+    let next = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Next"))
+        .expect("fret next semantics node");
+
+    let quad_one = find_best_quad(&scene, one.bounds).expect("painted quad for 1");
+    assert_close(
+        "button-group-nested 1 border-left",
+        quad_one.border[3],
+        expected_one_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested 1 radius tl",
+        quad_one.corners[0],
+        expected_one_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-nested 1 radius tr",
+        quad_one.corners[1],
+        expected_one_r_tr,
+        1.0,
+    );
+
+    let quad_two = find_best_quad(&scene, two.bounds).expect("painted quad for 2");
+    assert_close(
+        "button-group-nested 2 border-left",
+        quad_two.border[3],
+        expected_two_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested 2 radius tl",
+        quad_two.corners[0],
+        expected_two_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-nested 2 radius tr",
+        quad_two.corners[1],
+        expected_two_r_tr,
+        1.0,
+    );
+
+    let quad_prev = find_best_quad(&scene, prev.bounds).expect("painted quad for Previous");
+    assert_close(
+        "button-group-nested Previous border-left",
+        quad_prev.border[3],
+        expected_prev_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested Previous radius tr",
+        quad_prev.corners[1],
+        expected_prev_r_tr,
+        1.0,
+    );
+
+    let quad_next = find_best_quad(&scene, next.bounds).expect("painted quad for Next");
+    assert_close(
+        "button-group-nested Next border-left",
+        quad_next.border[3],
+        expected_next_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested Next radius tl",
+        quad_next.corners[0],
+        expected_next_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-nested Next radius tr",
+        quad_next.corners[1],
+        expected_next_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_separator_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-separator");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_copy = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Copy")
+    })
+    .expect("web Copy button");
+    let web_paste = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Paste")
+    })
+    .expect("web Paste button");
+    let web_sep = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "none")
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "vertical")
+            && (n.rect.w - 1.0).abs() <= 0.1
+    })
+    .expect("web separator node");
+
+    let expected_copy_border_top =
+        web_border_width_px_for(web_copy, "borderTopWidth").expect("web Copy borderTopWidth");
+    let expected_copy_r_tl = web_corner_radius_effective_px_for(web_copy, "borderTopLeftRadius")
+        .expect("web Copy borderTopLeftRadius");
+    let expected_copy_r_tr = web_corner_radius_effective_px_for(web_copy, "borderTopRightRadius")
+        .expect("web Copy borderTopRightRadius");
+
+    let expected_paste_border_top =
+        web_border_width_px_for(web_paste, "borderTopWidth").expect("web Paste borderTopWidth");
+    let expected_paste_r_tl = web_corner_radius_effective_px_for(web_paste, "borderTopLeftRadius")
+        .expect("web Paste borderTopLeftRadius");
+    let expected_paste_r_tr = web_corner_radius_effective_px_for(web_paste, "borderTopRightRadius")
+        .expect("web Paste borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Copy")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Separator::new()
+                .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            fret_ui_shadcn::Button::new("Paste")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+        ]);
+        vec![group.into_element(cx)]
+    });
+
+    let copy = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Copy"))
+        .expect("fret Copy button semantics node");
+    let paste = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Paste"))
+        .expect("fret Paste button semantics node");
+
+    let quad_copy = find_best_quad(&scene, copy.bounds).expect("painted quad for Copy");
+    assert_close(
+        "button-group-separator Copy border-top",
+        quad_copy.border[0],
+        expected_copy_border_top,
+        0.2,
+    );
+    assert_close(
+        "button-group-separator Copy radius tl",
+        quad_copy.corners[0],
+        expected_copy_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-separator Copy radius tr",
+        quad_copy.corners[1],
+        expected_copy_r_tr,
+        1.0,
+    );
+
+    let quad_paste = find_best_quad(&scene, paste.bounds).expect("painted quad for Paste");
+    assert_close(
+        "button-group-separator Paste border-top",
+        quad_paste.border[0],
+        expected_paste_border_top,
+        0.2,
+    );
+    assert_close(
+        "button-group-separator Paste radius tl",
+        quad_paste.corners[0],
+        expected_paste_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-separator Paste radius tr",
+        quad_paste.corners[1],
+        expected_paste_r_tr,
+        1.0,
+    );
+
+    let sep_w = web_sep.rect.w;
+    let sep_h = web_sep.rect.h;
+    let sep_target = Rect::new(
+        Point::new(
+            Px(copy.bounds.origin.x.0 + copy.bounds.size.width.0),
+            copy.bounds.origin.y,
+        ),
+        CoreSize::new(Px(sep_w), Px(sep_h)),
+    );
+    let quad_sep = find_best_quad(&scene, sep_target).expect("painted quad for separator");
+    assert_close(
+        "button-group-separator sep width",
+        quad_sep.rect.size.width.0,
+        sep_w,
+        0.2,
+    );
+    assert_close(
+        "button-group-separator sep height",
+        quad_sep.rect.size.height.0,
+        sep_h,
+        0.2,
+    );
+    let actual_paste_gap =
+        paste.bounds.origin.x.0 - (quad_sep.rect.origin.x.0 + quad_sep.rect.size.width.0);
+    assert_close(
+        "button-group-separator sep → paste gap",
+        actual_paste_gap,
+        0.0,
+        0.5,
     );
 }
 
