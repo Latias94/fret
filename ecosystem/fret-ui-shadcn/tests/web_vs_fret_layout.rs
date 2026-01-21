@@ -8427,6 +8427,612 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
 }
 
 #[test]
+fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
+    let web = read_web_golden("input-group-text");
+    let theme = web_theme(&web);
+
+    let mut web_groups: Vec<&WebNode> = Vec::new();
+    fn walk_collect<'a>(n: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if n.tag == "div"
+            && n.class_name.as_deref().is_some_and(|c| {
+                let mut has_group = false;
+                let mut has_border = false;
+                for t in c.split_whitespace() {
+                    has_group |= t == "group/input-group";
+                    has_border |= t == "border-input";
+                }
+                has_group && has_border
+            })
+        {
+            out.push(n);
+        }
+        for c in &n.children {
+            walk_collect(c, out);
+        }
+    }
+    walk_collect(&theme.root, &mut web_groups);
+    web_groups.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let web_group1 = *web_groups.get(1).expect("web group1");
+    let web_input1 = web_group1
+        .children
+        .iter()
+        .find(|n| n.tag == "input")
+        .expect("web input1");
+    let web_prefix =
+        web_find_by_tag_and_text(web_group1, "span", "https://").expect("web https prefix");
+    let web_suffix = web_find_by_tag_and_text(web_group1, "span", ".com").expect("web .com suffix");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-input-group-text-url",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group1.rect.w)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let prefix = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-text:url:prefix")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![
+                                fret_ui_shadcn::InputGroupText::new("https://")
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(web_prefix.rect.w))),
+                                    )
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let suffix = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-text:url:suffix")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![
+                                fret_ui_shadcn::InputGroupText::new(".com")
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(web_suffix.rect.w))),
+                                    )
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                        .a11y_label("Golden:input-group-text:url:input")
+                        .leading(vec![prefix])
+                        .trailing(vec![suffix])
+                        .into_element(cx);
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-text:url:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-text:url:root"),
+    )
+    .expect("fret group");
+    let input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:input-group-text:url:input"),
+    )
+    .expect("fret input");
+    let prefix = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-text:url:prefix"),
+    )
+    .expect("fret prefix");
+    let suffix = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-text:url:suffix"),
+    )
+    .expect("fret suffix");
+
+    assert_close_px(
+        "input-group-text url group w",
+        group.bounds.size.width,
+        web_group1.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text url group h",
+        group.bounds.size.height,
+        web_group1.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text url input x",
+        input.bounds.origin.x,
+        web_input1.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text url input w",
+        input.bounds.size.width,
+        web_input1.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text url prefix x",
+        prefix.bounds.origin.x,
+        web_prefix.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text url prefix w",
+        prefix.bounds.size.width,
+        web_prefix.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text url suffix x",
+        suffix.bounds.origin.x,
+        web_suffix.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text url suffix w",
+        suffix.bounds.size.width,
+        web_suffix.rect.w,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
+    let web = read_web_golden("input-group-text");
+    let theme = web_theme(&web);
+
+    let mut web_groups: Vec<&WebNode> = Vec::new();
+    fn walk_collect<'a>(n: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if n.tag == "div"
+            && n.class_name.as_deref().is_some_and(|c| {
+                let mut has_group = false;
+                let mut has_border = false;
+                for t in c.split_whitespace() {
+                    has_group |= t == "group/input-group";
+                    has_border |= t == "border-input";
+                }
+                has_group && has_border
+            })
+        {
+            out.push(n);
+        }
+        for c in &n.children {
+            walk_collect(c, out);
+        }
+    }
+    walk_collect(&theme.root, &mut web_groups);
+    web_groups.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let web_group2 = *web_groups.get(2).expect("web group2");
+    let web_input2 = web_group2
+        .children
+        .iter()
+        .find(|n| n.tag == "input")
+        .expect("web input2");
+    let web_suffix = web_find_by_tag_and_text(web_group2, "span", "@company.com")
+        .expect("web @company.com suffix");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-input-group-text-email",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group2.rect.w)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let suffix = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-text:email:suffix")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![
+                                fret_ui_shadcn::InputGroupText::new("@company.com")
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(web_suffix.rect.w))),
+                                    )
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                        .a11y_label("Golden:input-group-text:email:input")
+                        .trailing(vec![suffix])
+                        .into_element(cx);
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-text:email:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-text:email:root"),
+    )
+    .expect("fret group");
+    let input = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:input-group-text:email:input"),
+    )
+    .expect("fret input");
+    let suffix = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-text:email:suffix"),
+    )
+    .expect("fret suffix");
+
+    assert_close_px(
+        "input-group-text email group w",
+        group.bounds.size.width,
+        web_group2.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text email group h",
+        group.bounds.size.height,
+        web_group2.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text email input x",
+        input.bounds.origin.x,
+        web_input2.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text email input w",
+        input.bounds.size.width,
+        web_input2.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text email suffix x",
+        suffix.bounds.origin.x,
+        web_suffix.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text email suffix w",
+        suffix.bounds.size.width,
+        web_suffix.rect.w,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
+    let web = read_web_golden("input-group-text");
+    let theme = web_theme(&web);
+
+    let mut web_groups: Vec<&WebNode> = Vec::new();
+    fn walk_collect<'a>(n: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if n.tag == "div"
+            && n.class_name.as_deref().is_some_and(|c| {
+                let mut has_group = false;
+                let mut has_border = false;
+                for t in c.split_whitespace() {
+                    has_group |= t == "group/input-group";
+                    has_border |= t == "border-input";
+                }
+                has_group && has_border
+            })
+        {
+            out.push(n);
+        }
+        for c in &n.children {
+            walk_collect(c, out);
+        }
+    }
+    walk_collect(&theme.root, &mut web_groups);
+    web_groups.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let web_group3 = *web_groups.get(3).expect("web group3");
+    let web_textarea3 = web_group3
+        .children
+        .iter()
+        .find(|n| n.tag == "textarea")
+        .expect("web textarea3");
+    let web_count = web_find_by_tag_and_text(web_group3, "span", "120 characters left")
+        .expect("web count label");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let model: Model<String> = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout-input-group-text-textarea-count",
+        |cx| {
+            let container_layout = fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group3.rect.w)));
+            let container = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: fret_ui_kit::declarative::style::layout_style(
+                        &fret_ui::Theme::global(&*cx.app),
+                        container_layout,
+                    ),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let count = cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-text:count:text")),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![
+                                fret_ui_shadcn::InputGroupText::new("120 characters left")
+                                    .size(fret_ui_shadcn::InputGroupTextSize::Xs)
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(web_count.rect.w))),
+                                    )
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+
+                    let group = fret_ui_shadcn::InputGroup::new(model.clone())
+                        .textarea()
+                        .textarea_min_height(Px(web_textarea3.rect.h))
+                        .a11y_label("Golden:input-group-text:count:textarea")
+                        .block_end(vec![count])
+                        .into_element(cx);
+
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(Arc::from("Golden:input-group-text:count:root")),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![group],
+                    )]
+                },
+            );
+
+            vec![container]
+        },
+    );
+
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-text:count:root"),
+    )
+    .expect("fret group");
+    let textarea = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some("Golden:input-group-text:count:textarea"),
+    )
+    .expect("fret textarea");
+    let count = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:input-group-text:count:text"),
+    )
+    .expect("fret count text");
+
+    assert_close_px(
+        "input-group-text textarea count group w",
+        group.bounds.size.width,
+        web_group3.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count group h",
+        group.bounds.size.height,
+        web_group3.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count textarea x",
+        textarea.bounds.origin.x,
+        web_textarea3.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count textarea w",
+        textarea.bounds.size.width,
+        web_textarea3.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count textarea h",
+        textarea.bounds.size.height,
+        web_textarea3.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count text x",
+        count.bounds.origin.x,
+        web_count.rect.x,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count text w",
+        count.bounds.size.width,
+        web_count.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count text y",
+        Px(count.bounds.origin.y.0 - group.bounds.origin.y.0),
+        web_count.rect.y - web_group3.rect.y,
+        1.0,
+    );
+    assert_close_px(
+        "input-group-text textarea count text h",
+        count.bounds.size.height,
+        web_count.rect.h,
+        1.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
     let web = read_web_golden("spinner-input-group");
     let theme = web_theme(&web);
