@@ -110,6 +110,65 @@ where
     UiBuilder::new(FlexBox::new(Axis::Vertical, children))
 }
 
+/// A patchable container constructor for authoring ergonomics.
+///
+/// This is intended to be the default “box” layout node in the fluent authoring surface.
+#[derive(Debug, Clone)]
+pub struct ContainerBox<H, F> {
+    pub(crate) chrome: ChromeRefinement,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) children: Option<F>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H, F> ContainerBox<H, F> {
+    pub fn new(children: F) -> Self {
+        Self {
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, F> UiPatchTarget for ContainerBox<H, F> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.chrome = self.chrome.merge(patch.chrome);
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, F> UiSupportsChrome for ContainerBox<H, F> {}
+impl<H, F> UiSupportsLayout for ContainerBox<H, F> {}
+
+impl<H: UiHost, F> ContainerBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+        let container = decl_style::container_props(theme, self.chrome, self.layout);
+        let children = self.children.expect("expected container children closure");
+        cx.container(container, move |cx| children(cx))
+    }
+}
+
+/// Returns a patchable container builder.
+///
+/// Usage:
+/// - `ui::container(cx, |cx| vec![...]).px_2().into_element(cx)`
+pub fn container<H: UiHost, F>(
+    _cx: &mut ElementContext<'_, H>,
+    children: F,
+) -> UiBuilder<ContainerBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+{
+    UiBuilder::new(ContainerBox::new(children))
+}
+
 /// A patchable stack layout constructor for authoring ergonomics.
 ///
 /// The runtime `Stack` element is a positioned-container style layout: children can be absolutely
@@ -178,6 +237,22 @@ mod tests {
     use super::*;
     use crate::UiExt;
     use crate::{LengthRefinement, MetricRef};
+
+    #[test]
+    fn container_box_accepts_ui_patches() {
+        let container = ContainerBox::<(), ()>::new(())
+            .ui()
+            .p_1()
+            .w(LengthRefinement::Fill)
+            .build();
+
+        let padding = container
+            .chrome
+            .padding
+            .expect("expected padding refinement");
+        assert!(matches!(padding.left, Some(MetricRef::Token { .. })));
+        assert!(container.layout.size.is_some());
+    }
 
     #[test]
     fn stack_box_accepts_ui_patches() {
