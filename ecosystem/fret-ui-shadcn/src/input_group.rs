@@ -25,6 +25,8 @@ pub struct InputGroup {
     block_end: Vec<AnyElement>,
     leading_has_button: bool,
     trailing_has_button: bool,
+    leading_has_kbd: bool,
+    trailing_has_kbd: bool,
     a11y_label: Option<Arc<str>>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
@@ -45,6 +47,8 @@ impl std::fmt::Debug for InputGroup {
             .field("block_end_len", &self.block_end.len())
             .field("leading_has_button", &self.leading_has_button)
             .field("trailing_has_button", &self.trailing_has_button)
+            .field("leading_has_kbd", &self.leading_has_kbd)
+            .field("trailing_has_kbd", &self.trailing_has_kbd)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("submit_command", &self.submit_command)
             .field("cancel_command", &self.cancel_command)
@@ -67,6 +71,8 @@ impl InputGroup {
             block_end: Vec::new(),
             leading_has_button: false,
             trailing_has_button: false,
+            leading_has_kbd: false,
+            trailing_has_kbd: false,
             a11y_label: None,
             submit_command: None,
             cancel_command: None,
@@ -121,6 +127,24 @@ impl InputGroup {
     /// `InputGroup` recipe to apply the same layout outcome.
     pub fn trailing_has_button(mut self, value: bool) -> Self {
         self.trailing_has_button = value;
+        self
+    }
+
+    /// Upstream uses `has-[>kbd]:ml-[-0.35rem]` on inline-start addons (v4).
+    ///
+    /// Fret does not currently have a selector mechanism, so this is an explicit hint for the
+    /// `InputGroup` recipe to apply the same layout outcome.
+    pub fn leading_has_kbd(mut self, value: bool) -> Self {
+        self.leading_has_kbd = value;
+        self
+    }
+
+    /// Upstream uses `has-[>kbd]:mr-[-0.35rem]` on inline-end addons (v4).
+    ///
+    /// Fret does not currently have a selector mechanism, so this is an explicit hint for the
+    /// `InputGroup` recipe to apply the same layout outcome.
+    pub fn trailing_has_kbd(mut self, value: bool) -> Self {
+        self.trailing_has_kbd = value;
         self
     }
 
@@ -194,6 +218,8 @@ impl InputGroup {
         let block_end = self.block_end;
         let leading_has_button = self.leading_has_button;
         let trailing_has_button = self.trailing_has_button;
+        let leading_has_kbd = self.leading_has_kbd;
+        let trailing_has_kbd = self.trailing_has_kbd;
         let control = self.control;
         let a11y_label = self.a11y_label;
         let submit_command = self.submit_command;
@@ -407,6 +433,8 @@ impl InputGroup {
                     let leading = (!leading.is_empty()).then(|| {
                         let layout = if leading_has_button {
                             LayoutRefinement::default().flex_none().ml_neg(Space::N2)
+                        } else if leading_has_kbd {
+                            LayoutRefinement::default().flex_none().ml_neg(Space::N1p5)
                         } else {
                             LayoutRefinement::default().flex_none()
                         };
@@ -432,6 +460,8 @@ impl InputGroup {
                     let trailing = (!trailing.is_empty()).then(|| {
                         let layout = if trailing_has_button {
                             LayoutRefinement::default().flex_none().mr_neg(Space::N2)
+                        } else if trailing_has_kbd {
+                            LayoutRefinement::default().flex_none().mr_neg(Space::N1p5)
                         } else {
                             LayoutRefinement::default().flex_none()
                         };
