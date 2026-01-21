@@ -94,8 +94,8 @@ while keeping geometry/overflow semantics stable (verified via web goldens).
 
 Current state (as of 2026-01-21):
 
-- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`
-- Remaining: 96 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
+- Adopted: `ecosystem/fret-ui-shadcn/src/alert.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs`, `ecosystem/fret-ui-shadcn/src/kbd.rs`
+- Remaining: 95 `cx.text_props(TextProps { ... })` callsites under `ecosystem/fret-ui-shadcn/src`
 
 Top remaining hotspots (by callsite count):
 
