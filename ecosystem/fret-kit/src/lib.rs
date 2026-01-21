@@ -32,6 +32,10 @@ pub mod workspace_shell;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod mvu;
 
+/// Interop helpers for embedding foreign UI as isolated surfaces (desktop builds).
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub mod interop;
+
 /// Re-export the underlying `fret` facade (desktop builds).
 #[cfg(feature = "desktop")]
 pub use fret;
@@ -59,6 +63,9 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::mvu::{MessageRouter, Program as MvuProgram};
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::interop;
 
     #[cfg(feature = "workspace-shell")]
     pub use crate::workspace;
