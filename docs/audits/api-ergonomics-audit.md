@@ -168,3 +168,79 @@ This keeps kernel contracts stable and prevents accidental scope creep.
 - Promote ADR 0175 from Proposed → Accepted once example migration proves the UX.
 - Implement P1 changes (`IntoIterator`) and run `cargo fmt` + tests.
 
+## Comparative References (Iced, GPUI)
+
+This section is a quick “design vocabulary alignment” to make future ADR discussion concrete.
+
+### Iced (Elm-style MVU, task/subscription driven)
+
+Key authoring traits:
+
+- State as a plain Rust value, updated by messages (`update(&mut State, Message) -> Task<Message>`).
+- UI described as an element tree built each frame (`view(&State) -> Element<Message>`).
+- Message routing is typed and implicit (widgets produce `Message` directly).
+- No explicit invalidation model in user code; the runtime schedules redraws.
+
+Evidence anchors (reference checkout):
+
+- `F:\SourceCodes\Rust\fret\repo-ref\iced\src\application.rs` (`iced::application(...) -> Application`).
+- `F:\SourceCodes\Rust\fret\repo-ref\iced\src\lib.rs` pocket guide (“update/view/message” narrative).
+
+Ergonomic takeaway for Fret: typed message routing and “single default entry point” can be borrowed
+without adopting Iced’s widget model or layout approach.
+
+### GPUI (hybrid immediate/retained; entities + render each frame)
+
+Key authoring traits:
+
+- “Views” are entities implementing `Render`, called once per frame to rebuild the element tree.
+- Element state is owned by the framework (entity storage), not by the tree itself.
+- Context objects are the primary interface surface (AppContext / WindowContext).
+
+Evidence anchors (reference checkout):
+
+- `F:\SourceCodes\Rust\fret\repo-ref\zed\crates\gpui\README.md` (“three registers” overview).
+
+Ergonomic takeaway for Fret: Fret’s long-term direction already resembles GPUI; the main gap is
+authoring surface polish (density, defaults, unified patterns), not core capability.
+
+## Prototype: `fret_kit::mvu` (Typed Commands Without String Parsing)
+
+To test how much of the Iced “typed message” ergonomics we can adopt without changing kernel
+contracts, this worktree adds a small ecosystem-level MVU helper:
+
+- `ecosystem/fret-kit/src/mvu.rs`
+  - `Program` trait (`init/update/view`) with `State` + `Message`.
+  - `MessageRouter<Message>` that allocates per-frame `CommandId` and resolves it in the driver hook.
+  - `fret_kit::mvu::app::<P>(...)` mirrors the existing `fret_kit::app(...)` golden path.
+
+Why this shape:
+
+- The golden-path driver uses `fn` pointers for hotpatch predictability, so a trait-based program is
+  the simplest way to keep “no captured closures in wiring” while still improving ergonomics.
+
+Limitations (current):
+
+- This does not remove the model observation/invalidation responsibilities yet (it only eliminates
+  stringly `CommandId` parsing and prefix handling in app code).
+- `MessageRouter` is frame-local; it is intentionally not a stable command registry.
+
+## Code Size Snapshot (TODO demo family)
+
+Line counts (worktree):
+
+- `apps/fret-examples/src/todo_demo.rs`: 536
+- `apps/fret-examples/src/todo_mvu_demo.rs`: 518
+- `apps/fret-examples/src/todo_interop_demo.rs`: 512
+- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 336
+
+Interpretation:
+
+- The MVU prototype currently reduces “command routing complexity” more than raw LOC.
+- The largest LOC savings still come from using `fret-kit` golden-path hooks instead of writing a
+  full custom driver, which supports the “single default path” recommendation.
+
+Recent ergonomic improvement:
+
+- `fret-kit` now includes `interop::embedded_viewport` to reduce “isolated embedding” boilerplate
+  (publish target id as models + global viewport input filtering + surface panel helper).

@@ -422,7 +422,7 @@ pub struct PaintCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub scale_factor: f32,
     pub accumulated_transform: Transform2D,
-    pub(crate) children_render_transform: Option<Transform2D>,
+    pub children_render_transform: Option<Transform2D>,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),

@@ -1175,6 +1175,7 @@ dependencies = [
  "fret-ui-shadcn",
  "fret-workspace",
  "thiserror 2.0.17",
+ "wgpu",
 ]
 
 [[package]]

@@ -22,7 +22,7 @@ default = [
 ]
 
 # Compile the native desktop runner stack (winit + wgpu) via the `fret` facade bundles.
-desktop = ["dep:fret", "fret/native-wgpu", "fret-bootstrap/ui-app-driver"]
+desktop = ["dep:fret", "dep:wgpu", "fret/native-wgpu", "fret-bootstrap/ui-app-driver"]
 
 # Common app/dev conveniences (still optional; users can disable for minimal builds).
 diagnostics = ["fret-bootstrap/diagnostics"]
@@ -56,3 +56,4 @@ fret-core = { path = "../../crates/fret-core" }
 fret-launch = { path = "../../crates/fret-launch" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+wgpu = { workspace = true, optional = true }
