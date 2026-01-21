@@ -98,4 +98,8 @@ pub mod tags_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod todo_interop_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod todo_interop_kit_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
