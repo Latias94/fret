@@ -131,7 +131,8 @@ pub struct KbdGroup {
 }
 
 impl KbdGroup {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             layout: LayoutRefinement::default(),

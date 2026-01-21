@@ -7,9 +7,11 @@ use fret_core::{
     ViewportInputEvent,
 };
 use fret_launch::{
-    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitGlobalContext,
-    WinitHotReloadContext, WinitRenderContext, WinitWindowContext,
+    EngineFrameUpdate, FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext,
+    WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitWindowContext,
 };
+use fret_render::{Renderer, WgpuContext};
+use fret_runtime::{FrameId, TickId};
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::AnyElement;
 use fret_ui::overlay_placement::LayoutDirection;
@@ -44,6 +46,18 @@ type ModelChangesHookFn<S> =
     fn(&mut App, AppWindowId, &mut UiTree<App>, &mut S, &[fret_app::ModelId]);
 type GlobalChangesHookFn<S> =
     fn(&mut App, AppWindowId, &mut UiTree<App>, &mut S, &[std::any::TypeId]);
+
+type RecordEngineFrameHookFn<S> = fn(
+    &mut App,
+    AppWindowId,
+    &mut UiTree<App>,
+    &mut S,
+    &WgpuContext,
+    &mut Renderer,
+    f32,
+    TickId,
+    FrameId,
+) -> EngineFrameUpdate;
 
 /// A minimal, hotpatch-friendly “golden path” app driver.
 ///
@@ -81,6 +95,7 @@ pub struct UiAppDriver<S> {
 
     viewport_input: Option<fn(&mut App, ViewportInputEvent)>,
     dock_op: Option<fn(&mut App, fret_core::DockOp)>,
+    record_engine_frame: Option<RecordEngineFrameHookFn<S>>,
 
     #[cfg(feature = "ui-app-command-palette")]
     command_palette_enabled: bool,
@@ -111,6 +126,7 @@ impl<S> UiAppDriver<S> {
             handle_global_command: None,
             viewport_input: None,
             dock_op: None,
+            record_engine_frame: None,
 
             #[cfg(feature = "ui-app-command-palette")]
             command_palette_enabled: true,
@@ -216,6 +232,11 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    pub fn record_engine_frame(mut self, f: RecordEngineFrameHookFn<S>) -> Self {
+        self.record_engine_frame = Some(f);
+        self
+    }
+
     pub fn into_fn_driver(self) -> FnDriver<Self, UiAppWindowState<S>> {
         FnDriver::new(
             self,
@@ -242,6 +263,7 @@ impl<S> UiAppDriver<S> {
 
             hooks.viewport_input = Some(ui_app_viewport_input::<S>);
             hooks.dock_op = Some(ui_app_dock_op::<S>);
+            hooks.record_engine_frame = Some(ui_app_record_engine_frame::<S>);
         })
     }
 }
@@ -1961,9 +1983,9 @@ fn render_diag_inspect_overlay(
                     lines.push(format!("selector: {trimmed}"));
                 }
 
-                children.push(
-                    cx.container(props, |cx| lines.into_iter().map(|t| cx.text(t)).collect()),
-                );
+                children.push(cx.container(props, |cx| {
+                    lines.into_iter().map(|t| cx.text(t)).collect::<Vec<_>>()
+                }));
             }
 
             let show_focus = focus.as_ref().is_some_and(|f| {
@@ -2255,6 +2277,53 @@ fn ui_app_dock_op<S>(driver: &mut UiAppDriver<S>, app: &mut App, op: fret_core::
         {
             f(app, op);
         }
+    }
+}
+
+fn ui_app_record_engine_frame<S>(
+    driver: &mut UiAppDriver<S>,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut UiAppWindowState<S>,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+    tick_id: TickId,
+    frame_id: FrameId,
+) -> EngineFrameUpdate {
+    let Some(f) = driver.record_engine_frame else {
+        return EngineFrameUpdate::default();
+    };
+
+    #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+    {
+        let mut hot = subsecond::HotFn::current(f);
+        hot.call((
+            app,
+            window,
+            &mut state.ui,
+            &mut state.state,
+            context,
+            renderer,
+            scale_factor,
+            tick_id,
+            frame_id,
+        ))
+    }
+
+    #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+    {
+        f(
+            app,
+            window,
+            &mut state.ui,
+            &mut state.state,
+            context,
+            renderer,
+            scale_factor,
+            tick_id,
+            frame_id,
+        )
     }
 }
 

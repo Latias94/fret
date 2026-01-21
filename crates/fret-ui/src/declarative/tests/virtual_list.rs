@@ -29,7 +29,7 @@ fn virtual_list_computes_visible_range_after_first_layout() {
                     .iter()
                     .copied()
                     .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         );
         *list_element_id = Some(list.id);
@@ -146,7 +146,7 @@ fn virtual_list_computes_visible_range_after_first_layout_horizontal() {
                         )
                     })
                 })
-                .collect()
+                .collect::<Vec<_>>()
         });
         *list_element_id = Some(list.id);
         list
@@ -253,7 +253,7 @@ fn virtual_list_wraps_visible_items_in_engine_tree() {
                             cx.hover_region(props, |cx, _hovered| vec![cx.text("row")])
                         })
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         )
     }
@@ -323,7 +323,7 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
                 .iter()
                 .copied()
                 .map(|item| cx.keyed(item.key, |cx| cx.text("a")))
-                .collect()
+                .collect::<Vec<_>>()
         });
         *list_a_id = Some(list_a.id);
 
@@ -332,7 +332,7 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
                 .iter()
                 .copied()
                 .map(|item| cx.keyed(item.key, |cx| cx.text("b")))
-                .collect()
+                .collect::<Vec<_>>()
         });
         *list_b_id = Some(list_b.id);
 
@@ -447,7 +447,7 @@ fn virtual_list_scroll_to_item_keeps_target_visible() {
                         .iter()
                         .copied()
                         .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
-                        .collect()
+                        .collect::<Vec<_>>()
                 },
             );
             list_element_id = Some(list.id);
@@ -482,7 +482,7 @@ fn virtual_list_scroll_to_item_keeps_target_visible() {
                         .iter()
                         .copied()
                         .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
-                        .collect()
+                        .collect::<Vec<_>>()
                 },
             );
             list_element_id = Some(list.id);
@@ -549,7 +549,7 @@ fn virtual_list_probe_layout_does_not_consume_deferred_scroll_request() {
                         .iter()
                         .copied()
                         .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
-                        .collect()
+                        .collect::<Vec<_>>()
                 },
             )]
         },
@@ -583,7 +583,7 @@ fn virtual_list_probe_layout_does_not_consume_deferred_scroll_request() {
                         .iter()
                         .copied()
                         .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
-                        .collect()
+                        .collect::<Vec<_>>()
                 },
             )]
         },
@@ -640,7 +640,7 @@ fn virtual_list_scroll_to_item_triggers_layout_even_without_other_invalidations(
                     .iter()
                     .copied()
                     .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         );
         *list_element_id = Some(list.id);
@@ -755,7 +755,7 @@ fn virtual_list_scroll_to_item_uses_measured_row_heights() {
                             }
                         })
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         );
         *list_element_id = Some(list.id);
@@ -866,7 +866,7 @@ fn virtual_list_measurement_updates_preserve_scroll_anchor_under_overscan() {
                         .iter()
                         .copied()
                         .map(|item| cx.keyed(item.key, |cx| row_with_height(cx, Px(10.0))))
-                        .collect()
+                        .collect::<Vec<_>>()
                 },
             );
             list_element_id = Some(list.id);
@@ -906,7 +906,7 @@ fn virtual_list_measurement_updates_preserve_scroll_anchor_under_overscan() {
                                 }
                             })
                         })
-                        .collect()
+                        .collect::<Vec<_>>()
                 },
             );
             list_element_id = Some(list.id);
@@ -975,7 +975,7 @@ fn virtual_list_paint_clips_each_visible_row() {
                     .iter()
                     .copied()
                     .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         )
     }
@@ -1101,7 +1101,7 @@ fn virtual_list_keyed_reuses_node_ids_across_reorder() {
                 let st = runtime.for_window_mut(window);
                 ids.iter()
                     .map(|(item, id)| (*item, (*id, st.node_entry(*id).unwrap().node)))
-                    .collect()
+                    .collect::<std::collections::HashMap<_, _>>()
             });
 
         if pass == 1 {

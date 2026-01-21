@@ -234,6 +234,24 @@ impl<S> UiAppDriver<S> {
         self
     }
 
+    pub fn record_engine_frame(
+        mut self,
+        f: fn(
+            &mut App,
+            fret_core::AppWindowId,
+            &mut fret_ui::UiTree<App>,
+            &mut S,
+            &crate::fret::render::WgpuContext,
+            &mut crate::fret::render::Renderer,
+            f32,
+            fret_runtime::TickId,
+            fret_runtime::FrameId,
+        ) -> fret_launch::EngineFrameUpdate,
+    ) -> Self {
+        self.inner = self.inner.record_engine_frame(f);
+        self
+    }
+
     pub fn dock_op(mut self, f: fn(&mut App, fret_core::DockOp)) -> Self {
         self.inner = self.inner.dock_op(f);
         self

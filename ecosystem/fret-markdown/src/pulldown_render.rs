@@ -282,10 +282,10 @@ fn render_pulldown_table<H: UiHost>(
                                         justify,
                                     )
                                 })
-                                .collect()
+                                .collect::<Vec<_>>()
                         })
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             })]
         })]
     })
@@ -660,7 +660,7 @@ fn render_pulldown_list<H: UiHost>(
                     |_cx| vec![marker_el, body],
                 )
             })
-            .collect()
+            .collect::<Vec<_>>()
     })
 }
 

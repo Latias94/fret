@@ -70,7 +70,8 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             chrome: ChromeRefinement::default(),
@@ -107,7 +108,8 @@ pub struct TableHeader {
 }
 
 impl TableHeader {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -130,7 +132,8 @@ pub struct TableBody {
 }
 
 impl TableBody {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -153,7 +156,8 @@ pub struct TableFooter {
 }
 
 impl TableFooter {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 

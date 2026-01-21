@@ -338,6 +338,7 @@ impl<H: UiHost> UiTree<H> {
         size
     }
 
+    #[stacksafe::stacksafe]
     pub fn layout_in_with_pass_kind(
         &mut self,
         app: &mut H,

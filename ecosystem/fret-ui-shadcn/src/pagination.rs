@@ -61,7 +61,8 @@ pub struct Pagination {
 }
 
 impl Pagination {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             layout: LayoutRefinement::default().w_full(),
@@ -99,7 +100,8 @@ pub struct PaginationContent {
 }
 
 impl PaginationContent {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self { children }
     }
 
@@ -148,7 +150,8 @@ pub struct PaginationLink {
 }
 
 impl PaginationLink {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
         Self {
             children,
             size: PaginationLinkSize::default(),

@@ -53,12 +53,18 @@ impl<H: UiHost> UiTree<H> {
                     .unwrap_or(true),
                 dispatch_phase: InputDispatchPhase::Normal,
             };
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx);
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx);
+                    },
+                );
+            }
         }
 
         let cache_enabled = self.paint_cache_enabled();
@@ -112,6 +118,7 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
+    #[stacksafe::stacksafe]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn paint_node(
         &mut self,

@@ -557,6 +557,7 @@ impl<H: UiHost> UiTree<H> {
         false
     }
 
+    #[stacksafe::stacksafe]
     pub fn dispatch_event(&mut self, app: &mut H, services: &mut dyn UiServices, event: &Event) {
         let Some(base_root) = self
             .base_layer
