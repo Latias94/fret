@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, FontId, Px, TextStyle};
+use fret_core::{
+    Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap,
+};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, FlexProps, LayoutStyle, TextAreaProps, TextInputProps};
+use fret_ui::element::{
+    AnyElement, FlexProps, LayoutStyle, TextAreaProps, TextInputProps, TextProps,
+};
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
@@ -598,4 +602,68 @@ impl InputGroup {
 
 pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement {
     group.into_element(cx)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InputGroupTextSize {
+    #[default]
+    Sm,
+    Xs,
+}
+
+#[derive(Debug, Clone)]
+pub struct InputGroupText {
+    text: Arc<str>,
+    size: InputGroupTextSize,
+    layout: LayoutRefinement,
+}
+
+impl InputGroupText {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            size: InputGroupTextSize::Sm,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn size(mut self, size: InputGroupTextSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let color = theme.color_required("muted-foreground");
+
+        let (px, line_height) = match self.size {
+            InputGroupTextSize::Sm => (
+                theme.metric_required("metric.font.size"),
+                theme.metric_required("metric.font.line_height"),
+            ),
+            // Tailwind: `text-xs leading-4`.
+            InputGroupTextSize::Xs => (Px(12.0), Px(16.0)),
+        };
+
+        cx.text_props(TextProps {
+            layout: decl_style::layout_style(&theme, self.layout),
+            text: self.text,
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: px,
+                weight: FontWeight::MEDIUM,
+                slant: Default::default(),
+                line_height: Some(line_height),
+                letter_spacing_em: None,
+            }),
+            color: Some(color),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
 }
