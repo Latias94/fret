@@ -5,7 +5,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 use crate::layout as shadcn_layout;
 

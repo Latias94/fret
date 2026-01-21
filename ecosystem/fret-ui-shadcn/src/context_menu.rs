@@ -1845,8 +1845,11 @@ fn context_menu_submenu_panel<H: UiHost>(
         placed,
         labelled_by_element,
         move |layout| {
-            let mut props =
-                decl_style::container_props(&theme, panel_chrome.clone(), LayoutRefinement::default());
+            let mut props = decl_style::container_props(
+                &theme,
+                panel_chrome.clone(),
+                LayoutRefinement::default(),
+            );
             props.layout = layout;
             props
         },
