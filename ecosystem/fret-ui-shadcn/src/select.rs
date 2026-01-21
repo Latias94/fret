@@ -1,15 +1,12 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
-};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollProps,
-    SemanticsProps, SizeStyle, StackProps, TextProps,
+    SemanticsProps, SizeStyle, StackProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -34,7 +31,7 @@ use fret_ui_kit::recipes::input::{
 };
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -516,7 +513,6 @@ pub struct Select {
     open: Model<bool>,
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
-    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -540,7 +536,6 @@ impl Select {
             open,
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
-            trigger_test_id: None,
             disabled: false,
             a11y_label: None,
             on_dismiss_request: None,
@@ -608,11 +603,6 @@ impl Select {
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = placeholder.into();
-        self
-    }
-
-    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
-        self.trigger_test_id = Some(id.into());
         self
     }
 
@@ -699,7 +689,6 @@ impl Select {
             self.open,
             &self.entries,
             self.placeholder,
-            self.trigger_test_id,
             self.disabled,
             self.a11y_label,
             self.on_dismiss_request,
@@ -735,7 +724,6 @@ pub fn select<H: UiHost>(
         open,
         &entries,
         placeholder,
-        None,
         disabled,
         a11y_label,
         None,
@@ -759,7 +747,6 @@ fn select_impl<H: UiHost>(
     open: Model<bool>,
     entries: &[SelectEntry],
     placeholder: Arc<str>,
-    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -969,7 +956,6 @@ fn select_impl<H: UiHost>(
         // `control_chrome_pressable_with_id_props` stores handlers; keep a dedicated `open` clone
         // for trigger-owned hooks.
         let open_for_trigger = open.clone();
-        let trigger_test_id_for_trigger = trigger_test_id.clone();
 
         let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
@@ -1118,7 +1104,6 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
-            props.a11y.test_id = trigger_test_id_for_trigger.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
@@ -1611,14 +1596,17 @@ fn select_impl<H: UiHost>(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![cx.text_props(TextProps {
-                                                layout: LayoutStyle::default(),
-                                                text: label,
-                                                style: Some(style),
-                                                color: None,
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Clip,
-                                            })]
+                                            let mut text = ui::text(cx, label)
+                                                .text_size_px(style.size)
+                                                .font_weight(style.weight)
+                                                .nowrap();
+                                            if let Some(line_height) = style.line_height {
+                                                text = text.line_height_px(line_height);
+                                            }
+                                            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                                text = text.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            vec![text.into_element(cx)]
                                         },
                                     ));
                                 }
@@ -1804,25 +1792,14 @@ fn select_impl<H: UiHost>(
                                                                                     corner_radii: Corners::all(Px(0.0)),
                                                                                 },
                                                                                 move |cx| {
-                                                                                    vec![cx.text_props(TextProps {
-                                                                                        layout: {
-                                                                                            let mut layout = LayoutStyle::default();
-                                                                                            layout.size.width = Length::Fill;
-                                                                                            layout
-                                                                                        },
-                                                                                        text: label.text,
-                                                                                        style: Some(TextStyle {
-                                                                                            font: FontId::default(),
-                                                                                            size: label_text_px,
-                                                                                            weight: FontWeight::NORMAL,
-                                                                                            slant: Default::default(),
-                                                                                            line_height: Some(label_line_height),
-                                                                                            letter_spacing_em: None,
-                                                                                        }),
-                                                                                        color: Some(fg),
-                                                                                        wrap: TextWrap::None,
-                                                                                        overflow: TextOverflow::Clip,
-                                                                                    })]
+                                                                                    vec![ui::text(cx, label.text)
+                                                                                        .w_full()
+                                                                                        .text_size_px(label_text_px)
+                                                                                        .line_height_px(label_line_height)
+                                                                                        .font_normal()
+                                                                                        .text_color(ColorRef::Color(fg))
+                                                                                        .nowrap()
+                                                                                        .into_element(cx)]
                                                                                 },
                                                                             ));
                                                                         }
@@ -2055,18 +2032,19 @@ fn select_impl<H: UiHost>(
                                                                                                     ..Default::default()
                                                                                                 },
                                                                                                 |cx| {
-                                                                                                    vec![cx.text_props(TextProps {
-                                                                                                        layout: {
-                                                                                                            let mut layout = LayoutStyle::default();
-                                                                                                            layout.size.width = Length::Fill;
-                                                                                                            layout
-                                                                                                        },
-                                                                                                        text: item_label.clone(),
-                                                                                                        style: Some(text_style.clone()),
-                                                                                                        color: Some(fg),
-                                                                                                        wrap: TextWrap::None,
-                                                                                                        overflow: TextOverflow::Clip,
-                                                                                                    })]
+                                                                                                    let mut text = ui::text(cx, item_label.clone())
+                                                                                                        .w_full()
+                                                                                                        .text_size_px(text_style.size)
+                                                                                                        .font_weight(text_style.weight)
+                                                                                                        .text_color(ColorRef::Color(fg))
+                                                                                                        .nowrap();
+                                                                                                    if let Some(line_height) = text_style.line_height {
+                                                                                                        text = text.line_height_px(line_height);
+                                                                                                    }
+                                                                                                    if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                                                                                                        text = text.letter_spacing_em(letter_spacing_em);
+                                                                                                    }
+                                                                                                    vec![text.into_element(cx)]
                                                                                                 },
                                                                                             );
                                                                                             if is_alignment_item {
@@ -2367,21 +2345,25 @@ fn select_impl<H: UiHost>(
                                         ..Default::default()
                                     },
                                     move |cx| {
-                                        let text_layout = if auto_width_trigger {
-                                            LayoutStyle::default()
-                                        } else {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Fill;
-                                            layout
-                                        };
-                                        vec![cx.text_props(TextProps {
-                                            layout: text_layout,
-                                            text: label,
-                                            style: Some(text_style.clone()),
-                                            color: Some(if selected.is_some() { fg } else { fg_muted }),
-                                            wrap: TextWrap::None,
-                                            overflow: TextOverflow::Ellipsis,
-                                        })]
+                                        let mut text = ui::text(cx, label)
+                                            .text_size_px(text_style.size)
+                                            .font_weight(text_style.weight)
+                                            .text_color(ColorRef::Color(if selected.is_some() {
+                                                fg
+                                            } else {
+                                                fg_muted
+                                            }))
+                                            .truncate();
+                                        if let Some(line_height) = text_style.line_height {
+                                            text = text.line_height_px(line_height);
+                                        }
+                                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                                            text = text.letter_spacing_em(letter_spacing_em);
+                                        }
+                                        if !auto_width_trigger {
+                                            text = text.w_full();
+                                        }
+                                        vec![text.into_element(cx)]
                                     },
                                 );
 
