@@ -106,6 +106,7 @@ patterns:
 - `input-group-tooltip` (inline-start and inline-end button addons + stack gap)
 - `empty-input-group` (inline-start icon + inline-end kbd addon geometry)
 - `kbd-input-group` (inline-end multi-kbd addon geometry)
+- `input-group-textarea` (block-start/bottom + block-end/top addons with dividers)
 - `spinner-input-group` (textarea + block-end addon + `ml-auto` send button)
 - `field-input`
 - `field-checkbox`
