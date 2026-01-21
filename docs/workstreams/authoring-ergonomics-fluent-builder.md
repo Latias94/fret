@@ -190,7 +190,7 @@ This keeps the surface cohesive without turning `fret-ui-kit` into a general-pur
 
 These are the remaining items that most directly improve authoring density for editor-ish UI:
 
-1) **Shadcn surface presets** (`menu_surface`):
+1) **More shadcn surface presets** (as needed):
    - keep these in `fret-ui-shadcn` (policy layer)
    - expose them as discoverable helpers, not ad-hoc per component
 2) **A patchable container constructor** (layout node, not a component):
