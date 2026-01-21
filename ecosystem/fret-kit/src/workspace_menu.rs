@@ -27,6 +27,34 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
+fn diag_test_id_suffix(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut last_was_dash = false;
+    for ch in raw.chars() {
+        let ch = if ch.is_ascii() {
+            ch.to_ascii_lowercase()
+        } else {
+            '-'
+        };
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            out.push(ch);
+            last_was_dash = false;
+        } else if !last_was_dash {
+            out.push('-');
+            last_was_dash = true;
+        }
+    }
+    let out = out.trim_matches('-');
+    if out.is_empty() {
+        return "x".to_string();
+    }
+    out.to_string()
+}
+
+fn diag_test_id(prefix: &str, raw: &str) -> Arc<str> {
+    Arc::<str>::from(format!("{prefix}-{}", diag_test_id_suffix(raw)))
+}
+
 #[derive(Debug, Clone)]
 pub struct MenubarFromRuntimeOptions {
     pub platform: Platform,
@@ -495,6 +523,13 @@ fn render_menu_from_runtime<H: UiHost>(
                 trigger_id,
                 open.clone(),
             ));
+            cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
+                if down.button == fret_core::MouseButton::Left {
+                    host.request_focus(trigger_id);
+                    host.request_redraw(action_cx.window);
+                }
+                fret_ui::action::PressablePointerDownResult::Continue
+            }));
             menu::wire_menubar_open_on_arrow_keys(cx, trigger_id, open.clone());
 
             let overlay_root_name = menu::menubar_root_name(trigger_id);
@@ -517,6 +552,7 @@ fn render_menu_from_runtime<H: UiHost>(
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::MenuItem),
                     label: Some(menu.title.clone()),
+                    test_id: Some(diag_test_id("menubar-trigger", menu.title.as_ref())),
                     expanded: Some(is_open),
                     controls_element: Some(content_id_for_trigger.0),
                     ..Default::default()
@@ -1004,6 +1040,7 @@ fn render_menu_item<H: UiHost>(
             a11y: PressableA11y {
                 role: Some(SemanticsRole::MenuItem),
                 label: Some(item.label.clone()),
+                test_id: Some(diag_test_id("menubar-item", item.value.as_ref())),
                 expanded,
                 controls_element,
                 ..Default::default()
@@ -1024,6 +1061,13 @@ fn render_menu_item<H: UiHost>(
                 },
             ));
         }
+        cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
+            if down.button == fret_core::MouseButton::Left {
+                host.request_focus(item_id);
+                host.request_redraw(action_cx.window);
+            }
+            fret_ui::action::PressablePointerDownResult::Continue
+        }));
 
         let bg = if st.hovered || st.focused || st.pressed {
             Some(item_hover)

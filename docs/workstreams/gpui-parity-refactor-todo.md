@@ -159,6 +159,14 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
 
+- [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
+  - Touches: `crates/fret-ui/src/tree/layout.rs` (`repair_view_cache_root_bounds_from_engine_if_needed`)
+  - Goal: cache-root semantics bounds remain in screen space so scripted clicks hit real widgets.
+  - Root cause: some cache roots could end up with `Rect::default()` bounds even though the layout engine has a solved rect for them, causing the entire subtree's semantics bounds to be relative (0-based) and diagnostics clicks to miss the intended controls.
+  - Fix (v1): after the main layout pass, if a view-cache root has default bounds but its parent has a solved engine child rect, synthesize the root bounds and translate the retained subtree by the implied delta.
+  - Evidence (pass under reuse + shell):
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-virtual-list-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+
 - [x] GPUI-MVP2-cache-006 Add an explicit cache key gate for view-cache reuse (GPUI-aligned).
   - Touches: `crates/fret-ui/src/element.rs` (`ViewCacheProps.cache_key`), `crates/fret-ui/src/elements/cx.rs` (reuse gating),
     `crates/fret-ui/src/elements/runtime.rs` (per-root key storage), `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`.

@@ -815,7 +815,7 @@ fn hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform
     ui.set_root(underlay);
 
     let overlay_root = ui.create_node(TransformedOverlayRoot);
-    ui.set_node_view_cache_flags(overlay_root, true, false);
+    ui.set_node_view_cache_flags(overlay_root, true, false, false);
     let overlay_leaf = ui.create_node(CountNormalDown {
         normal: overlay_down.clone(),
     });

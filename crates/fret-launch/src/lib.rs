@@ -1,7 +1,9 @@
 mod error;
 pub mod runner;
+mod stacksafe_config;
 
 pub use error::RunnerError;
+pub use stacksafe_config::configure_stacksafe_from_env;
 
 pub use runner::{
     EngineFrameUpdate, FnDriver, FnDriverHooks, RenderTargetUpdate, ViewportOverlay3dHooks,

@@ -1,24 +1,22 @@
 {
   "schema_version": 1,
   "steps": [
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-menus" }
-    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-menubar-file" }
+        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
       },
       "timeout_frames": 240
     },
-    { "type": "press_key", "key": "f10" },
+    { "type": "click", "target": { "kind": "test_id", "id": "menubar-trigger-file" } },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-menubar-file" }
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-app-open" }
       },
       "timeout_frames": 120
     },
@@ -26,13 +24,21 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-menubar-open" }
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-app-open" }
       },
-      "timeout_frames": 60
+      "timeout_frames": 120
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 5 },
-    { "type": "capture_bundle", "label": "ui-gallery-menubar-file-escape" }
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-file-escape-focus-restore" }
   ]
 }
