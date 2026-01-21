@@ -13,6 +13,8 @@ pub struct InputGroup {
     model: Model<String>,
     leading: Vec<AnyElement>,
     trailing: Vec<AnyElement>,
+    leading_has_button: bool,
+    trailing_has_button: bool,
     a11y_label: Option<Arc<str>>,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
@@ -27,6 +29,8 @@ impl std::fmt::Debug for InputGroup {
             .field("model", &"<model>")
             .field("leading_len", &self.leading.len())
             .field("trailing_len", &self.trailing.len())
+            .field("leading_has_button", &self.leading_has_button)
+            .field("trailing_has_button", &self.trailing_has_button)
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("submit_command", &self.submit_command)
             .field("cancel_command", &self.cancel_command)
@@ -43,6 +47,8 @@ impl InputGroup {
             model,
             leading: Vec::new(),
             trailing: Vec::new(),
+            leading_has_button: false,
+            trailing_has_button: false,
             a11y_label: None,
             submit_command: None,
             cancel_command: None,
@@ -59,6 +65,24 @@ impl InputGroup {
 
     pub fn trailing(mut self, children: Vec<AnyElement>) -> Self {
         self.trailing = children;
+        self
+    }
+
+    /// Upstream uses `has-[>button]:ml-[-0.45rem]` on inline-start addons (v4).
+    ///
+    /// Fret does not currently have a selector mechanism, so this is an explicit hint for the
+    /// `InputGroup` recipe to apply the same layout outcome.
+    pub fn leading_has_button(mut self, value: bool) -> Self {
+        self.leading_has_button = value;
+        self
+    }
+
+    /// Upstream uses `has-[>button]:mr-[-0.45rem]` on inline-end addons (v4).
+    ///
+    /// Fret does not currently have a selector mechanism, so this is an explicit hint for the
+    /// `InputGroup` recipe to apply the same layout outcome.
+    pub fn trailing_has_button(mut self, value: bool) -> Self {
+        self.trailing_has_button = value;
         self
     }
 
@@ -164,6 +188,8 @@ impl InputGroup {
 
         let leading = self.leading;
         let trailing = self.trailing;
+        let leading_has_button = self.leading_has_button;
+        let trailing_has_button = self.trailing_has_button;
 
         cx.container(
             fret_ui::element::ContainerProps {
@@ -180,12 +206,14 @@ impl InputGroup {
                     decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 
                 let leading = (!leading.is_empty()).then(|| {
+                    let layout = if leading_has_button {
+                        LayoutRefinement::default().flex_none().ml_neg(Space::N2)
+                    } else {
+                        LayoutRefinement::default().flex_none()
+                    };
                     cx.flex(
                         FlexProps {
-                            layout: decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default().flex_none(),
-                            ),
+                            layout: decl_style::layout_style(&theme, layout),
                             direction: Axis::Horizontal,
                             gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
                             padding: Edges {
@@ -203,12 +231,14 @@ impl InputGroup {
                 });
 
                 let trailing = (!trailing.is_empty()).then(|| {
+                    let layout = if trailing_has_button {
+                        LayoutRefinement::default().flex_none().mr_neg(Space::N2)
+                    } else {
+                        LayoutRefinement::default().flex_none()
+                    };
                     cx.flex(
                         FlexProps {
-                            layout: decl_style::layout_style(
-                                &theme,
-                                LayoutRefinement::default().flex_none(),
-                            ),
+                            layout: decl_style::layout_style(&theme, layout),
                             direction: Axis::Horizontal,
                             gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme),
                             padding: Edges {
