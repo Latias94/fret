@@ -186,7 +186,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let theme_revision = Theme::global(&*app).revision();
-        let key = PaintCacheKey::new(bounds, sf, theme_revision);
+        let children_render_transform = self.node_children_render_transform(node);
+        let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
+        let key = PaintCacheKey::new(bounds, sf, theme_revision, child_transform);
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
@@ -281,6 +283,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 scale_factor: sf,
                 accumulated_transform: current_transform,
+                children_render_transform,
                 services: &mut *services,
                 observe_model: &mut observe_model,
                 observe_global: &mut observe_global,

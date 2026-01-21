@@ -422,6 +422,7 @@ pub struct PaintCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub scale_factor: f32,
     pub accumulated_transform: Transform2D,
+    pub(crate) children_render_transform: Option<Transform2D>,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
@@ -476,7 +477,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
-        let child_transform = self.tree.node_children_render_transform(self.node);
+        let child_transform = self.children_render_transform;
         if let Some(transform) = child_transform {
             self.scene
                 .push(fret_core::SceneOp::PushTransform { transform });
