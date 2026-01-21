@@ -266,6 +266,9 @@ impl<H: UiHost> UiTree<H> {
 
         let start = scene.ops_len();
         self.with_widget_mut(node, |widget, tree| {
+            let children_render_transform = widget
+                .children_render_transform(bounds)
+                .filter(|t| t.inverse().is_some());
             let mut children_buf = SmallNodeList::<32>::default();
             if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
                 children_buf.set(children);
@@ -281,6 +284,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 scale_factor: sf,
                 accumulated_transform: current_transform,
+                children_render_transform,
                 services: &mut *services,
                 observe_model: &mut observe_model,
                 observe_global: &mut observe_global,
