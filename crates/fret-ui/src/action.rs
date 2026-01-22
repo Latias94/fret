@@ -47,7 +47,9 @@ pub enum PressablePointerUpResult {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DismissReason {
     Escape,
-    OutsidePress,
+    OutsidePress {
+        pointer: Option<OutsidePressCx>,
+    },
     /// Focus moved outside the dismissable layer subtree (Radix `onFocusOutside` outcome).
     FocusOutside,
     /// The trigger (or another registered subtree) was scrolled.
@@ -55,6 +57,15 @@ pub enum DismissReason {
     /// This is used for Radix-aligned tooltip semantics: a tooltip should close when its trigger
     /// is inside the scroll target that received a wheel/scroll gesture.
     Scroll,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OutsidePressCx {
+    pub pointer_id: PointerId,
+    pub pointer_type: PointerType,
+    pub button: MouseButton,
+    pub modifiers: Modifiers,
+    pub click_count: u8,
 }
 
 /// Pointer down payload for component-owned pointer handlers.

@@ -112,13 +112,32 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                     window,
                     element: this.element,
                 };
+                let reason = match event {
+                    Event::Pointer(fret_core::PointerEvent::Down {
+                        button,
+                        modifiers,
+                        click_count,
+                        pointer_id,
+                        pointer_type,
+                        ..
+                    }) => DismissReason::OutsidePress {
+                        pointer: Some(action::OutsidePressCx {
+                            pointer_id: *pointer_id,
+                            pointer_type: *pointer_type,
+                            button: *button,
+                            modifiers: *modifiers,
+                            click_count: *click_count,
+                        }),
+                    },
+                    _ => DismissReason::OutsidePress { pointer: None },
+                };
                 h(
                     &mut host,
                     action::ActionCx {
                         window,
                         target: this.element,
                     },
-                    DismissReason::OutsidePress,
+                    reason,
                 );
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();

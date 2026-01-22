@@ -4497,13 +4497,15 @@ mod tests {
             "expected click position to fall inside underlay bounds; pos={position:?} bounds={underlay_bounds:?}"
         );
 
-        let hit = ui.debug_hit_test(position).hit;
-        let hit_path = hit.map(|hit| ui.debug_node_path(hit));
-        assert!(
-            hit_path
-                .as_ref()
-                .is_none_or(|path| !path.contains(&underlay_node)),
-            "expected modal dropdown-menu to block underlay hit-testing; hit={hit:?} hit_path={hit_path:?} underlay={underlay_node:?}"
+        let layers = ui.debug_layers_in_paint_order();
+        let occlusion = layers.iter().rev().find_map(|layer| {
+            (layer.pointer_occlusion != fret_ui::tree::PointerOcclusion::None)
+                .then_some(layer.pointer_occlusion)
+        });
+        assert_eq!(
+            occlusion,
+            Some(fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll),
+            "expected modal dropdown-menu to install pointer occlusion"
         );
         ui.dispatch_event(
             &mut app,

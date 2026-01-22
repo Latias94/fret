@@ -1298,10 +1298,18 @@ mod tests {
             Some(false),
             "underlay should not activate while modal dialog is open"
         );
-        assert_eq!(
-            dismiss_reason.get(),
-            Some(fret_ui::action::DismissReason::OutsidePress)
-        );
+        let reason = dismiss_reason.get();
+        let Some(fret_ui::action::DismissReason::OutsidePress { pointer }) = reason else {
+            panic!("expected outside-press dismissal, got {reason:?}");
+        };
+        let Some(cx) = pointer else {
+            panic!("expected pointer payload for outside-press dismissal");
+        };
+        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+        assert_eq!(cx.button, fret_core::MouseButton::Left);
+        assert_eq!(cx.modifiers, fret_core::Modifiers::default());
+        assert_eq!(cx.click_count, 1);
     }
 
     #[test]

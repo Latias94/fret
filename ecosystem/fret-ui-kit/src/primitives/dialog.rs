@@ -26,7 +26,6 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
-use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -300,11 +299,27 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
             },
             move |cx, _st| {
                 if let Some(on_dismiss_request) = on_dismiss_request.clone() {
-                    cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
-                        on_dismiss_request(host, action_cx, DismissReason::OutsidePress);
+                    cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                        on_dismiss_request(
+                            host,
+                            action_cx,
+                            DismissReason::OutsidePress {
+                                pointer: Some(fret_ui::action::OutsidePressCx {
+                                    pointer_id: up.pointer_id,
+                                    pointer_type: up.pointer_type,
+                                    button: up.button,
+                                    modifiers: up.modifiers,
+                                    click_count: up.click_count,
+                                }),
+                            },
+                        );
+                        fret_ui::action::PressablePointerUpResult::SkipActivate
                     }));
                 } else {
-                    cx.pressable_set_bool(&open, false);
+                    cx.pressable_add_on_pointer_up(Arc::new(move |host, _action_cx, _up| {
+                        let _ = host.models_mut().update(&open, |v| *v = false);
+                        fret_ui::action::PressablePointerUpResult::SkipActivate
+                    }));
                 }
 
                 children
@@ -784,10 +799,18 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
-        assert_eq!(
-            *reason_cell.lock().expect("reason lock"),
-            Some(DismissReason::OutsidePress)
-        );
+        let reason = *reason_cell.lock().expect("reason lock");
+        let Some(DismissReason::OutsidePress { pointer }) = reason else {
+            panic!("expected outside-press dismissal, got {reason:?}");
+        };
+        let Some(cx) = pointer else {
+            panic!("expected pointer payload for outside-press dismissal");
+        };
+        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+        assert_eq!(cx.button, fret_core::MouseButton::Left);
+        assert_eq!(cx.modifiers, fret_core::Modifiers::default());
+        assert_eq!(cx.click_count, 1);
     }
 
     #[test]

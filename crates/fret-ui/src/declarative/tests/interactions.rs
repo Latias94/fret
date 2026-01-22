@@ -1634,7 +1634,16 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
         |cx| {
             let dismissed = dismissed.clone();
             cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
-                assert_eq!(reason, DismissReason::OutsidePress);
+                match reason {
+                    DismissReason::OutsidePress { pointer: Some(cx) } => {
+                        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+                        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+                        assert_eq!(cx.button, MouseButton::Left);
+                        assert_eq!(cx.modifiers, Modifiers::default());
+                        assert_eq!(cx.click_count, 1);
+                    }
+                    other => panic!("expected outside-press dismissal, got {other:?}"),
+                }
                 let _ = host
                     .models_mut()
                     .update(&dismissed, |v: &mut bool| *v = true);
