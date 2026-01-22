@@ -2418,6 +2418,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub dirty_views: Vec<UiDirtyViewV1>,
     #[serde(default)]
+    pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
+    #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
     pub model_change_unobserved: Vec<UiModelChangeUnobservedV1>,
@@ -2463,6 +2465,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_dirty_views()
                 .iter()
                 .map(UiDirtyViewV1::from_dirty_view)
+                .collect(),
+            virtual_list_windows: ui
+                .debug_virtual_list_windows()
+                .iter()
+                .map(UiVirtualListWindowV1::from_window)
                 .collect(),
             model_change_hotspots: ui
                 .debug_model_change_hotspots()
@@ -2515,6 +2522,113 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiAxisV1 {
+    Horizontal,
+    Vertical,
+}
+
+impl UiAxisV1 {
+    fn from_axis(axis: fret_core::Axis) -> Self {
+        match axis {
+            fret_core::Axis::Horizontal => Self::Horizontal,
+            fret_core::Axis::Vertical => Self::Vertical,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListMeasureModeV1 {
+    Fixed,
+    Measured,
+}
+
+impl UiVirtualListMeasureModeV1 {
+    fn from_mode(mode: fret_ui::element::VirtualListMeasureMode) -> Self {
+        match mode {
+            fret_ui::element::VirtualListMeasureMode::Fixed => Self::Fixed,
+            fret_ui::element::VirtualListMeasureMode::Measured => Self::Measured,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiVirtualRangeV1 {
+    pub start_index: u64,
+    pub end_index: u64,
+    pub overscan: u64,
+    pub count: u64,
+}
+
+impl UiVirtualRangeV1 {
+    fn from_range(range: fret_ui::virtual_list::VirtualRange) -> Self {
+        Self {
+            start_index: range.start_index as u64,
+            end_index: range.end_index as u64,
+            overscan: range.overscan as u64,
+            count: range.count as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiVirtualListWindowV1 {
+    pub node: u64,
+    pub element: u64,
+    pub axis: UiAxisV1,
+    #[serde(default)]
+    pub is_probe_layout: bool,
+    pub items_len: u64,
+    pub items_revision: u64,
+    pub prev_items_revision: u64,
+    pub measure_mode: UiVirtualListMeasureModeV1,
+    pub overscan: u64,
+    pub viewport: f32,
+    pub prev_viewport: f32,
+    pub offset: f32,
+    pub prev_offset: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_window_range: Option<UiVirtualRangeV1>,
+    #[serde(default)]
+    pub deferred_scroll_to_item: bool,
+    #[serde(default)]
+    pub deferred_scroll_consumed: bool,
+    #[serde(default)]
+    pub window_mismatch: bool,
+}
+
+impl UiVirtualListWindowV1 {
+    fn from_window(window: &fret_ui::tree::UiDebugVirtualListWindow) -> Self {
+        Self {
+            node: key_to_u64(window.node),
+            element: window.element.0,
+            axis: UiAxisV1::from_axis(window.axis),
+            is_probe_layout: window.is_probe_layout,
+            items_len: window.items_len as u64,
+            items_revision: window.items_revision,
+            prev_items_revision: window.prev_items_revision,
+            measure_mode: UiVirtualListMeasureModeV1::from_mode(window.measure_mode),
+            overscan: window.overscan as u64,
+            viewport: window.viewport.0,
+            prev_viewport: window.prev_viewport.0,
+            offset: window.offset.0,
+            prev_offset: window.prev_offset.0,
+            window_range: window.window_range.map(UiVirtualRangeV1::from_range),
+            prev_window_range: window.prev_window_range.map(UiVirtualRangeV1::from_range),
+            render_window_range: window.render_window_range.map(UiVirtualRangeV1::from_range),
+            deferred_scroll_to_item: window.deferred_scroll_to_item,
+            deferred_scroll_consumed: window.deferred_scroll_consumed,
+            window_mismatch: window.window_mismatch,
         }
     }
 }

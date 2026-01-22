@@ -1,6 +1,6 @@
 # ADR 0190: Prepaint-Windowed Virtual Surfaces (GPUI-Aligned)
 
-Status: Proposed
+Status: Accepted (v1 contract; implementation in progress)
 
 ## Context
 
@@ -107,3 +107,20 @@ At minimum, a perf bundle should be able to attribute:
 - Zed/GPUI dirty views + view caching gates:
   - `repo-ref/zed/crates/gpui/src/window.rs`
   - `repo-ref/zed/crates/gpui/src/view.rs`
+
+## Implementation Notes (v1 Progress)
+
+This ADR defines a contract; the implementation is tracked in `docs/workstreams/gpui-parity-refactor-todo.md` (MVP5).
+
+Early evidence that the runtime is moving toward this model:
+
+- VirtualList has an explicit notion of a layout-derived visible window and can keep wheel scrolling transform-only when
+  the window is stable:
+  - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+  - `crates/fret-ui/src/declarative/host_widget/event/scroll.rs`
+- Out-of-band virtual-surface commands (e.g. `scroll_to_item`) are surfaced to view-cache reuse decisions to avoid
+  “stale cached output behind cache-hit frames”:
+  - `crates/fret-ui/src/declarative/mount.rs` (pre-render scroll-handle invalidation gate)
+  - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`)
+- Diagnostics bundles can export virtual-surface window telemetry for postmortem explanation:
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.virtual_list_windows`)

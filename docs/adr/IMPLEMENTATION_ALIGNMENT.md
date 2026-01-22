@@ -14,21 +14,21 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 ## Summary
 
-- Last updated: 2026-01-20
+- Last updated: 2026-01-22
 - ADR count (numbered): 203
 
 - Aligned: 82
 - Aligned (with known gaps): 63
 - N/A (superseded): 2
 - Not audited: 18
-- Not implemented: 6
-- Partially aligned: 26
+- Not implemented: 5
+- Partially aligned: 27
 
 ## Matrix
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
-| [`0190-prepaint-windowed-virtual-surfaces.md`](0190-prepaint-windowed-virtual-surfaces.md) | Proposed | Not implemented | Contract introduced to unlock GPUI-aligned “windowed surfaces” (VirtualList/tables/trees/text/canvas): compute visible windows during `prepaint` and emit per-frame ephemeral items without forcing full cache-root rerenders for small scroll deltas, while keeping reuse gated by dirty views + cache keys. Initial targets and diagnostics hooks are tracked in `docs/workstreams/gpui-parity-refactor-todo.md` (MVP5). |
+| [`0190-prepaint-windowed-virtual-surfaces.md`](0190-prepaint-windowed-virtual-surfaces.md) | Accepted | Partially aligned | VirtualList has a layout-derived window model and can keep wheel scrolling transform-only while the visible window remains stable (`crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`, `crates/fret-ui/src/declarative/host_widget/event/scroll.rs`). Out-of-band window-affecting scroll handle changes (e.g. `scroll_to_item`) are surfaced to view-cache reuse decisions to avoid cache-hit stale output (`crates/fret-ui/src/declarative/mount.rs`, `crates/fret-ui/src/declarative/tests/view_cache.rs`). Diagnostics bundles can export virtual-surface window telemetry (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs` via `UiTreeDebugSnapshotV1.virtual_list_windows`). Gaps: the runtime does not yet compute windows during `prepaint` nor provide a general “ephemeral items” API; VirtualList still derives visible items during declarative render and uses rerender when the window changes. |
 | [`0182-prepaint-interaction-stream-and-range-reuse.md`](0182-prepaint-interaction-stream-and-range-reuse.md) | Proposed | Partially aligned | A minimal prepaint v0 exists and records an “interaction stream” with cache-root range reuse for clean `ViewCache` subtrees. Prepaint currently caches hit-test relevant metadata per node (inverse transforms + clip + layer hit-test model), and hot paths reuse it for hit-testing and event coordinate mapping when nodes are clean and inspection is inactive. Evidence: `crates/fret-ui/src/tree/layout.rs` (`prepaint_after_layout` call site), `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_after_layout`, `apply_interaction_record`), `crates/fret-ui/src/tree/hit_test.rs` (`prepaint_hit_test` fast path), `crates/fret-ui/src/tree/dispatch.rs` (`build_mapped_event_chain`), tests in `crates/fret-ui/src/tree/tests/{prepaint,hit_test,outside_press}.rs`. Gaps: the interaction stream does not yet carry cursor requests / outside-press observers / accessibility semantics; routing still performs tree-level hit-test traversal (it does not dispatch directly from the recorded stream); there is no standardized multi-stream frame recording contract surface beyond v0 experiments. |
 | [`0187-preferences-command-policy.md`](0187-preferences-command-policy.md) | Proposed | Aligned | `app.preferences` exists as a standard command with a default macOS keybinding, and remains app-owned (no runner-native behavior). Golden-path `UiAppDriver` exposes an optional `on_preferences` hook. Evidence: `crates/fret-app/src/core_commands.rs`, `ecosystem/fret-bootstrap/src/ui_app_driver.rs`, example app handling `apps/fret-ui-gallery/src/driver.rs`. |
 | [`0186-macos-about-panel-effect.md`](0186-macos-about-panel-effect.md) | Proposed | Aligned | Adds `Effect::ShowAboutPanel` and a macOS runner mapping to the standard native About panel (`orderFrontStandardAboutPanel:`), while keeping About command-driven via bootstrap mapping for `app.about`. Evidence: `crates/fret-runtime/src/effect.rs`, `crates/fret-launch/src/runner/desktop/{mod.rs,macos_menu.rs}`, `ecosystem/fret-bootstrap/src/ui_app_driver.rs`. |

@@ -271,8 +271,11 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
       - `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` (wheel invalidation gate)
       - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (content-space layout + window_range)
       - `crates/fret-ui/src/declarative/host_widget/paint.rs` (row paint under scroll transform + per-row clips)
+      - `crates/fret-ui/src/declarative/mount.rs` (pre-render scroll-handle invalidation gate for view-cache reuse)
+      - `crates/fret-ui/src/declarative/frame.rs` + `crates/fret-ui/src/tree/layout.rs` (scroll-handle change classification)
+      - `crates/fret-ui/src/tree/mod.rs` (scroll-handle invalidation detail gates view-cache dirtiness)
       - `crates/fret-ui/src/elements/cx.rs` + `crates/fret-ui/src/element.rs` (window_range + render_window_range state)
-      - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`)
+      - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`), `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`)
 
 ## MVP5 — Prepaint-driven Ephemeral Windows (Beyond VirtualList)
 
@@ -293,6 +296,7 @@ Initial candidates (to be evidence-backed via `diag perf` bundles):
   - Code/text: `ecosystem/fret-code-view` (code blocks), `ecosystem/fret-markdown` (code blocks + long documents)
   - Tables/trees: `ecosystem/fret-ui-kit` (table/tree virtualization)
   - Logs/inspectors: diagnostics panes and large “property inspectors” in `apps/*` and `ecosystem/fret-workspace`
+  - Search/commands: command palette, search results, outline panels (typically “list-of-rows” UIs with large datasets)
 - **2D viewport culling (nodes/sprites)**
   - Node graph / canvas: `ecosystem/fret-node`, `ecosystem/fret-canvas`
   - Gizmos/overlays: `ecosystem/fret-gizmo`, `ecosystem/fret-viewport-tooling`
@@ -301,10 +305,12 @@ Initial candidates (to be evidence-backed via `diag perf` bundles):
 
 Non-candidates (usually): small forms/menus/popovers where the “ephemeral window” complexity would outweigh the wins.
 
-- [ ] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
+- [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
-  - Notes: once the v1 API surface is real, promote ADR 0190 from “Proposed” to “Accepted” (or capture any additional contract in a follow-up ADR).
+  - Notes: ADR 0190 is now Accepted as the guiding contract; capture any new “hard-to-change” commitments as follow-up ADRs if needed.
+  - Progress (v1):
+    - Bundles can export VirtualList window telemetry via `UiTreeDebugSnapshotV1.virtual_list_windows` (debug-only, bounded) for postmortem analysis.
 - [ ] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
