@@ -168,6 +168,9 @@ Recent fixes:
 - Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
 - Menu panel width now grows beyond the `min-w-[12rem]` baseline when long checkbox/radio labels
   require it (e.g. View/Profiles menus), matching upstream sizing behavior.
+- Note: The current "grow to fit" sizing path uses a deterministic text-width heuristic. If we need
+  stronger 1:1 guarantees across font stacks, we should expose a text measurement service and use
+  real glyph metrics instead of a character-count estimate.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
   - Root shadow (`shadow-xs`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
