@@ -261,31 +261,27 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
     - VirtualList no longer relies on post-activation `Pressable` `notify()` for scroll-to-item correctness (the scroll handle becomes the driver).
     - Worst-tick bundles no longer attribute the dominant `notify_call` hotspot to `pressable.rs:*` for the VirtualList torture scenario.
   - Progress (v1):
-    - Runtime now keeps scroll-handle bindings live across cache-hit frames and marks the nearest cache root dirty for layout-affecting scroll-handle
-      revision bumps during dispatch.
-    - Known gap: removing `Pressable`'s post-activation `notify()` still breaks the torture script jump step; track this as the v2 follow-up.
+    - Wheel scrolling is now **transform-only** (hit-test-only invalidation) while the visible window remains stable; layout invalidation is used only
+      when the visible window actually changes.
+    - VirtualList children are laid out in “content space” (not offset-adjusted), and the scroll offset is applied via `ScrollChildTransform` so paint
+      and hit-testing can track offset changes without a relayout.
+    - Declarative render now prefers a layout-derived `VirtualListState.window_range` and records `render_window_range` so layout can detect window
+      mismatches and only force a view-cache rerender when needed.
   - Evidence:
-      - `crates/fret-ui/src/tree/dispatch.rs` (dispatch-time scroll-handle handling)
-      - `crates/fret-ui/src/declarative/frame.rs` + `crates/fret-ui/src/declarative/mount.rs` (binding retention)
-      - `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_handle_revision_bumps_invalidation_during_dispatch`)
-      - `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_scroll_to_item_affects_next_render_visible_items`)
-      - Script sanity: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` (view-cache + shell)
+      - `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` (wheel invalidation gate)
+      - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (content-space layout + window_range)
+      - `crates/fret-ui/src/declarative/host_widget/paint.rs` (row paint under scroll transform + per-row clips)
+      - `crates/fret-ui/src/elements/cx.rs` + `crates/fret-ui/src/element.rs` (window_range + render_window_range state)
+      - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`)
 
 ## MVP5 — Prepaint-driven Ephemeral Windows (Beyond VirtualList)
 
 Goal: converge on GPUI’s “stable feel + stable perf” loop by moving large virtual surfaces to **prepaint-driven visible
 windows** + per-frame ephemeral items, while keeping caching gated by dirty views and explicit cache keys (ADR 0180/0182).
 
-- [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
+- [ ] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
-  - Progress (v1):
-    - `bundle.json` exports `debug.windowed_surface_updates[]` for window deltas (initially `VirtualList`, layout-derived).
-  - Evidence:
-    - `crates/fret-ui/src/tree/mod.rs` (`debug_windowed_surface_updates`, `UiDebugWindowedSurfaceUpdate*`)
-    - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (VirtualList window-change recording)
-    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.windowed_surface_updates`)
-    - `crates/fret-ui/src/tree/tests/windowed_surfaces.rs` (`virtual_list_window_update_is_recorded_in_debug`)
 - [ ] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
