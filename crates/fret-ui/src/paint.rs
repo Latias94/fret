@@ -1,5 +1,5 @@
 use crate::element::{RingPlacement, RingStyle, ShadowLayerStyle, ShadowStyle};
-use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, Scene, SceneOp, Size};
+use fret_core::{Color, Corners, DrawOrder, Edges, Point, Px, Rect, Scene, SceneOp, Size};
 
 fn corners_inflate(mut corners: Corners, delta: Px) -> Corners {
     let d = delta.0.max(0.0);
@@ -185,6 +185,210 @@ pub fn paint_focus_ring(scene: &mut Scene, order: DrawOrder, bounds: Rect, ring:
                     corner_radii: corners_inflate(ring.corner_radii, outer),
                 });
             }
+        }
+    }
+}
+
+/// Paint a paint-only "state layer" overlay (Material-like interaction feedback).
+///
+/// This is a mechanism-level primitive: it does not define *when* a state layer should be shown,
+/// only how to render one efficiently in the scene.
+pub fn paint_state_layer(
+    scene: &mut Scene,
+    order: DrawOrder,
+    bounds: Rect,
+    color: Color,
+    opacity: f32,
+    corner_radii: Corners,
+) {
+    if bounds.size.width.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
+        return;
+    }
+
+    let a = (color.a * opacity).clamp(0.0, 1.0);
+    if a <= 0.0 {
+        return;
+    }
+
+    scene.push(SceneOp::Quad {
+        order,
+        rect: bounds,
+        background: Color { a, ..color },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii,
+    });
+}
+
+/// Paint a low-level ripple ink circle (Material-like interaction feedback).
+///
+/// This is a mechanism-level primitive: it only emits scene ops for a ripple "frame". Policy and
+/// state management (timing, easing, bounded/unbounded choice, fade rules) live in ecosystem crates.
+///
+/// - `bounds` is used for bounded clipping and as the coordinate space for `origin`.
+/// - If `clip_corner_radii` is `Some`, the ripple is clipped to a rounded-rect matching `bounds`.
+pub fn paint_ripple(
+    scene: &mut Scene,
+    order: DrawOrder,
+    bounds: Rect,
+    origin: Point,
+    radius: Px,
+    color: Color,
+    opacity: f32,
+    clip_corner_radii: Option<Corners>,
+) {
+    if bounds.size.width.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
+        return;
+    }
+
+    let r = radius.0.max(0.0);
+    if r <= 0.0 || !r.is_finite() {
+        return;
+    }
+
+    let a = (color.a * opacity).clamp(0.0, 1.0);
+    if a <= 0.0 {
+        return;
+    }
+
+    if let Some(corner_radii) = clip_corner_radii {
+        scene.push(SceneOp::PushClipRRect {
+            rect: bounds,
+            corner_radii,
+        });
+    }
+
+    let circle = Rect::new(
+        Point::new(Px(origin.x.0 - r), Px(origin.y.0 - r)),
+        Size::new(Px(r * 2.0), Px(r * 2.0)),
+    );
+
+    scene.push(SceneOp::Quad {
+        order,
+        rect: circle,
+        background: Color { a, ..color },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: Corners::all(Px(r)),
+    });
+
+    if clip_corner_radii.is_some() {
+        scene.push(SceneOp::PopClip);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{paint_ripple, paint_state_layer};
+    use fret_core::{Color, Corners, DrawOrder, Px, Rect, Scene, Size};
+
+    #[test]
+    fn paint_state_layer_emits_single_quad_with_expected_alpha() {
+        let mut scene = Scene::default();
+        paint_state_layer(
+            &mut scene,
+            DrawOrder(0),
+            Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(10.0), Px(10.0)),
+            ),
+            Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.5,
+            },
+            0.2,
+            Corners::all(Px(4.0)),
+        );
+
+        assert_eq!(scene.ops().len(), 1);
+        match scene.ops()[0] {
+            fret_core::SceneOp::Quad { background, .. } => {
+                assert!((background.a - 0.1).abs() < 1e-6);
+            }
+            _ => panic!("expected quad"),
+        }
+    }
+
+    #[test]
+    fn paint_ripple_bounded_emits_clip_quad_and_pop() {
+        let mut scene = Scene::default();
+        paint_ripple(
+            &mut scene,
+            DrawOrder(0),
+            Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(10.0), Px(10.0)),
+            ),
+            fret_core::Point::new(Px(5.0), Px(5.0)),
+            Px(4.0),
+            Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.5,
+            },
+            0.5,
+            Some(Corners::all(Px(2.0))),
+        );
+
+        assert_eq!(scene.ops().len(), 3);
+        match scene.ops()[0] {
+            fret_core::SceneOp::PushClipRRect { rect, .. } => {
+                assert!((rect.size.width.0 - 10.0).abs() < 1e-6);
+            }
+            _ => panic!("expected clip push"),
+        }
+        match scene.ops()[1] {
+            fret_core::SceneOp::Quad {
+                rect,
+                background,
+                corner_radii,
+                ..
+            } => {
+                assert!((rect.origin.x.0 - 1.0).abs() < 1e-6);
+                assert!((rect.origin.y.0 - 1.0).abs() < 1e-6);
+                assert!((rect.size.width.0 - 8.0).abs() < 1e-6);
+                assert!((corner_radii.top_left.0 - 4.0).abs() < 1e-6);
+                assert!((background.a - 0.25).abs() < 1e-6);
+            }
+            _ => panic!("expected quad"),
+        }
+        match scene.ops()[2] {
+            fret_core::SceneOp::PopClip => {}
+            _ => panic!("expected clip pop"),
+        }
+    }
+
+    #[test]
+    fn paint_ripple_unbounded_emits_single_quad() {
+        let mut scene = Scene::default();
+        paint_ripple(
+            &mut scene,
+            DrawOrder(0),
+            Rect::new(
+                fret_core::Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(10.0), Px(10.0)),
+            ),
+            fret_core::Point::new(Px(5.0), Px(5.0)),
+            Px(4.0),
+            Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            },
+            0.1,
+            None,
+        );
+
+        assert_eq!(scene.ops().len(), 1);
+        match scene.ops()[0] {
+            fret_core::SceneOp::Quad { background, .. } => {
+                assert!((background.a - 0.1).abs() < 1e-6);
+            }
+            _ => panic!("expected quad"),
         }
     }
 }
