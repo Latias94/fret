@@ -1749,7 +1749,12 @@ impl<H: UiHost> UiTree<H> {
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
-        if let Event::Pointer(PointerEvent::Move { .. }) = event {
+        if let Event::Pointer(PointerEvent::Move { pointer_id, .. }) = event {
+            let captured_layer_for_pointer_move = self
+                .captured
+                .get(pointer_id)
+                .copied()
+                .and_then(|n| self.node_layer(n));
             let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
             let mut hit_barrier = false;
             for layer_id in layers.into_iter().rev() {
@@ -1767,6 +1772,17 @@ impl<H: UiHost> UiTree<H> {
                     break;
                 }
                 if !wants_pointer_move_events {
+                    if barrier_root == Some(layer_root) {
+                        hit_barrier = true;
+                    }
+                    continue;
+                }
+                if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
+                    // Pointer-move observer hooks are used by overlay policies (e.g. Radix menu safe
+                    // corridor). When a pointer is captured by a different layer (viewport tools,
+                    // docking drags, etc.), do not let unrelated overlay layers observe that move
+                    // stream. This keeps captured interactions stable and avoids cross-layer
+                    // arbitration fights during drags.
                     if barrier_root == Some(layer_root) {
                         hit_barrier = true;
                     }
