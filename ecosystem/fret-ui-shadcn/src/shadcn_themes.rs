@@ -313,6 +313,7 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         url: Some("https://ui.shadcn.com".to_string()),
         colors,
         metrics,
+        ..Default::default()
     }
 }
 

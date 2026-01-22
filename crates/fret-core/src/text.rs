@@ -80,15 +80,17 @@ impl Default for TextConstraints {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextStyle {
     pub font: FontId,
     pub size: Px,
     pub weight: FontWeight,
     pub slant: TextSlant,
     /// Optional line height override, in logical px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line_height: Option<Px>,
     /// Optional tracking (letter spacing) override, in EM.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub letter_spacing_em: Option<f32>,
 }
 

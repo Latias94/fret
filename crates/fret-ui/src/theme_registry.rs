@@ -2,6 +2,10 @@
 pub enum ThemeTokenKind {
     Color,
     Metric,
+    Number,
+    DurationMs,
+    Easing,
+    TextStyle,
 }
 
 pub fn canonicalize_token_key(kind: ThemeTokenKind, key: &str) -> &str {
@@ -13,6 +17,10 @@ pub fn canonicalize_token_key(kind: ThemeTokenKind, key: &str) -> &str {
     match kind {
         ThemeTokenKind::Color => canonicalize_color_key(key),
         ThemeTokenKind::Metric => canonicalize_metric_key(key),
+        ThemeTokenKind::Number => key,
+        ThemeTokenKind::DurationMs => key,
+        ThemeTokenKind::Easing => key,
+        ThemeTokenKind::TextStyle => key,
     }
 }
 
