@@ -64,6 +64,16 @@ impl WindowCommandGatingSnapshot {
         self.action_availability.as_deref()
     }
 
+    /// GPUI naming parity: query the latest published dispatch-path availability, if present.
+    ///
+    /// This is only meaningful for `CommandScope::Widget` commands; other scopes are not modeled
+    /// as dispatch-path availability entries today.
+    pub fn is_action_available(&self, command: &CommandId) -> Option<bool> {
+        self.action_availability
+            .as_ref()
+            .and_then(|map| map.get(command).copied())
+    }
+
     pub fn with_action_availability(
         mut self,
         action_availability: Option<Arc<HashMap<CommandId, bool>>>,
