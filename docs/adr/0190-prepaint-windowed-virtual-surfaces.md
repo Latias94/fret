@@ -23,6 +23,7 @@ We also expect the same pattern to apply broadly in the ecosystem:
 
 - tables and trees built on virtualization,
 - code/text views (visible line windows),
+- long scrolling documents (markdown/log/trace views),
 - canvas/node graphs (viewport culling windows),
 - large charts (data window / sampling windows).
 
@@ -43,6 +44,11 @@ Fret defines a “windowed virtual surface” as a UI primitive whose visible co
 
 The runtime MUST allow the visible window to be computed during `prepaint`, not only during declarative render.
 
+This ADR intentionally covers both:
+
+- 1D scroll-windowed surfaces (rows/lines/items), and
+- 2D viewport-culling surfaces (nodes/edges/sprites) where “window” is a visible region in world space.
+
 ### 2) Per-frame ephemeral items are allowed, but must be identity-stable where it matters
 
 The visible window MAY change per frame. The runtime MUST support emitting ephemeral items for that window without
@@ -62,6 +68,7 @@ Windowed surfaces MUST compose with view caching:
   clean; it should instead be treated as an allowed “ephemeral prepaint update” for that surface.
 - Out-of-band virtual-surface commands (e.g. `scroll_to_item`) MUST schedule a redraw and invalidate the appropriate
   view boundary deterministically, without relying on unrelated input-driven `notify()` calls.
+  - Examples: `scroll_to_item`, `ensure_line_visible`, `center_on_node`, `zoom_to_fit`.
 
 ### 4) Diagnostics requirements
 

@@ -110,8 +110,10 @@ Candidate migrations (v1; performance-first):
 
 - Virtual surfaces (prepaint-driven window + per-frame items):
   - `VirtualList` (`crates/fret-ui`, plus `ecosystem/fret-ui-kit` table/tree/list helpers).
-  - Code/text windows (e.g. code view line windows) and large tables/trees built on top of virtualization primitives.
+  - Table/tree windows built on top of virtualization primitives (row/section windowing).
+  - Text/code/markdown windows (e.g. visible line windows; long documents and code blocks).
   - Canvas/node graph culling windows (visible nodes/edges derived from viewport).
+  - Large chart/plot surfaces (data sampling windows derived from viewport/time range).
 - Chrome derived from interaction (paint-only; structural stability):
   - Scrollbar visibility/fade, hover toolbars, selection highlights, focus rings, cursor affordances.
 
@@ -130,6 +132,7 @@ Alignment checklist (v1; what must be derived per frame / per dirty view):
   - Visible-range windows for lists/tables/trees.
   - Visible-line windows for text/code surfaces.
   - Viewport-culling windows for canvas/node graph surfaces.
+  - Data-window/sampling windows for charts/plots (avoid rebuilding full series on pan/zoom).
 
 Audit heuristic: if a component’s child set (or a large portion of its render work) depends on scroll offset / viewport
 and the current implementation rebuilds that structure in the declarative render pass, it is a prime candidate for
