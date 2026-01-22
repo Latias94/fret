@@ -412,6 +412,25 @@ async function hoverFirstByText(
   throw new Error(`no element for ${selector} containing text: ${containsText}`)
 }
 
+async function hoverExampleWithinSelectorByText(
+  page: puppeteer.Page,
+  title: string,
+  itemSelector: string,
+  containsText: string
+) {
+  const example = await findExampleByTitle(page, title)
+  const items = await example.$$(itemSelector)
+  for (const item of items) {
+    const text = await item.evaluate((el) => (el.textContent || "").trim())
+    if (!text.includes(containsText)) continue
+    await item.hover()
+    return
+  }
+  throw new Error(
+    `no element for selector=${itemSelector} in example title=${title} containing text: ${containsText}`
+  )
+}
+
 async function findExampleByTitle(page: puppeteer.Page, title: string) {
   const examples = await page.$$('[data-slot="example"]')
   for (const example of examples) {
@@ -1475,6 +1494,44 @@ const scenarios: Scenario[] = [
       await pressChord(ctx.page, ["ArrowDown", "Escape"])
       await sleep(50)
       await pushStep(ctx, { kind: "press", key: "ArrowDown,Escape" })
+    },
+  },
+  {
+    primitive: "menubar",
+    scenario: "hover-switch-trigger",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "File"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "menubar:with-submenu:file" })
+
+      await hoverExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "Edit"
+      )
+      await sleep(200)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "hover", target: "menubar-trigger:Edit" })
     },
   },
   {
