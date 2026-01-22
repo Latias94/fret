@@ -201,7 +201,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     rows.push(cx.text(captured.clone()));
                     rows.push(cx.text(format!("last_viewport_input={last}")));
                     rows.push(cx.text(
-                        "Synth pointer: F1 toggle; I/J/K/L move; Space down/up (consumes these keys while enabled).",
+                        "Synth pointer: F1 toggle; I/J/K/L move; Space down/up; B right down/up; U/O wheel up/down (consumes these keys while enabled).",
                     ));
                     rows.push(cx.text(synth_debug.to_string()));
                     rows.push(popover);
@@ -287,6 +287,7 @@ struct SynthPointerState {
     pointer_id: fret_core::PointerId,
     position: Point,
     pressed: bool,
+    mouse_right_pressed: bool,
 }
 
 impl Default for SynthPointerState {
@@ -298,6 +299,7 @@ impl Default for SynthPointerState {
             pointer_id: fret_core::PointerId((1u64 << 56) | 42),
             position: Point::new(Px(160.0), Px(120.0)),
             pressed: false,
+            mouse_right_pressed: false,
         }
     }
 }
@@ -375,12 +377,13 @@ impl DockingArbitrationDriver {
 
         let msg: Arc<str> = Arc::from(
             format!(
-                "synth_pointer: enabled={} id={:?} pos=({:.1},{:.1}) down={} {}",
+                "synth_pointer: enabled={} id={:?} pos=({:.1},{:.1}) down={} mouse_right_down={} {}",
                 synth.enabled,
                 synth.pointer_id,
                 synth.position.x.0,
                 synth.position.y.0,
                 synth.pressed,
+                synth.mouse_right_pressed,
                 drag
             )
             .into_boxed_str(),
@@ -455,6 +458,68 @@ impl DockingArbitrationDriver {
         app.request_redraw(window);
     }
 
+    fn dispatch_synth_mouse_button(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        synth: &SynthPointerState,
+        button: MouseButton,
+        pressed: bool,
+        modifiers: Modifiers,
+    ) {
+        if !synth.enabled {
+            return;
+        }
+        let evt = if pressed {
+            fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: synth.position,
+                button,
+                modifiers,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }
+        } else {
+            fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: synth.position,
+                button,
+                modifiers,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }
+        };
+        ui.dispatch_event(app, services, &Event::Pointer(evt));
+        app.request_redraw(window);
+    }
+
+    fn dispatch_synth_mouse_wheel(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        synth: &SynthPointerState,
+        delta: Point,
+        modifiers: Modifiers,
+    ) {
+        if !synth.enabled {
+            return;
+        }
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId(0),
+                position: synth.position,
+                delta,
+                modifiers,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        app.request_redraw(window);
+    }
+
     fn alloc_floating_logical_window_id(&mut self) -> String {
         let reserved = self.restore.as_ref().map(|r| &r.pending_logical_window_ids);
 
@@ -477,7 +542,7 @@ impl DockingArbitrationDriver {
         let dialog_open = app.models_mut().insert(false);
         let last_viewport_input = app.models_mut().insert(Arc::<str>::from("<none>"));
         let synth_pointer_debug = app.models_mut().insert(Arc::<str>::from(
-            "synth_pointer: enabled=false id=<unset> pos=(n/a) down=false drag(<none>)",
+            "synth_pointer: enabled=false id=<unset> pos=(n/a) down=false mouse_right_down=false drag(<none>)",
         ));
 
         app.with_global_mut(ViewportDebugService::default, |svc, _app| {
@@ -779,11 +844,15 @@ impl WinitAppDriver for DockingArbitrationDriver {
         // F1 toggles the synth pointer. While enabled:
         // - I/J/K/L move the pointer (logical pixels),
         // - Space presses/releases the pointer (Left button semantics).
+        // - B presses/releases the mouse right button at the synth pointer position,
+        // - U/O emit mouse wheel up/down at the synth pointer position.
         //
         // These keys are consumed while enabled to keep the demo deterministic.
         let mut dispatch_to_ui = true;
         let mut synth_move_after = false;
         let mut synth_button_after: Option<bool> = None;
+        let mut synth_mouse_right_after: Option<bool> = None;
+        let mut synth_wheel_after: Option<Point> = None;
         let mut synth_mods = Modifiers::default();
 
         match event {
@@ -798,6 +867,10 @@ impl WinitAppDriver for DockingArbitrationDriver {
                     // Release deterministically before disabling.
                     synth.pressed = false;
                     synth_button_after = Some(false);
+                }
+                if !synth.enabled && synth.mouse_right_pressed {
+                    synth.mouse_right_pressed = false;
+                    synth_mouse_right_after = Some(false);
                 }
                 synth_mods = *modifiers;
                 dispatch_to_ui = false;
@@ -875,6 +948,57 @@ impl WinitAppDriver for DockingArbitrationDriver {
                     DockingArbitrationDriver::update_synth_debug(app, window, synth);
                 }
             }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyB,
+                repeat: false,
+                modifiers,
+            } => {
+                let synth = self.synth_pointer_mut(app, window);
+                if synth.enabled && !synth.mouse_right_pressed {
+                    synth.mouse_right_pressed = true;
+                    synth_mouse_right_after = Some(true);
+                    synth_mods = *modifiers;
+                    dispatch_to_ui = false;
+                    DockingArbitrationDriver::update_synth_debug(app, window, synth);
+                }
+            }
+            Event::KeyUp {
+                key: fret_core::KeyCode::KeyB,
+                modifiers,
+            } => {
+                let synth = self.synth_pointer_mut(app, window);
+                if synth.enabled && synth.mouse_right_pressed {
+                    synth.mouse_right_pressed = false;
+                    synth_mouse_right_after = Some(false);
+                    synth_mods = *modifiers;
+                    dispatch_to_ui = false;
+                    DockingArbitrationDriver::update_synth_debug(app, window, synth);
+                }
+            }
+            Event::KeyDown {
+                key: fret_core::KeyCode::KeyU | fret_core::KeyCode::KeyO,
+                repeat: false,
+                modifiers,
+            } => {
+                let synth = self.synth_pointer_mut(app, window);
+                if synth.enabled {
+                    // Positive wheel Y means scrolling up (winit semantics).
+                    let delta = match event {
+                        Event::KeyDown {
+                            key: fret_core::KeyCode::KeyU,
+                            ..
+                        } => Point::new(Px(0.0), Px(24.0)),
+                        Event::KeyDown {
+                            key: fret_core::KeyCode::KeyO,
+                            ..
+                        } => Point::new(Px(0.0), Px(-24.0)),
+                        _ => Point::new(Px(0.0), Px(0.0)),
+                    };
+                    synth_wheel_after = Some(delta);
+                    synth_mods = *modifiers;
+                    dispatch_to_ui = false;
+                }
+            }
             _ => {}
         }
 
@@ -943,6 +1067,29 @@ impl WinitAppDriver for DockingArbitrationDriver {
                     window,
                     &st,
                     pressed,
+                    synth_mods,
+                );
+            }
+            if let Some(pressed) = synth_mouse_right_after {
+                DockingArbitrationDriver::dispatch_synth_mouse_button(
+                    &mut state.ui,
+                    app,
+                    services,
+                    window,
+                    &st,
+                    MouseButton::Right,
+                    pressed,
+                    synth_mods,
+                );
+            }
+            if let Some(delta) = synth_wheel_after {
+                DockingArbitrationDriver::dispatch_synth_mouse_wheel(
+                    &mut state.ui,
+                    app,
+                    services,
+                    window,
+                    &st,
+                    delta,
                     synth_mods,
                 );
             }
