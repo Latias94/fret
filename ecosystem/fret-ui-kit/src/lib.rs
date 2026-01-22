@@ -48,7 +48,7 @@ pub use ui_builder::{
 
 pub use overlay_controller::{
     OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence, OverlayRequest,
-    ToastLayerSpec,
+    OverlayStackEntryKind, ToastLayerSpec, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
 };
 pub use window_overlays::{
     DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
@@ -74,9 +74,9 @@ pub mod prelude {
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge,
         MetricRef, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
     };
-    pub use crate::{
-        OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence, OverlayRequest,
-    };
+    pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
+    pub use crate::{OverlayRequest, OverlayStackEntryKind};
+    pub use crate::{WindowOverlayStackEntry, WindowOverlayStackSnapshot};
 
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_runtime::{CommandId, Model};

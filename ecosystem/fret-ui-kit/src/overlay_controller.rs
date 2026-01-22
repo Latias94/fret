@@ -369,6 +369,38 @@ pub struct OverlayArbitrationSnapshot {
     pub pointer_occlusion: fret_ui::tree::PointerOcclusion,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlayStackEntryKind {
+    Base,
+    Popover,
+    Modal,
+    Tooltip,
+    Hover,
+    ToastLayer,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WindowOverlayStackEntry {
+    pub kind: OverlayStackEntryKind,
+    pub id: Option<GlobalElementId>,
+    pub open: bool,
+    pub visible: bool,
+    pub blocks_underlay_input: bool,
+    pub hit_testable: bool,
+    pub pointer_occlusion: fret_ui::tree::PointerOcclusion,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WindowOverlayStackSnapshot {
+    pub arbitration: OverlayArbitrationSnapshot,
+    pub stack: Vec<WindowOverlayStackEntry>,
+    pub topmost_overlay: Option<GlobalElementId>,
+    pub topmost_popover: Option<GlobalElementId>,
+    pub topmost_modal: Option<GlobalElementId>,
+    pub topmost_pointer_occluding_overlay: Option<GlobalElementId>,
+}
+
 impl OverlayController {
     pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
         window_overlays::begin_frame(app, window);
@@ -565,6 +597,95 @@ impl OverlayController {
             })
             .unwrap_or(PointerOcclusion::None);
         out
+    }
+
+    /// Computes an ordered, window-scoped overlay stack snapshot by combining:
+    ///
+    /// - runtime layer order (`UiTree::debug_layers_in_paint_order`),
+    /// - overlay manager state (`window_overlays`) to map layer IDs to overlay IDs/kinds.
+    ///
+    /// The intent is to give ecosystem integration points a stable "what overlays are currently
+    /// active, and in what order" view without requiring them to depend on `window_overlays`
+    /// internals.
+    pub fn stack_snapshot_for_window<H: UiHost>(
+        ui: &UiTree<H>,
+        app: &mut H,
+        window: AppWindowId,
+    ) -> WindowOverlayStackSnapshot {
+        use fret_ui::tree::PointerOcclusion;
+        use std::collections::HashMap;
+
+        let arbitration = Self::arbitration_snapshot(ui);
+        let base_root = ui.base_root();
+        let layers = ui.debug_layers_in_paint_order();
+
+        let mut by_layer = HashMap::new();
+        for entry in window_overlays::overlay_layer_entries_for_window(app, window) {
+            let kind = match entry.kind {
+                window_overlays::WindowOverlayLayerKind::Popover => OverlayStackEntryKind::Popover,
+                window_overlays::WindowOverlayLayerKind::Modal => OverlayStackEntryKind::Modal,
+                window_overlays::WindowOverlayLayerKind::Hover => OverlayStackEntryKind::Hover,
+                window_overlays::WindowOverlayLayerKind::Tooltip => OverlayStackEntryKind::Tooltip,
+                window_overlays::WindowOverlayLayerKind::ToastLayer => {
+                    OverlayStackEntryKind::ToastLayer
+                }
+            };
+            by_layer.insert(entry.layer, (kind, entry.id, entry.open));
+        }
+
+        let mut stack: Vec<WindowOverlayStackEntry> = Vec::with_capacity(layers.len());
+        for layer in layers {
+            let (kind, id, open) = if base_root == Some(layer.root) {
+                (OverlayStackEntryKind::Base, None, false)
+            } else if let Some((kind, id, open)) = by_layer.get(&layer.id).copied() {
+                (kind, Some(id), open)
+            } else {
+                (OverlayStackEntryKind::Unknown, None, false)
+            };
+            stack.push(WindowOverlayStackEntry {
+                kind,
+                id,
+                open,
+                visible: layer.visible,
+                blocks_underlay_input: layer.blocks_underlay_input,
+                hit_testable: layer.hit_testable,
+                pointer_occlusion: layer.pointer_occlusion,
+            });
+        }
+
+        let topmost_overlay = stack
+            .iter()
+            .rev()
+            .find_map(|e| (e.visible && e.id.is_some()).then_some(e.id))
+            .flatten();
+        let topmost_popover = stack
+            .iter()
+            .rev()
+            .find_map(|e| {
+                (e.visible && e.open && e.kind == OverlayStackEntryKind::Popover).then_some(e.id)
+            })
+            .flatten();
+        let topmost_modal = stack
+            .iter()
+            .rev()
+            .find_map(|e| (e.visible && e.kind == OverlayStackEntryKind::Modal).then_some(e.id))
+            .flatten();
+        let topmost_pointer_occluding_overlay = stack
+            .iter()
+            .rev()
+            .find_map(|e| {
+                (e.visible && e.pointer_occlusion != PointerOcclusion::None).then_some(e.id)
+            })
+            .flatten();
+
+        WindowOverlayStackSnapshot {
+            arbitration,
+            stack,
+            topmost_overlay,
+            topmost_popover,
+            topmost_modal,
+            topmost_pointer_occluding_overlay,
+        }
     }
 
     pub fn fade_presence<H: UiHost>(
@@ -784,6 +905,126 @@ mod tests {
         assert_eq!(
             snap.pointer_occlusion,
             fret_ui::tree::PointerOcclusion::None
+        );
+    }
+
+    #[test]
+    fn stack_snapshot_reports_topmost_popover_and_modal_in_paint_order() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let popover_open = app.models_mut().insert(true);
+        let modal_open = app.models_mut().insert(true);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let mut trigger_id: Option<GlobalElementId> = None;
+
+        // Frame 0: base only.
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |cx| {
+                vec![cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        trigger_id = Some(id);
+                        Vec::new()
+                    },
+                )]
+            },
+        );
+        ui.set_root(base);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_id = trigger_id.expect("trigger id");
+
+        // Frame 1: popover opened.
+        OverlayController::begin_frame(&mut app, window);
+        let popover_id = GlobalElementId(0xabc);
+        OverlayController::request_for_window(
+            &mut app,
+            window,
+            OverlayRequest::dismissible_menu(
+                popover_id,
+                trigger_id,
+                popover_open.clone(),
+                OverlayPresence::instant(true),
+                Vec::new(),
+            ),
+        );
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        assert_eq!(snap.topmost_popover, Some(popover_id));
+        assert_eq!(snap.topmost_modal, None);
+        assert_eq!(snap.topmost_overlay, Some(popover_id));
+        assert_eq!(
+            snap.stack.last().map(|e| (e.kind, e.id)),
+            Some((OverlayStackEntryKind::Popover, Some(popover_id)))
+        );
+
+        // Frame 2: modal opened above the popover.
+        OverlayController::begin_frame(&mut app, window);
+        let modal_id = GlobalElementId(0xdef);
+        OverlayController::request_for_window(
+            &mut app,
+            window,
+            OverlayRequest::dismissible_menu(
+                popover_id,
+                trigger_id,
+                popover_open.clone(),
+                OverlayPresence::instant(true),
+                Vec::new(),
+            ),
+        );
+        OverlayController::request_for_window(
+            &mut app,
+            window,
+            OverlayRequest::modal(
+                modal_id,
+                Some(trigger_id),
+                modal_open.clone(),
+                OverlayPresence::instant(true),
+                Vec::new(),
+            ),
+        );
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        assert_eq!(snap.topmost_modal, Some(modal_id));
+        assert_eq!(snap.topmost_overlay, Some(modal_id));
+        assert!(
+            snap.stack
+                .iter()
+                .any(|e| e.kind == OverlayStackEntryKind::Popover && e.id == Some(popover_id)),
+            "expected popover layer to still be identifiable in the stack snapshot even if it closes on modal open"
+        );
+        assert_eq!(
+            snap.stack.last().map(|e| (e.kind, e.id)),
+            Some((OverlayStackEntryKind::Modal, Some(modal_id)))
         );
     }
 
