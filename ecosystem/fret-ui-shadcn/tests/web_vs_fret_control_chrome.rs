@@ -4986,6 +4986,70 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_radio_group_demo_focus_ring_matches() {
+    let web = read_web_golden("radio-group-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_radio = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|v| v == "radio")
+            && n.id.as_deref() == Some("r2")
+    })
+    .expect("web radio control node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_radio).expect("web radio focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let items = vec![
+                fret_ui_shadcn::RadioGroupItem::new("default", "Default"),
+                fret_ui_shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
+                fret_ui_shadcn::RadioGroupItem::new("compact", "Compact"),
+            ];
+
+            let group = items.into_iter().fold(
+                fret_ui_shadcn::RadioGroup::uncontrolled(Some("comfortable")).a11y_label("Options"),
+                |group, item| group.item(item),
+            );
+
+            vec![group.into_element(cx)]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::RadioButton
+                        && n.label.as_deref() == Some("Comfortable")
+                })
+                .map(|n| n.id)
+                .expect("missing fret radio semantics node")
+        },
+    );
+
+    let radio_row = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Comfortable"))
+        .expect("missing semantics for radio");
+
+    let target = Rect::new(radio_row.bounds.origin, CoreSize::new(Px(16.0), Px(16.0)));
+    let ring_quad =
+        find_focus_ring_quad(&scene, target, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "radio-group-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
 fn web_vs_fret_progress_demo_control_chrome_matches() {
     let web = read_web_golden("progress-demo");
     let theme = web

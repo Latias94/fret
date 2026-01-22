@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
+    TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -320,6 +323,10 @@ impl RadioGroup {
                                         enabled: item_enabled,
                                         focusable: tab_stop,
                                         focus_ring: Some(ring_style),
+                                        focus_ring_bounds: Some(Rect::new(
+                                            Point::new(Px(0.0), Px(0.0)),
+                                            Size::new(icon, icon),
+                                        )),
                                         ..Default::default()
                                     },
                                     move |cx, st, checked| {
