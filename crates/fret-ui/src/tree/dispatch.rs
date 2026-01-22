@@ -1264,8 +1264,18 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        if event_position(event).is_some() {
-            let chain = self.build_mapped_event_chain(node_id, event);
+        if matches!(
+            event,
+            Event::Pointer(_)
+                | Event::PointerCancel(_)
+                | Event::ExternalDrag(_)
+                | Event::InternalDrag(_)
+        ) {
+            let chain = if event_position(event).is_some() {
+                self.build_mapped_event_chain(node_id, event)
+            } else {
+                self.build_unmapped_event_chain(node_id, event)
+            };
             let should_run_capture_phase = match event {
                 Event::Pointer(PointerEvent::Down { .. })
                 | Event::Pointer(PointerEvent::Up { .. })
@@ -1503,7 +1513,7 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         } else {
-            if matches!(event, Event::KeyDown { .. }) {
+            if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
                 let mut chain: Vec<NodeId> = Vec::new();
                 let mut cur = Some(node_id);
                 while let Some(id) = cur {
@@ -2482,6 +2492,16 @@ impl<H: UiHost> UiTree<H> {
         }
 
         out.reverse();
+        out
+    }
+
+    fn build_unmapped_event_chain(&self, start: NodeId, event: &Event) -> Vec<(NodeId, Event)> {
+        let mut out: Vec<(NodeId, Event)> = Vec::new();
+        let mut cur = Some(start);
+        while let Some(id) = cur {
+            out.push((id, event.clone()));
+            cur = self.nodes.get(id).and_then(|n| n.parent);
+        }
         out
     }
 }

@@ -11,7 +11,9 @@ Implemented:
 - Dispatch phase enum: `crates/fret-runtime/src/input.rs` (`InputDispatchPhase::{Preview,Capture,Bubble}`).
 - `prevent_default` plumbing: `crates/fret-runtime/src/input.rs` (`DefaultAction`, `DefaultActionSet`) and `crates/fret-ui/src/widget.rs` (`EventCx::{prevent_default,default_prevented}`).
 - Default actions step (v1): `DefaultAction::FocusOnPointerDown` is applied by default during event dispatch and can be suppressed via `prevent_default`: `crates/fret-ui/src/tree/dispatch.rs`.
+- Capture-phase dispatch (root → target): key down/up and pointer interactions (down/up/wheel/pinch/cancel, and move when buttons are pressed or capture is active): `crates/fret-ui/src/tree/dispatch.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/prevent_default.rs`.
+- Tests: `crates/fret-ui/src/tree/tests/dispatch_phase.rs`.
 - Dispatch-path action availability query (retained `UiTree`):
   - `Widget::command_availability` returns `CommandAvailability::{NotHandled,Available,Blocked}`.
   - `UiTree::{command_availability,is_command_available}` provides a best-effort query suitable for gating UI surfaces.
@@ -19,9 +21,8 @@ Implemented:
 
 Not implemented yet / known gaps:
 
-- Capture-phase dispatch as a first-class pass (separate from Preview/Bubble), including a
-  dedicated capture hook to avoid double-running normal bubble handlers.
 - Additional default actions beyond `FocusOnPointerDown` (intentionally deferred to keep v1 low risk).
+- Capture-phase coverage is still incremental for non-pointer/key event families and may need to be expanded as the contract hardens.
 
 ## Context
 
@@ -255,7 +256,7 @@ compose the new mechanisms:
 2) **Implement `DefaultAction::FocusOnPointerDown`**
    - Move "focus-on-mousedown" from component-specific defaults into the runtime default action
      step, and allow suppression via `prevent_default`.
-3) **Add capture + bubble dispatch for pointer down / key down**
+3) **Add capture + bubble dispatch for pointer interactions + key down/up**
    - Start with the smallest set of events that benefit from phase separation.
 4) **Add availability query plumbing**
    - Build and store a dispatch-tree snapshot that supports `is_action_available(CommandId)`.
