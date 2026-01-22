@@ -339,23 +339,25 @@ impl ClickTracker {
         }
     }
 
-    fn end_press(&mut self, button: MouseButton, pos: Point) -> u8 {
+    fn end_press(&mut self, button: MouseButton, pos: Point) -> (u8, bool) {
         if matches!(button, MouseButton::Other(_)) {
-            return 1;
+            return (1, true);
         }
         let now = Instant::now();
         let (state, press) = self.state_for_button_mut(button);
         let Some(press_state) = press.take() else {
-            return 1;
+            return (1, false);
         };
 
-        if !press_state.moved && distance_px(pos, press_state.start_pos) <= Self::CLICK_SLOP_PX {
+        let is_click =
+            !press_state.moved && distance_px(pos, press_state.start_pos) <= Self::CLICK_SLOP_PX;
+        if is_click {
             state.last_time = Some(now);
             state.last_pos = pos;
             state.count = press_state.click_count;
         }
 
-        press_state.click_count.max(1)
+        (press_state.click_count.max(1), is_click)
     }
 
     fn state_for_button_mut(
@@ -648,12 +650,14 @@ impl WinitInputState {
                             pointer_type,
                         }
                     } else {
-                        let click_count = pointer_state.click.end_press(mapped_button, pos);
+                        let (click_count, is_click) =
+                            pointer_state.click.end_press(mapped_button, pos);
                         PointerEvent::Up {
                             pointer_id,
                             position: pos,
                             button: mapped_button,
                             modifiers: self.modifiers,
+                            is_click,
                             click_count,
                             pointer_type,
                         }
@@ -931,6 +935,9 @@ pub fn map_pointer_kind(kind: PointerKind) -> PointerType {
         PointerKind::Unknown => PointerType::Unknown,
     }
 }
+
+#[cfg(test)]
+mod click_tracker_tests;
 
 pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
     match button {

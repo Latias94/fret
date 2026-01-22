@@ -758,6 +758,7 @@ mod tests {
         let _ = arb.handle_event(&dummy_event(ViewportInputKind::PointerUp {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             click_count: 1,
         }));
         assert_eq!(arb.active_tool(), None);

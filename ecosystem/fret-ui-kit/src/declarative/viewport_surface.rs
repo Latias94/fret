@@ -213,6 +213,7 @@ pub fn viewport_surface_panel<H: UiHost>(
                 ViewportInputKind::PointerUp {
                     button: up.button,
                     modifiers: up.modifiers,
+                    is_click: up.is_click,
                     click_count: up.click_count,
                 },
                 clamped,

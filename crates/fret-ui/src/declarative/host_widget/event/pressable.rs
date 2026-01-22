@@ -282,6 +282,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 position,
                 button,
                 modifiers,
+                is_click,
                 click_count,
                 pointer_type,
             } => {
@@ -308,6 +309,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         pixels_per_point,
                         button: *button,
                         modifiers: *modifiers,
+                        is_click: *is_click,
                         click_count: *click_count,
                         pointer_type: *pointer_type,
                     };
@@ -345,7 +347,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                 // when overlay policies update hover state in an observer pass.
                 let hovered = cx.bounds.contains(*position);
 
-                if pressed && hovered && !skip_activate {
+                let is_touch = *pointer_type == fret_core::PointerType::Touch;
+                if pressed && hovered && (!is_touch || *is_click) && !skip_activate {
                     let hook = crate::elements::with_element_state(
                         &mut *cx.app,
                         window,

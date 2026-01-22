@@ -130,6 +130,12 @@ pub enum PointerEvent {
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
+        /// Whether this pointer-up completes a "true click" (press + release without exceeding
+        /// the runner's click slop threshold).
+        ///
+        /// This signal is computed by the platform runner and is intentionally separate from
+        /// `click_count`: `click_count` can remain stable even when a press turns into a drag.
+        is_click: bool,
         /// Consecutive click count for this button (1 = single click, 2 = double click, ...).
         ///
         /// See `PointerEvent::Down.click_count` for the normalization rules.
@@ -585,6 +591,10 @@ pub enum ViewportInputKind {
     PointerUp {
         button: MouseButton,
         modifiers: Modifiers,
+        /// Whether this pointer-up completes a "true click".
+        ///
+        /// See `PointerEvent::Up.is_click` for normalization rules.
+        is_click: bool,
         /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
         click_count: u8,
     },

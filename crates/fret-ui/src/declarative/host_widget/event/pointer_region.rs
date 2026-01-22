@@ -385,6 +385,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             position,
             button,
             modifiers,
+            is_click,
             pointer_type,
             click_count,
             pointer_id,
@@ -407,6 +408,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 pixels_per_point,
                 button: *button,
                 modifiers: *modifiers,
+                is_click: *is_click,
                 click_count: *click_count,
                 pointer_type: *pointer_type,
             };

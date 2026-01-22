@@ -2126,6 +2126,7 @@ impl<H: UiHost> UiTree<H> {
                         pointer_id,
                         button,
                         modifiers,
+                        is_click,
                         click_count,
                         pointer_type,
                         ..
@@ -2134,6 +2135,7 @@ impl<H: UiHost> UiTree<H> {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        is_click: *is_click,
                         click_count: *click_count,
                         pointer_type: *pointer_type,
                     },

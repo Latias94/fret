@@ -3493,6 +3493,7 @@ mod tests {
                 position,
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

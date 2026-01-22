@@ -152,6 +152,11 @@ pub struct PointerUpCx {
     pub pixels_per_point: f32,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    /// Whether this pointer-up completes a "true click" (press + release without exceeding click
+    /// slop).
+    ///
+    /// See `PointerEvent::Up.is_click` for normalization rules.
+    pub is_click: bool,
     /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
     pub click_count: u8,
     pub pointer_type: PointerType,

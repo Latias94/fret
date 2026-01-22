@@ -2652,6 +2652,7 @@ mod tests {
                 position: at,
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

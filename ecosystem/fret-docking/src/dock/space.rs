@@ -1592,6 +1592,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             position,
                             button,
                             modifiers,
+                            is_click,
                             click_count,
                             pointer_type,
                             ..
@@ -1761,6 +1762,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         ViewportInputKind::PointerUp {
                                             button: *button,
                                             modifiers: *modifiers,
+                                            is_click: *is_click,
                                             click_count: *click_count,
                                         },
                                     );
@@ -1849,6 +1851,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             ViewportInputKind::PointerUp {
                                                 button: *button,
                                                 modifiers: *modifiers,
+                                                is_click: *is_click,
                                                 click_count: *click_count,
                                             },
                                         ) {

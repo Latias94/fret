@@ -346,6 +346,7 @@ mod tests {
             &dummy_event(ViewportInputKind::PointerUp {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 click_count: 1,
             }),
             MouseButton::Left,

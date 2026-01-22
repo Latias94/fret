@@ -450,6 +450,7 @@ impl DockingArbitrationDriver {
                 position: synth.position,
                 button: MouseButton::Left,
                 modifiers,
+                is_click: true,
                 click_count: 1,
                 pointer_type: fret_core::PointerType::Touch,
             }
@@ -486,6 +487,7 @@ impl DockingArbitrationDriver {
                 position: synth.position,
                 button,
                 modifiers,
+                is_click: true,
                 click_count: 1,
                 pointer_type: fret_core::PointerType::Mouse,
             }

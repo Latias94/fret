@@ -249,6 +249,7 @@ pub mod viewport_surface {
                 position,
                 button,
                 modifiers,
+                is_click,
                 click_count,
                 pointer_id,
                 pointer_type,
@@ -277,6 +278,7 @@ pub mod viewport_surface {
                     ViewportInputKind::PointerUp {
                         button: *button,
                         modifiers: *modifiers,
+                        is_click: *is_click,
                         click_count: *click_count,
                     },
                 );
