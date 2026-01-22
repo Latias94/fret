@@ -166,7 +166,13 @@ impl<H: UiHost> UiTree<H> {
         CommandAvailability::NotHandled
     }
 
-    pub(crate) fn publish_window_command_action_availability_snapshot(
+    /// Publish a per-window action availability snapshot for widget-scoped commands.
+    ///
+    /// This is a data-only integration seam for runner/platform and UI-kit layers (menus, command
+    /// palette, shortcut help). Most apps should prefer publishing a filtered snapshot (e.g. only
+    /// menu/palette command sets) at the app-driver layer. This retained-runtime helper exists for
+    /// callers that want the "all widget commands" baseline behavior.
+    pub fn publish_window_command_action_availability_snapshot(
         &mut self,
         app: &mut H,
         input_ctx: &InputContext,
@@ -401,8 +407,6 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
-
-            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
 
         handled

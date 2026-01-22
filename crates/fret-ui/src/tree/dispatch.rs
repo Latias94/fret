@@ -2160,8 +2160,6 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
-
-            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
 
