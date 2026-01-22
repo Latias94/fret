@@ -845,6 +845,18 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let captured = event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+        let (dock_drag_affects_window, dock_drag_capture_anchor) = self
+            .window
+            .map(|window| {
+                let affects = app.any_drag_session(|d| {
+                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                        && (d.source_window == window || d.current_window == window)
+                });
+                let anchor =
+                    crate::internal_drag::route(&*app, window, fret_runtime::DRAG_KIND_DOCK_PANEL);
+                (affects, anchor)
+            })
+            .unwrap_or((false, None));
 
         // Internal drag overrides may need to route events to a stable "anchor" node, even if
         // hit-testing fails or the cursor is over an unrelated widget (e.g. docking tear-off).
@@ -924,10 +936,6 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
-                let dock_drag_affects_window = app.any_drag_session(|d| {
-                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                        && (d.source_window == window || d.current_window == window)
-                });
                 if dock_drag_affects_window {
                     // ADR 0072: while a dock drag session is active, outside-press dismissal must
                     // not trigger. The drag owns input arbitration for the window.
@@ -1373,7 +1381,16 @@ impl<H: UiHost> UiTree<H> {
                         if let Some(pointer_id) = event_pointer_id_for_capture {
                             match capture {
                                 Some(node) => {
-                                    self.captured.insert(pointer_id, node);
+                                    // ADR 0072: while a dock drag is active in this window,
+                                    // pointer capture requests are only allowed from the docking
+                                    // drag route anchor. This prevents competing policies (e.g.
+                                    // viewport tools, resizers, overlays) from stealing capture
+                                    // mid-drag.
+                                    let allow = !dock_drag_affects_window
+                                        || dock_drag_capture_anchor == Some(node);
+                                    if allow {
+                                        self.captured.insert(pointer_id, node);
+                                    }
                                 }
                                 None => {
                                     self.captured.remove(&pointer_id);
