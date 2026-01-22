@@ -3591,3 +3591,108 @@ fn non_modal_menu_blocks_underlay_click_but_allows_wheel() {
     assert_eq!(app.models().get_copied(&open), Some(false));
     assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
 }
+
+#[test]
+fn dock_drag_closes_non_modal_overlays_for_entire_window() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Second frame: open a non-modal popover overlay.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _trigger2 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Start a dock drag session for a *different* pointer id (window-global suppression).
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // Third frame: re-request the overlay; window_overlays policy should force it closed.
+    begin_frame(&mut app, window);
+    let _trigger3 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(app.models().get_copied(&open), Some(false));
+}
