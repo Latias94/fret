@@ -23,6 +23,9 @@ Scope: this document focuses on `CommandScope::Widget` commands and the question
   - `WindowCommandEnabledService` (explicit overrides)
   - `WindowCommandActionAvailabilityService` (dispatch-path availability)
   - via `WindowCommandGatingSnapshot`
+  - Note: the availability map is best-effort and may omit commands with `NotHandled` availability
+    (treat missing entries as "unknown", not "disabled"). `focus.next` / `focus.previous` are
+    always published as `true/false` via the UiTree focus traversal fallback.
 
 ## Coverage Checklist (Core Widget Commands)
 

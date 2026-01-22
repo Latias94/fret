@@ -6,8 +6,9 @@ use std::{
 use fret_core::{AppWindowId, Point, PointerId};
 use fret_runtime::{ClipboardToken, TimerToken};
 use fret_runtime::{
-    CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
-    EffectSink, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TimeHost,
+    CommandId, CommandMeta, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
+    DragSessionId, Effect, EffectSink, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost,
+    TimeHost,
 };
 use fret_runtime::{FrameId, TickId};
 
@@ -63,6 +64,10 @@ impl TestHost {
 
     pub(crate) fn commands(&self) -> &CommandRegistry {
         CommandsHost::commands(self)
+    }
+
+    pub(crate) fn register_command(&mut self, id: CommandId, meta: CommandMeta) {
+        self.commands.register(id, meta);
     }
 
     pub(crate) fn request_redraw(&mut self, window: AppWindowId) {

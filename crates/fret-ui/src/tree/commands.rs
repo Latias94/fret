@@ -196,7 +196,13 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         for id in widget_commands {
-            let availability = self.command_availability_from_node(app, input_ctx, start, &id);
+            let mut availability = self.command_availability_from_node(app, input_ctx, start, &id);
+            if availability == CommandAvailability::NotHandled
+                && matches!(id.as_str(), "focus.next" | "focus.previous")
+            {
+                availability =
+                    self.focus_traversal_command_availability(&active_layers, barrier_root);
+            }
             match availability {
                 CommandAvailability::Available => {
                     snapshot.insert(id, true);
@@ -205,7 +211,9 @@ impl<H: UiHost> UiTree<H> {
                     snapshot.insert(id, false);
                 }
                 CommandAvailability::NotHandled => {
-                    snapshot.insert(id, false);
+                    if matches!(id.as_str(), "focus.next" | "focus.previous") {
+                        snapshot.insert(id, false);
+                    }
                 }
             }
         }
