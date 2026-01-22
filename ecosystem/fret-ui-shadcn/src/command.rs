@@ -2556,6 +2556,9 @@ mod tests {
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_runtime::{
+        CommandScope, WindowCommandActionAvailabilityService, WindowCommandEnabledService,
+    };
     use fret_ui::tree::UiTree;
 
     fn bounds() -> Rect {
@@ -2694,6 +2697,47 @@ mod tests {
             *disabled.borrow(),
             Some(true),
             "expected the command entry to be disabled via WindowCommandEnabledService"
+        );
+    }
+
+    #[test]
+    fn host_command_entries_respect_widget_action_availability_snapshot() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let disabled: RefCell<Option<bool>> = RefCell::new(None);
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+            let entries = command_entries_from_host_commands(cx);
+            for entry in entries {
+                if let CommandEntry::Item(item) = entry
+                    && item.command.as_ref() == Some(&cmd)
+                {
+                    *disabled.borrow_mut() = Some(item.disabled);
+                    break;
+                }
+            }
+        });
+
+        assert_eq!(
+            *disabled.borrow(),
+            Some(true),
+            "expected the command entry to be disabled via WindowCommandActionAvailabilityService"
         );
     }
 
