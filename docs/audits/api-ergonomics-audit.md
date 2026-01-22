@@ -137,7 +137,17 @@ Make this guidance part of:
 
 ### P3 — Formalize “foreign UI embedding” as isolated surfaces
 
-Add an ADR (or update existing integration docs) stating:
+ADR 0189 formalizes the policy (and the kernel already supports the mechanism). The recommended ecosystem entrypoint is `fret-kit`’s embedded viewport helper surface.
+
+Supported surface (ecosystem-level):
+
+- `EmbeddedViewportSurface` owned by window state
+- `EmbeddedViewportForeignUi` (object-safe boundary) registered per window via `set_foreign_ui(...)`
+- single-call driver wiring: `drive_embedded_viewport_foreign()`
+
+This enables “reuse other ecosystems” without collapsing focus/IME/a11y contracts.
+
+Policy statement (keep):
 
 - Supported: embed foreign UI as a render target surface + event forwarding.
 - Not supported: mixing foreign widget trees as first-class Fret elements (no shared a11y/focus/IME semantics).
