@@ -1251,7 +1251,11 @@ impl<H: UiHost> UiTree<H> {
                 hit
             };
 
-            if let Event::Pointer(PointerEvent::Move { buttons, .. }) = event
+            if let Event::Pointer(PointerEvent::Move {
+                buttons,
+                pointer_id,
+                ..
+            }) = event
                 && !buttons.left
                 && !buttons.right
                 && !buttons.middle
@@ -1259,17 +1263,29 @@ impl<H: UiHost> UiTree<H> {
                 // When a modal barrier becomes active, the previous pointer-move hit may belong to
                 // an underlay layer that is now inactive. Do not synthesize hover-move events into
                 // the underlay in that case (e.g. Radix `disableOutsidePointerEvents`).
+                let mut last_pointer_move_hit = self
+                    .last_pointer_move_hit
+                    .get(pointer_id)
+                    .copied()
+                    .flatten();
                 if barrier_root.is_some()
-                    && self
-                        .last_pointer_move_hit
+                    && last_pointer_move_hit
                         .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
                 {
-                    self.last_pointer_move_hit = None;
+                    self.last_pointer_move_hit.remove(pointer_id);
+                    last_pointer_move_hit = None;
                 }
 
-                if hit != self.last_pointer_move_hit {
-                    synth_pointer_move_prev_target = self.last_pointer_move_hit;
-                    self.last_pointer_move_hit = hit;
+                if hit != last_pointer_move_hit {
+                    synth_pointer_move_prev_target = last_pointer_move_hit;
+                    match hit {
+                        Some(hit) => {
+                            self.last_pointer_move_hit.insert(*pointer_id, Some(hit));
+                        }
+                        None => {
+                            self.last_pointer_move_hit.remove(pointer_id);
+                        }
+                    }
                 }
             }
 
@@ -1720,6 +1736,7 @@ impl<H: UiHost> UiTree<H> {
 
         if let Event::Pointer(PointerEvent::Move { .. }) = event
             && let Some(prev) = synth_pointer_move_prev_target
+            && captured.is_none()
             && self.node_in_any_layer(prev, &active_layers)
         {
             // Forward a synthetic hover-move to the previously hovered target so retained
