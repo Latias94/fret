@@ -1067,6 +1067,167 @@ fn radix_web_menubar_open_navigate_close_matches_fret() {
 }
 
 #[test]
+fn radix_web_menubar_hover_switch_trigger_matches_fret() {
+    let golden = read_timeline("menubar-example.menubar.hover-switch-trigger.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "menubar");
+    assert_eq!(golden.scenario, "hover-switch-trigger");
+    assert!(golden.steps.len() >= 3);
+
+    let switch_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Hover { target } if target == "menubar-trigger:Edit"))
+        .expect("switch step");
+
+    let edit_open = find_first(&switch_step.snapshot.dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "menubar-trigger")
+            && n.text.as_deref().is_some_and(|t| t.trim() == "Edit")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+            && n.attrs.get("aria-expanded").is_some_and(|v| v == "true")
+    });
+    assert!(
+        edit_open.is_some(),
+        "web expected Edit trigger to be open after hover switch"
+    );
+
+    let file_open = find_first(&switch_step.snapshot.dom, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v == "menubar-trigger")
+            && n.text.as_deref().is_some_and(|t| t.trim() == "File")
+            && n.attrs.get("data-state").is_some_and(|v| v == "open")
+    });
+    assert!(
+        file_open.is_none(),
+        "web expected File trigger to be closed after hover switch"
+    );
+
+    assert!(
+        has_dom_node_attr(&switch_step.snapshot.dom, "data-slot", "menubar-content"),
+        "web expected menubar content to remain present after hover switch"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let build = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+
+        Menubar::new(vec![
+            MenubarMenu::new("File").entries(vec![
+                MenubarEntry::Group(MenubarGroup::new(vec![
+                    MenubarEntry::Item(MenubarItem::new("New Tab")),
+                    MenubarEntry::Item(MenubarItem::new("New Window")),
+                    MenubarEntry::Item(MenubarItem::new("New Incognito Window")),
+                ])),
+                MenubarEntry::Separator,
+                MenubarEntry::Group(MenubarGroup::new(vec![MenubarEntry::Item(
+                    MenubarItem::new("Print..."),
+                )])),
+            ]),
+            MenubarMenu::new("Edit").entries(vec![MenubarEntry::Group(MenubarGroup::new(vec![
+                MenubarEntry::Item(MenubarItem::new("Undo")),
+                MenubarEntry::Item(MenubarItem::new("Redo")),
+            ]))]),
+        ])
+        .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let file = find_semantics(&snap, SemanticsRole::MenuItem, "File");
+    let edit = find_semantics(&snap, SemanticsRole::MenuItem, "Edit");
+    let file_center = bounds_center(file.bounds);
+    let edit_center = bounds_center(edit.bounds);
+    click_center(&mut ui, &mut app, &mut services, file_center);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    move_pointer(&mut ui, &mut app, &mut services, edit_center);
+    deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        find_semantics(&snap, SemanticsRole::MenuItem, "Edit")
+            .flags
+            .expanded,
+        "hovering a sibling trigger should switch which menubar menu is open"
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(4),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !find_semantics(&snap, SemanticsRole::MenuItem, "File")
+            .flags
+            .expanded,
+        "expected File trigger to close after hover switch"
+    );
+}
+
+#[test]
 fn radix_web_navigation_menu_open_close_matches_fret() {
     let golden = read_timeline("navigation-menu-example.navigation-menu.open-close.light");
     assert!(golden.version >= 1);
