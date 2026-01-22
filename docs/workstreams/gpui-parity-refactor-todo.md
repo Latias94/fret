@@ -344,6 +344,12 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json`
     - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`
     - `ecosystem/fret-code-view/src/code_block.rs` (`render_code_block_windowed_lines`)
+    - A/B bundles (same script steps, different variant):
+      - Baseline (`FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0`): `target/fret-diag/1769092650269-ui-gallery-code-view-scroll-refresh-baseline/bundle.json`
+        - `diag stats` time sum (us): total=70638041 layout=35427247 paint=35207014
+      - Windowed (`FRET_UI_GALLERY_CODE_VIEW_WINDOWED=1`): `target/fret-diag/1769092702700-ui-gallery-code-view-scroll-refresh/bundle.json`
+        - `diag stats` time sum (us): total=4976556 layout=4533404 paint=438751
+      - Both pass stale-paint verification: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`
 - [ ] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
   - Candidates: `ecosystem/fret-node/src/*`, canvas/gizmo/viewport overlays, large scene editors.
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
