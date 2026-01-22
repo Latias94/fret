@@ -1247,6 +1247,9 @@ impl DropdownMenu {
                     let popper_placement =
                         popper::PopperContentPlacement::new(direction, side, align, side_offset)
                             .with_align_offset(align_offset)
+                            // Match Radix/Floating behavior: align+collision should clamp along
+                            // the alignment axis when the aligned placement would overflow.
+                            .with_shift_cross_axis(true)
                             .with_arrow(arrow_options, arrow_protrusion);
 
                     // shadcn: content width tracks trigger width (with a minimum), and height
