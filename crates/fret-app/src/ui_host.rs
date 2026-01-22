@@ -89,6 +89,10 @@ impl DragHost for App {
         App::drag(self, pointer_id)
     }
 
+    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        App::drags(self).any(|d| predicate(d))
+    }
+
     fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
         App::drag_mut(self, pointer_id)
     }

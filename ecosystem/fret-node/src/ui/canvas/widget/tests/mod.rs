@@ -1348,6 +1348,10 @@ impl DragHost for TestUiHostImpl {
             .filter(|drag| drag.pointer_id == pointer_id)
     }
 
+    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        self.drag.as_ref().is_some_and(|d| predicate(d))
+    }
+
     fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
         self.drag
             .as_mut()

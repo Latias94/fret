@@ -157,6 +157,10 @@ impl DragHost for ThemeTestHost {
         self.drags.get(&pointer_id)
     }
 
+    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        self.drags.values().any(|d| predicate(d))
+    }
+
     fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
         self.drags.get_mut(&pointer_id)
     }

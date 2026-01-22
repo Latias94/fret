@@ -302,6 +302,10 @@ impl App {
         self.drags.get(&pointer_id)
     }
 
+    pub(crate) fn drags(&self) -> impl Iterator<Item = &DragSession> {
+        self.drags.values()
+    }
+
     pub fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
         self.drags.get_mut(&pointer_id)
     }
