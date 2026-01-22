@@ -89,6 +89,9 @@ _None tracked at this time._
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
 - Web menu content inset gate (root): `web_vs_fret_context_menu_demo_menu_content_insets_match`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
+- Web panel shadow gate (root, `shadow-md`): `web_vs_fret_context_menu_demo_shadow_matches_web`,
+  `web_vs_fret_context_menu_demo_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
 - Web placement gate (submenu): `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd.open.json`).
 - Web menu content inset gate (submenu): `web_vs_fret_context_menu_demo_submenu_menu_content_insets_match`

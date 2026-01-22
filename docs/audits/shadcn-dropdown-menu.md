@@ -103,6 +103,9 @@ Notes on API mapping:
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web menu content inset gate (root): `web_vs_fret_dropdown_menu_demo_menu_content_insets_match`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
+- Web panel shadow gate (root, `shadow-md`): `web_vs_fret_dropdown_menu_demo_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web placement gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
 - Web scroll state gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_scroll_state_matches`
