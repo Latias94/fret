@@ -244,6 +244,9 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if cx.focus != Some(cx.node) {
                     return false;
                 }
+                if command.as_str() == "text.copy" && !cx.input_ctx.caps.clipboard.text {
+                    return false;
+                }
                 let (outcome, range) = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
@@ -323,6 +326,26 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         };
 
         match instance {
+            ElementInstance::SelectableText(_props) => {
+                if cx.focus != Some(cx.node) {
+                    return CommandAvailability::NotHandled;
+                }
+                if command.as_str() != "text.copy" || !cx.input_ctx.caps.clipboard.text {
+                    return CommandAvailability::NotHandled;
+                }
+                let has_selection = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| state.selection_anchor != state.caret,
+                );
+                if has_selection {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::NotHandled
+                }
+            }
             ElementInstance::FocusScope(props) if props.trap_focus => match command.as_str() {
                 "focus.next" | "focus.previous" => CommandAvailability::Available,
                 _ => CommandAvailability::NotHandled,
