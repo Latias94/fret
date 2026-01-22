@@ -138,6 +138,17 @@ Audit heuristic: if a component’s child set (or a large portion of its render 
 and the current implementation rebuilds that structure in the declarative render pass, it is a prime candidate for
 prepaint-driven windows + per-frame ephemeral items.
 
+### 1.5.1 Remaining gaps vs Zed/GPUI (what still blocks the “stable feel” loop)
+
+Even with dirty views + cache roots in place, “stable feel + stable perf” requires closing a few practical gaps:
+
+- **Windowed surfaces beyond VirtualList**: code/text/markdown surfaces and 2D canvas/node graphs must be able to update
+  their visible window (scroll/camera) without forcing cache-root rerenders for small deltas (ADR 0190, MVP5).
+- **Cache key precision**: view-cache reuse must remain gated by explicit cache keys, but we should gradually refine the
+  recommended key inputs toward GPUI’s `bounds/content_mask/text_style` model (ADR 1152 §7).
+- **Explainability under reuse**: diagnostics bundles should make it obvious whether we missed reuse due to dirtiness vs
+  key mismatch vs inspection mode, so “why didn’t this update?” questions have a single-run answer.
+
 ### 1.6 Ecosystem adoption patterns (how we get ROI beyond a single widget)
 
 To avoid a second “big rewrite” later, we should treat the v1 primitive as an ecosystem-facing building block, not as a

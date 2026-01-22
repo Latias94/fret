@@ -279,9 +279,32 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
 Goal: converge on GPUI’s “stable feel + stable perf” loop by moving large virtual surfaces to **prepaint-driven visible
 windows** + per-frame ephemeral items, while keeping caching gated by dirty views and explicit cache keys (ADR 0180/0182).
 
+### Candidate Map (What Should Become “Windowed”)
+
+This list is intentionally biased toward editor-scale performance. The rule of thumb is:
+
+- if the surface’s visible content is primarily a function of **viewport + scroll/camera** (plus overscan),
+- and we currently “solve correctness” by forcing cache-root rerenders/relayout on scroll,
+- then it likely belongs to the **prepaint-windowed** bucket (ADR 0190).
+
+Initial candidates (to be evidence-backed via `diag perf` bundles):
+
+- **1D scroll window (rows/lines)**
+  - Code/text: `ecosystem/fret-code-view` (code blocks), `ecosystem/fret-markdown` (code blocks + long documents)
+  - Tables/trees: `ecosystem/fret-ui-kit` (table/tree virtualization)
+  - Logs/inspectors: diagnostics panes and large “property inspectors” in `apps/*` and `ecosystem/fret-workspace`
+- **2D viewport culling (nodes/sprites)**
+  - Node graph / canvas: `ecosystem/fret-node`, `ecosystem/fret-canvas`
+  - Gizmos/overlays: `ecosystem/fret-gizmo`, `ecosystem/fret-viewport-tooling`
+- **Sampling windows (data reduction)**
+  - Charts/plots: `ecosystem/fret-chart`, `ecosystem/fret-plot`, `ecosystem/fret-plot3d`
+
+Non-candidates (usually): small forms/menus/popovers where the “ephemeral window” complexity would outweigh the wins.
+
 - [ ] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+  - Notes: once the v1 API surface is real, promote ADR 0190 from “Proposed” to “Accepted” (or capture any additional contract in a follow-up ADR).
 - [ ] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
@@ -290,13 +313,15 @@ windows** + per-frame ephemeral items, while keeping caching gated by dirty view
 - [ ] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
   - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.
-- [ ] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
+- [~] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
   - Candidates: `ecosystem/fret-code-view/src/*`, text editor widgets, markdown/code blocks, diagnostics inspectors.
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
   - Progress (v1):
     - UI Gallery now has a dedicated harness page: `code_view_torture` (large code block with vertical scroll).
     - Scripted scroll capture exists: `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json` (run with `fretboard diag run ...`).
     - Stale-paint check is wired: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`.
+  - Next (v1):
+    - First migration target: `ecosystem/fret-code-view` “CodeBlock -> windowed lines” (visible line window + overscan), with regression enforced by the harness above.
   - Evidence:
     - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_VIEW_TORTURE`)
     - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_view_torture`, `ui-gallery-code-view-root`)
