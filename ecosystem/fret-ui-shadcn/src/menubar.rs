@@ -41,10 +41,21 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn estimate_text_width(text: &str, font_size: Px) -> Px {
+    // Heuristic: our menu panel sizing needs a deterministic width before layout, but the
+    // declarative menu rows use flex-1 labels. We approximate the max-content width from the text
+    // length, matching shadcn's "min-width but grow to fit" behavior closely enough for goldens.
+    let avg = font_size.0 * 0.537;
+    Px(text.chars().count() as f32 * avg)
+}
+
 fn menu_panel_desired_size(
     entries: &[MenubarEntry],
     min_width: Px,
+    font_size: Px,
     font_line_height: Px,
+    pad_x: Px,
+    pad_x_inset: Px,
     pad_y: Px,
 ) -> Size {
     let item_line = font_line_height.0.max(16.0);
@@ -52,6 +63,7 @@ fn menu_panel_desired_size(
 
     // new-york-v4: menu panels use `p-1` + `border`.
     let mut height = Px(10.0);
+    let mut max_row_width = 0.0f32;
 
     for entry in entries {
         match entry {
@@ -59,18 +71,52 @@ fn menu_panel_desired_size(
                 // new-york-v4: `Separator` uses `-mx-1 my-1` (1px line + 4px + 4px).
                 height.0 += 9.0;
             }
-            MenubarEntry::Label(_)
-            | MenubarEntry::Item(_)
-            | MenubarEntry::CheckboxItem(_)
-            | MenubarEntry::RadioItem(_)
-            | MenubarEntry::Submenu(_) => {
+            MenubarEntry::Label(label) => {
                 height.0 += row_height.0;
+                let pad_left = if label.inset { pad_x_inset } else { pad_x };
+                let row_w = pad_left.0 + estimate_text_width(&label.text, font_size).0 + pad_x.0;
+                max_row_width = max_row_width.max(row_w);
+            }
+            MenubarEntry::Item(item) => {
+                height.0 += row_height.0;
+                let pad_left = if item.inset { pad_x_inset } else { pad_x };
+                let row_w = pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
+                max_row_width = max_row_width.max(row_w);
+            }
+            MenubarEntry::CheckboxItem(item) => {
+                height.0 += row_height.0;
+                let pad_left = pad_x_inset;
+                let row_w = pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
+                max_row_width = max_row_width.max(row_w);
+            }
+            MenubarEntry::RadioItem(item) => {
+                height.0 += row_height.0;
+                let pad_left = pad_x_inset;
+                let row_w = pad_left.0 + estimate_text_width(&item.label, font_size).0 + pad_x.0;
+                max_row_width = max_row_width.max(row_w);
+            }
+            MenubarEntry::Submenu(submenu) => {
+                height.0 += row_height.0;
+                let pad_left = if submenu.trigger.inset {
+                    pad_x_inset
+                } else {
+                    pad_x
+                };
+                let chevron_w = 16.0;
+                let row_w = pad_left.0
+                    + estimate_text_width(&submenu.trigger.label, font_size).0
+                    + pad_x.0
+                    + chevron_w;
+                max_row_width = max_row_width.max(row_w);
             }
             MenubarEntry::Group(_) | MenubarEntry::RadioGroup(_) => {}
         }
     }
 
-    Size::new(min_width, height)
+    // new-york-v4: content uses `p-1` + `border` with border-box sizing.
+    let chrome_x = 10.0;
+    let width = Px(min_width.0.max(max_row_width + chrome_x));
+    Size::new(width, height)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1162,9 +1208,19 @@ impl MenubarMenuEntries {
                         let entries: Arc<[MenubarEntry]> = Arc::from(flat.into_boxed_slice());
 
                         let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
+                        let pad_x = MetricRef::space(Space::N2).resolve(&theme);
+                        let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
+                        let font_size = theme.metric_required("font.size");
                         let font_line_height = theme.metric_required("font.line_height");
-                        let mut desired =
-                            menu_panel_desired_size(&entries, Px(192.0), font_line_height, pad_y);
+                        let mut desired = menu_panel_desired_size(
+                            &entries,
+                            Px(192.0),
+                            font_size,
+                            font_line_height,
+                            pad_x,
+                            pad_x_inset,
+                            pad_y,
+                        );
                         let popper_placement = popper::PopperContentPlacement::new(
                             direction,
                             Side::Bottom,
@@ -1253,9 +1309,6 @@ impl MenubarMenuEntries {
                         let border = theme.color_required("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
-                        let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-                        let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                        let font_size = theme.metric_required("font.size");
                         let destructive_fg = theme.color_required("destructive");
                         let destructive_bg = alpha_mul(destructive_fg, 0.12);
 
@@ -1752,7 +1805,10 @@ impl MenubarMenuEntries {
                                                                       let desired = menu_panel_desired_size(
                                                                           &flat,
                                                                           Px(128.0),
+                                                                          font_size,
                                                                           font_line_height,
+                                                                          pad_x,
+                                                                          pad_x_inset,
                                                                           pad_y,
                                                                       );
                                                                       Some(Size::new(
@@ -2086,10 +2142,26 @@ impl MenubarMenuEntries {
                                     &mut flat,
                                     submenu_entries.iter().cloned().collect::<Vec<_>>(),
                                 );
-                                menu_panel_desired_size(&flat, Px(128.0), font_line_height, pad_y)
+                                menu_panel_desired_size(
+                                    &flat,
+                                    Px(128.0),
+                                    font_size,
+                                    font_line_height,
+                                    pad_x,
+                                    pad_x_inset,
+                                    pad_y,
+                                )
                             })
                             .unwrap_or_else(|| {
-                                menu_panel_desired_size(&[], Px(128.0), font_line_height, pad_y)
+                                menu_panel_desired_size(
+                                    &[],
+                                    Px(128.0),
+                                    font_size,
+                                    font_line_height,
+                                    pad_x,
+                                    pad_x_inset,
+                                    pad_y,
+                                )
                             });
                         let submenu_max_h = theme
                             .metric_by_key("component.menubar.max_height")
