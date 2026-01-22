@@ -267,6 +267,8 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
       and hit-testing can track offset changes without a relayout.
     - Declarative render now prefers a layout-derived `VirtualListState.window_range` and records `render_window_range` so layout can detect window
       mismatches and only force a view-cache rerender when needed.
+    - `scroll_descendant_into_view` maps the VirtualList viewport into content space before computing the scroll delta (prevents runaway scroll offsets
+      and “invisible but interactable” rows during focus traversal).
   - Evidence:
       - `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` (wheel invalidation gate)
       - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (content-space layout + window_range)
@@ -275,7 +277,10 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
       - `crates/fret-ui/src/declarative/frame.rs` + `crates/fret-ui/src/tree/layout.rs` (scroll-handle change classification)
       - `crates/fret-ui/src/tree/mod.rs` (scroll-handle invalidation detail gates view-cache dirtiness)
       - `crates/fret-ui/src/elements/cx.rs` + `crates/fret-ui/src/element.rs` (window_range + render_window_range state)
-      - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`), `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`)
+      - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`), `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`), `crates/fret-ui/src/tree/tests/scroll_into_view.rs` (`focus_traversal_does_not_scroll_visible_virtual_list_descendant_into_view`)
+      - Diagnostics: in an exported `ui-gallery-virtual-list-edit-9000` bundle, find a snapshot where
+        `debug.virtual_list_windows[*].deferred_scroll_consumed=true` and `window_mismatch=true`; the next snapshot should include a
+        `debug.dirty_views` entry with `detail=scroll_handle_layout`, and `render_window_range` should match `window_range`.
 
 ## MVP5 — Prepaint-driven Ephemeral Windows (Beyond VirtualList)
 
@@ -311,6 +316,8 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
   - Notes: ADR 0190 is now Accepted as the guiding contract; capture any new “hard-to-change” commitments as follow-up ADRs if needed.
   - Progress (v1):
     - Bundles can export VirtualList window telemetry via `UiTreeDebugSnapshotV1.virtual_list_windows` (debug-only, bounded) for postmortem analysis.
+    - Bundles expose `debug.dirty_views[*].detail` to distinguish `scroll_handle_hit_test_only` vs `scroll_handle_layout`, making “why did this cache
+      root rerender?” explainable for VirtualList scroll/scroll_to_item flows.
 - [ ] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
