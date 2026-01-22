@@ -203,6 +203,7 @@ mod command_enabled_service;
 mod dispatch_phase;
 mod escape_dismiss;
 mod focus_scope;
+mod focus_traversal_availability;
 mod globals;
 mod hit_test;
 mod interactivity_gate;
