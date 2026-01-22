@@ -351,6 +351,24 @@ impl OverlayRequest {
 /// A small, stable facade over `window_overlays` to keep overlay policy wiring out of shadcn code.
 pub struct OverlayController;
 
+/// Snapshot of overlay-related input arbitration state for a single `UiTree`.
+///
+/// This is intended for ecosystem integration points (docking, viewport tooling, policies) that
+/// need a stable way to reason about "what input gating is currently active" without depending on
+/// `window_overlays` internals.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct OverlayArbitrationSnapshot {
+    /// Whether any non-base overlay layers are visible.
+    pub has_any_overlays: bool,
+    /// Whether a modal barrier is currently active (`blocks_underlay_input=true` on a visible layer).
+    pub modal_barrier_active: bool,
+    /// Effective pointer occlusion outcome (Radix `disableOutsidePointerEvents` style gating).
+    ///
+    /// When `modal_barrier_active=true`, this is always `PointerOcclusion::None` since the modal
+    /// barrier already blocks underlay pointer routing.
+    pub pointer_occlusion: fret_ui::tree::PointerOcclusion,
+}
+
 impl OverlayController {
     pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
         window_overlays::begin_frame(app, window);
@@ -513,6 +531,42 @@ impl OverlayController {
         window_overlays::render(ui, app, services, window, bounds);
     }
 
+    /// Computes a stable snapshot of overlay-related input arbitration state from the runtime
+    /// layer stack.
+    ///
+    /// Recommended usage:
+    /// - call after `OverlayController::render(...)` (so the layer stack reflects current overlay state),
+    /// - use the snapshot to drive cross-system policies (e.g. docking/viewport suppression, diagnostics).
+    pub fn arbitration_snapshot<H: UiHost>(ui: &UiTree<H>) -> OverlayArbitrationSnapshot {
+        use fret_ui::tree::PointerOcclusion;
+
+        let base_root = ui.base_root();
+        let layers = ui.debug_layers_in_paint_order();
+
+        let mut out = OverlayArbitrationSnapshot::default();
+        out.has_any_overlays = layers
+            .iter()
+            .any(|l| l.visible && base_root.is_none_or(|base| l.root != base));
+        out.modal_barrier_active = layers.iter().any(|l| {
+            l.visible && base_root.is_none_or(|base| l.root != base) && l.blocks_underlay_input
+        });
+
+        if out.modal_barrier_active {
+            out.pointer_occlusion = PointerOcclusion::None;
+            return out;
+        }
+
+        out.pointer_occlusion = layers
+            .iter()
+            .rev()
+            .filter(|l| l.visible && base_root.is_none_or(|base| l.root != base))
+            .find_map(|l| {
+                (l.pointer_occlusion != PointerOcclusion::None).then_some(l.pointer_occlusion)
+            })
+            .unwrap_or(PointerOcclusion::None);
+        out
+    }
+
     pub fn fade_presence<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -646,6 +700,91 @@ mod tests {
         }
 
         fn release(&mut self, _path: PathId) {}
+    }
+
+    #[test]
+    fn arbitration_snapshot_reports_modal_and_pointer_occlusion() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |_| Vec::new(),
+        );
+        ui.set_root(base);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = OverlayController::arbitration_snapshot(&ui);
+        assert_eq!(
+            snap,
+            OverlayArbitrationSnapshot {
+                has_any_overlays: false,
+                modal_barrier_active: false,
+                pointer_occlusion: fret_ui::tree::PointerOcclusion::None,
+            }
+        );
+
+        // Add a non-modal overlay with pointer occlusion.
+        OverlayController::begin_frame(&mut app, window);
+        let overlay = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "overlay",
+            |_| Vec::new(),
+        );
+        let overlay_layer = ui.push_overlay_root_ex(overlay, false, true);
+        ui.set_layer_pointer_occlusion(
+            overlay_layer,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = OverlayController::arbitration_snapshot(&ui);
+        assert_eq!(snap.has_any_overlays, true);
+        assert_eq!(snap.modal_barrier_active, false);
+        assert_eq!(
+            snap.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+        );
+
+        // Add a modal barrier; it should override occlusion in the snapshot.
+        OverlayController::begin_frame(&mut app, window);
+        let modal = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "modal",
+            |_| Vec::new(),
+        );
+        let _modal_layer = ui.push_overlay_root_ex(modal, true, true);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = OverlayController::arbitration_snapshot(&ui);
+        assert_eq!(snap.has_any_overlays, true);
+        assert_eq!(snap.modal_barrier_active, true);
+        assert_eq!(
+            snap.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
     }
 
     impl SvgService for FakeServices {
