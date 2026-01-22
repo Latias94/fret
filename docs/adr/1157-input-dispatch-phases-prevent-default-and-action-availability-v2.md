@@ -19,6 +19,14 @@ Not implemented yet / known gaps:
 - Action availability query API (`is_action_available` / dispatch-tree snapshot service).
 - Additional default actions beyond `FocusOnPointerDown` (intentionally deferred to keep v1 low risk).
 
+Prototype / in-progress (see `refactor/input-dispatch-v2` branch):
+
+- Dispatch-path availability query on retained trees:
+  - `Widget::command_availability` returns `CommandAvailability::{NotHandled,Available,Blocked}`.
+  - `UiTree::is_command_available` provides a `bool` query suitable for gating UI surfaces.
+- Data-only runner bridge:
+  - `WindowCommandActionAvailabilityService` holds window-scoped per-command availability snapshots.
+
 ## Context
 
 Fret is a non-DOM UI runtime targeting editor-grade interaction workloads (multi-root overlays,
@@ -189,6 +197,35 @@ Recommended composition for UI surfaces:
   1) it is available along the current dispatch path, AND
   2) it is not disabled by `WindowCommandEnabledService`, AND
   3) the surface-specific gating (e.g. `when` for keystrokes) allows it.
+
+#### Suggested mechanism surface (retained `UiTree`)
+
+For the retained runtime, action availability is expressed as a pure query method on widgets:
+
+- `Widget::command_availability(&self, cx, command) -> CommandAvailability`
+  - `NotHandled`: this node does not participate in availability for this command.
+  - `Available`: this node (or its subtree policy) enables the command.
+  - `Blocked`: this node intentionally prevents the command from "reaching" ancestors (used for
+    modal barriers, focus traps, and other dispatch-scoping constructs).
+
+The runtime provides a helper query:
+
+- `UiTree::is_command_available(&mut self, app, command) -> bool`
+  - Walks the focused bubble path (or modal barrier root when applicable),
+  - Stops at the first `Available` / `Blocked`,
+  - Returns `false` when no node claims availability.
+
+#### Suggested runner integration (data-only snapshot)
+
+Native runners need a synchronous, data-only view of command gating for OS menu validation.
+Availability queries should therefore be *published* by the UI/app layer as a snapshot service:
+
+- `WindowCommandActionAvailabilityService` (`HashMap<AppWindowId, HashMap<CommandId, bool>>`)
+
+The snapshot is typically recomputed:
+
+- for all commands when the command palette is open, and/or
+- for the current menu bar command set during normal operation.
 
 #### Command identity strategy
 
