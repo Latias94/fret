@@ -357,6 +357,104 @@ fn outside_press_observer_is_suppressed_during_dock_drag() {
 }
 
 #[test]
+fn outside_press_observer_is_suppressed_while_other_pointer_is_captured_in_different_layer() {
+    struct CaptureOnDown;
+
+    impl<H: UiHost> Widget<H> for CaptureOnDown {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                cx.capture_pointer(cx.node);
+            }
+        }
+    }
+
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+    }
+
+    let window = AppWindowId::default();
+    let mut app = crate::test_host::TestHost::new();
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CaptureOnDown);
+    ui.set_root(base);
+
+    let overlay_root = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+    ui.set_layer_visible(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // First pointer establishes capture in the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    // Reset the observer counter; we only care about the second pointer while capture is active.
+    let _ = app
+        .models_mut()
+        .update(&observer_down, |v: &mut u32| *v = 0);
+
+    // Second pointer should not dismiss overlays while the first pointer is captured elsewhere.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(20.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(0),
+        "expected outside-press observer dispatch to be suppressed while another pointer is captured"
+    );
+}
+
+#[test]
 fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
     struct RecordObserverDown {
         observer: Model<u32>,

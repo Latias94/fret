@@ -2377,6 +2377,10 @@ impl<H: UiHost> UiTree<H> {
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
+        let event_pointer_id = match params.event {
+            Event::Pointer(PointerEvent::Down { pointer_id, .. }) => Some(*pointer_id),
+            _ => None,
+        };
 
         // Only the topmost "dismissable" non-modal overlay should observe outside presses.
         // This mirrors Radix-style DismissableLayer semantics while staying click-through:
@@ -2397,6 +2401,22 @@ impl<H: UiHost> UiTree<H> {
             }
             if !params.active_layer_roots.contains(&layer.root) {
                 continue;
+            }
+
+            // If another pointer is captured by a different UI layer, treat the active capture as
+            // exclusive for outside-press dismissal.
+            //
+            // This avoids accidental multi-pointer dismissal while editor-style interactions
+            // (viewport tools, drags) are in progress (ADR 0049).
+            if let Some(event_pointer_id) = event_pointer_id
+                && self.captured.iter().any(|(pid, node)| {
+                    *pid != event_pointer_id
+                        && self
+                            .node_layer(*node)
+                            .is_some_and(|layer| layer != layer_id)
+                })
+            {
+                return PointerDownOutsideOutcome::default();
             }
 
             // If the pointer event is inside this layer, it will be handled by the normal hit-test
