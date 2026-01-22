@@ -206,7 +206,6 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
             .with_keywords(["copy", "clipboard"])
             .with_scope(CommandScope::Widget)
             .with_os_action(OsAction::Copy)
-            .with_when(when_text.clone())
             .with_default_keybindings([
                 DefaultKeybinding {
                     platform: PlatformFilter::Windows,
@@ -287,7 +286,6 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
             .with_keywords(["select", "all"])
             .with_scope(CommandScope::Widget)
             .with_os_action(OsAction::SelectAll)
-            .with_when(when_text)
             .with_default_keybindings([
                 DefaultKeybinding {
                     platform: PlatformFilter::Windows,
