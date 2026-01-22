@@ -3696,3 +3696,73 @@ fn dock_drag_closes_non_modal_overlays_for_entire_window() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     assert_eq!(app.models().get_copied(&open), Some(false));
 }
+
+#[test]
+fn dock_drag_restores_focus_when_focus_is_missing_on_drag_end() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base and focus the trigger.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    ui.set_focus(Some(trigger_node));
+
+    // Start a dock drag session and render a frame so the overlay policy can record the focus snapshot.
+    app.begin_cross_window_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Simulate focus being cleared during the drag (platform/runner behavior).
+    ui.set_focus(None);
+
+    // End the drag and render another frame; focus should restore to the pre-drag focus node.
+    app.cancel_drag(PointerId(7));
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.focus(), Some(trigger_node));
+}

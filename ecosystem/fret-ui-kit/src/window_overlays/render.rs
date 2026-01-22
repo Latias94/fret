@@ -51,6 +51,10 @@ pub fn render<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
 ) {
+    let dock_drag_affects_window = app.any_drag_session(|d| {
+        d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
+    });
+
     let focused_now = app
         .global::<WindowMetricsService>()
         .and_then(|svc| svc.focused(window));
@@ -58,7 +62,8 @@ pub fn render<H: UiHost>(
         .global::<WindowMetricsService>()
         .and_then(|svc| svc.scale_factor(window));
 
-    let (focus_lost, resized) =
+    let focus_now = ui.focus();
+    let (focus_lost, resized, dock_drag_restore_focus) =
         app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
             let w = overlays.windows.entry(window).or_default();
 
@@ -78,12 +83,23 @@ pub fn render<H: UiHost>(
                 w.last_scale_factor = Some(scale_factor_now);
             }
 
-            (focus_lost, resized)
+            let started = dock_drag_affects_window && !w.dock_drag_active_last;
+            let ended = !dock_drag_affects_window && w.dock_drag_active_last;
+            w.dock_drag_active_last = dock_drag_affects_window;
+            if started {
+                w.dock_drag_restore_focus = focus_now;
+            }
+            let restore = ended.then(|| w.dock_drag_restore_focus.take()).flatten();
+
+            (focus_lost, resized, restore)
         });
 
-    let dock_drag_affects_window = app.any_drag_session(|d| {
-        d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
-    });
+    if let Some(restore) = dock_drag_restore_focus
+        && ui.focus().is_none()
+        && ui.node_layer(restore).is_some()
+    {
+        ui.set_focus(Some(restore));
+    }
 
     let (
         mut modal_requests,
