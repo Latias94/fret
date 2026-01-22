@@ -8566,6 +8566,97 @@ fn web_vs_fret_combobox_demo_tiny_viewport_listbox_option_insets_match() {
     assert_combobox_demo_listbox_option_insets_match("combobox-demo.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_combobox_popover_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "combobox-popover",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide};
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+
+            Popover::new(open.clone())
+                .side(PopoverSide::Right)
+                .align(PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    |cx| Button::new("Open").variant(ButtonVariant::Outline).into_element(cx),
+                    |cx| {
+                        PopoverContent::new(Vec::new())
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(288.0)))
+                                    .h_px(MetricRef::Px(Px(205.33334))),
+                            )
+                            .into_element(cx)
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        None,
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "combobox-responsive",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_shadcn::{Combobox, ComboboxItem};
+
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let items = vec![
+                ComboboxItem::new("nextjs", "Next.js"),
+                ComboboxItem::new("sveltekit", "SvelteKit"),
+                ComboboxItem::new("nuxt", "Nuxt.js"),
+                ComboboxItem::new("remix", "Remix"),
+                ComboboxItem::new("astro", "Astro"),
+            ];
+
+            Combobox::new(value, open.clone())
+                .a11y_label("Select a framework")
+                .width(Px(200.0))
+                .items(items)
+                .into_element(cx)
+        },
+        SemanticsRole::ComboBox,
+        None,
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_popover_listbox_height_matches() {
+    assert_combobox_demo_listbox_height_matches("combobox-popover");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_height_matches() {
+    assert_combobox_demo_listbox_height_matches("combobox-responsive");
+}
+
+#[test]
+fn web_vs_fret_combobox_popover_listbox_option_height_matches() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-popover");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_option_height_matches() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-responsive");
+}
+
+#[test]
+fn web_vs_fret_combobox_popover_listbox_option_insets_match() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-popover");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_option_insets_match() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-responsive");
+}
+
 fn assert_point_anchored_overlay_placement_matches(
     web_name: &str,
     web_portal_role: &str,
