@@ -67,6 +67,14 @@ DropdownMenu open-state examples (checkboxes / radio group):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-checkboxes dropdown-menu-radio-group --modes=open --update --baseUrl=http://localhost:4020`
 
+DropdownMenu open-state examples (button-group-demo / mode-toggle):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-group-demo --modes=open --update --baseUrl=http://localhost:4020 --openAction=click --openSelector=\"[data-fret-golden-target] button[aria-label='More Options']\"`
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-group-demo --modes=open --update --baseUrl=http://localhost:4020 --openVariants=\"submenu-kbd=[data-fret-golden-target] button[aria-label='More Options']\" --openSteps=\"keys=[data-slot='dropdown-menu-sub-trigger']@ArrowRight\"`
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts mode-toggle --modes=open --update --baseUrl=http://localhost:4020 --openAction=click --openSelector=\"[data-fret-golden-target] button\"`
+
 Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --openSelector=\"[data-fret-golden-target] button[role='combobox']\"`
@@ -158,10 +166,12 @@ On the current setup, `--all` (default `--modes=closed`) generates `370` JSON fi
 This number can drift as `repo-ref/ui` adds/removes routable pages.
 
 If you also extract open overlay states (`--modes=open` or `--open`), you will get additional
-`*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
+`*.open.json` files alongside the base closed-mode goldens. The exact counts drift as upstream
+adds/removes routable pages.
 
-- `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `66` open-mode files (`*.open.json`)
+To compute the current snapshot counts (PowerShell):
+
+`$open=(Get-ChildItem -Path goldens/shadcn-web/v4/new-york-v4 -Filter *.open.json -File).Count; $closed=(Get-ChildItem -Path goldens/shadcn-web/v4/new-york-v4 -Filter *.json -File | Where-Object { $_.Name -notmatch '\\.open\\.json$' }).Count; \"$closed closed, $open open\"`
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
