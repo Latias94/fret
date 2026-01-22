@@ -18,9 +18,10 @@ use fret_ui::UiTree;
 use fret_ui::action::{DismissReason, UiActionHostAdapter};
 use fret_ui::element::{
     ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
-    PressableProps, SizeStyle,
+    PressableProps, ScrollAxis, SizeStyle, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
+use fret_ui::scroll::ScrollHandle;
 
 #[derive(Default)]
 struct FakeServices;
@@ -457,6 +458,7 @@ fn render_base_with_trigger_and_underlay_pointer_move(
     bounds: Rect,
     open: Model<bool>,
     underlay_moved: Model<bool>,
+    underlay_scroll: ScrollHandle,
 ) -> (GlobalElementId, GlobalElementId) {
     begin_frame(app, window);
 
@@ -504,8 +506,8 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                     },
                 );
 
-                let underlay = cx.pointer_region(
-                    PointerRegionProps {
+                let underlay = cx.wheel_region(
+                    WheelRegionProps {
                         layout: {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
@@ -522,18 +524,38 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                                 ..Default::default()
                             }
                         },
-                        enabled: true,
+                        axis: ScrollAxis::Y,
+                        scroll_target: None,
+                        scroll_handle: underlay_scroll,
                     },
                     |cx| {
-                        let underlay_moved = underlay_moved.clone();
-                        cx.pointer_region_on_pointer_move(Arc::new(move |host, _cx, _mv| {
-                            let _ = host.models_mut().update(&underlay_moved, |v| *v = true);
-                            false
-                        }));
-                        Vec::new()
+                        let underlay = cx.pointer_region(
+                            PointerRegionProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                            },
+                            |cx| {
+                                let underlay_moved = underlay_moved.clone();
+                                cx.pointer_region_on_pointer_move(Arc::new(
+                                    move |host, _cx, _mv| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&underlay_moved, |v| *v = true);
+                                        false
+                                    },
+                                ));
+                                Vec::new()
+                            },
+                        );
+                        underlay_id = Some(underlay.id);
+                        vec![underlay]
                     },
                 );
-                underlay_id = Some(underlay.id);
 
                 vec![trigger, underlay]
             },
@@ -3095,6 +3117,9 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
 
     let open = app.models_mut().insert(false);
     let underlay_moved = app.models_mut().insert(false);
+    let underlay_scroll = ScrollHandle::default();
+    underlay_scroll.set_viewport_size(fret_core::Size::new(Px(160.0), Px(32.0)));
+    underlay_scroll.set_content_size(fret_core::Size::new(Px(160.0), Px(200.0)));
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -3111,6 +3136,7 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
         bounds,
         open.clone(),
         underlay_moved.clone(),
+        underlay_scroll.clone(),
     );
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -3140,6 +3166,7 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
         bounds,
         open.clone(),
         underlay_moved.clone(),
+        underlay_scroll.clone(),
     );
 
     request_dismissible_popover_for_window(
@@ -3178,4 +3205,18 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
         }),
     );
     assert_eq!(app.models().get_copied(&underlay_moved), Some(false));
+
+    let prev_scroll_y = underlay_scroll.offset().y;
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: Point::new(Px(10.0), Px(130.0)),
+            delta: Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(underlay_scroll.offset().y.0 > prev_scroll_y.0);
 }
