@@ -138,7 +138,7 @@ References:
 - ADR 0072: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - Viewport input boundary: `docs/adr/0025-viewport-input-forwarding.md`
 
-### 5) Escape cancels dock drag and restores pre-drag overlay/focus state safely
+### 5) Escape cancels dock drag and restores focus safely
 
 **Goal**
 
@@ -153,7 +153,8 @@ References:
 **Expected**
 
 - Drag session ends (no dock op committed).
-- Window focus/overlays are restored safely (no forced focus changes mid-cancel).
+- Focus is restored safely if it was lost during the drag.
+- Non-modal overlays that were closed for drag hygiene remain closed unless explicitly re-opened (e.g. user re-triggers the popover/menu).
 
 ---
 
