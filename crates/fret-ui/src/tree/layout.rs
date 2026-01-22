@@ -8,7 +8,7 @@ use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
 impl<H: UiHost> UiTree<H> {
-    pub(super) fn invalidate_scroll_handle_bindings_for_changed_handles(
+    pub(crate) fn invalidate_scroll_handle_bindings_for_changed_handles(
         &mut self,
         app: &mut H,
         pass_kind: LayoutPassKind,
@@ -27,6 +27,14 @@ impl<H: UiHost> UiTree<H> {
 
         let mut visited = HashMap::<NodeId, u8>::new();
         for change in changed {
+            let detail = match change.kind {
+                crate::declarative::frame::ScrollHandleChangeKind::Layout => {
+                    UiDebugInvalidationDetail::ScrollHandleLayout
+                }
+                crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                    UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+                }
+            };
             let inv = match change.kind {
                 crate::declarative::frame::ScrollHandleChangeKind::Layout => Invalidation::Layout,
                 crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
@@ -51,7 +59,7 @@ impl<H: UiHost> UiTree<H> {
                     inv,
                     &mut visited,
                     UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::ScrollHandle,
+                    detail,
                 );
             }
         }

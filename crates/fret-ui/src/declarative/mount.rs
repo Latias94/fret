@@ -140,6 +140,14 @@ where
         runtime.prepare_window_for_frame(window, frame_id);
     });
 
+    // Out-of-band scroll handle mutations (e.g. deferred scroll-to-item) must be visible to view
+    // caching decisions. Apply scroll-handle-driven invalidations before running the declarative
+    // render closure so cache-hit frames cannot replay stale virtual-surface output.
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
+
     let ui_ref: &UiTree<H> = &*ui;
     let children: Vec<AnyElement> =
         app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -411,6 +419,13 @@ where
     let frame_id = app.frame_id();
     let focused = ui.focus();
     ui.begin_debug_frame_if_needed(frame_id);
+
+    // Match `render_root`: apply out-of-band scroll handle invalidations before render so view
+    // caching can make a correct reuse decision.
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
 
     let ui_ref: &UiTree<H> = &*ui;
     let children: Vec<AnyElement> =

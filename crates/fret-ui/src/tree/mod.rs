@@ -303,7 +303,8 @@ pub enum UiDebugInvalidationDetail {
     NotifyCall,
     HoverEvent,
     FocusEvent,
-    ScrollHandle,
+    ScrollHandleHitTestOnly,
+    ScrollHandleLayout,
     FocusVisiblePolicy,
     InputModalityPolicy,
     AnimationFrameRequest,
@@ -329,7 +330,8 @@ impl UiDebugInvalidationDetail {
             Self::NotifyCall => Some("notify_call"),
             Self::HoverEvent => Some("hover_event"),
             Self::FocusEvent => Some("focus_event"),
-            Self::ScrollHandle => Some("scroll_handle"),
+            Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
+            Self::ScrollHandleLayout => Some("scroll_handle_layout"),
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),
             Self::InputModalityPolicy => Some("input_modality_policy"),
             Self::AnimationFrameRequest => Some("animation_frame_request"),
@@ -383,6 +385,29 @@ pub struct UiDebugCacheRootStats {
     pub contained_layout: bool,
     pub paint_replayed_ops: u32,
     pub reuse_reason: UiDebugCacheRootReuseReason,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugVirtualListWindow {
+    pub node: NodeId,
+    pub element: GlobalElementId,
+    pub axis: fret_core::Axis,
+    pub is_probe_layout: bool,
+    pub items_len: usize,
+    pub items_revision: u64,
+    pub prev_items_revision: u64,
+    pub measure_mode: crate::element::VirtualListMeasureMode,
+    pub overscan: usize,
+    pub viewport: Px,
+    pub prev_viewport: Px,
+    pub offset: Px,
+    pub prev_offset: Px,
+    pub window_range: Option<crate::virtual_list::VirtualRange>,
+    pub prev_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub render_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub deferred_scroll_to_item: bool,
+    pub deferred_scroll_consumed: bool,
+    pub window_mismatch: bool,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -775,6 +800,7 @@ pub struct UiTree<H: UiHost> {
     debug_hover_declarative_invalidations:
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
+    debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
     #[cfg(feature = "diagnostics")]
@@ -842,6 +868,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_edge_this_frame: false,
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
+            debug_virtual_list_windows: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
@@ -918,7 +945,7 @@ impl<H: UiHost> UiTree<H> {
             UiDebugInvalidationSource::Notify
                 | UiDebugInvalidationSource::ModelChange
                 | UiDebugInvalidationSource::GlobalChange
-        ) || detail == UiDebugInvalidationDetail::ScrollHandle
+        ) || detail == UiDebugInvalidationDetail::ScrollHandleLayout
     }
 
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
@@ -994,6 +1021,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_edge_this_frame = false;
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
+        self.debug_virtual_list_windows.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_set_children_writes.clear();
         #[cfg(feature = "diagnostics")]
@@ -1128,6 +1156,18 @@ impl<H: UiHost> UiTree<H> {
             contained_layout,
             reuse_reason,
         });
+    }
+
+    pub(crate) fn debug_record_virtual_list_window(&mut self, record: UiDebugVirtualListWindow) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many virtual surfaces.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_virtual_list_windows.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_virtual_list_windows.push(record);
     }
 
     pub(crate) fn debug_record_paint_cache_replay(&mut self, node: NodeId, replayed_ops: u32) {
@@ -1420,6 +1460,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_dirty_views.as_slice()
+    }
+
+    pub fn debug_virtual_list_windows(&self) -> &[UiDebugVirtualListWindow] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_virtual_list_windows.as_slice()
     }
 
     pub fn debug_model_change_hotspots(&self) -> &[UiDebugModelChangeHotspot] {

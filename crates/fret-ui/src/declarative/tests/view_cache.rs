@@ -200,6 +200,119 @@ fn view_cache_gates_reuse_on_explicit_cache_key() {
 }
 
 #[test]
+fn view_cache_rerenders_on_virtual_list_scroll_to_item() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(40.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let mut root: Option<NodeId> = None;
+    let mut scene = Scene::default();
+
+    let render_frame =
+        |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut FakeTextService| {
+            let renders = renders.clone();
+            let scroll_handle = scroll_handle.clone();
+            render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "view-cache-virtual-list-scroll-to-item",
+                move |cx| {
+                    vec![
+                        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                            renders.fetch_add(1, Ordering::SeqCst);
+                            vec![cx.virtual_list_keyed(
+                                500,
+                                crate::element::VirtualListOptions::fixed(Px(10.0), 0),
+                                &scroll_handle,
+                                |i| i as u64,
+                                |cx, _i| cx.text("row"),
+                            )]
+                        }),
+                    ]
+                },
+            )
+        };
+
+    // Frame 0: mount.
+    let root0 = render_frame(&mut ui, &mut app, &mut services);
+    root.get_or_insert(root0);
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    app.advance_frame();
+
+    // Advance until we observe a cache-hit frame (no child render closure call).
+    let mut renders_before_scroll: Option<usize> = None;
+    for _ in 0..8 {
+        let before = renders.load(Ordering::SeqCst);
+        let root_n = render_frame(&mut ui, &mut app, &mut services);
+        root.get_or_insert(root_n);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        scene.clear();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let after = renders.load(Ordering::SeqCst);
+
+        let cache_hit = after == before;
+        let mismatch = ui
+            .debug_virtual_list_windows()
+            .last()
+            .is_some_and(|w| w.window_mismatch);
+
+        app.advance_frame();
+
+        if cache_hit && !mismatch {
+            renders_before_scroll = Some(after);
+            break;
+        }
+    }
+
+    let renders_before_scroll = renders_before_scroll
+        .unwrap_or_else(|| panic!("expected a stable cache-hit frame before scroll_to_item"));
+
+    // Out-of-band scroll-to-item should force rerender (disable reuse) on the next frame so the
+    // visible rows are rebuilt in the same tick (avoids a one-frame stale list).
+    scroll_handle.scroll_to_item(80, crate::scroll::ScrollStrategy::Start);
+    assert!(scroll_handle.deferred_scroll_to_item().is_some());
+
+    // Next frame: render should rerun due to the layout-affecting scroll handle change.
+    let before = renders.load(Ordering::SeqCst);
+    let root1 = render_frame(&mut ui, &mut app, &mut services);
+    root.get_or_insert(root1);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    scene.clear();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "expected final layout to consume deferred scroll request"
+    );
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected scroll offset to change"
+    );
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        before + 1,
+        "scroll_to_item should disable view-cache reuse for the affected root"
+    );
+    assert_eq!(before, renders_before_scroll);
+}
+
+#[test]
 fn view_cache_inherits_model_observations_on_cache_hit_layout() {
     let mut app = TestHost::new();
     let model = app.models_mut().insert(0u32);

@@ -12,28 +12,40 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::VirtualListProps,
     ) -> Size {
-        let (mut metrics, prev_items_revision, render_window_range, _deferred_scroll_hint) =
-            crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                crate::element::VirtualListState::default,
-                |state| {
-                    state.metrics.ensure_with_mode(
-                        props.measure_mode,
-                        props.len,
-                        props.estimate_row_height,
-                        props.gap,
-                        props.scroll_margin,
-                    );
-                    (
-                        state.metrics.clone(),
-                        state.items_revision,
-                        state.render_window_range,
-                        state.deferred_scroll_offset_hint,
-                    )
-                },
-            );
+        let (
+            mut metrics,
+            prev_items_revision,
+            render_window_range,
+            prev_window_range,
+            prev_offset_x,
+            prev_offset_y,
+            prev_viewport_w,
+            prev_viewport_h,
+        ) = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::element::VirtualListState::default,
+            |state| {
+                state.metrics.ensure_with_mode(
+                    props.measure_mode,
+                    props.len,
+                    props.estimate_row_height,
+                    props.gap,
+                    props.scroll_margin,
+                );
+                (
+                    state.metrics.clone(),
+                    state.items_revision,
+                    state.render_window_range,
+                    state.window_range,
+                    state.offset_x,
+                    state.offset_y,
+                    state.viewport_w,
+                    state.viewport_h,
+                )
+            },
+        );
         let content_extent = metrics.total_height();
         let should_remeasure_visible_items = props.items_revision != prev_items_revision;
 
@@ -82,6 +94,8 @@ impl ElementHostWidget {
             fret_core::Axis::Horizontal => prev_offset.x,
         };
         let mut offset = metrics.clamp_offset(prev_offset_axis, viewport);
+        let deferred_scroll_to_item = props.scroll_handle.deferred_scroll_to_item().is_some();
+        let mut deferred_scroll_consumed = false;
 
         // Avoid consuming deferred scroll requests during "probe" layout passes that use an
         // effectively-unbounded available space. Those passes are not the final viewport
@@ -94,6 +108,7 @@ impl ElementHostWidget {
             && props.len > 0
             && let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
         {
+            deferred_scroll_consumed = true;
             offset = metrics.scroll_offset_for_item(index, viewport, offset, strategy);
             props.scroll_handle.clear_deferred_scroll_to_item();
         }
@@ -332,6 +347,40 @@ impl ElementHostWidget {
             && window_range.is_some()
             && render_window_range != window_range;
 
+        if cx.tree.debug_enabled() {
+            let prev_offset_state = match axis {
+                fret_core::Axis::Vertical => prev_offset_y,
+                fret_core::Axis::Horizontal => prev_offset_x,
+            };
+            let prev_viewport_state = match axis {
+                fret_core::Axis::Vertical => prev_viewport_h,
+                fret_core::Axis::Horizontal => prev_viewport_w,
+            };
+
+            cx.tree
+                .debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
+                    node: cx.node,
+                    element: self.element,
+                    axis,
+                    is_probe_layout,
+                    items_len: props.len,
+                    items_revision: props.items_revision,
+                    prev_items_revision,
+                    measure_mode: props.measure_mode,
+                    overscan: props.overscan,
+                    viewport,
+                    prev_viewport: prev_viewport_state,
+                    offset,
+                    prev_offset: prev_offset_state,
+                    window_range,
+                    prev_window_range,
+                    render_window_range,
+                    deferred_scroll_to_item,
+                    deferred_scroll_consumed,
+                    window_mismatch,
+                });
+        }
+
         if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
             // Virtual list visible-item sets are computed during the declarative render pass. If
             // the visible window changed, ensure the nearest view-cache root re-renders on the
@@ -340,7 +389,7 @@ impl ElementHostWidget {
                 cx.node,
                 Invalidation::Layout,
                 UiDebugInvalidationSource::Notify,
-                UiDebugInvalidationDetail::ScrollHandle,
+                UiDebugInvalidationDetail::ScrollHandleLayout,
             );
         }
 
