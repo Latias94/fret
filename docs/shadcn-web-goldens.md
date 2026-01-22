@@ -103,6 +103,10 @@ For keyboard-driven submenus, prefer `keys=<selector>@<keys>` (no global `--open
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts menubar-demo --modes=open --update --baseUrl=http://localhost:4020 --openVariants="submenu-kbd=[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']" --openSteps="keys=[data-slot='menubar-sub-trigger']@ArrowRight"`
 
+Extract Menubar top-level open variants (useful for checkbox/radio item gates):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts menubar-demo --modes=open --update --baseUrl=http://localhost:4020 --openAction=click --openVariants="view=[data-fret-golden-target] button[data-slot='menubar-trigger']:nth-of-type(3);profiles=[data-fret-golden-target] button[data-slot='menubar-trigger']:nth-of-type(4)"`
+
 Extract a constrained-viewport open variant (useful for max-height/clamp/scroll behavior):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-demo --modes=open --update --baseUrl=http://localhost:4020 --viewportH=320 --openVariants="vp1440x320=[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']"`

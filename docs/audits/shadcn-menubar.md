@@ -40,6 +40,8 @@ Key upstream behaviors/surfaces:
 - Pass: Panel sizing is derived from the entry list (row padding + line height) and is clamped by
   the available window bounds; overflow scrolls on Y, matching shadcn's `max-h-(--available-height)`
   + `overflow-y-auto` outcome (best-effort, renderer-driven).
+- Pass: Panel width uses a shadcn-like `min-width` baseline but grows when long checkbox/radio labels
+  require more space (mirrors upstream `min-w-*` behavior rather than a fixed `w-*`).
 
 ### Keyboard navigation
 
@@ -80,6 +82,10 @@ _None tracked at this time._
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
 - shadcn-web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web placement gate (View menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_view_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.view.open.json`).
+- shadcn-web placement gate (Profiles menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_profiles_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
 - shadcn-web placement gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x320.open.json`).
 - shadcn-web scroll state gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
@@ -88,10 +94,22 @@ _None tracked at this time._
   (`web_vs_fret_menubar_demo_tiny_viewport_scroll_state_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x240.open.json`).
 - shadcn-web menu row height gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_menu_item_height_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web menu row height gate (View menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_view_menu_item_height_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.view.open.json`).
+- shadcn-web menu row height gate (Profiles menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_profiles_menu_item_height_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
 - shadcn-web item padding + shortcut/chevron alignment gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_item_padding_and_shortcut_match`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web checkbox indicator slot inset gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_view_checkbox_indicator_slot_inset_matches_web`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.view.open.json`).
+- shadcn-web radio indicator slot inset gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_profiles_radio_indicator_slot_inset_matches_web`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
 - shadcn-web menu content inset gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_menu_content_insets_match`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web menu content inset gate (View menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_view_menu_content_insets_match`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.view.open.json`).
+- shadcn-web menu content inset gate (Profiles menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+  (`web_vs_fret_menubar_demo_profiles_menu_content_insets_match`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
 - shadcn-web menu row height gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x320.open.json`).
 - shadcn-web menu content inset gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`

@@ -166,6 +166,8 @@ Recent fixes:
 
 - Root panel chrome now matches upstream `rounded-md` + `shadow-xs` (new-york-v4 baseline).
 - Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
+- Menu panel width now grows beyond the `min-w-[12rem]` baseline when long checkbox/radio labels
+  require it (e.g. View/Profiles menus), matching upstream sizing behavior.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
   - Root shadow (`shadow-xs`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
@@ -174,11 +176,13 @@ Recent fixes:
     (`web_vs_fret_menubar_demo_shadow_matches_web`, `web_vs_fret_menubar_demo_shadow_matches_web_dark`).
   - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_demo_submenu_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_shadow_matches_web_dark`).
-  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`, `web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches`).
-  - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`, `web_vs_fret_menubar_demo_view_overlay_placement_matches`, `web_vs_fret_menubar_demo_profiles_overlay_placement_matches`, `web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches`).
+  - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_menu_item_height_matches`, `web_vs_fret_menubar_demo_view_menu_item_height_matches`, `web_vs_fret_menubar_demo_profiles_menu_item_height_matches`, `web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches`).
+  - Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_menubar_demo_view_checkbox_indicator_slot_inset_matches_web`, `web_vs_fret_menubar_demo_profiles_radio_indicator_slot_inset_matches_web`).
   - Item row padding + shortcut/chevron alignment: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
     (`web_vs_fret_menubar_demo_item_padding_and_shortcut_match`).
-  - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match`).
+  - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_menu_content_insets_match`, `web_vs_fret_menubar_demo_view_menu_content_insets_match`, `web_vs_fret_menubar_demo_profiles_menu_content_insets_match`, `web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match`).
 
 Note: for menu-like overlays (DropdownMenu / ContextMenu / Menubar), the placement gate also asserts
 the portal panel `w/h` against the shadcn-web portal wrapper geometry (so “menu height” regressions

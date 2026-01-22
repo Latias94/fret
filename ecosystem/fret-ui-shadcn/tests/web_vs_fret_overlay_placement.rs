@@ -9976,6 +9976,8 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
             .expect("web trigger slot=menubar-trigger")
         });
 
+    let menu_label = web_trigger.text.as_deref().unwrap_or("File");
+
     let web_portal_index = theme
         .portals
         .iter()
@@ -10035,8 +10037,8 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     let trigger = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(menu_label))
+        .unwrap_or_else(|| panic!("fret menubar trigger semantics ({menu_label})"));
     let click_point = Point::new(
         Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
         Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
@@ -10093,8 +10095,8 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     let trigger = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(menu_label))
+        .unwrap_or_else(|| panic!("fret menubar trigger semantics ({menu_label})"));
 
     let expected_portal_w = web_portal.rect.w;
     let expected_portal_h = web_portal.rect.h;
@@ -10196,6 +10198,316 @@ fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     );
 }
 
+#[test]
+fn web_vs_fret_menubar_demo_view_overlay_placement_matches() {
+    assert_menubar_demo_constrained_overlay_placement_matches("menubar-demo.view");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_overlay_placement_matches() {
+    assert_menubar_demo_constrained_overlay_placement_matches("menubar-demo.profiles");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_view_checkbox_indicator_slot_inset_matches_web() {
+    assert_menubar_demo_checkbox_indicator_slot_inset_matches_web_impl("menubar-demo.view");
+}
+
+fn assert_menubar_demo_checkbox_indicator_slot_inset_matches_web_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_item = web_portal_nodes_by_data_slot(&theme, "menubar-checkbox-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("Always Show Bookmarks Bar"))
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "missing web Always Show Bookmarks Bar menubar-checkbox-item node for {web_name}"
+            )
+        });
+    let expected_pad_left = web_css_px(web_item, "paddingLeft").unwrap_or_else(|| {
+        panic!("missing web Always Show Bookmarks Bar paddingLeft for {web_name}")
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let view_trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("View"))
+        .expect("fret menubar trigger semantics (View)");
+    let click_point = Point::new(
+        Px(view_trigger.bounds.origin.x.0 + view_trigger.bounds.size.width.0 * 0.5),
+        Px(view_trigger.bounds.origin.y.0 + view_trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItemCheckbox
+                && n.label.as_deref() == Some("Always Show Bookmarks Bar")
+        })
+        .unwrap_or_else(|| {
+            panic!("missing fret Always Show Bookmarks Bar MenuItemCheckbox for {web_name}")
+        });
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, item.bounds))
+        .unwrap_or_else(|| {
+            panic!("missing fret Menu containing Always Show Bookmarks Bar for {web_name}")
+        });
+
+    let label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Always Show Bookmarks Bar")
+                && fret_rect_contains(item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| {
+            panic!("missing fret Always Show Bookmarks Bar Text node for {web_name}")
+        });
+
+    let actual_pad_left = label_text.bounds.origin.x.0 - item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Always Show Bookmarks Bar paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    assert!(fret_rect_contains(menu.bounds, item.bounds));
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_radio_indicator_slot_inset_matches_web() {
+    assert_menubar_demo_radio_indicator_slot_inset_matches_web_impl("menubar-demo.profiles");
+}
+
+fn assert_menubar_demo_radio_indicator_slot_inset_matches_web_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_item = web_portal_nodes_by_data_slot(&theme, "menubar-radio-item")
+        .into_iter()
+        .find(|n| n.text.as_deref().is_some_and(|text| text == "Andy"))
+        .unwrap_or_else(|| panic!("missing web Andy menubar-radio-item node for {web_name}"));
+    let expected_pad_left = web_css_px(web_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web Andy paddingLeft for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let profiles_trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Profiles"))
+        .expect("fret menubar trigger semantics (Profiles)");
+    let click_point = Point::new(
+        Px(profiles_trigger.bounds.origin.x.0 + profiles_trigger.bounds.size.width.0 * 0.5),
+        Px(profiles_trigger.bounds.origin.y.0 + profiles_trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let item = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItemRadio && n.label.as_deref() == Some("Andy"))
+        .unwrap_or_else(|| panic!("missing fret Andy MenuItemRadio for {web_name}"));
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, item.bounds))
+        .unwrap_or_else(|| panic!("missing fret Menu containing Andy for {web_name}"));
+
+    let label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Andy")
+                && fret_rect_contains(item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Andy Text node for {web_name}"));
+
+    let actual_pad_left = label_text.bounds.origin.x.0 - item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Andy paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    assert!(fret_rect_contains(menu.bounds, item.bounds));
+}
+
 fn assert_menubar_demo_constrained_overlay_placement_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -10209,6 +10521,8 @@ fn assert_menubar_demo_constrained_overlay_placement_matches(web_name: &str) {
             })
             .expect("web trigger slot=menubar-trigger")
         });
+
+    let menu_label = web_trigger.text.as_deref().unwrap_or("File");
 
     let web_portal_index = theme
         .portals
@@ -10269,8 +10583,8 @@ fn assert_menubar_demo_constrained_overlay_placement_matches(web_name: &str) {
     let trigger = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(menu_label))
+        .unwrap_or_else(|| panic!("fret menubar trigger semantics ({menu_label})"));
     let click_point = Point::new(
         Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
         Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
@@ -10327,8 +10641,8 @@ fn assert_menubar_demo_constrained_overlay_placement_matches(web_name: &str) {
     let trigger = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(menu_label))
+        .unwrap_or_else(|| panic!("fret menubar trigger semantics ({menu_label})"));
 
     let expected_portal_w = web_portal.rect.w;
     let expected_portal_h = web_portal.rect.h;
@@ -10448,6 +10762,16 @@ fn web_vs_fret_menubar_demo_tiny_viewport_overlay_placement_matches() {
 fn assert_menubar_demo_constrained_menu_item_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
+    let web_trigger = web_find_by_data_slot_and_state(&theme.root, "menubar-trigger", "open")
+        .unwrap_or_else(|| {
+            find_first(&theme.root, &|n| {
+                n.attrs
+                    .get("data-slot")
+                    .is_some_and(|v| v.as_str() == "menubar-trigger")
+            })
+            .expect("web trigger slot=menubar-trigger")
+        });
+    let menu_label = web_trigger.text.as_deref().unwrap_or("File");
     let expected_hs = web_portal_slot_heights(
         &theme,
         &[
@@ -10499,8 +10823,8 @@ fn assert_menubar_demo_constrained_menu_item_height_matches(web_name: &str) {
     let trigger = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(menu_label))
+        .unwrap_or_else(|| panic!("fret menubar trigger semantics ({menu_label})"));
     let click_point = Point::new(
         Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
         Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
@@ -10571,6 +10895,16 @@ fn web_vs_fret_menubar_demo_tiny_viewport_menu_item_height_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_menu_item_height_matches() {
     assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_view_menu_item_height_matches() {
+    assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo.view");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_menu_item_height_matches() {
+    assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo.profiles");
 }
 
 #[test]
@@ -10834,6 +11168,16 @@ fn assert_menubar_demo_item_padding_and_shortcut_match_impl(web_name: &str) {
 fn assert_menubar_demo_constrained_menu_content_insets_match(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
+    let web_trigger = web_find_by_data_slot_and_state(&theme.root, "menubar-trigger", "open")
+        .unwrap_or_else(|| {
+            find_first(&theme.root, &|n| {
+                n.attrs
+                    .get("data-slot")
+                    .is_some_and(|v| v.as_str() == "menubar-trigger")
+            })
+            .expect("web trigger slot=menubar-trigger")
+        });
+    let menu_label = web_trigger.text.as_deref().unwrap_or("File");
     let expected = web_menu_content_insets_for_slots(&theme, &["menubar-content"]);
     let expected_menu_h = web_portal_node_by_data_slot(&theme, "menubar-content")
         .rect
@@ -10875,8 +11219,8 @@ fn assert_menubar_demo_constrained_menu_content_insets_match(web_name: &str) {
     let trigger = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some(menu_label))
+        .unwrap_or_else(|| panic!("fret menubar trigger semantics ({menu_label})"));
     let click_point = Point::new(
         Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
         Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
@@ -11140,6 +11484,16 @@ fn web_vs_fret_menubar_demo_tiny_viewport_scroll_state_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_menu_content_insets_match() {
     assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_view_menu_content_insets_match() {
+    assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo.view");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_menu_content_insets_match() {
+    assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo.profiles");
 }
 
 fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {
