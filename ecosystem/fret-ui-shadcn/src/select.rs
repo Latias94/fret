@@ -531,6 +531,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -556,6 +557,7 @@ impl Select {
             placeholder: Arc::from("Select..."),
             disabled: false,
             a11y_label: None,
+            aria_invalid: false,
             on_dismiss_request: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -633,6 +635,11 @@ impl Select {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
         self
     }
 
@@ -743,6 +750,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.a11y_label,
+            self.aria_invalid,
             self.on_dismiss_request,
             self.chrome,
             self.layout,
@@ -780,6 +788,7 @@ pub fn select<H: UiHost>(
         placeholder,
         disabled,
         a11y_label,
+        false,
         None,
         ChromeRefinement::default(),
         layout,
@@ -805,6 +814,7 @@ fn select_impl<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -895,7 +905,7 @@ fn select_impl<H: UiHost>(
         );
 
         let radius = resolved.radius;
-        let ring = decl_style::focus_ring(&theme, radius);
+        let mut ring = decl_style::focus_ring(&theme, radius);
 
         let label = selected
             .as_ref()
@@ -924,12 +934,28 @@ fn select_impl<H: UiHost>(
                 .merge(layout),
         );
 
-        let border = resolved.border_color;
-        let border_focus = resolved.border_color_focused;
+        let mut border = resolved.border_color;
+        let mut border_focus = resolved.border_color_focused;
         let fg = resolved.text_color;
         let fg_muted = theme
             .color_by_key("muted-foreground")
             .unwrap_or_else(|| theme.color_required("muted-foreground"));
+
+        if aria_invalid {
+            let border_color = theme.color_required("destructive");
+            border = border_color;
+            border_focus = border_color;
+
+            let ring_key = if theme.name.contains("/dark") {
+                "destructive/40"
+            } else {
+                "destructive/20"
+            };
+            ring.color = theme
+                .color_by_key(ring_key)
+                .or_else(|| theme.color_by_key("destructive/20"))
+                .unwrap_or(border_color);
+        }
 
         let enabled = !disabled;
         let item_len = count_items(entries);

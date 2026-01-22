@@ -17,6 +17,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 pub struct Textarea {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    aria_invalid: bool,
     min_height: Px,
     size: ComponentSize,
     chrome: ChromeRefinement,
@@ -41,6 +42,7 @@ impl Textarea {
         Self {
             model,
             a11y_label: None,
+            aria_invalid: false,
             min_height: Px(64.0),
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
@@ -50,6 +52,11 @@ impl Textarea {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
         self
     }
 
@@ -78,6 +85,7 @@ impl Textarea {
             cx,
             self.model,
             self.a11y_label,
+            self.aria_invalid,
             self.min_height,
             self.size,
             self.chrome,
@@ -90,6 +98,7 @@ pub fn textarea<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    aria_invalid: bool,
     min_height: Px,
     size: ComponentSize,
     chrome: ChromeRefinement,
@@ -122,6 +131,23 @@ pub fn textarea<H: UiHost>(
     chrome.preedit_bg_color = alpha_mul(resolved.selection_color, 0.22);
     chrome.preedit_underline_color = resolved.selection_color;
     chrome.focus_ring = Some(decl_style::focus_ring(&theme, resolved.radius));
+
+    if aria_invalid {
+        let border_color = theme.color_required("destructive");
+        chrome.border_color = border_color;
+        if let Some(mut ring) = chrome.focus_ring.take() {
+            let ring_key = if theme.name.contains("/dark") {
+                "destructive/40"
+            } else {
+                "destructive/20"
+            };
+            ring.color = theme
+                .color_by_key(ring_key)
+                .or_else(|| theme.color_by_key("destructive/20"))
+                .unwrap_or(border_color);
+            chrome.focus_ring = Some(ring);
+        }
+    }
 
     let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
 
