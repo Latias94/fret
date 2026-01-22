@@ -213,6 +213,10 @@ It complements (but does not replace) ADRs:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`
       - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`
+    - Added submenu unsafe-leave (submenu closes, root stays open) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-unsafe-leave.light.json`
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-unsafe-leave.light.json`
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-unsafe-leave.light.json`
     - Added Fret gates covering pointer-grace corridor staying open: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added submenu keyboard open/close timelines:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`

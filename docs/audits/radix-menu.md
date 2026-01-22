@@ -97,6 +97,10 @@ composing:
   pointer grace corridor keeps the submenu open against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
+  closes when the pointer leaves to an unsafe sibling item (root menu remains open) against the
+  Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-unsafe-leave.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu submenu
   keyboard open/close (ArrowRight open, ArrowLeft close + focus restore) against the Radix Vega web
   golden
   (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`).
@@ -110,6 +114,10 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
   pointer grace corridor keeps the submenu open against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
+  closes when leaving to an unsafe sibling item (root menu remains open) against the Radix Vega web
+  golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-unsafe-leave.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates context-menu placement
   (menu popper gap + cross-axis delta, anchored to the right-click point) against the Radix Vega web
   golden
@@ -120,6 +128,10 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
   pointer grace corridor keeps the submenu open against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu closes
+  when hovering a sibling menubar trigger (submenu closes; menubar stays open) against the Radix
+  Vega web golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-unsafe-leave.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs` validates menubar menu placement
   (menu popper gap + cross-axis delta) against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.open-navigate-close.light.json`).
