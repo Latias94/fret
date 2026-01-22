@@ -9,6 +9,7 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
 };
 use fret_icons::ids;
+use fret_runtime::WindowCommandGatingService;
 use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
@@ -115,11 +116,18 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
     options: CommandCatalogOptions,
 ) -> Vec<CommandEntry> {
     let fallback_input_ctx = command_palette_input_context(&*cx.app);
-    let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-        &*cx.app,
-        cx.window,
-        fallback_input_ctx,
-    );
+    let snapshot = cx
+        .app
+        .global::<WindowCommandGatingService>()
+        .and_then(|svc| svc.snapshot(cx.window))
+        .cloned()
+        .unwrap_or_else(|| {
+            fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                &*cx.app,
+                cx.window,
+                fallback_input_ctx,
+            )
+        });
 
     // Best-effort: treat the command palette as a global discovery surface, even when the window
     // input context reflects focus in the palette input itself.
@@ -2738,6 +2746,63 @@ mod tests {
             *disabled.borrow(),
             Some(true),
             "expected the command entry to be disabled via WindowCommandActionAvailabilityService"
+        );
+    }
+
+    #[test]
+    fn host_command_entries_prefer_window_command_gating_snapshot_when_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        app.set_global(fret_runtime::WindowCommandGatingService::default());
+        app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, app| {
+                let input_ctx = command_palette_input_context(app);
+                let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+                let mut availability: HashMap<CommandId, bool> = HashMap::new();
+                availability.insert(cmd.clone(), false);
+                svc.set_snapshot(
+                    window,
+                    WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                        .with_action_availability(Some(Arc::new(availability))),
+                );
+            },
+        );
+
+        let disabled: RefCell<Option<bool>> = RefCell::new(None);
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+            let entries = command_entries_from_host_commands(cx);
+            for entry in entries {
+                if let CommandEntry::Item(item) = entry
+                    && item.command.as_ref() == Some(&cmd)
+                {
+                    *disabled.borrow_mut() = Some(item.disabled);
+                    break;
+                }
+            }
+        });
+
+        assert_eq!(
+            *disabled.borrow(),
+            Some(true),
+            "expected the command entry to be disabled via WindowCommandGatingService snapshot"
         );
     }
 
