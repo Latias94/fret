@@ -276,9 +276,16 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
 Goal: converge on GPUI’s “stable feel + stable perf” loop by moving large virtual surfaces to **prepaint-driven visible
 windows** + per-frame ephemeral items, while keeping caching gated by dirty views and explicit cache keys (ADR 0180/0182).
 
-- [ ] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
+- [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+  - Progress (v1):
+    - `bundle.json` exports `debug.windowed_surface_updates[]` for window deltas (initially `VirtualList`, layout-derived).
+  - Evidence:
+    - `crates/fret-ui/src/tree/mod.rs` (`debug_windowed_surface_updates`, `UiDebugWindowedSurfaceUpdate*`)
+    - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (VirtualList window-change recording)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.windowed_surface_updates`)
+    - `crates/fret-ui/src/tree/tests/windowed_surfaces.rs` (`virtual_list_window_update_is_recorded_in_debug`)
 - [ ] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
