@@ -451,8 +451,8 @@ pub fn render<H: UiHost>(
             // not introduce pointer occlusion mid-capture. Force-close the overlay to avoid
             // capture+occlusion overlap and keep routing deterministic.
             if open_now
-                && disable_outside_pointer_events
                 && captured_layer.is_some_and(|layer| layer != entry.layer)
+                && (disable_outside_pointer_events || consume_outside_pointer_events)
             {
                 let _ = app.models_mut().update(&open, |v| *v = false);
                 open_now = false;

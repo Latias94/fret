@@ -4175,6 +4175,90 @@ fn pointer_capture_forces_menu_like_overlay_to_close_and_drop_occlusion() {
 }
 
 #[test]
+fn pointer_capture_forces_consuming_popover_to_close() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base and capture pointer 0 in the underlay (viewport-like capture).
+    let (trigger, _underlay) = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.any_captured_node().is_some(),
+        "expected pointer capture to be active before opening the consuming popover"
+    );
+
+    // Second frame: attempt to open a consuming non-modal overlay. Even without pointer occlusion,
+    // we must not introduce non-click-through dismissal semantics while another layer owns capture.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_copied(&open),
+        Some(false),
+        "expected pointer capture to force-close consuming popovers"
+    );
+}
+
+#[test]
 fn dock_drag_restores_focus_when_focus_is_missing_on_drag_end() {
     let window = AppWindowId::default();
     let mut app = App::new();
