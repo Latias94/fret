@@ -585,20 +585,29 @@ impl Default for AnchoredProps {
     }
 }
 
-/// A low-level drop shadow primitive for component-level elevation recipes.
+/// One `box-shadow` layer (CSS-style) for component-level elevation recipes.
 ///
-/// This intentionally does not require a dedicated blur pipeline: the runtime can approximate
-/// softness by drawing multiple expanded quads with alpha falloff (see ADR 0060).
+/// This is renderer-friendly: runtimes can approximate blur by drawing multiple expanded quads with
+/// alpha falloff (ADR 0060) until we have a true blur pipeline.
 #[derive(Debug, Clone, Copy)]
-pub struct ShadowStyle {
+pub struct ShadowLayerStyle {
     pub color: Color,
     pub offset_x: Px,
     pub offset_y: Px,
+    /// Blur radius in pixels.
+    pub blur: Px,
+    /// Spread radius in pixels (can be negative).
     pub spread: Px,
-    /// Additional "soft" layers to draw around the shadow.
-    ///
-    /// `0` draws a single hard-edge quad. Higher values approximate blur via multiple layers.
-    pub softness: u8,
+}
+
+/// A low-level drop shadow primitive for component-level elevation recipes.
+///
+/// Many Tailwind/shadcn recipes are multi-layer shadows (e.g. `shadow-md`), so we support up to two
+/// layers without forcing heap allocation (keeps `ContainerProps` `Copy`).
+#[derive(Debug, Clone, Copy)]
+pub struct ShadowStyle {
+    pub primary: ShadowLayerStyle,
+    pub secondary: Option<ShadowLayerStyle>,
     pub corner_radii: Corners,
 }
 

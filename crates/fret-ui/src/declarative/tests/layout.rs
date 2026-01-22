@@ -5998,16 +5998,19 @@ fn container_paints_shadow_before_background() {
                         a: 1.0,
                     }),
                     shadow: Some(crate::element::ShadowStyle {
-                        color: Color {
-                            r: 0.0,
-                            g: 0.0,
-                            b: 0.0,
-                            a: 0.5,
+                        primary: crate::element::ShadowLayerStyle {
+                            color: Color {
+                                r: 0.0,
+                                g: 0.0,
+                                b: 0.0,
+                                a: 0.5,
+                            },
+                            offset_x: Px(2.0),
+                            offset_y: Px(3.0),
+                            blur: Px(0.0),
+                            spread: Px(1.0),
                         },
-                        offset_x: Px(2.0),
-                        offset_y: Px(3.0),
-                        spread: Px(1.0),
-                        softness: 0,
+                        secondary: None,
                         corner_radii: fret_core::Corners::all(Px(4.0)),
                     }),
                     corner_radii: fret_core::Corners::all(Px(4.0)),
