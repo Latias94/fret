@@ -271,13 +271,14 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
       and “invisible but interactable” rows during focus traversal).
   - Evidence:
       - `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` (wheel invalidation gate)
+      - `crates/fret-ui/src/tree/layout.rs` (`invalidate_scroll_handle_bindings_for_changed_handles` upgrades VirtualList scroll to `Layout` only when the viewport leaves the last rendered overscan window)
       - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (content-space layout + window_range)
       - `crates/fret-ui/src/declarative/host_widget/paint.rs` (row paint under scroll transform + per-row clips)
       - `crates/fret-ui/src/declarative/mount.rs` (pre-render scroll-handle invalidation gate for view-cache reuse)
       - `crates/fret-ui/src/declarative/frame.rs` + `crates/fret-ui/src/tree/layout.rs` (scroll-handle change classification)
       - `crates/fret-ui/src/tree/mod.rs` (scroll-handle invalidation detail gates view-cache dirtiness)
       - `crates/fret-ui/src/elements/cx.rs` + `crates/fret-ui/src/element.rs` (window_range + render_window_range state)
-      - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`, `virtual_list_wheel_scroll_is_hit_test_only_within_overscan_window`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`), `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`), `crates/fret-ui/src/tree/tests/scroll_into_view.rs` (`focus_traversal_does_not_scroll_visible_virtual_list_descendant_into_view`)
+      - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`, `virtual_list_wheel_scroll_is_hit_test_only_within_overscan_window`, `virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`), `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`), `crates/fret-ui/src/tree/tests/scroll_into_view.rs` (`focus_traversal_does_not_scroll_visible_virtual_list_descendant_into_view`)
       - Diagnostics: in an exported `ui-gallery-virtual-list-edit-9000` bundle, find a snapshot where
         `debug.virtual_list_windows[*].deferred_scroll_consumed=true` and `window_mismatch=true`; the next snapshot should include a
         `debug.dirty_views` entry with `detail=scroll_handle_layout`, and `render_window_range` should match `window_range`.
