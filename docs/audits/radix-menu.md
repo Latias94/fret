@@ -134,6 +134,10 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar closes when
   clicking outside while a submenu is open against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-outside-click-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates layered keyboard close
+  (ArrowLeft closes submenu + restores focus; Escape closes root + restores focus) against the
+  Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-arrowleft-escape-close.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
   pointer grace corridor keeps the submenu open against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`).

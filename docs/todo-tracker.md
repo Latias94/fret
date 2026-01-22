@@ -223,6 +223,8 @@ It complements (but does not replace) ADRs:
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.outside-click-close.light.json`
     - Added menubar submenu-outside-click-close (click outside closes root + submenu) timeline:
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-outside-click-close.light.json`
+    - Added menubar submenu-arrowleft-escape-close (ArrowLeft closes submenu; Escape closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-arrowleft-escape-close.light.json`
     - Added Fret gates covering pointer-grace corridor staying open: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added submenu keyboard open/close timelines:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`

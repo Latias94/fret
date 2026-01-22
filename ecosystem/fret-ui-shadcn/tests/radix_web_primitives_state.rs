@@ -3666,6 +3666,21 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
         ),
         "web expected submenu content to be absent after ArrowLeft"
     );
+    assert_eq!(
+        sub_close_step.snapshot.focus.text.as_deref(),
+        Some("Invite users"),
+        "web expected focus to return to the submenu trigger after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("dropdown-menu-sub-trigger"),
+        "web expected focused element to be the dropdown-menu submenu trigger after ArrowLeft"
+    );
 
     let window = AppWindowId::default();
     let bounds = window_bounds();
@@ -3921,6 +3936,21 @@ fn radix_web_context_menu_submenu_keyboard_open_close_matches_fret() {
         ),
         "web expected submenu content to be absent after ArrowLeft"
     );
+    assert_eq!(
+        sub_close_step.snapshot.focus.text.as_deref(),
+        Some("More Tools"),
+        "web expected focus to return to the submenu trigger after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("context-menu-sub-trigger"),
+        "web expected focused element to be the context-menu submenu trigger after ArrowLeft"
+    );
 
     let window = AppWindowId::default();
     let bounds = window_bounds();
@@ -4171,6 +4201,21 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
         ),
         "web expected submenu content to be absent after ArrowLeft"
     );
+    assert_eq!(
+        sub_close_step.snapshot.focus.text.as_deref(),
+        Some("Share"),
+        "web expected focus to return to the submenu trigger after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("menubar-sub-trigger"),
+        "web expected focused element to be the menubar submenu trigger after ArrowLeft"
+    );
 
     let window = AppWindowId::default();
     let bounds = window_bounds();
@@ -4362,6 +4407,285 @@ fn radix_web_menubar_submenu_keyboard_open_close_matches_fret() {
         focused.label.as_deref(),
         Some("Share"),
         "expected focus to return to the submenu trigger after ArrowLeft"
+    );
+}
+
+#[test]
+fn radix_web_menubar_submenu_arrowleft_escape_close_matches_fret() {
+    let golden = read_timeline("menubar-example.menubar.submenu-arrowleft-escape-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "menubar");
+    assert_eq!(golden.scenario, "submenu-arrowleft-escape-close");
+    assert!(golden.steps.len() >= 5);
+
+    let sub_close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "ArrowLeft"))
+        .expect("submenu close step");
+    assert!(
+        !has_dom_node_attr(
+            &sub_close_step.snapshot.dom,
+            "data-slot",
+            "menubar-sub-content"
+        ),
+        "web expected submenu content to be absent after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step.snapshot.focus.text.as_deref(),
+        Some("Share"),
+        "web expected focus to return to the submenu trigger after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("menubar-sub-trigger"),
+        "web expected focused element to be the menubar submenu trigger after ArrowLeft"
+    );
+
+    let close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "Escape"))
+        .expect("close step");
+    assert!(
+        !has_dom_node_attr(&close_step.snapshot.dom, "data-slot", "menubar-content"),
+        "web expected menubar content to be absent after Escape"
+    );
+    assert_eq!(
+        close_step.snapshot.focus.text.as_deref(),
+        Some("File"),
+        "web expected focus to return to the File trigger after Escape"
+    );
+    assert_eq!(
+        close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("menubar-trigger"),
+        "web expected focused element to be the menubar trigger after Escape"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+
+        Menubar::new(vec![
+            MenubarMenu::new("File").entries(vec![
+                MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                    MenubarEntry::Group(MenubarGroup::new(vec![
+                        MenubarEntry::Item(MenubarItem::new("Email link")),
+                        MenubarEntry::Item(MenubarItem::new("Messages")),
+                        MenubarEntry::Item(MenubarItem::new("Notes")),
+                    ])),
+                ])),
+                MenubarEntry::Separator,
+                MenubarEntry::Group(MenubarGroup::new(vec![MenubarEntry::Item(
+                    MenubarItem::new("Print..."),
+                )])),
+            ]),
+            MenubarMenu::new("Edit").entries(vec![MenubarEntry::Group(MenubarGroup::new(vec![
+                MenubarEntry::Item(MenubarItem::new("Undo")),
+                MenubarEntry::Item(MenubarItem::new("Redo")),
+            ]))]),
+        ])
+        .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let file = find_semantics(&snap, SemanticsRole::MenuItem, "File");
+    click_center(&mut ui, &mut app, &mut services, bounds_center(file.bounds));
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let mut frame = 3;
+    for _ in 0..20 {
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("semantics snapshot");
+        let focused_label = snap
+            .nodes
+            .iter()
+            .find(|n| n.flags.focused)
+            .and_then(|n| n.label.as_deref());
+        if focused_label == Some("Share") {
+            break;
+        }
+
+        dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            |cx| vec![build(cx)],
+        );
+        frame += 1;
+    }
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx)],
+    );
+    frame += 1;
+
+    timers.ingest_effects(&mut app);
+    timers.fire_after(Duration::from_millis(0), &mut ui, &mut app, &mut services);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx)],
+    );
+    frame += 1;
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email link")
+        }),
+        "submenu should be open after ArrowRight"
+    );
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx)],
+    );
+    frame += 1;
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email link")
+        }),
+        "submenu should be closed after ArrowLeft"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Share"),
+        "expected focus to return to the submenu trigger after ArrowLeft"
+    );
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !find_semantics(&snap, SemanticsRole::MenuItem, "File")
+            .flags
+            .expanded,
+        "expected menubar menu to be closed after Escape"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("File"),
+        "expected focus to return to the trigger after Escape"
     );
 }
 

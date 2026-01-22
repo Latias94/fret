@@ -1667,6 +1667,65 @@ const scenarios: Scenario[] = [
   },
   {
     primitive: "menubar",
+    scenario: "submenu-arrowleft-escape-close",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "File"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "menubar:with-submenu:file" })
+
+      const pressed = await pressUntilActiveElementContainsText(
+        ctx.page,
+        "ArrowDown",
+        "Share",
+        20
+      )
+      await press(ctx.page, "ArrowRight")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: [...pressed, "ArrowRight"].join(",") })
+
+      await press(ctx.page, "ArrowLeft")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        false,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
+
+      await press(ctx.page, "Escape")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        false,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "Escape" })
+    },
+  },
+  {
+    primitive: "menubar",
     scenario: "submenu-hover-select",
     item: "menubar-example",
     async run(ctx) {
