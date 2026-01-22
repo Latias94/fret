@@ -294,6 +294,48 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cx.stop_propagation();
                 true
             }
+            ElementInstance::TextInput(props) => {
+                let model = props.model.clone();
+                let model_id = model.id();
+                match self.text_input.as_mut() {
+                    None => {
+                        self.text_input = Some(crate::text_input::BoundTextInput::new(model));
+                    }
+                    Some(input) => {
+                        if input.model_id() != model_id {
+                            input.set_model(model);
+                        }
+                    }
+                }
+                let input = self.text_input.as_mut().expect("text input");
+                input.set_chrome_style(props.chrome);
+                input.set_text_style(props.text_style);
+                input.set_placeholder(props.placeholder);
+                input.set_editable(props.editable);
+                input.set_submit_command(props.submit_command);
+                input.set_cancel_command(props.cancel_command);
+                <crate::text_input::BoundTextInput as Widget<H>>::command(input, cx, command)
+            }
+            ElementInstance::TextArea(props) => {
+                let model = props.model.clone();
+                let model_id = model.id();
+                match self.text_area.as_mut() {
+                    None => {
+                        self.text_area = Some(crate::text_area::BoundTextArea::new(model));
+                    }
+                    Some(area) => {
+                        if area.model_id() != model_id {
+                            area.set_model(model);
+                        }
+                    }
+                }
+                let area = self.text_area.as_mut().expect("text area");
+                area.set_style(props.chrome);
+                area.set_text_style(props.text_style);
+                area.set_min_height(props.min_height);
+                area.set_editable(props.editable);
+                <crate::text_area::BoundTextArea as Widget<H>>::command(area, cx, command)
+            }
             ElementInstance::FocusScope(props) if props.trap_focus => {
                 let forward = match command.as_str() {
                     "focus.next" => Some(true),
@@ -360,6 +402,24 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     CommandAvailability::NotHandled
                 }
             }
+            ElementInstance::TextInput(_props) => self
+                .text_input
+                .as_ref()
+                .map(|input| {
+                    <crate::text_input::BoundTextInput as Widget<H>>::command_availability(
+                        input, cx, command,
+                    )
+                })
+                .unwrap_or(CommandAvailability::NotHandled),
+            ElementInstance::TextArea(_props) => self
+                .text_area
+                .as_ref()
+                .map(|area| {
+                    <crate::text_area::BoundTextArea as Widget<H>>::command_availability(
+                        area, cx, command,
+                    )
+                })
+                .unwrap_or(CommandAvailability::NotHandled),
             ElementInstance::FocusScope(props) if props.trap_focus => match command.as_str() {
                 "focus.next" | "focus.previous" => CommandAvailability::Available,
                 _ => CommandAvailability::NotHandled,
