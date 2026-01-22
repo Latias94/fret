@@ -104,6 +104,27 @@ let list = cx.virtual_list_keyed(
 ```
 "#;
 
+pub(crate) const DOC_CODE_VIEW_TORTURE: &str = r#"
+## Code View (torture harness)
+
+This page is a stress surface for **large scrollable text/code documents**.
+
+It is intended to back the GPUI parity workstream:
+
+- validate scroll stability (no “stale paint” / “UI looks not refreshed” regressions)
+- identify when code/text surfaces should become **prepaint-windowed** (ADR 0190)
+- provide a deterministic bundle capture target for perf investigations
+"#;
+
+pub(crate) const USAGE_CODE_VIEW_TORTURE: &str = r#"
+```rust
+use fret_code_view::CodeBlock;
+
+let code = Arc::<str>::from("...");
+let block = CodeBlock::new(code).language("rust").show_line_numbers(true);
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 

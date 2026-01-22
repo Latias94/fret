@@ -1473,6 +1473,7 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-bootstrap",
+ "fret-code-view",
  "fret-core",
  "fret-icons",
  "fret-kit",

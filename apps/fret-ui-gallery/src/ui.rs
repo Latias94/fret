@@ -1,4 +1,5 @@
 use fret_app::{App, CommandId, Model};
+use fret_code_view as code_view;
 use fret_core::ImageId;
 use fret_markdown as markdown;
 use fret_ui::Theme;
@@ -6,7 +7,7 @@ use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use time::Date;
 
 use crate::spec::*;
@@ -90,7 +91,7 @@ pub(crate) fn sidebar_view(
                     button =
                         button.test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")));
 
-                    if item.id == PAGE_VIRTUAL_LIST_TORTURE {
+                    if item.id == PAGE_VIRTUAL_LIST_TORTURE || item.id == PAGE_CODE_VIEW_TORTURE {
                         let on_activate: fret_ui::action::OnActivate =
                             Arc::new(move |host, action_cx, _reason| {
                                 let _ =
@@ -478,6 +479,7 @@ fn page_preview(
             virtual_list_torture_edit_text,
             virtual_list_torture_scroll,
         ),
+        PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -1146,6 +1148,60 @@ fn preview_virtual_list_torture(
     });
 
     vec![header, list]
+}
+
+fn code_view_torture_source() -> Arc<str> {
+    static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
+    SOURCE
+        .get_or_init(|| {
+            let mut out = String::new();
+            out.push_str("// Code View Torture Harness\n");
+            out.push_str("// Generated content: large line count + long lines\n\n");
+            for i in 0..8_000 {
+                let _ = std::fmt::Write::write_fmt(
+                    &mut out,
+                    format_args!(
+                        "{i:05}: fn example_{i}() {{ let x = {i}; let y = x.wrapping_mul(31); }}\n"
+                    ),
+                );
+            }
+            Arc::<str>::from(out)
+        })
+        .clone()
+}
+
+fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: stress large scrollable code/text surfaces (candidate for prepaint-windowed lines)."),
+                cx.text("Use scripted wheel steps + stale-paint checks to validate scroll stability."),
+            ]
+        },
+    );
+
+    let code = code_view_torture_source();
+    let block = code_view::CodeBlock::new(code)
+        .language("rust")
+        .show_line_numbers(true)
+        .show_scrollbar_y(true)
+        .max_height(Px(420.0))
+        .into_element(cx);
+
+    let block = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-code-view-root")),
+            ..Default::default()
+        },
+        |_cx| vec![block],
+    );
+
+    vec![header, block]
 }
 
 fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
