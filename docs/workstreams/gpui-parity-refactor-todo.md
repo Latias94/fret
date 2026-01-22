@@ -244,6 +244,62 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
   - Touches: `ecosystem/fret-ui-kit/src/*`
 - [ ] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
   - Touches: `apps/fret-ui-gallery/src/*`, selected `ecosystem/*` components
+- [~] GPUI-MVP4-demo-003 VirtualList: move “visible range” derivation from declarative render into prepaint-driven state.
+  - Motivation: reduce cache-root rerenders and layout invalidations during scroll/hover by keeping the element tree more structurally stable.
+  - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
+  - Touches: `ecosystem/fret-ui-kit/src/*`, `apps/fret-ui-gallery/src/*` (migration site), `crates/fret-ui/src/tree/*` (if new hooks needed)
+  - Plan (v1, Fret-compatible):
+    - Ensure out-of-band `ScrollHandle` revision changes (e.g. `scroll_to_item`) are detected during event dispatch and schedule a redraw even when no
+      `notify()` occurred, so view-cache roots cannot replay stale virtual-list output indefinitely.
+    - Keep steady wheel scroll “transform-only” within overscan, but upgrade to a single view-cache rerender only when the range window actually changes.
+    - Remove the dependency on `Pressable`'s implicit post-activation `notify()` for scroll-to-item correctness (the scroll handle becomes the driver).
+  - Done when (v1):
+    - `tools/diag-scripts/ui-gallery-virtual-list-torture.json` passes with view-cache + shell enabled, and out-of-band scroll-handle updates (e.g.
+      `scroll_to_item`) cannot get “stuck” behind cache-hit frames.
+  - Done when (v2):
+    - VirtualList no longer relies on post-activation `Pressable` `notify()` for scroll-to-item correctness (the scroll handle becomes the driver).
+    - Worst-tick bundles no longer attribute the dominant `notify_call` hotspot to `pressable.rs:*` for the VirtualList torture scenario.
+  - Progress (v1):
+    - Runtime now keeps scroll-handle bindings live across cache-hit frames and marks the nearest cache root dirty for layout-affecting scroll-handle
+      revision bumps during dispatch.
+    - Known gap: removing `Pressable`'s post-activation `notify()` still breaks the torture script jump step; track this as the v2 follow-up.
+  - Evidence:
+      - `crates/fret-ui/src/tree/dispatch.rs` (dispatch-time scroll-handle handling)
+      - `crates/fret-ui/src/declarative/frame.rs` + `crates/fret-ui/src/declarative/mount.rs` (binding retention)
+      - `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_handle_revision_bumps_invalidation_during_dispatch`)
+      - `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_scroll_to_item_affects_next_render_visible_items`)
+      - Script sanity: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` (view-cache + shell)
+
+## MVP5 — Prepaint-driven Ephemeral Windows (Beyond VirtualList)
+
+Goal: converge on GPUI’s “stable feel + stable perf” loop by moving large virtual surfaces to **prepaint-driven visible
+windows** + per-frame ephemeral items, while keeping caching gated by dirty views and explicit cache keys (ADR 0180/0182).
+
+- [ ] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
+  - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
+  - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+- [ ] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
+  - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
+  - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
+  - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
+  - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
+- [ ] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
+  - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
+  - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.
+- [ ] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
+  - Candidates: `ecosystem/fret-code-view/src/*`, text editor widgets, markdown/code blocks, diagnostics inspectors.
+  - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
+- [ ] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
+  - Candidates: `ecosystem/fret-node/src/*`, canvas/gizmo/viewport overlays, large scene editors.
+  - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
+- [ ] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
+  - Candidates: `ecosystem/*plot*`, `ecosystem/*chart*`, large timeseries views.
+  - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
+- [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
+  - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
+  - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
+  - Baseline note: current worst-tick bundles remain layout-dominated and frequently attribute dirty views to
+    `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:417`.
 
 ## Open Questions (Keep Short)
 

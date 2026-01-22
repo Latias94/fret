@@ -86,6 +86,54 @@ This plan focuses on refactoring Fret to gain:
 - Preserve ordering semantics (ADR 0002 / ADR 0009).
 - Keep portability boundaries (`fret-runtime` effects, no `wgpu` types in UI runtime).
 
+### 1.5 Rebuild vs Retain (GPUI-aligned mental model)
+
+When we say “GPUI parity”, the goal is **not** “everything is rebuilt every frame” and also not “a traditional retained
+widget tree”. It is a split:
+
+- **Rebuilt each frame (per dirty view/cache root)**:
+  - Declarative element tree (structure, props, style) is rebuilt on demand (dirty views), with explicit cross-frame
+    state living outside the tree (`ElementRuntime`).
+  - Hover/focus/pressed/capture-derived chrome should be *paint-only by default* (ADR 0181), i.e. it should not
+    change the layout tree shape in steady state.
+- **Ephemeral per frame (derived during prepaint, not a retained subtree)**:
+  - Large “virtual surfaces” should derive their visible window during prepaint and emit per-frame items without
+    forcing a rerender of the entire view-cache root for small scroll deltas.
+  - Reference pattern: gpui-component’s `VirtualList` derives visible range + consumes `scroll_to_item` in `prepaint`
+    and only lays out/prepaints the visible items (`repo-ref/gpui-component/crates/ui/src/virtual_list.rs`).
+- **Retained across frames (keyed caches, not implicit state)**:
+  - `ElementRuntime` state, view-cache recorded ranges, prepaint interaction caches, layout engine solves, text shaping
+    caches, and GPU resources must remain retained and reused behind explicit “dirty + cache key” gates (ADR 0180/0182).
+
+Candidate migrations (v1; performance-first):
+
+- Virtual surfaces (prepaint-driven window + per-frame items):
+  - `VirtualList` (`crates/fret-ui`, plus `ecosystem/fret-ui-kit` table/tree/list helpers).
+  - Code/text windows (e.g. code view line windows) and large tables/trees built on top of virtualization primitives.
+  - Canvas/node graph culling windows (visible nodes/edges derived from viewport).
+- Chrome derived from interaction (paint-only; structural stability):
+  - Scrollbar visibility/fade, hover toolbars, selection highlights, focus rings, cursor affordances.
+
+The refactor strategy is to introduce a reusable “prepaint-driven ephemeral subtree/items” primitive, migrate
+`VirtualList` first (largest multiplier), then apply the same primitive to tables/trees/code views/canvas surfaces.
+
+Alignment checklist (v1; what must be derived per frame / per dirty view):
+
+- View rebuild boundaries:
+  - Dirty views/cache roots decide *whether we rebuild*; rebuilding should be the default authoring model, not a special-case.
+- Interaction-derived visuals (should not force structural/layout churn):
+  - Hover/pressed/focus/capture states (ADR 0181).
+  - Scrollbar visibility, opacity fades, thumb geometry.
+  - Cursor icon and caret/selection visuals.
+- Virtualization windows (should not require rerender on small deltas):
+  - Visible-range windows for lists/tables/trees.
+  - Visible-line windows for text/code surfaces.
+  - Viewport-culling windows for canvas/node graph surfaces.
+
+Audit heuristic: if a component’s child set (or a large portion of its render work) depends on scroll offset / viewport
+and the current implementation rebuilds that structure in the declarative render pass, it is a prime candidate for
+prepaint-driven windows + per-frame ephemeral items.
+
 ### 1.4 Contract gates (ADRs)
 
 This workstream is “fearless” in implementation scope, but not in contract hygiene. Any meaningful shifts to
@@ -128,6 +176,8 @@ We should define explicit acceptance thresholds (initial proposal):
   - `UiDebugFrameStats.paint_cache_hits/misses/replayed_ops` trend upward on stable scenes (`crates/fret-ui/src/tree/mod.rs:110`).
 - Large UI surfaces remain stable:
   - 10k-row virtual list: scrolling does not trigger full relayout of unrelated subtree.
+  - Virtualized surfaces do not require “input-driven notify” as a hidden dependency for correctness (e.g. `scroll_to_item`
+    must schedule a redraw + invalidate the right cache root deterministically).
 
 ### 2.3 Definition of Done (workstream-level)
 
@@ -158,6 +208,12 @@ The refactor should always move these metrics in the right direction, as reporte
 These commands exist to make A/B perf and correctness regressions easy to reproduce locally.
 
 Prefer `diag run` for a fast pass/fail signal, and `diag perf` when you want the per-frame counters in the exported bundle.
+
+When using `diag perf`, inspect these exported debug surfaces to decide which parts should become prepaint-windowed:
+
+- `windows[].snapshots[].debug.dirty_views` (why a view/cache root was marked dirty, including `notify_call` callsites).
+- `windows[].snapshots[].debug.cache_roots[].contained_relayout_time_us` (which cache roots dominate layout time).
+- `windows[].snapshots[].debug.cache_roots[].reuse_reason` (whether we are missing reuse due to dirtiness vs cache-key gates).
 
 Run a script without view cache (baseline):
 
