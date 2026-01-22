@@ -282,6 +282,8 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
       - Diagnostics: in an exported `ui-gallery-virtual-list-edit-9000` bundle, find a snapshot where
         `debug.virtual_list_windows[*].deferred_scroll_consumed=true` and `window_mismatch=true`; the next snapshot should include a
         `debug.dirty_views` entry with `detail=scroll_handle_layout`, and `render_window_range` should match `window_range`.
+      - Perf capture: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --top 10 --sort time --warmup-frames 5 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+        produced worst bundle `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` (top.us(total/layout/prepaint/paint)=503161/476991/241/25929).
 
 ## MVP5 — Prepaint-driven Ephemeral Windows (Beyond VirtualList)
 
