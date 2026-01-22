@@ -79,6 +79,12 @@ Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --openSelector=\"[data-fret-golden-target] button[role='combobox']\"`
 
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-popover --modes=open --update --openSelector=\"[data-fret-golden-target] [data-state='closed'][aria-haspopup]\"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-dropdown-menu --modes=open --update --openSelector=\"[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']\"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-responsive --modes=open --update --openSelector=\"[data-fret-golden-target] [data-state='closed'][aria-haspopup]\"`
+
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --viewportW=375 --viewportH=320 --openVariants=\"vp375x320=[data-fret-golden-target] button[role='combobox']\"`
 
 Select open-state example (`select-demo`):
@@ -269,7 +275,8 @@ width/height) so variant panels (e.g. `simple`, `with-icon`) can't silently drif
 shadcn layout contract.
 
 It also includes geometry gates for cmdk-derived listboxes such as `combobox-demo` (option row
-height and option insets within the listbox).
+height and option insets within the listbox), and menu item metrics for mixed cmdk+menu recipes
+such as `combobox-dropdown-menu` (menu item height + dropdown content insets).
 
 Overlay chrome conformance (border, radii, and selected colors):
 
