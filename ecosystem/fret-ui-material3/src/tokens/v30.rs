@@ -98,6 +98,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_sys_shape(cfg);
     inject_sys_typescale(cfg, typography);
     inject_comp_button_scalars(cfg);
+    inject_comp_icon_button_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -234,6 +235,7 @@ pub fn theme_config_with_colors(
     let mut cfg = theme_config(typography);
     inject_sys_colors(&mut cfg, colors);
     inject_comp_button_colors_from_sys(&mut cfg);
+    inject_comp_icon_button_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -466,6 +468,310 @@ fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.button.text.disabled.label-text.color",
+        "md.sys.color.on-surface",
+    );
+}
+
+fn inject_comp_icon_button_scalars(cfg: &mut ThemeConfig) {
+    // Sources:
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-icon-button-small.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-icon-button-*.scss
+
+    cfg.metrics.insert(
+        "md.comp.icon-button.small.container.height".to_string(),
+        40.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.icon-button.small.default.leading-space".to_string(),
+        8.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.icon-button.small.default.trailing-space".to_string(),
+        8.0,
+    );
+    cfg.metrics
+        .insert("md.comp.icon-button.small.icon.size".to_string(), 24.0);
+    cfg.metrics.insert(
+        "md.comp.icon-button.small.outlined.outline.width".to_string(),
+        1.0,
+    );
+
+    for variant in ["standard", "filled", "tonal", "outlined"] {
+        cfg.numbers.insert(
+            format!("md.comp.icon-button.{variant}.disabled.icon.opacity"),
+            0.38,
+        );
+
+        cfg.numbers.insert(
+            format!("md.comp.icon-button.{variant}.hovered.state-layer.opacity"),
+            0.08,
+        );
+        cfg.numbers.insert(
+            format!("md.comp.icon-button.{variant}.focused.state-layer.opacity"),
+            0.1,
+        );
+        cfg.numbers.insert(
+            format!("md.comp.icon-button.{variant}.pressed.state-layer.opacity"),
+            0.1,
+        );
+    }
+
+    // Filled/tonal also have a disabled container opacity.
+    for variant in ["filled", "tonal"] {
+        cfg.numbers.insert(
+            format!("md.comp.icon-button.{variant}.disabled.container.opacity"),
+            0.1,
+        );
+    }
+    // Outlined selected state carries a disabled container opacity.
+    cfg.numbers.insert(
+        "md.comp.icon-button.outlined.selected.disabled.container.opacity".to_string(),
+        0.1,
+    );
+}
+
+fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
+    // See the corresponding Material Web token sets:
+    // - `_md-comp-icon-button-standard.scss`
+    // - `_md-comp-icon-button-filled.scss`
+    // - `_md-comp-icon-button-tonal.scss`
+    // - `_md-comp-icon-button-outlined.scss`
+
+    // Standard.
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.hovered.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.focused.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.pressed.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.disabled.icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.selected.icon.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.selected.hovered.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.selected.focused.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.selected.pressed.state-layer.color",
+        "md.sys.color.primary",
+    );
+
+    // Filled.
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.container.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.icon.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.hovered.state-layer.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.focused.state-layer.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.pressed.state-layer.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.disabled.icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    // Filled selected/unselected container behavior.
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.selected.container.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.selected.icon.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.container.color",
+        "md.sys.color.surface-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.hovered.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.focused.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.pressed.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.hovered.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.focused.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.unselected.pressed.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    // Tonal.
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.container.color",
+        "md.sys.color.secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.hovered.state-layer.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.focused.state-layer.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.pressed.state-layer.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.disabled.icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.container.color",
+        "md.sys.color.secondary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.icon.color",
+        "md.sys.color.on-secondary",
+    );
+
+    // Outlined.
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.outline.color",
+        "md.sys.color.outline-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.hovered.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.focused.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.pressed.state-layer.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.disabled.icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.disabled.outline.color",
+        "md.sys.color.outline-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.container.color",
+        "md.sys.color.inverse-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.disabled.container.color",
         "md.sys.color.on-surface",
     );
 }
@@ -859,10 +1165,22 @@ mod tests {
             Some(40.0)
         );
         assert_eq!(
+            cfg.metrics
+                .get("md.comp.icon-button.small.container.height")
+                .copied(),
+            Some(40.0)
+        );
+        assert_eq!(
             cfg.numbers
                 .get("md.comp.button.filled.disabled.label-text.opacity")
                 .copied(),
             Some(0.38)
+        );
+        assert_eq!(
+            cfg.numbers
+                .get("md.comp.icon-button.filled.disabled.container.opacity")
+                .copied(),
+            Some(0.1)
         );
 
         // Inject into an existing config should merge/overwrite.
