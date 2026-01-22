@@ -58,6 +58,11 @@ pub trait DragHost {
 
     fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool;
 
+    fn find_drag_pointer_id(
+        &self,
+        predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<PointerId>;
+
     fn cancel_drag_sessions(
         &mut self,
         predicate: impl FnMut(&DragSession) -> bool,

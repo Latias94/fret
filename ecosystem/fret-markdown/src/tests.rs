@@ -161,6 +161,16 @@ impl DragHost for ThemeTestHost {
         self.drags.values().any(|d| predicate(d))
     }
 
+    fn find_drag_pointer_id(
+        &self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<PointerId> {
+        self.drags
+            .values()
+            .find(|d| predicate(d))
+            .map(|d| d.pointer_id)
+    }
+
     fn cancel_drag_sessions(
         &mut self,
         mut predicate: impl FnMut(&DragSession) -> bool,

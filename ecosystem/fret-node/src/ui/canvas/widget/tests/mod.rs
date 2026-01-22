@@ -1352,6 +1352,16 @@ impl DragHost for TestUiHostImpl {
         self.drag.as_ref().is_some_and(|d| predicate(d))
     }
 
+    fn find_drag_pointer_id(
+        &self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<fret_core::PointerId> {
+        self.drag
+            .as_ref()
+            .filter(|d| predicate(d))
+            .map(|d| d.pointer_id)
+    }
+
     fn cancel_drag_sessions(
         &mut self,
         mut predicate: impl FnMut(&DragSession) -> bool,
