@@ -9,6 +9,7 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
 };
 use fret_icons::ids;
+use fret_runtime::WindowCommandEnabledService;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
     format_sequence,
@@ -88,10 +89,17 @@ fn command_item_from_meta<H: UiHost>(
         })
         .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)));
 
+    let disabled = meta.when.as_ref().is_some_and(|w| !w.eval(input_ctx))
+        || cx
+            .app
+            .global::<WindowCommandEnabledService>()
+            .and_then(|svc| svc.enabled(cx.window, id))
+            == Some(false);
+
     let mut item = CommandItem::new(meta.title.clone())
         .value(Arc::from(id.as_str()))
         .keywords(keywords)
-        .disabled(meta.when.as_ref().is_some_and(|w| !w.eval(input_ctx)))
+        .disabled(disabled)
         .on_select(id.clone());
     if let Some(shortcut) = shortcut {
         item = item.shortcut(shortcut);
@@ -134,7 +142,12 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
         std::collections::BTreeMap::new();
 
     for (id, meta) in &commands {
-        let disabled = meta.when.as_ref().is_some_and(|w| !w.eval(&input_ctx));
+        let disabled = meta.when.as_ref().is_some_and(|w| !w.eval(&input_ctx))
+            || cx
+                .app
+                .global::<WindowCommandEnabledService>()
+                .and_then(|svc| svc.enabled(cx.window, id))
+                == Some(false);
         if disabled && options.hide_disabled {
             continue;
         }
@@ -2636,6 +2649,39 @@ mod tests {
             assert_eq!(dialog.open, open);
             assert_eq!(dialog.query, query);
         });
+    }
+
+    #[test]
+    fn host_command_entries_respect_window_command_enabled_overrides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let cmd = CommandId::from("test.disabled-command");
+        app.commands_mut()
+            .register(cmd.clone(), CommandMeta::new("Disabled Command"));
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let disabled: RefCell<Option<bool>> = RefCell::new(None);
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+            let entries = command_entries_from_host_commands(cx);
+            for entry in entries {
+                if let CommandEntry::Item(item) = entry
+                    && item.command.as_ref() == Some(&cmd)
+                {
+                    *disabled.borrow_mut() = Some(item.disabled);
+                    break;
+                }
+            }
+        });
+
+        assert_eq!(
+            *disabled.borrow(),
+            Some(true),
+            "expected the command entry to be disabled via WindowCommandEnabledService"
+        );
     }
 
     fn click(

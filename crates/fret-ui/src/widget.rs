@@ -681,6 +681,11 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 }
 
 pub trait Widget<H: UiHost> {
+    /// Capture-phase event dispatch (root → target).
+    ///
+    /// Default is no-op so existing widgets keep their current bubble-only behavior.
+    fn event_capture(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
+
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
