@@ -3815,5 +3815,20 @@ fn event_position(event: &Event) -> Option<Point> {
     }
 }
 
+fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {
+    // Hover is a cursor-driven affordance (Mouse/Pen). Touch pointers must not perturb hover state,
+    // otherwise multi-pointer input can cause spurious hover exits while a mouse cursor remains in
+    // place.
+    //
+    // `Unknown` is treated as hover-capable to keep desktop backends usable when pointer
+    // classification is incomplete.
+    matches!(
+        pointer_type,
+        fret_core::PointerType::Mouse
+            | fret_core::PointerType::Pen
+            | fret_core::PointerType::Unknown
+    )
+}
+
 #[cfg(test)]
 mod tests;

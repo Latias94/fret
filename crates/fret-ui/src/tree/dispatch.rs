@@ -9,6 +9,81 @@ struct PendingInvalidation {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn run_pressable_hover_hook(
+        app: &mut H,
+        window: AppWindowId,
+        element: crate::elements::GlobalElementId,
+        is_hovered: bool,
+    ) {
+        let hook = crate::elements::with_element_state(
+            app,
+            window,
+            element,
+            crate::action::PressableHoverActionHooks::default,
+            |hooks| hooks.on_hover_change.clone(),
+        );
+
+        let Some(hook) = hook else {
+            return;
+        };
+
+        struct PressableHoverHookHost<'a, H: crate::UiHost> {
+            app: &'a mut H,
+            window: AppWindowId,
+            element: crate::elements::GlobalElementId,
+        }
+
+        impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
+            fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                self.app.models_mut()
+            }
+
+            fn push_effect(&mut self, effect: Effect) {
+                match effect {
+                    Effect::SetTimer {
+                        window: Some(window),
+                        token,
+                        ..
+                    } if window == self.window => {
+                        crate::elements::record_timer_target(
+                            &mut *self.app,
+                            window,
+                            token,
+                            self.element,
+                        );
+                    }
+                    Effect::CancelTimer { token } => {
+                        crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                    }
+                    _ => {}
+                }
+                self.app.push_effect(effect);
+            }
+
+            fn request_redraw(&mut self, window: AppWindowId) {
+                self.app.request_redraw(window);
+            }
+
+            fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                self.app.next_timer_token()
+            }
+        }
+
+        let mut host = PressableHoverHookHost {
+            app,
+            window,
+            element,
+        };
+        hook(
+            &mut host,
+            crate::action::ActionCx {
+                window,
+                target: element,
+            },
+            is_hovered,
+        );
+    }
+
     fn invalidation_rank(inv: Invalidation) -> u8 {
         match inv {
             Invalidation::Paint => 1,
@@ -985,230 +1060,111 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
             }
-            let hovered_pressable: Option<crate::elements::GlobalElementId> =
-                declarative::with_window_frame(app, window, |window_frame| {
-                    let window_frame = window_frame?;
-                    let mut node = hit_for_hover;
-                    while let Some(id) = node {
-                        if let Some(record) = window_frame.instances.get(&id)
-                            && matches!(record.instance, declarative::ElementInstance::Pressable(_))
-                        {
-                            return Some(record.element);
-                        }
-                        node = self.nodes.get(id).and_then(|n| n.parent);
-                    }
-                    None
-                });
 
-            let (prev_element, prev_node, next_element, next_node) =
-                crate::elements::update_hovered_pressable(app, window, hovered_pressable);
-            if prev_node.is_some() || next_node.is_some() {
-                needs_redraw = true;
-                self.debug_record_hover_edge_pressable();
-                if let Some(node) = prev_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
+            let hover_capable = match event {
+                Event::Pointer(PointerEvent::Move { pointer_type, .. })
+                | Event::Pointer(PointerEvent::Down { pointer_type, .. })
+                | Event::Pointer(PointerEvent::Up { pointer_type, .. })
+                | Event::Pointer(PointerEvent::Wheel { pointer_type, .. })
+                | Event::Pointer(PointerEvent::PinchGesture { pointer_type, .. }) => {
+                    pointer_type_supports_hover(*pointer_type)
                 }
-                if let Some(node) = next_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
-                }
-            }
+                _ => false,
+            };
 
-            if let Some(element) = prev_element
-                && prev_node.is_some()
-            {
-                let hook = crate::elements::with_element_state(
-                    app,
-                    window,
-                    element,
-                    crate::action::PressableHoverActionHooks::default,
-                    |hooks| hooks.on_hover_change.clone(),
-                );
-
-                if let Some(h) = hook {
-                    struct PressableHoverHookHost<'a, H: crate::UiHost> {
-                        app: &'a mut H,
-                        window: AppWindowId,
-                        element: crate::elements::GlobalElementId,
-                    }
-
-                    impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
-                        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
-                            self.app.models_mut()
-                        }
-
-                        fn push_effect(&mut self, effect: Effect) {
-                            match effect {
-                                Effect::SetTimer {
-                                    window: Some(window),
-                                    token,
-                                    ..
-                                } if window == self.window => {
-                                    crate::elements::record_timer_target(
-                                        &mut *self.app,
-                                        window,
-                                        token,
-                                        self.element,
-                                    );
-                                }
-                                Effect::CancelTimer { token } => {
-                                    crate::elements::clear_timer_target(
-                                        &mut *self.app,
-                                        self.window,
-                                        token,
-                                    );
-                                }
-                                _ => {}
+            if hover_capable {
+                let hovered_pressable: Option<crate::elements::GlobalElementId> =
+                    declarative::with_window_frame(app, window, |window_frame| {
+                        let window_frame = window_frame?;
+                        let mut node = hit_for_hover;
+                        while let Some(id) = node {
+                            if let Some(record) = window_frame.instances.get(&id)
+                                && matches!(
+                                    record.instance,
+                                    declarative::ElementInstance::Pressable(_)
+                                )
+                            {
+                                return Some(record.element);
                             }
-                            self.app.push_effect(effect);
+                            node = self.nodes.get(id).and_then(|n| n.parent);
                         }
+                        None
+                    });
 
-                        fn request_redraw(&mut self, window: AppWindowId) {
-                            self.app.request_redraw(window);
-                        }
-
-                        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
-                            self.app.next_timer_token()
-                        }
+                let (prev_element, prev_node, next_element, next_node) =
+                    crate::elements::update_hovered_pressable(app, window, hovered_pressable);
+                if prev_node.is_some() || next_node.is_some() {
+                    needs_redraw = true;
+                    self.debug_record_hover_edge_pressable();
+                    if let Some(node) = prev_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
                     }
-
-                    let mut host = PressableHoverHookHost {
-                        app,
-                        window,
-                        element,
-                    };
-                    h(
-                        &mut host,
-                        crate::action::ActionCx {
-                            window,
-                            target: element,
-                        },
-                        false,
-                    );
+                    if let Some(node) = next_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
+                    }
                 }
-            }
 
-            if let Some(element) = next_element
-                && next_node.is_some()
-            {
-                let hook = crate::elements::with_element_state(
-                    app,
-                    window,
-                    element,
-                    crate::action::PressableHoverActionHooks::default,
-                    |hooks| hooks.on_hover_change.clone(),
-                );
+                if let Some(element) = prev_element
+                    && prev_node.is_some()
+                {
+                    Self::run_pressable_hover_hook(app, window, element, false);
+                }
 
-                if let Some(h) = hook {
-                    struct PressableHoverHookHost<'a, H: crate::UiHost> {
-                        app: &'a mut H,
-                        window: AppWindowId,
-                        element: crate::elements::GlobalElementId,
-                    }
+                if let Some(element) = next_element
+                    && next_node.is_some()
+                {
+                    Self::run_pressable_hover_hook(app, window, element, true);
+                }
 
-                    impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
-                        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
-                            self.app.models_mut()
-                        }
-
-                        fn push_effect(&mut self, effect: Effect) {
-                            match effect {
-                                Effect::SetTimer {
-                                    window: Some(window),
-                                    token,
-                                    ..
-                                } if window == self.window => {
-                                    crate::elements::record_timer_target(
-                                        &mut *self.app,
-                                        window,
-                                        token,
-                                        self.element,
-                                    );
-                                }
-                                Effect::CancelTimer { token } => {
-                                    crate::elements::clear_timer_target(
-                                        &mut *self.app,
-                                        self.window,
-                                        token,
-                                    );
-                                }
-                                _ => {}
+                let hovered_hover_region: Option<crate::elements::GlobalElementId> =
+                    declarative::with_window_frame(app, window, |window_frame| {
+                        let window_frame = window_frame?;
+                        let mut node = hit;
+                        while let Some(id) = node {
+                            if let Some(record) = window_frame.instances.get(&id)
+                                && matches!(
+                                    record.instance,
+                                    declarative::ElementInstance::HoverRegion(_)
+                                )
+                            {
+                                return Some(record.element);
                             }
-                            self.app.push_effect(effect);
+                            node = self.nodes.get(id).and_then(|n| n.parent);
                         }
+                        None
+                    });
 
-                        fn request_redraw(&mut self, window: AppWindowId) {
-                            self.app.request_redraw(window);
-                        }
-
-                        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
-                            self.app.next_timer_token()
-                        }
+                let (_prev_element, prev_node, _next_element, next_node) =
+                    crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
+                if prev_node.is_some() || next_node.is_some() {
+                    needs_redraw = true;
+                    self.debug_record_hover_edge_hover_region();
+                    if let Some(node) = prev_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
                     }
-
-                    let mut host = PressableHoverHookHost {
-                        app,
-                        window,
-                        element,
-                    };
-                    h(
-                        &mut host,
-                        crate::action::ActionCx {
-                            window,
-                            target: element,
-                        },
-                        true,
-                    );
-                }
-            }
-
-            let hovered_hover_region: Option<crate::elements::GlobalElementId> =
-                declarative::with_window_frame(app, window, |window_frame| {
-                    let window_frame = window_frame?;
-                    let mut node = hit;
-                    while let Some(id) = node {
-                        if let Some(record) = window_frame.instances.get(&id)
-                            && matches!(
-                                record.instance,
-                                declarative::ElementInstance::HoverRegion(_)
-                            )
-                        {
-                            return Some(record.element);
-                        }
-                        node = self.nodes.get(id).and_then(|n| n.parent);
+                    if let Some(node) = next_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
                     }
-                    None
-                });
-
-            let (_prev_element, prev_node, _next_element, next_node) =
-                crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
-            if prev_node.is_some() || next_node.is_some() {
-                needs_redraw = true;
-                self.debug_record_hover_edge_hover_region();
-                if let Some(node) = prev_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
-                }
-                if let Some(node) = next_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
                 }
             }
         }
@@ -1690,6 +1646,47 @@ impl<H: UiHost> UiTree<H> {
             && let Some(pointer_id) = event_pointer_id_for_capture
         {
             self.captured.remove(&pointer_id);
+        }
+
+        if let Event::PointerCancel(e) = event
+            && let Some(window) = self.window
+            && pointer_type_supports_hover(e.pointer_type)
+        {
+            let (prev_element, prev_node, _next_element, _next_node) =
+                crate::elements::update_hovered_pressable(app, window, None);
+            if prev_node.is_some() {
+                needs_redraw = true;
+                self.debug_record_hover_edge_pressable();
+                if let Some(node) = prev_node {
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
+                }
+            }
+
+            if let Some(element) = prev_element
+                && prev_node.is_some()
+            {
+                Self::run_pressable_hover_hook(app, window, element, false);
+            }
+
+            let (_prev_element, prev_node, _next_element, _next_node) =
+                crate::elements::update_hovered_hover_region(app, window, None);
+            if prev_node.is_some() {
+                needs_redraw = true;
+                self.debug_record_hover_edge_hover_region();
+                if let Some(node) = prev_node {
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
+                }
+            }
         }
 
         if defer_keydown_shortcuts_until_after_dispatch
