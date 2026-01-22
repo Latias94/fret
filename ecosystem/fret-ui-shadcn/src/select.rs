@@ -530,6 +530,7 @@ pub struct Select {
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
     disabled: bool,
+    trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -556,6 +557,7 @@ impl Select {
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
             disabled: false,
+            trigger_test_id: None,
             a11y_label: None,
             aria_invalid: false,
             on_dismiss_request: None,
@@ -600,6 +602,11 @@ impl Select {
             .open_model(cx);
 
         Self::new(model, open)
+    }
+
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
+        self
     }
 
     pub fn item(mut self, item: SelectItem) -> Self {
@@ -749,6 +756,7 @@ impl Select {
             &self.entries,
             self.placeholder,
             self.disabled,
+            self.trigger_test_id,
             self.a11y_label,
             self.aria_invalid,
             self.on_dismiss_request,
@@ -787,6 +795,7 @@ pub fn select<H: UiHost>(
         &entries,
         placeholder,
         disabled,
+        None,
         a11y_label,
         false,
         None,
@@ -813,6 +822,7 @@ fn select_impl<H: UiHost>(
     entries: &[SelectEntry],
     placeholder: Arc<str>,
     disabled: bool,
+    trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
@@ -837,6 +847,7 @@ fn select_impl<H: UiHost>(
         .merge(chrome);
 
     cx.scope(|cx| {
+        let trigger_test_id = trigger_test_id.clone();
         fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
             for entry in entries {
                 match entry {
@@ -1188,6 +1199,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
+            props.a11y.test_id = trigger_test_id.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
