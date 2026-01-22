@@ -4650,6 +4650,62 @@ fn web_vs_fret_switch_demo_track_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_switch_demo_focus_ring_matches() {
+    let web = read_web_golden("switch-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_switch = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.id.as_deref() == Some("airplane-mode")
+            && n.attrs.get("role").is_some_and(|v| v == "switch")
+    })
+    .expect("web switch track node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_switch).expect("web switch focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Switch::new(model)
+                    .a11y_label("SwitchFocus")
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::Switch && n.label.as_deref() == Some("SwitchFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret switch semantics node")
+        },
+    );
+
+    let switch = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Switch && n.label.as_deref() == Some("SwitchFocus"))
+        .expect("missing semantics for switch");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, switch.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "switch-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
 fn web_vs_fret_checkbox_demo_control_chrome_matches() {
     let web = read_web_golden("checkbox-demo");
     let theme = web
@@ -4696,6 +4752,62 @@ fn web_vs_fret_checkbox_demo_control_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("checkbox radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_checkbox_demo_focus_ring_matches() {
+    let web = read_web_golden("checkbox-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_checkbox = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.id.as_deref() == Some("terms")
+            && n.attrs.get("role").is_some_and(|v| v == "checkbox")
+    })
+    .expect("web checkbox node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_checkbox).expect("web checkbox focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Checkbox::new(model)
+                    .a11y_label("CheckboxFocus")
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::Checkbox && n.label.as_deref() == Some("CheckboxFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret checkbox semantics node")
+        },
+    );
+
+    let checkbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Checkbox && n.label.as_deref() == Some("CheckboxFocus"))
+        .expect("missing semantics for checkbox");
+
+    let ring_quad = find_focus_ring_quad(&scene, checkbox.bounds, expected_ring_spread)
+        .expect("focus ring quad");
+    assert_color_close(
+        "checkbox-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
 }
 
 #[test]

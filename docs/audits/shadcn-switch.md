@@ -35,13 +35,15 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 - Pass: Thumb is rendered as a circular element with `background` color and is non-interactive.
 - Pass: Thumb is vertically centered based on track/thumbnail sizes (aligns with `items-center`).
 - Pass: Track uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
-- Pass: Focus-visible styling includes an outward focus ring and a `ring`-colored border (best-effort).
+- Pass: Focus ring thickness (`ring-[3px]`) matches shadcn-web focus variant (`switch-demo.focus`).
 
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib switch`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_switch_demo_track_size`).
+- Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
+  (`web_vs_fret_switch_demo_focus_ring_matches`).
 
 ## Follow-ups (recommended)
 

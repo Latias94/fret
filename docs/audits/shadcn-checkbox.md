@@ -36,13 +36,15 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 - Pass: Checked state uses `primary` background, `primary-foreground` indicator color, and `primary`
   border.
 - Pass: Uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
-- Pass: Focus-visible styling includes an outward focus ring and a `ring`-colored border (best-effort).
+- Pass: Focus ring thickness (`ring-[3px]`) matches shadcn-web focus variant (`checkbox-demo.focus`).
 
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib checkbox`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_checkbox_demo_control_size`).
+- Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
+  (`web_vs_fret_checkbox_demo_focus_ring_matches`).
 
 ## Follow-ups (recommended)
 
