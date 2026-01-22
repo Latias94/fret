@@ -2058,9 +2058,24 @@ fn assert_overlay_placement_matches(
             })
         })
         .expect("web trigger (context menu)"),
-        _ => find_first(&web.themes["light"].root, &|n| n.tag == "button")
-            .or_else(|| find_first(&web.themes["dark"].root, &|n| n.tag == "button"))
-            .expect("web trigger (button)"),
+        _ => {
+            let is_open_trigger = |n: &WebNode| {
+                n.tag == "button"
+                    && (n
+                        .attrs
+                        .get("data-state")
+                        .is_some_and(|v| v.as_str() == "open")
+                        || n.attrs
+                            .get("aria-expanded")
+                            .is_some_and(|v| v.as_str() == "true"))
+            };
+
+            find_first(&web.themes["light"].root, &is_open_trigger)
+                .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+                .or_else(|| find_first(&web.themes["light"].root, &|n| n.tag == "button"))
+                .or_else(|| find_first(&web.themes["dark"].root, &|n| n.tag == "button"))
+                .expect("web trigger (button)")
+        }
     };
 
     let web_portal_index = if let Some(web_portal_role) = web_portal_role {
@@ -2962,6 +2977,216 @@ fn web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches() {
         },
         SemanticsRole::Button,
         Some("Open"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_dropdown_menu_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "button-group-demo",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::{
+                Button, ButtonGroup, ButtonGroupOrientation, ButtonSize, ButtonVariant,
+                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuGroup,
+                DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+            };
+
+            fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+                cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(16.0));
+                            layout.size.height = Length::Px(Px(16.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )
+            }
+
+            let radius = fret_ui::Theme::global(&*cx.app).metric_required("metric.radius.md");
+
+            let left_button = Button::new("Snooze")
+                .variant(ButtonVariant::Outline)
+                .corner_radii_override(fret_core::Corners {
+                    top_left: radius,
+                    bottom_left: radius,
+                    top_right: Px(0.0),
+                    bottom_right: Px(0.0),
+                });
+
+            let right_button = Button::new("More Options")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Icon)
+                .border_left_width_override(Px(0.0))
+                .corner_radii_override(fret_core::Corners {
+                    top_left: Px(0.0),
+                    bottom_left: Px(0.0),
+                    top_right: radius,
+                    bottom_right: radius,
+                })
+                .children([icon_stub(cx)]);
+
+            let label: Model<Option<Arc<str>>> =
+                cx.app.models_mut().insert(Some(Arc::from("personal")));
+
+            let dropdown = DropdownMenu::new(open.clone())
+                .align(DropdownMenuAlign::End)
+                // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
+                .min_width(Px(208.0))
+                .into_element(
+                    cx,
+                    |cx| right_button.clone().into_element(cx),
+                    |cx| {
+                        vec![
+                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
+                                ),
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
+                                ),
+                            ])),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                                ),
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                                ),
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                                ),
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Label As...")
+                                        .leading(icon_stub(cx))
+                                        .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                            DropdownMenuRadioGroup::new(label.clone())
+                                                .item(DropdownMenuRadioItemSpec::new(
+                                                    "personal", "Personal",
+                                                ))
+                                                .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                                .item(DropdownMenuRadioItemSpec::new(
+                                                    "other", "Other",
+                                                )),
+                                        )]),
+                                ),
+                            ])),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Trash")
+                                        .leading(icon_stub(cx))
+                                        .variant(
+                                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                        ),
+                                ),
+                            ])),
+                        ]
+                    },
+                );
+
+            let group3 = cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Group,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.flex(
+                        fret_ui::element::FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        move |cx| vec![left_button.clone().into_element(cx), dropdown.clone()],
+                    )]
+                },
+            );
+
+            ButtonGroup::new(vec![
+                ButtonGroup::new(vec![
+                    Button::new("Go Back")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Icon)
+                        .children([icon_stub(cx)])
+                        .into(),
+                ])
+                .into(),
+                ButtonGroup::new(vec![
+                    Button::new("Archive")
+                        .variant(ButtonVariant::Outline)
+                        .into(),
+                    Button::new("Report").variant(ButtonVariant::Outline).into(),
+                ])
+                .into(),
+                group3.into(),
+            ])
+            .orientation(ButtonGroupOrientation::Horizontal)
+            .into_element(cx)
+        },
+        SemanticsRole::Button,
+        Some("More Options"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_mode_toggle_dropdown_menu_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "mode-toggle",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::{
+                Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
+                DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+                cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(16.0));
+                            layout.size.height = Length::Px(Px(16.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )
+            }
+
+            DropdownMenu::new(open.clone())
+                .align(DropdownMenuAlign::End)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Toggle theme")
+                            .variant(ButtonVariant::Outline)
+                            .size(ButtonSize::Icon)
+                            .children([icon_stub(cx)])
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Light")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Dark")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("System")),
+                        ]
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        Some("Toggle theme"),
         SemanticsRole::Menu,
     );
 }
@@ -4767,6 +4992,213 @@ fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     );
 }
 
+fn assert_button_group_demo_submenu_overlay_placement_matches(web_name: &str) {
+    use fret_ui_shadcn::{
+        Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+        DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
+
+    fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(16.0));
+                    layout.size.height = Length::Px(Px(16.0));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
+    }
+
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_sub_menu = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-content");
+    let web_sub_trigger = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-trigger");
+
+    let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
+    let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
+    let expected_w = web_sub_menu.rect.w;
+    let expected_h = web_sub_menu.rect.h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let label_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("personal")));
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        DropdownMenu::new(open.clone())
+            .align(DropdownMenuAlign::End)
+            // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
+            .min_width(Px(208.0))
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("More Options")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Icon)
+                        .children([icon_stub(cx)])
+                        .into_element(cx)
+                },
+                |cx| {
+                    vec![DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Label As...")
+                                .leading(icon_stub(cx))
+                                .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                    DropdownMenuRadioGroup::new(label_value.clone())
+                                        .item(DropdownMenuRadioItemSpec::new(
+                                            "personal", "Personal",
+                                        ))
+                                        .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                        .item(DropdownMenuRadioItemSpec::new("other", "Other")),
+                                )]),
+                        ),
+                    ]))]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Label As..."))
+        .expect("fret submenu trigger semantics");
+    ui.set_focus(Some(trigger.id));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Label As..."))
+        .expect("fret submenu trigger semantics (final)");
+
+    let menus: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .collect();
+    assert!(
+        menus.len() >= 2,
+        "expected at least 2 menu panels after opening submenu; got {}",
+        menus.len()
+    );
+
+    let root_menu = menus
+        .iter()
+        .find(|m| fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("root menu contains sub-trigger");
+    let submenu = menus
+        .iter()
+        .find(|m| !fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("submenu menu does not contain sub-trigger");
+
+    let actual_dx =
+        submenu.bounds.origin.x.0 - (trigger.bounds.origin.x.0 + trigger.bounds.size.width.0);
+    let actual_dy = submenu.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+    let actual_w = submenu.bounds.size.width.0;
+    let actual_h = submenu.bounds.size.height.0;
+
+    assert_close(
+        &format!("{web_name} submenu dx"),
+        actual_dx,
+        expected_dx,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} submenu dy"),
+        actual_dy,
+        expected_dy,
+        2.0,
+    );
+    assert_close(&format!("{web_name} submenu w"), actual_w, expected_w, 2.0);
+    assert_close(&format!("{web_name} submenu h"), actual_h, expected_h, 2.0);
+
+    assert!(
+        root_menu.bounds.size.width.0 > 0.0 && root_menu.bounds.size.height.0 > 0.0,
+        "expected root menu bounds to be non-zero"
+    );
+}
+
 #[test]
 fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
     assert_dropdown_menu_demo_submenu_overlay_placement_matches("dropdown-menu-demo.submenu-kbd");
@@ -4775,6 +5207,11 @@ fn web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches() {
 #[test]
 fn web_vs_fret_dropdown_menu_demo_submenu_hover_overlay_placement_matches() {
     assert_dropdown_menu_demo_submenu_overlay_placement_matches("dropdown-menu-demo.submenu");
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_submenu_overlay_placement_matches() {
+    assert_button_group_demo_submenu_overlay_placement_matches("button-group-demo.submenu-kbd");
 }
 
 #[test]
