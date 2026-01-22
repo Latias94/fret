@@ -100,7 +100,8 @@ Material 3 Expressive) in Fret.
 
 - [x] Button (MVP: filled/tonal/elevated/outlined/text, state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/button.rs` (`Button`, `ButtonVariant`).
-- [ ] Icon button
+- [x] Icon button (MVP: standard/filled/tonal/outlined, state layer + bounded ripple, optional toggle colors)
+  - Evidence: `ecosystem/fret-ui-material3/src/icon_button.rs` (`IconButton`, `IconButtonVariant`).
 - [ ] Checkbox / Radio / Switch
 - [ ] Text field
 - [ ] Tabs
@@ -113,6 +114,9 @@ Material 3 Expressive) in Fret.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_BUTTON`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_button`),
     `apps/fret-ui-gallery/src/driver.rs` (v30 token injection via `extend_tokens_from_config`).
+- [x] Add a Material 3 IconButton gallery page for manual interaction verification.
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_ICON_BUTTON`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_icon_button`).
 - [ ] Add a small, scripted interaction test harness for Material states (hover/press/ripple).
 - [ ] Add golden-style visual snapshots per component state (light/dark, density variants).
 
