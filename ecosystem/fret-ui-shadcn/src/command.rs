@@ -60,7 +60,7 @@ fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
+        dispatch_phase: InputDispatchPhase::Bubble,
     }
 }
 
@@ -192,7 +192,6 @@ fn command_text_input<H: UiHost>(
     a11y_role: Option<SemanticsRole>,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
-    height: Px,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
@@ -228,7 +227,7 @@ fn command_text_input<H: UiHost>(
     props.text_style = item_text_style(&theme);
     props.layout.size = SizeStyle {
         width: Length::Fill,
-        height: Length::Px(height),
+        height: Length::Fill,
         min_width: Some(Px(0.0)),
         min_height: Some(Px(0.0)),
         ..Default::default()
@@ -470,11 +469,11 @@ impl std::fmt::Debug for Command {
 }
 
 impl Command {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            children,
+            children: children.into_iter().collect(),
         }
     }
 
@@ -575,9 +574,6 @@ impl CommandInput {
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
                 .unwrap_or(Px(36.0));
-            let input_h = theme
-                .metric_by_key("component.command.input.height")
-                .unwrap_or(Px(40.0));
             let icon_size = theme
                 .metric_by_key("component.command.input.icon_size")
                 .unwrap_or(Px(16.0));
@@ -660,7 +656,6 @@ impl CommandInput {
                     Some(SemanticsRole::ComboBox),
                     None,
                     None,
-                    input_h,
                 );
 
                 let mut row = cx.row(
@@ -793,8 +788,8 @@ impl CommandItem {
         self
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 }
@@ -1143,7 +1138,6 @@ impl CommandList {
                                                     border: Edges::all(Px(0.0)),
                                                     border_color: None,
                                                     corner_radii: Corners::all(radius),
-                                                    ..Default::default()
                                                 };
 
                                                 vec![cx.container(props, move |cx| {
@@ -1199,12 +1193,11 @@ pub struct CommandPalette {
     input_role: Option<SemanticsRole>,
     input_expanded: Option<bool>,
     input_wrapper_h: MetricRef,
-    input_h: MetricRef,
     input_icon_size: MetricRef,
     item_pad_y: MetricRef,
     group_pad_x: MetricRef,
     group_pad_y: MetricRef,
-    group_next_top_pad_zero: bool,
+    group_gap_y: Option<MetricRef>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     scroll: LayoutRefinement,
@@ -1426,13 +1419,12 @@ impl CommandPalette {
             placeholder: None,
             input_role: Some(SemanticsRole::ComboBox),
             input_expanded: None,
-            input_wrapper_h: MetricRef::Px(Px(36.0)),
-            input_h: MetricRef::Px(Px(40.0)),
+            input_wrapper_h: MetricRef::Px(Px(40.0)),
             input_icon_size: MetricRef::Px(Px(16.0)),
             item_pad_y: MetricRef::space(Space::N1p5),
             group_pad_x: MetricRef::space(Space::N1),
             group_pad_y: MetricRef::space(Space::N1),
-            group_next_top_pad_zero: false,
+            group_gap_y: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
@@ -1465,12 +1457,11 @@ impl CommandPalette {
     /// - `[&_[cmdk-group]]:px-2`
     pub fn command_dialog_defaults(mut self) -> Self {
         self.input_wrapper_h = MetricRef::Px(Px(48.0));
-        self.input_h = MetricRef::Px(Px(48.0));
         self.input_icon_size = MetricRef::Px(Px(20.0));
         self.item_pad_y = MetricRef::space(Space::N3);
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
-        self.group_next_top_pad_zero = true;
+        self.group_gap_y = Some(MetricRef::space(Space::N1));
         self
     }
 
@@ -1559,12 +1550,11 @@ impl CommandPalette {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let input_wrapper_h_fallback = self.input_wrapper_h.resolve(&theme);
-            let input_h_fallback = self.input_h.resolve(&theme);
             let input_icon_size_fallback = self.input_icon_size.resolve(&theme);
             let item_pad_y = self.item_pad_y.resolve(&theme);
             let group_pad_x = self.group_pad_x.resolve(&theme);
             let group_pad_y = self.group_pad_y.resolve(&theme);
-            let group_next_top_pad_zero = self.group_next_top_pad_zero;
+            let group_gap_y_fallback = self.group_gap_y.clone();
 
             let disabled = self.disabled;
             let wrap = self.wrap;
@@ -1768,14 +1758,17 @@ impl CommandPalette {
                     CommandPaletteRenderRow::GroupPad => cx.container(
                         ContainerProps {
                             layout: {
-                                let height = if group_next_top_pad_zero {
-                                    group_pad_y
-                                } else {
-                                    Px(group_pad_y.0 * 2.0)
-                                };
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Fill;
-                                layout.size.height = Length::Px(height);
+                                let group_gap_y = theme
+                                    .metric_by_key("component.command.group.gap_y")
+                                    .unwrap_or_else(|| {
+                                        group_gap_y_fallback
+                                            .as_ref()
+                                            .map(|m| m.resolve(&theme))
+                                            .unwrap_or(Px(group_pad_y.0 * 2.0))
+                                    });
+                                layout.size.height = Length::Px(group_gap_y);
                                 layout
                             },
                             ..Default::default()
@@ -1901,7 +1894,6 @@ impl CommandPalette {
                                         border: Edges::all(Px(0.0)),
                                         border_color: None,
                                         corner_radii: Corners::all(radius),
-                                        ..Default::default()
                                     };
 
                                     vec![cx.container(props, move |cx| {
@@ -1998,9 +1990,6 @@ impl CommandPalette {
             let wrapper_h = theme
                 .metric_by_key("component.command.input.wrapper_height")
                 .unwrap_or(input_wrapper_h_fallback);
-            let input_h = theme
-                .metric_by_key("component.command.input.height")
-                .unwrap_or(input_h_fallback);
             let icon_size = theme
                 .metric_by_key("component.command.input.icon_size")
                 .unwrap_or(input_icon_size_fallback);
@@ -2024,7 +2013,7 @@ impl CommandPalette {
             wrapper.border_color = Some(border);
 
             if matches!(wrapper.layout.size.height, Length::Auto) {
-                wrapper.layout.size.height = Length::Px(wrapper_h);
+                wrapper.layout.size.height = Length::Px(Px(wrapper_h.0 + wrapper.border.bottom.0));
             }
             wrapper.padding = Edges {
                 top: Px(0.0),
@@ -2042,7 +2031,6 @@ impl CommandPalette {
                 self.input_role,
                 active_descendant,
                 self.input_expanded,
-                input_h,
             );
             let input_id = input.id;
 

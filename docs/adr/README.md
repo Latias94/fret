@@ -117,7 +117,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Typography (weight/line-height/tracking)**: `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - **Text editing commands + selection model**: `docs/adr/0044-text-editing-state-and-commands.md`
 - **Text geometry queries (caret/hit-test, multiline affinity)**: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
-- **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`
+- **Shortcut arbitration / AltGr / multi-stroke bindings**: `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - **Observability + diagnostics bundles + scripted UI interaction tests**: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - **Renderer (ordering, batching, shapes/SDF)**: `docs/adr/0009-renderer-ordering-and-batching.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`, `docs/adr/0002-display-list.md`
 - **Renderer clipping (soft/rounded)**: `docs/adr/0063-rounded-clipping-and-soft-clip-masks.md`

@@ -291,6 +291,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
@@ -315,6 +316,7 @@ impl<H: UiHost> UiTree<H> {
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
+                        prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
                         captured: pointer_id_for_capture
@@ -446,6 +448,7 @@ impl<H: UiHost> UiTree<H> {
                     window: tree.window,
                     pointer_id: pointer_id_for_capture,
                     input_ctx: input_ctx.clone(),
+                    prevented_default_actions: &mut prevented_default_actions,
                     children,
                     focus: tree.focus,
                     captured: pointer_id_for_capture.and_then(|p| tree.captured.get(&p).copied()),
@@ -568,8 +571,37 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
+
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
+
+        // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
+        // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
+        //
+        // Modal barriers must continue to block wheel events while present.
+        let wheel_hit_test_layers: Option<Vec<NodeId>> = (is_wheel
+            && barrier_root.is_some_and(|barrier_root| {
+                self.root_to_layer
+                    .get(&barrier_root)
+                    .copied()
+                    .and_then(|layer| self.layers.get(layer))
+                    .is_some_and(|layer| !layer.hit_testable)
+            }))
+        .then(|| {
+            let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+            let mut roots: Vec<NodeId> = Vec::new();
+            for layer_id in visible.into_iter().rev() {
+                let layer = &self.layers[layer_id];
+                if layer.hit_testable {
+                    roots.push(layer.root);
+                }
+            }
+            roots
+        });
+        let hit_test_layer_roots: &[NodeId] = wheel_hit_test_layers
+            .as_deref()
+            .unwrap_or(active_layers.as_slice());
 
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
@@ -601,7 +633,7 @@ impl<H: UiHost> UiTree<H> {
             focus_is_text_input,
             edit_can_undo: true,
             edit_can_redo: true,
-            dispatch_phase: InputDispatchPhase::Normal,
+            dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
             if let Some(availability) = app
@@ -791,9 +823,10 @@ impl<H: UiHost> UiTree<H> {
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
-        let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
         let mut wheel_stop_node: Option<NodeId> = None;
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut focus_requested = false;
 
         if let Event::KeyDown {
             key: fret_core::KeyCode::Escape,
@@ -872,10 +905,10 @@ impl<H: UiHost> UiTree<H> {
             // For now, only allow cached hit-test reuse for pointer-move events; other pointer
             // events clear the cache and rebuild it from a full hit-test pass.
             let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
 
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
@@ -1123,6 +1156,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let mut pointer_hit: Option<NodeId> = None;
         let target = if let Some(captured) = captured {
             Some(captured)
         } else if let Some(target) = internal_drag_target {
@@ -1130,10 +1164,10 @@ impl<H: UiHost> UiTree<H> {
         } else if let Some(pos) = event_position(event) {
             // See the cached hit-test reuse note above.
             let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
 
             let hit = if matches!(event, Event::InternalDrag(_)) {
@@ -1160,6 +1194,7 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 hit
             };
+            pointer_hit = hit;
 
             if let Event::Pointer(PointerEvent::Move { buttons, .. }) = event
                 && !buttons.left
@@ -1252,6 +1287,7 @@ impl<H: UiHost> UiTree<H> {
                         window: tree.window,
                         pointer_id: event_pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
+                        prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
                         captured: event_pointer_id_for_capture
@@ -1297,12 +1333,15 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(focus) = requested_focus
                     && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
                 {
+                    focus_requested = true;
                     if let Some(prev) = self.focus {
                         self.mark_invalidation(prev, Invalidation::Paint);
                     }
                     self.focus = Some(focus);
                     self.mark_invalidation(focus, Invalidation::Paint);
                     self.scroll_node_into_view(app, focus);
+                } else if requested_focus.is_some() {
+                    focus_requested = true;
                 }
 
                 if let Some(capture) = requested_capture {
@@ -1359,6 +1398,7 @@ impl<H: UiHost> UiTree<H> {
                         window: tree.window,
                         pointer_id: event_pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
+                        prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
                         captured: event_pointer_id_for_capture
@@ -1405,12 +1445,15 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(focus) = requested_focus
                     && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
                 {
+                    focus_requested = true;
                     if let Some(prev) = self.focus {
                         self.mark_invalidation(prev, Invalidation::Paint);
                     }
                     self.focus = Some(focus);
                     self.mark_invalidation(focus, Invalidation::Paint);
                     self.scroll_node_into_view(app, focus);
+                } else if requested_focus.is_some() {
+                    focus_requested = true;
                 }
 
                 if let Some(capture) = requested_capture {
@@ -1447,6 +1490,29 @@ impl<H: UiHost> UiTree<H> {
                     Some(parent) => parent,
                     None => break,
                 };
+            }
+        }
+
+        if let Event::Pointer(PointerEvent::Down { button, .. }) = event
+            && *button == fret_core::MouseButton::Left
+            && !focus_requested
+            && !prevented_default_actions.contains(fret_runtime::DefaultAction::FocusOnPointerDown)
+            && captured.is_none()
+            && internal_drag_target.is_none()
+            && let Some(window) = self.window
+            && let Some(hit) = pointer_hit
+        {
+            let candidate = self.first_focusable_ancestor_including_declarative(app, window, hit);
+            if let Some(focus) = candidate
+                && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+            {
+                if let Some(prev) = self.focus {
+                    self.mark_invalidation(prev, Invalidation::Paint);
+                }
+                self.focus = Some(focus);
+                self.mark_invalidation(focus, Invalidation::Paint);
+                self.scroll_node_into_view(app, focus);
+                needs_redraw = true;
             }
         }
 
@@ -1705,7 +1771,7 @@ impl<H: UiHost> UiTree<H> {
                 focus_is_text_input,
                 edit_can_undo: true,
                 edit_can_redo: true,
-                dispatch_phase: InputDispatchPhase::Normal,
+                dispatch_phase: InputDispatchPhase::Bubble,
             };
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()
@@ -1744,6 +1810,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
@@ -1757,7 +1824,7 @@ impl<H: UiHost> UiTree<H> {
                             .map(|n| (n.children.as_slice(), n.bounds))
                             .unwrap_or((&[][..], Rect::default()));
                         let mut observer_ctx = input_ctx.clone();
-                        observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
+                        observer_ctx.dispatch_phase = InputDispatchPhase::Preview;
                         let mut cx = EventCx {
                             app,
                             services: &mut *services,
@@ -1765,6 +1832,7 @@ impl<H: UiHost> UiTree<H> {
                             window: tree.window,
                             pointer_id: pointer_id_for_capture,
                             input_ctx: observer_ctx,
+                            prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
                             captured: pointer_id_for_capture
@@ -1822,7 +1890,7 @@ impl<H: UiHost> UiTree<H> {
                         .map(|n| (n.children.as_slice(), n.bounds))
                         .unwrap_or((&[][..], Rect::default()));
                     let mut observer_ctx = input_ctx.clone();
-                    observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
+                    observer_ctx.dispatch_phase = InputDispatchPhase::Preview;
                     let mut cx = EventCx {
                         app,
                         services: &mut *services,
@@ -1830,6 +1898,7 @@ impl<H: UiHost> UiTree<H> {
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: observer_ctx,
+                        prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
                         captured: pointer_id_for_capture

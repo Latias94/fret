@@ -18,9 +18,10 @@ use fret_ui::UiTree;
 use fret_ui::action::{DismissReason, UiActionHostAdapter};
 use fret_ui::element::{
     ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
-    PressableProps, SizeStyle,
+    PressableProps, SizeStyle, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
+use fret_ui::scroll::ScrollHandle;
 
 #[derive(Default)]
 struct FakeServices;
@@ -533,6 +534,92 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                         Vec::new()
                     },
                 );
+                underlay_id = Some(underlay.id);
+
+                vec![trigger, underlay]
+            },
+        )]
+    });
+    ui.set_root(root);
+
+    (
+        trigger_id.expect("trigger id"),
+        underlay_id.expect("underlay id"),
+    )
+}
+
+fn render_base_with_trigger_and_underlay_wheel_region(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    open: Model<bool>,
+    scroll_handle: ScrollHandle,
+) -> (GlobalElementId, GlobalElementId) {
+    begin_frame(app, window);
+
+    let mut trigger_id: Option<GlobalElementId> = None;
+    let mut underlay_id: Option<GlobalElementId> = None;
+
+    let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+        vec![cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(80.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        Vec::new()
+                    },
+                );
+
+                let mut wheel_region = WheelRegionProps::default();
+                wheel_region.layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        left: Some(Px(0.0)),
+                        top: Some(Px(120.0)),
+                        ..Default::default()
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(Px(160.0)),
+                        height: Length::Px(Px(32.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                wheel_region.scroll_handle = scroll_handle.clone();
+                let underlay = cx.wheel_region(wheel_region, |_| Vec::new());
                 underlay_id = Some(underlay.id);
 
                 vec![trigger, underlay]
@@ -3095,6 +3182,7 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
 
     let open = app.models_mut().insert(false);
     let underlay_moved = app.models_mut().insert(false);
+    let scroll_handle = ScrollHandle::default();
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -3132,14 +3220,14 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
     // while open (Radix `disableOutsidePointerEvents` outcome).
     let _ = app.models_mut().update(&open, |v| *v = true);
     begin_frame(&mut app, window);
-    let (_trigger2, _underlay2) = render_base_with_trigger_and_underlay_pointer_move(
+    let (_trigger2, _underlay2) = render_base_with_trigger_and_underlay_wheel_region(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
         open.clone(),
-        underlay_moved.clone(),
+        scroll_handle.clone(),
     );
 
     request_dismissible_popover_for_window(
@@ -3178,4 +3266,22 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
         }),
     );
     assert_eq!(app.models().get_copied(&underlay_moved), Some(false));
+
+    // Underlay scroll should still be reachable while outside pointer events are disabled:
+    // the default policy uses an "except scroll" occlusion mode.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            pointer_id: PointerId(0),
+            position: Point::new(Px(10.0), Px(130.0)),
+            delta: Point::new(Px(0.0), Px(-60.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected wheel to update underlay scroll handle even while occluding pointer interactions"
+    );
 }

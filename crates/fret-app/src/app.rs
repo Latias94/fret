@@ -908,7 +908,7 @@ mod tests {
             focus_is_text_input: false,
             edit_can_undo: true,
             edit_can_redo: true,
-            dispatch_phase: InputDispatchPhase::Normal,
+            dispatch_phase: InputDispatchPhase::Bubble,
         };
 
         let ctrl_z = KeyChord::new(

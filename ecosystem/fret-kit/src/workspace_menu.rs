@@ -1175,11 +1175,11 @@ fn menu_shortcut_input_context<H: UiHost>(
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
+        dispatch_phase: InputDispatchPhase::Bubble,
     });
 
     ctx.platform = platform;
-    ctx.dispatch_phase = InputDispatchPhase::Normal;
+    ctx.dispatch_phase = InputDispatchPhase::Bubble;
     ctx
 }
 

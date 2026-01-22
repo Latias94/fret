@@ -188,7 +188,6 @@ fn select_scroll_with_buttons<H: UiHost>(
                                 border: Edges::all(Px(0.0)),
                                 border_color: None,
                                 corner_radii: Corners::all(Px(0.0)),
-                                ..Default::default()
                             },
                             |cx| {
                                 vec![cx.flex(
@@ -515,14 +514,6 @@ pub enum SelectPosition {
     Popper,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-struct BorderWidthOverride {
-    top: Option<Px>,
-    right: Option<Px>,
-    bottom: Option<Px>,
-    left: Option<Px>,
-}
-
 #[derive(Clone)]
 pub struct Select {
     model: Model<Option<Arc<str>>>,
@@ -531,7 +522,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
-    aria_invalid: bool,
+    trigger_test_id: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -544,8 +535,6 @@ pub struct Select {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
-    trigger_border_width_override: BorderWidthOverride,
-    trigger_corner_radii_override: Option<Corners>,
 }
 
 impl Select {
@@ -557,7 +546,7 @@ impl Select {
             placeholder: Arc::from("Select..."),
             disabled: false,
             a11y_label: None,
-            aria_invalid: false,
+            trigger_test_id: None,
             on_dismiss_request: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -570,8 +559,6 @@ impl Select {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
-            trigger_border_width_override: BorderWidthOverride::default(),
-            trigger_corner_radii_override: None,
         }
     }
 
@@ -638,8 +625,8 @@ impl Select {
         self
     }
 
-    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
-        self.aria_invalid = aria_invalid;
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
         self
     }
 
@@ -693,38 +680,6 @@ impl Select {
         self
     }
 
-    /// Overrides per-edge border widths (in px) for the Select trigger's chrome.
-    ///
-    /// This is primarily used by shadcn recipe compositions that merge borders (e.g. input groups).
-    pub fn border_left_width_override(mut self, border: Px) -> Self {
-        self.trigger_border_width_override.left = Some(border);
-        self
-    }
-
-    pub fn border_right_width_override(mut self, border: Px) -> Self {
-        self.trigger_border_width_override.right = Some(border);
-        self
-    }
-
-    pub fn border_top_width_override(mut self, border: Px) -> Self {
-        self.trigger_border_width_override.top = Some(border);
-        self
-    }
-
-    pub fn border_bottom_width_override(mut self, border: Px) -> Self {
-        self.trigger_border_width_override.bottom = Some(border);
-        self
-    }
-
-    /// Overrides per-corner radii (in px) for the Select trigger's chrome.
-    ///
-    /// This is primarily used by shadcn recipe compositions that merge corner radii
-    /// (`rounded-l-none`, `rounded-r-none`).
-    pub fn corner_radii_override(mut self, corners: Corners) -> Self {
-        self.trigger_corner_radii_override = Some(corners);
-        self
-    }
-
     /// Enables a Select arrow (Radix `SelectArrow`-style).
     pub fn arrow(mut self, arrow: bool) -> Self {
         self.arrow = arrow;
@@ -750,7 +705,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.a11y_label,
-            self.aria_invalid,
+            self.trigger_test_id,
             self.on_dismiss_request,
             self.chrome,
             self.layout,
@@ -763,8 +718,6 @@ impl Select {
             self.arrow,
             self.arrow_size_override,
             self.arrow_padding_override,
-            self.trigger_border_width_override,
-            self.trigger_corner_radii_override,
         )
     }
 }
@@ -788,7 +741,7 @@ pub fn select<H: UiHost>(
         placeholder,
         disabled,
         a11y_label,
-        false,
+        None,
         None,
         ChromeRefinement::default(),
         layout,
@@ -801,8 +754,6 @@ pub fn select<H: UiHost>(
         false,
         None,
         None,
-        BorderWidthOverride::default(),
-        None,
     )
 }
 
@@ -814,7 +765,7 @@ fn select_impl<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
-    aria_invalid: bool,
+    trigger_test_id: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -827,8 +778,6 @@ fn select_impl<H: UiHost>(
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
-    trigger_border_width_override: BorderWidthOverride,
-    trigger_corner_radii_override: Option<Corners>,
 ) -> AnyElement {
     let chrome = ChromeRefinement::default()
         .pl(Space::N2p5)
@@ -837,6 +786,8 @@ fn select_impl<H: UiHost>(
         .merge(chrome);
 
     cx.scope(|cx| {
+        let trigger_test_id_for_trigger = trigger_test_id.clone();
+
         fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
             for entry in entries {
                 match entry {
@@ -905,7 +856,7 @@ fn select_impl<H: UiHost>(
         );
 
         let radius = resolved.radius;
-        let mut ring = decl_style::focus_ring(&theme, radius);
+        let ring = decl_style::focus_ring(&theme, radius);
 
         let label = selected
             .as_ref()
@@ -934,28 +885,12 @@ fn select_impl<H: UiHost>(
                 .merge(layout),
         );
 
-        let mut border = resolved.border_color;
-        let mut border_focus = resolved.border_color_focused;
+        let border = resolved.border_color;
+        let border_focus = resolved.border_color_focused;
         let fg = resolved.text_color;
         let fg_muted = theme
             .color_by_key("muted-foreground")
             .unwrap_or_else(|| theme.color_required("muted-foreground"));
-
-        if aria_invalid {
-            let border_color = theme.color_required("destructive");
-            border = border_color;
-            border_focus = border_color;
-
-            let ring_key = if theme.name.contains("/dark") {
-                "destructive/40"
-            } else {
-                "destructive/20"
-            };
-            ring.color = theme
-                .color_by_key(ring_key)
-                .or_else(|| theme.color_by_key("destructive/20"))
-                .unwrap_or(border_color);
-        }
 
         let enabled = !disabled;
         let item_len = count_items(entries);
@@ -1188,6 +1123,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
+            props.a11y.test_id = trigger_test_id_for_trigger.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
@@ -1874,7 +1810,6 @@ fn select_impl<H: UiHost>(
                                                                                     border: Edges::all(Px(0.0)),
                                                                                     border_color: None,
                                                                                     corner_radii: Corners::all(Px(0.0)),
-                                                                                    ..Default::default()
                                                                                 },
                                                                                 move |cx| {
                                                                                     vec![ui::text(cx, label.text)
@@ -2083,32 +2018,31 @@ fn select_impl<H: UiHost>(
 
                                                                                              vec![cx.container(
                                                                                                 ContainerProps {
-                                                                                                    layout: {
-                                                                                                        let mut layout =
-                                                                                                            LayoutStyle::default();
-                                                                                                        layout.size.width = Length::Fill;
-                                                                                                        layout.size.height = Length::Fill;
-                                                                                                        layout
-                                                                                                    },
-                                                                                                    // new-york-v4: `py-1.5 pl-2 pr-8`
-                                                                                                    padding: Edges {
-                                                                                                        top: Px(6.0),
-                                                                                                        right: Px(32.0),
-                                                                                                        bottom: Px(6.0),
-                                                                                                        left: Px(8.0),
-                                                                                                    },
-                                                                                                    background: Some(bg),
-                                                                                                    shadow: None,
-                                                                                                    border: Edges::all(Px(0.0)),
-                                                                                                    border_color: None,
-                                                                                                    corner_radii: Corners::all(
-                                                                                                        theme.metric_required("metric.radius.sm"),
-                                                                                                    ),
-                                                                                                    ..Default::default()
+                                                                                            layout: {
+                                                                                                let mut layout =
+                                                                                                    LayoutStyle::default();
+                                                                                                layout.size.width = Length::Fill;
+                                                                                                layout.size.height = Length::Fill;
+                                                                                                layout
+                                                                                            },
+                                                                                            // new-york-v4: `py-1.5 pl-2 pr-8`
+                                                                                            padding: Edges {
+                                                                                                top: Px(6.0),
+                                                                                                right: Px(32.0),
+                                                                                                bottom: Px(6.0),
+                                                                                                left: Px(8.0),
+                                                                                            },
+                                                                                            background: Some(bg),
+                                                                                            shadow: None,
+                                                                                            border: Edges::all(Px(0.0)),
+                                                                                            border_color: None,
+                                                                                            corner_radii: Corners::all(
+                                                                                                theme.metric_required("metric.radius.sm"),
+                                                                                            ),
                                                                                                 },
-                                                                                                 |cx| {
-                                                                                             let text = cx.container(
-                                                                                                 ContainerProps {
+                                                                                                |cx| {
+                                                                                            let text = cx.container(
+                                                                                                ContainerProps {
                                                                                                     layout: {
                                                                                                         let mut layout =
                                                                                                             LayoutStyle::default();
@@ -2146,38 +2080,37 @@ fn select_impl<H: UiHost>(
                                                                                                     * 0.5)
                                                                                                     .max(0.0),
                                                                                             );
-                                                                                                 let indicator = cx.container(
-                                                                                                     ContainerProps {
-                                                                                                         layout: LayoutStyle {
-                                                                                                             position: PositionStyle::Absolute,
-                                                                                                             inset: InsetStyle {
-                                                                                                                 top: Some(indicator_top),
-                                                                                                                 right: Some(Px(8.0)),
-                                                                                                                 bottom: None,
-                                                                                                                 left: None,
-                                                                                                             },
-                                                                                                             size: SizeStyle {
-                                                                                                                 width: Length::Px(
-                                                                                                                     indicator_size,
-                                                                                                                 ),
-                                                                                                                 height: Length::Px(
-                                                                                                                     indicator_size,
-                                                                                                                 ),
-                                                                                                                 ..Default::default()
-                                                                                                             },
-                                                                                                             ..Default::default()
-                                                                                                         },
-                                                                                                         padding: Edges::all(Px(0.0)),
-                                                                                                         background: None,
-                                                                                                         shadow: None,
-                                                                                                         border: Edges::all(Px(0.0)),
-                                                                                                         border_color: None,
-                                                                                                         corner_radii: Corners::all(Px(0.0)),
-                                                                                                         ..Default::default()
-                                                                                                     },
-                                                                                                     |cx| {
-                                                                                                         vec![cx.flex(
-                                                                                                             FlexProps {
+                                                                                            let indicator = cx.container(
+                                                                                                ContainerProps {
+                                                                                                    layout: LayoutStyle {
+                                                                                                        position: PositionStyle::Absolute,
+                                                                                                        inset: InsetStyle {
+                                                                                                            top: Some(indicator_top),
+                                                                                                            right: Some(Px(8.0)),
+                                                                                                            bottom: None,
+                                                                                                            left: None,
+                                                                                                        },
+                                                                                                        size: SizeStyle {
+                                                                                                            width: Length::Px(
+                                                                                                                indicator_size,
+                                                                                                            ),
+                                                                                                            height: Length::Px(
+                                                                                                                indicator_size,
+                                                                                                            ),
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        ..Default::default()
+                                                                                                    },
+                                                                                                    padding: Edges::all(Px(0.0)),
+                                                                                                    background: None,
+                                                                                                    shadow: None,
+                                                                                                    border: Edges::all(Px(0.0)),
+                                                                                                    border_color: None,
+                                                                                                    corner_radii: Corners::all(Px(0.0)),
+                                                                                                },
+                                                                                                |cx| {
+                                                                                                    vec![cx.flex(
+                                                                                                        FlexProps {
                                                                                                             layout: {
                                                                                                                 let mut layout =
                                                                                                                     LayoutStyle::default();
@@ -2262,7 +2195,6 @@ fn select_impl<H: UiHost>(
                                                 border: Edges::all(border_width),
                                                 border_color: Some(overlay_border),
                                                 corner_radii: Corners::all(radius),
-                                                ..Default::default()
                                             },
                                             move |_cx| vec![scroll],
                                         );
@@ -2384,7 +2316,7 @@ fn select_impl<H: UiHost>(
                 Length::Fill
             };
             let auto_width_trigger = matches!(content_width, Length::Auto);
-            let mut chrome = input_chrome_container_props(
+            let chrome = input_chrome_container_props(
                 {
                     let mut layout = LayoutStyle::default();
                     layout.size.width = chrome_width;
@@ -2393,21 +2325,6 @@ fn select_impl<H: UiHost>(
                 resolved,
                 border_color,
             );
-            if let Some(corners) = trigger_corner_radii_override {
-                chrome.corner_radii = corners;
-            }
-            if let Some(border) = trigger_border_width_override.top {
-                chrome.border.top = border;
-            }
-            if let Some(border) = trigger_border_width_override.right {
-                chrome.border.right = border;
-            }
-            if let Some(border) = trigger_border_width_override.bottom {
-                chrome.border.bottom = border;
-            }
-            if let Some(border) = trigger_border_width_override.left {
-                chrome.border.left = border;
-            }
 
             let state_for_value_node = trigger_state.clone();
 

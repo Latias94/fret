@@ -30,11 +30,11 @@ pub(crate) fn command_shortcut_label<H: UiHost>(
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
+        dispatch_phase: InputDispatchPhase::Bubble,
     });
     base_ctx.platform = platform;
     base_ctx.caps = caps;
-    base_ctx.dispatch_phase = InputDispatchPhase::Normal;
+    base_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
     let seq = cx
         .app

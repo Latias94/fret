@@ -970,10 +970,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn pressable_with_id_props(
+    pub fn pressable_with_id_props<I>(
         &mut self,
-        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> (PressableProps, Vec<AnyElement>),
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> (PressableProps, I),
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
@@ -991,6 +994,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 },
                 id,
             );
+            let children = children.into_iter().collect();
             cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }

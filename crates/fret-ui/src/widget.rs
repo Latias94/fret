@@ -3,7 +3,9 @@ use fret_core::{
     AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
     Transform2D, UiServices,
 };
-use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
+use fret_runtime::{
+    CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
+};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
@@ -29,6 +31,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub window: Option<AppWindowId>,
     pub pointer_id: Option<fret_core::PointerId>,
     pub input_ctx: InputContext,
+    pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
@@ -81,6 +84,14 @@ impl<'a, H: UiHost> EventCx<'a, H> {
 
     pub fn stop_propagation(&mut self) {
         self.stop_propagation = true;
+    }
+
+    pub fn prevent_default(&mut self, action: DefaultAction) {
+        self.prevented_default_actions.insert(action);
+    }
+
+    pub fn default_prevented(&self, action: DefaultAction) -> bool {
+        self.prevented_default_actions.contains(action)
     }
 
     /// Request a window redraw (one-shot).

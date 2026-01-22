@@ -221,7 +221,11 @@ impl OverlayRequest {
         }
     }
 
-    pub fn hover(id: GlobalElementId, trigger: GlobalElementId, children: Vec<AnyElement>) -> Self {
+    pub fn hover(
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        children: impl IntoIterator<Item = AnyElement>,
+    ) -> Self {
         Self {
             kind: OverlayKind::Hover,
             id,
@@ -240,7 +244,7 @@ impl OverlayRequest {
                 interactive: true,
             },
             initial_focus: None,
-            children,
+            children: children.into_iter().collect(),
             toast_layer: None,
         }
     }

@@ -51,7 +51,7 @@ impl<H: UiHost> UiTree<H> {
                     .and_then(|svc| svc.snapshot(window))
                     .map(|s| s.edit_can_redo)
                     .unwrap_or(true),
-                dispatch_phase: InputDispatchPhase::Normal,
+                dispatch_phase: InputDispatchPhase::Bubble,
             };
             let needs_update = app
                 .global::<fret_runtime::WindowInputContextService>()

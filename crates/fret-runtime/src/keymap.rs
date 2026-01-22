@@ -558,7 +558,7 @@ impl Keymap {
 
         fn default_display_contexts(base: &InputContext) -> [InputContext; 4] {
             let mut c0 = base.clone();
-            c0.dispatch_phase = InputDispatchPhase::Normal;
+            c0.dispatch_phase = InputDispatchPhase::Bubble;
             c0.ui_has_modal = false;
             c0.focus_is_text_input = false;
 
