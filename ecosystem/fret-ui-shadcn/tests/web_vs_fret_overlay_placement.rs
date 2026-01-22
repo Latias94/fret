@@ -2747,6 +2747,513 @@ fn web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_dialog_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "dropdown-menu-dialog",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use fret_ui_shadcn::{
+                Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
+                DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
+            };
+
+            use fret_ui_kit::declarative::icon as decl_icon;
+
+            let button = Button::new("")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::IconSm)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(32.0)))
+                        .h_px(MetricRef::Px(Px(32.0))),
+                )
+                .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
+
+            DropdownMenu::new(open.clone())
+                // new-york-v4 dropdown-menu-dialog: `DropdownMenuContent className="w-40"`.
+                .min_width(Px(160.0))
+                .align(DropdownMenuAlign::End)
+                .into_element(
+                    cx,
+                    |cx| button.into_element(cx),
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("File Actions")),
+                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("New File...")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Share...")),
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Download").disabled(true),
+                                ),
+                            ])),
+                        ]
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        None,
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_dialog_menu_item_height_matches() {
+    let web_name = "dropdown-menu-dialog";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+
+    let snap = build_dropdown_menu_dialog_open_snapshot(theme);
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_dialog_menu_content_insets_match() {
+    let web_name = "dropdown-menu-dialog";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+
+    let snap = build_dropdown_menu_dialog_open_snapshot(theme);
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+}
+
+fn build_dropdown_menu_dialog_open_snapshot(
+    theme: &WebGoldenTheme,
+) -> fret_core::SemanticsSnapshot {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_kit::declarative::icon as decl_icon;
+        use fret_ui_kit::{LayoutRefinement, MetricRef};
+        use fret_ui_shadcn::{
+            Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+            DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
+        };
+
+        let button = Button::new("")
+            .variant(ButtonVariant::Outline)
+            .size(ButtonSize::IconSm)
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(32.0)))
+                    .h_px(MetricRef::Px(Px(32.0))),
+            )
+            .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
+
+        DropdownMenu::new(open.clone())
+            .min_width(Px(160.0))
+            .align(DropdownMenuAlign::End)
+            .into_element(
+                cx,
+                |cx| button.clone().into_element(cx),
+                |_cx| {
+                    vec![
+                        DropdownMenuEntry::Label(DropdownMenuLabel::new("File Actions")),
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("New File...")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Share...")),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Download").disabled(true),
+                            ),
+                        ])),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    ui.semantics_snapshot().expect("semantics snapshot").clone()
+}
+
+#[test]
+fn web_vs_fret_item_dropdown_overlay_placement_matches() {
+    let web_name = "item-dropdown";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let is_open_trigger = |n: &WebNode| {
+        n.tag == "button"
+            && (n
+                .attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == "open")
+                || n.attrs
+                    .get("aria-expanded")
+                    .is_some_and(|v| v.as_str() == "true"))
+    };
+    let web_trigger = find_first(&web.themes["light"].root, &is_open_trigger)
+        .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+        .expect("web trigger (button)");
+    let trigger_rect = web_trigger.rect;
+
+    let expected_item_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_item_h = expected_item_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+    let item_h = expected_item_h.round();
+
+    assert_overlay_placement_matches(
+        web_name,
+        Some("menu"),
+        move |cx, open| {
+            use fret_ui::element::LayoutStyle;
+            use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+            use fret_ui_shadcn::{
+                Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, DropdownMenu,
+                DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, Item, ItemContent,
+                ItemDescription, ItemMedia, ItemSize, ItemTitle,
+            };
+
+            use fret_ui_kit::declarative::icon as decl_icon;
+
+            let button = Button::new("Select")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(trigger_rect.w)))
+                        .h_px(MetricRef::Px(Px(trigger_rect.h))),
+                )
+                .children([decl_icon::icon(cx, fret_icons::ids::ui::CHEVRON_DOWN)]);
+
+            let people = vec![
+                ("shadcn", "shadcn@vercel.com"),
+                ("maxleiter", "maxleiter@vercel.com"),
+                ("evilrabbit", "evilrabbit@vercel.com"),
+            ];
+
+            let entries: Vec<DropdownMenuEntry> = people
+                .into_iter()
+                .map(|(username, email)| {
+                    let content = Item::new(vec![
+                        ItemMedia::new(vec![
+                            Avatar::new(vec![
+                                AvatarFallback::new(
+                                    username
+                                        .chars()
+                                        .next()
+                                        .map(|ch| ch.to_string())
+                                        .unwrap_or_else(|| "?".to_owned()),
+                                )
+                                .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        ItemContent::new(vec![
+                            ItemTitle::new(username).into_element(cx),
+                            ItemDescription::new(email).into_element(cx),
+                        ])
+                        .gap(Px(2.0))
+                        .into_element(cx),
+                    ])
+                    .size(ItemSize::Sm)
+                    .refine_style(
+                        ChromeRefinement::default()
+                            .p(Space::N2)
+                            .rounded(fret_ui_kit::Radius::Md),
+                    )
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(Px(item_h))),
+                    )
+                    .into_element(cx);
+
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new(username)
+                            .padding(Edges::all(Px(0.0)))
+                            .estimated_height(Px(item_h))
+                            .content(content),
+                    )
+                })
+                .collect();
+
+            let dropdown = DropdownMenu::new(open.clone())
+                // new-york-v4 item-dropdown: `DropdownMenuContent className="w-72"`.
+                .min_width(Px(288.0))
+                .align(DropdownMenuAlign::End)
+                .into_element(cx, |cx| button.into_element(cx), |_cx| entries);
+
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    padding: Edges {
+                        left: Px(trigger_rect.x),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |_cx| vec![dropdown],
+            )
+        },
+        SemanticsRole::Button,
+        Some("Select"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_item_dropdown_menu_item_height_matches() {
+    let web_name = "item-dropdown";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+
+    let snap = build_item_dropdown_open_snapshot(theme, expected_h.round());
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_item_dropdown_menu_content_insets_match() {
+    let web_name = "item-dropdown";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_item_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_item_h = expected_item_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let snap = build_item_dropdown_open_snapshot(theme, expected_item_h.round());
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+fn build_item_dropdown_open_snapshot(
+    theme: &WebGoldenTheme,
+    expected_item_h: f32,
+) -> fret_core::SemanticsSnapshot {
+    let is_open_trigger = |n: &WebNode| {
+        n.tag == "button"
+            && (n
+                .attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == "open")
+                || n.attrs
+                    .get("aria-expanded")
+                    .is_some_and(|v| v.as_str() == "true"))
+    };
+    let web_trigger = find_first(&theme.root, &is_open_trigger).unwrap_or_else(|| {
+        panic!("missing web item-dropdown trigger button (expected in light theme root)")
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_core::Corners;
+        use fret_ui::element::LayoutStyle;
+        use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+        use fret_ui_shadcn::{
+            Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, DropdownMenu,
+            DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, Item, ItemContent,
+            ItemDescription, ItemMedia, ItemSize, ItemTitle,
+        };
+
+        use fret_ui_kit::declarative::icon as decl_icon;
+
+        let button = Button::new("Select")
+            .variant(ButtonVariant::Outline)
+            .size(ButtonSize::Sm)
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(web_trigger.rect.w)))
+                    .h_px(MetricRef::Px(Px(web_trigger.rect.h))),
+            )
+            .children([decl_icon::icon(cx, fret_icons::ids::ui::CHEVRON_DOWN)]);
+
+        let people = vec![
+            ("shadcn", "shadcn@vercel.com"),
+            ("maxleiter", "maxleiter@vercel.com"),
+            ("evilrabbit", "evilrabbit@vercel.com"),
+        ];
+
+        let entries: Vec<DropdownMenuEntry> = people
+            .into_iter()
+            .map(|(username, email)| {
+                let content = Item::new(vec![
+                    ItemMedia::new(vec![
+                        Avatar::new(vec![
+                            AvatarFallback::new(
+                                username
+                                    .chars()
+                                    .next()
+                                    .map(|ch| ch.to_string())
+                                    .unwrap_or_else(|| "?".to_owned()),
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    ItemContent::new(vec![
+                        ItemTitle::new(username).into_element(cx),
+                        ItemDescription::new(email).into_element(cx),
+                    ])
+                    .gap(Px(2.0))
+                    .into_element(cx),
+                ])
+                .size(ItemSize::Sm)
+                .refine_style(ChromeRefinement::default().p(Space::N2))
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(MetricRef::Px(Px(expected_item_h))),
+                )
+                .into_element(cx);
+
+                DropdownMenuEntry::Item(
+                    DropdownMenuItem::new(username)
+                        .padding(Edges::all(Px(0.0)))
+                        .estimated_height(Px(expected_item_h))
+                        .content(content),
+                )
+            })
+            .collect();
+
+        let dropdown = DropdownMenu::new(open.clone())
+            .min_width(Px(288.0))
+            .align(DropdownMenuAlign::End)
+            .into_element(cx, |cx| button.clone().into_element(cx), |_cx| entries);
+
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                padding: Edges {
+                    left: Px(web_trigger.rect.x),
+                    ..Default::default()
+                },
+                corner_radii: Corners::all(Px(0.0)),
+                ..Default::default()
+            },
+            |_cx| vec![dropdown],
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    ui.semantics_snapshot().expect("semantics snapshot").clone()
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "dropdown-menu-demo",
@@ -8572,15 +9079,21 @@ fn web_vs_fret_combobox_popover_overlay_placement_matches() {
         "combobox-popover",
         Some("dialog"),
         |cx, open| {
-            use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide};
             use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use fret_ui_shadcn::{
+                Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide,
+            };
 
             Popover::new(open.clone())
                 .side(PopoverSide::Right)
                 .align(PopoverAlign::Start)
                 .into_element(
                     cx,
-                    |cx| Button::new("Open").variant(ButtonVariant::Outline).into_element(cx),
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
                     |cx| {
                         PopoverContent::new(Vec::new())
                             .refine_layout(
