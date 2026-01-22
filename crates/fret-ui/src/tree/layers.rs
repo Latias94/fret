@@ -10,6 +10,7 @@ pub(super) struct UiLayer {
     pub(super) visible: bool,
     pub(super) blocks_underlay_input: bool,
     pub(super) hit_testable: bool,
+    pub(super) pointer_occlusion: PointerOcclusion,
     pub(super) wants_pointer_down_outside_events: bool,
     pub(super) consume_pointer_down_outside_events: bool,
     pub(super) pointer_down_outside_branches: Vec<NodeId>,
@@ -37,6 +38,7 @@ impl<H: UiHost> UiTree<H> {
             visible: true,
             blocks_underlay_input: false,
             hit_testable: true,
+            pointer_occlusion: PointerOcclusion::None,
             wants_pointer_down_outside_events: false,
             consume_pointer_down_outside_events: false,
             pointer_down_outside_branches: Vec::new(),
@@ -65,6 +67,7 @@ impl<H: UiHost> UiTree<H> {
             visible: true,
             blocks_underlay_input,
             hit_testable,
+            pointer_occlusion: PointerOcclusion::None,
             wants_pointer_down_outside_events: false,
             consume_pointer_down_outside_events: false,
             pointer_down_outside_branches: Vec::new(),
@@ -190,6 +193,13 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub fn set_layer_pointer_occlusion(&mut self, layer: UiLayerId, occlusion: PointerOcclusion) {
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.pointer_occlusion = occlusion;
+    }
+
     pub fn is_layer_visible(&self, layer: UiLayerId) -> bool {
         self.layers.get(layer).is_some_and(|l| l.visible)
     }
@@ -274,6 +284,35 @@ impl<H: UiHost> UiTree<H> {
             .iter()
             .copied()
             .filter(|id| self.layers.get(*id).is_some_and(|l| l.visible))
+    }
+
+    pub(super) fn topmost_pointer_occlusion_layer(
+        &self,
+        barrier_root: Option<NodeId>,
+    ) -> Option<(UiLayerId, PointerOcclusion)> {
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        let mut hit_barrier = false;
+        for layer_id in layers.into_iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+            if barrier_root.is_some() && hit_barrier {
+                break;
+            }
+
+            let occlusion = layer.pointer_occlusion;
+            if occlusion != PointerOcclusion::None {
+                return Some((layer_id, occlusion));
+            }
+
+            if barrier_root == Some(layer.root) {
+                hit_barrier = true;
+            }
+        }
+        None
     }
 
     pub(super) fn active_input_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {

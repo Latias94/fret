@@ -356,6 +356,23 @@ pub struct UiDebugInvalidationWalk {
     pub truncated_at: Option<NodeId>,
 }
 
+/// Controls whether an overlay layer prevents pointer interactions from reaching layers beneath it.
+///
+/// This is a *mechanism* only. Policy lives in ecosystem crates (e.g. `fret-ui-kit`), which decide
+/// when to enable occlusion (Radix `disableOutsidePointerEvents` outcomes, editor interaction
+/// arbitration, etc.).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PointerOcclusion {
+    /// No occlusion; pointer events route normally via hit-testing across layers.
+    #[default]
+    None,
+    /// Blocks pointer interaction (hover/move/down/up) for layers beneath the occluding layer.
+    BlockMouse,
+    /// Blocks pointer interaction for layers beneath the occluding layer, but allows scroll wheel
+    /// to route to underlay scroll targets.
+    BlockMouseExceptScroll,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugLayerInfo {
     pub id: UiLayerId,
@@ -363,6 +380,7 @@ pub struct UiDebugLayerInfo {
     pub visible: bool,
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
+    pub pointer_occlusion: PointerOcclusion,
     pub wants_pointer_down_outside_events: bool,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
@@ -1743,6 +1761,7 @@ impl<H: UiHost> UiTree<H> {
                     visible: layer.visible,
                     blocks_underlay_input: layer.blocks_underlay_input,
                     hit_testable: layer.hit_testable,
+                    pointer_occlusion: layer.pointer_occlusion,
                     wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
                     wants_pointer_move_events: layer.wants_pointer_move_events,
                     wants_timer_events: layer.wants_timer_events,
@@ -2168,6 +2187,39 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn node_parent(&self, node: NodeId) -> Option<NodeId> {
         self.nodes.get(node).and_then(|n| n.parent)
+    }
+
+    pub fn first_focusable_ancestor_including_declarative(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        start: NodeId,
+    ) -> Option<NodeId> {
+        let mut node = Some(start);
+        while let Some(id) = node {
+            let focusable = if let Some(record) =
+                crate::declarative::element_record_for_node(app, window, id)
+            {
+                match &record.instance {
+                    crate::declarative::ElementInstance::TextInput(_) => true,
+                    crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
+                    _ => false,
+                }
+            } else {
+                self.nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.is_focusable())
+            };
+
+            if focusable {
+                return Some(id);
+            }
+
+            node = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        None
     }
 
     pub fn first_focusable_descendant(&self, root: NodeId) -> Option<NodeId> {

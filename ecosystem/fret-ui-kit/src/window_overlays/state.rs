@@ -25,7 +25,6 @@ pub(super) struct WindowOverlayFrame {
 
 pub(super) struct ActivePopover {
     pub(super) layer: UiLayerId,
-    pub(super) pointer_barrier_layer: Option<UiLayerId>,
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
     pub(super) initial_focus: Option<GlobalElementId>,

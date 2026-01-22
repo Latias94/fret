@@ -209,6 +209,7 @@ mod models;
 mod outside_press;
 mod paint_cache;
 mod pointer_move_hover;
+mod pointer_occlusion;
 mod prepaint;
 mod scroll_into_view;
 mod scroll_invalidation;
