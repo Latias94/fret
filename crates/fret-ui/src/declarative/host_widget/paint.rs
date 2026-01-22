@@ -259,7 +259,16 @@ impl ElementHostWidget {
                     && crate::focus_visible::is_focus_visible(cx.app, cx.window)
                     && let Some(ring) = props.focus_ring
                 {
-                    crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), cx.bounds, ring);
+                    let bounds = props.focus_ring_bounds.map_or(cx.bounds, |b| {
+                        Rect::new(
+                            Point::new(
+                                cx.bounds.origin.x + b.origin.x,
+                                cx.bounds.origin.y + b.origin.y,
+                            ),
+                            b.size,
+                        )
+                    });
+                    crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), bounds, ring);
                 }
             }
             ElementInstance::Text(props) => {

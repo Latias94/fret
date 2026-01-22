@@ -995,6 +995,7 @@ pub fn render<H: UiHost>(
                                         enabled: true,
                                         focusable: false,
                                         focus_ring: None,
+                                        focus_ring_bounds: None,
                                         a11y: Default::default(),
                                     },
                                     move |cx, st| {
@@ -1063,6 +1064,7 @@ pub fn render<H: UiHost>(
                                         enabled: true,
                                         focusable: false,
                                         focus_ring: None,
+                                        focus_ring_bounds: None,
                                         a11y: Default::default(),
                                     },
                                     move |cx, st| {
@@ -1136,6 +1138,7 @@ pub fn render<H: UiHost>(
                                         enabled: true,
                                         focusable: false,
                                         focus_ring: None,
+                                        focus_ring_bounds: None,
                                         a11y: Default::default(),
                                     },
                                     move |cx, st| {

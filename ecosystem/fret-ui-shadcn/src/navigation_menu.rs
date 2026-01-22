@@ -1073,6 +1073,7 @@ impl NavigationMenu {
                                         enabled: true,
                                         focusable: false,
                                         focus_ring: None,
+                                        focus_ring_bounds: None,
                                         a11y: PressableA11y::default(),
                                     },
                                     children,

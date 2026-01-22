@@ -3,8 +3,8 @@ use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, NodeId, Px, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap,
-    UvRect, ViewportFit,
+    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle,
+    TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -612,6 +612,14 @@ pub struct PressableProps {
     /// but it is skipped by the default focus traversal.
     pub focusable: bool,
     pub focus_ring: Option<RingStyle>,
+    /// Optional override for the bounds used when painting the focus ring.
+    ///
+    /// Coordinates are **local** to the pressable's origin (i.e. `0,0` is the pressable's top-left),
+    /// and are translated into absolute coordinates at paint time.
+    ///
+    /// This is useful when the pressable is wider than the visual control chrome (e.g. a "row"
+    /// pressable that should paint focus ring only around an icon-sized control).
+    pub focus_ring_bounds: Option<Rect>,
     pub a11y: PressableA11y,
 }
 
@@ -623,6 +631,7 @@ impl std::fmt::Debug for PressableProps {
             .field("focusable", &self.focusable);
 
         out.field("focus_ring", &self.focus_ring)
+            .field("focus_ring_bounds", &self.focus_ring_bounds)
             .field("a11y", &self.a11y)
             .finish()
     }
@@ -635,6 +644,7 @@ impl Default for PressableProps {
             enabled: true,
             focusable: true,
             focus_ring: None,
+            focus_ring_bounds: None,
             a11y: PressableA11y::default(),
         }
     }
