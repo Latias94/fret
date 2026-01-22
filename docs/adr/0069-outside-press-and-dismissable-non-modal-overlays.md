@@ -90,8 +90,10 @@ This differs materially from `consume_pointer_down_outside_events`:
 
 - `consume_pointer_down_outside_events` only suppresses the normal hit-tested **pointer-down**
   dispatch for the same input event that triggered the outside-press observer.
-- `disableOutsidePointerEvents` must also prevent underlay hover/move/wheel interactions while the
+- `disableOutsidePointerEvents` must also prevent underlay hover/move/click interactions while the
   overlay remains open.
+  - Wheel events are allowed to route to underlay scrollables by default (editor ergonomics),
+    matching GPUI's `BlockMouseExceptScroll` behavior.
 
 To express that outcome in Fret without turning menus into full modal barriers, the overlay
 substrate supports an additional per-overlay flag:
@@ -101,9 +103,9 @@ substrate supports an additional per-overlay flag:
 
 Runtime mechanism:
 
-- While `disable_outside_pointer_events=true` and the overlay is open, the overlay controller
-  installs a **non-hit-testable input barrier layer** (no rendering; no hit target) that scopes
-  the active input layer stack so the underlay is not considered for pointer routing.
+- While `disable_outside_pointer_events=true` and the overlay is open, the overlay controller sets
+  `pointer_occlusion = BlockMouseExceptScroll` on the overlay layer, causing mouse hit-test dispatch
+  to ignore targets in underlay layers (except wheel).
 - Outside-press dismissal still uses the observer pass described above (the overlay can close on
   outside press even though the underlay is inert).
 
@@ -136,6 +138,11 @@ click while the overlay is open can:
 
 Therefore, component-layer overlay policies should treat the trigger as an implicit
 `DismissableLayerBranch` by default (in addition to any explicit branches).
+
+Note: for non-click-through overlays that both consume outside pointer-down events and disable
+outside pointer interactions (menu-like `modal=true` outcomes), treating the trigger as an implicit
+branch can prevent trigger presses from dismissing the overlay, because the trigger itself may be
+pointer-occluded. In that case, policy may choose to *not* treat the trigger as a branch.
 
 ### Presence and close transitions (click-through correctness)
 
