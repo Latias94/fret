@@ -54,7 +54,7 @@ pub fn render<H: UiHost>(
     let dock_drag_affects_window = app.any_drag_session(|d| {
         d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
     });
-    let captured_layer = ui.any_captured_node().and_then(|node| ui.node_layer(node));
+    let arbitration = ui.input_arbitration_snapshot();
 
     let focused_now = app
         .global::<WindowMetricsService>()
@@ -451,8 +451,10 @@ pub fn render<H: UiHost>(
             // not introduce pointer occlusion mid-capture. Force-close the overlay to avoid
             // capture+occlusion overlap and keep routing deterministic.
             if open_now
-                && captured_layer.is_some_and(|layer| layer != entry.layer)
                 && (disable_outside_pointer_events || consume_outside_pointer_events)
+                && arbitration.pointer_capture_active
+                && (arbitration.pointer_capture_multiple_layers
+                    || arbitration.pointer_capture_layer != Some(entry.layer))
             {
                 let _ = app.models_mut().update(&open, |v| *v = false);
                 open_now = false;

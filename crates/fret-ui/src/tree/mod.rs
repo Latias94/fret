@@ -373,6 +373,20 @@ pub enum PointerOcclusion {
     BlockMouseExceptScroll,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct UiInputArbitrationSnapshot {
+    pub modal_barrier_root: Option<NodeId>,
+    pub pointer_occlusion: PointerOcclusion,
+    pub pointer_occlusion_layer: Option<UiLayerId>,
+    pub pointer_capture_active: bool,
+    /// When all captured pointers belong to the same layer, this reports that layer.
+    ///
+    /// If captures span multiple layers (or a captured node cannot be mapped to a layer), this is
+    /// `None` and `pointer_capture_multiple_layers=true`.
+    pub pointer_capture_layer: Option<UiLayerId>,
+    pub pointer_capture_multiple_layers: bool,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugLayerInfo {
     pub id: UiLayerId,
@@ -1690,6 +1704,47 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn any_captured_node(&self) -> Option<NodeId> {
         self.captured.values().copied().next()
+    }
+
+    pub fn input_arbitration_snapshot(&self) -> UiInputArbitrationSnapshot {
+        let (_active, barrier_root) = self.active_input_layers();
+
+        let (pointer_occlusion_layer, pointer_occlusion) = self
+            .topmost_pointer_occlusion_layer(barrier_root)
+            .map(|(layer, occlusion)| (Some(layer), occlusion))
+            .unwrap_or((None, PointerOcclusion::None));
+
+        let mut pointer_capture_active = false;
+        let mut pointer_capture_layer: Option<UiLayerId> = None;
+        let mut pointer_capture_multiple_layers = false;
+        for &node in self.captured.values() {
+            pointer_capture_active = true;
+            let Some(layer) = self.node_layer(node) else {
+                pointer_capture_layer = None;
+                pointer_capture_multiple_layers = true;
+                break;
+            };
+
+            match pointer_capture_layer {
+                None => pointer_capture_layer = Some(layer),
+                Some(prev) => {
+                    if prev != layer {
+                        pointer_capture_layer = None;
+                        pointer_capture_multiple_layers = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        UiInputArbitrationSnapshot {
+            modal_barrier_root: barrier_root,
+            pointer_occlusion,
+            pointer_occlusion_layer,
+            pointer_capture_active,
+            pointer_capture_layer,
+            pointer_capture_multiple_layers,
+        }
     }
 
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
