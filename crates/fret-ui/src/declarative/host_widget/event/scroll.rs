@@ -17,7 +17,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         fret_core::PointerEvent::Wheel {
             delta, modifiers, ..
         } => {
-            let consumed = crate::elements::with_element_state(
+            let scroll_invalidation = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
                 this.element,
@@ -42,6 +42,9 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         fret_core::Axis::Horizontal => prev.x,
                     };
                     let offset = state.metrics.clamp_offset(prev_offset, viewport);
+                    let prev_range = state
+                        .metrics
+                        .visible_range(offset, viewport, props.overscan);
 
                     let delta = match axis {
                         fret_core::Axis::Vertical => delta.y,
@@ -67,20 +70,27 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                                     .set_offset(fret_core::Point::new(next, prev.y));
                             }
                         }
-                        true
+                        let next_range =
+                            state.metrics.visible_range(next, viewport, props.overscan);
+                        let window_changed = prev_range != next_range;
+                        Some(if window_changed {
+                            Invalidation::Layout
+                        } else {
+                            Invalidation::HitTestOnly
+                        })
                     } else {
-                        false
+                        None
                     }
                 },
             );
-            if consumed {
+            if let Some(inv) = scroll_invalidation {
                 super::invalidate_scroll_handle_bindings(
                     cx,
                     window,
                     props.scroll_handle.base_handle().binding_key(),
-                    Invalidation::Layout,
+                    inv,
                 );
-                cx.invalidate_self(Invalidation::Layout);
+                cx.invalidate_self(inv);
                 cx.request_redraw();
                 cx.stop_propagation();
             }

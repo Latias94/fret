@@ -12,23 +12,30 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::VirtualListProps,
     ) -> Size {
-        let mut metrics = crate::elements::with_element_state(
-            &mut *cx.app,
-            window,
-            self.element,
-            crate::element::VirtualListState::default,
-            |state| {
-                state.metrics.ensure_with_mode(
-                    props.measure_mode,
-                    props.len,
-                    props.estimate_row_height,
-                    props.gap,
-                    props.scroll_margin,
-                );
-                state.metrics.clone()
-            },
-        );
+        let (mut metrics, prev_items_revision, render_window_range, _deferred_scroll_hint) =
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                crate::element::VirtualListState::default,
+                |state| {
+                    state.metrics.ensure_with_mode(
+                        props.measure_mode,
+                        props.len,
+                        props.estimate_row_height,
+                        props.gap,
+                        props.scroll_margin,
+                    );
+                    (
+                        state.metrics.clone(),
+                        state.items_revision,
+                        state.render_window_range,
+                        state.deferred_scroll_offset_hint,
+                    )
+                },
+            );
         let content_extent = metrics.total_height();
+        let should_remeasure_visible_items = props.items_revision != prev_items_revision;
 
         let axis = props.axis;
         let desired_w = match props.layout.size.width {
@@ -61,6 +68,13 @@ impl ElementHostWidget {
         let mut needs_redraw = false;
 
         props.scroll_handle.set_items_count(props.len);
+        self.scroll_child_transform = Some(super::super::ScrollChildTransform {
+            handle: props.scroll_handle.base_handle().clone(),
+            axis: match axis {
+                fret_core::Axis::Vertical => crate::element::ScrollAxis::Y,
+                fret_core::Axis::Horizontal => crate::element::ScrollAxis::X,
+            },
+        });
 
         let prev_offset = props.scroll_handle.offset();
         let prev_offset_axis = match axis {
@@ -165,7 +179,7 @@ impl ElementHostWidget {
                     }
                 }
 
-                if any_measured_change {
+                if any_measured_change || should_remeasure_visible_items {
                     needs_redraw = true;
 
                     if !is_probe_layout
@@ -246,11 +260,11 @@ impl ElementHostWidget {
             let start = metrics.offset_for_index(*idx);
             let origin = match axis {
                 fret_core::Axis::Vertical => {
-                    let y = cx.bounds.origin.y.0 + start.0 - offset.0;
+                    let y = cx.bounds.origin.y.0 + start.0;
                     fret_core::Point::new(cx.bounds.origin.x, Px(y))
                 }
                 fret_core::Axis::Horizontal => {
-                    let x = cx.bounds.origin.x.0 + start.0 - offset.0;
+                    let x = cx.bounds.origin.x.0 + start.0;
                     fret_core::Point::new(Px(x), cx.bounds.origin.y)
                 }
             };
@@ -272,6 +286,12 @@ impl ElementHostWidget {
         for (child, child_bounds) in &child_rects {
             let _ = cx.layout_in(*child, *child_bounds);
         }
+
+        let window_range = if !is_probe_layout {
+            metrics.visible_range(offset, viewport, props.overscan)
+        } else {
+            None
+        };
 
         crate::elements::with_element_state(
             &mut *cx.app,
@@ -295,16 +315,27 @@ impl ElementHostWidget {
                         }
                     }
                 }
+                if !is_probe_layout && viewport.0 > 0.0 {
+                    state.has_final_viewport = true;
+                }
+                if !is_probe_layout {
+                    state.window_range = window_range;
+                    state.deferred_scroll_offset_hint = None;
+                }
                 state.items_revision = props.items_revision;
                 state.metrics = metrics;
             },
         );
 
-        if !is_probe_layout && needs_redraw && cx.tree.view_cache_enabled() {
-            // Virtual list visible-item sets are computed during the declarative render pass. When a
-            // scroll handle change is consumed during layout (e.g. deferred scroll-to-item), we
-            // must ensure the nearest view-cache root re-renders on the next frame so it can
-            // rebuild the visible range.
+        let window_mismatch = !is_probe_layout
+            && viewport.0 > 0.0
+            && window_range.is_some()
+            && render_window_range != window_range;
+
+        if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
+            // Virtual list visible-item sets are computed during the declarative render pass. If
+            // the visible window changed, ensure the nearest view-cache root re-renders on the
+            // next frame so it can rebuild the visible items.
             cx.tree.invalidate_with_source_and_detail(
                 cx.node,
                 Invalidation::Layout,

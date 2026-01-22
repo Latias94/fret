@@ -2274,15 +2274,40 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 }
 
                 let viewport = Px(viewport.0.max(0.0));
-                let handle_offset = match axis {
-                    fret_core::Axis::Vertical => scroll_handle.offset().y,
-                    fret_core::Axis::Horizontal => scroll_handle.offset().x,
-                };
-                let offset = state.metrics.clamp_offset(handle_offset, viewport);
+                let offset = state.metrics.clamp_offset(offset, viewport);
 
-                state
-                    .metrics
-                    .visible_range(offset, viewport, options.overscan)
+                state.deferred_scroll_offset_hint = None;
+
+                let mut range = state.window_range.filter(|r| {
+                    r.count == len && r.overscan == options.overscan && r.start_index <= r.end_index
+                });
+
+                // Preview deferred scroll-to-item requests during render so we compute the correct
+                // visible range without consuming the request. The final layout pass will apply
+                // the scroll offset and clear the request.
+                if state.has_final_viewport
+                    && viewport.0 > 0.0
+                    && len > 0
+                    && let Some((index, strategy)) = scroll_handle.deferred_scroll_to_item()
+                {
+                    let desired = state
+                        .metrics
+                        .scroll_offset_for_item(index, viewport, offset, strategy);
+                    let desired = state.metrics.clamp_offset(desired, viewport);
+                    state.deferred_scroll_offset_hint = Some(desired);
+                    range = state
+                        .metrics
+                        .visible_range(desired, viewport, options.overscan);
+                }
+
+                if range.is_none() {
+                    range = state
+                        .metrics
+                        .visible_range(offset, viewport, options.overscan);
+                }
+
+                state.render_window_range = range;
+                range
             });
 
             let mut indices = range

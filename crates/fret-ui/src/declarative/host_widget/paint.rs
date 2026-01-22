@@ -770,7 +770,6 @@ impl ElementHostWidget {
             ElementInstance::VirtualList(props) => {
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
-                let offset_y = props.scroll_handle.offset().y;
                 let metrics = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
@@ -787,19 +786,39 @@ impl ElementHostWidget {
                         state.metrics.clone()
                     },
                 );
+                let child_transform = cx.children_render_transform;
 
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
-                    let y = cx.bounds.origin.y.0 + metrics.offset_for_index(idx).0 - offset_y.0;
+                    let y = cx.bounds.origin.y.0 + metrics.offset_for_index(idx).0;
                     let row_h = metrics.height_at(idx);
                     let child_bounds = Rect::new(
                         fret_core::Point::new(cx.bounds.origin.x, Px(y)),
                         Size::new(cx.bounds.size.width, row_h),
                     );
 
+                    if let Some(transform) = child_transform {
+                        cx.scene.push(SceneOp::PushTransform { transform });
+                    }
                     cx.scene.push(SceneOp::PushClipRect { rect: child_bounds });
-                    cx.paint(child, child_bounds);
+
+                    let accumulated = child_transform
+                        .map(|t| cx.accumulated_transform.compose(t))
+                        .unwrap_or(cx.accumulated_transform);
+                    cx.tree.paint_node(
+                        cx.app,
+                        cx.services,
+                        child,
+                        child_bounds,
+                        cx.scene,
+                        cx.scale_factor,
+                        accumulated,
+                    );
+
                     cx.scene.push(SceneOp::PopClip);
+                    if child_transform.is_some() {
+                        cx.scene.push(SceneOp::PopTransform);
+                    }
                 }
 
                 cx.scene.push(SceneOp::PopClip);
