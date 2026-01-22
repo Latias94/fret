@@ -95,11 +95,15 @@ Radix outcome:
 
 Fret mapping:
 
-- `disable_outside_pointer_events=true` installs a per-window "blocks-underlay-input" layer while
-  the overlay is open (a pointer barrier root).
-- For fully modal overlays, shadcn recipes often render an explicit full-window barrier element
-  behind content; this is still routed through the same `OnDismissRequest` contract to preserve
-  preventDefault semantics (see `primitives::dialog` / `primitives::select`).
+- `disable_outside_pointer_events=true` enables pointer occlusion for the overlay layer:
+  `PointerOcclusion::BlockMouseExceptScroll`.
+  - Mouse hover/move/down/up are prevented from reaching underlay widgets while the overlay is
+    open.
+  - Wheel events are still allowed to route to the underlay scroll target (editor ergonomics, GPUI
+    alignment).
+- Fully modal overlays still use `blocks_underlay_input=true` (barrier-backed layers). Modal barrier
+  dismissal is routed through the same `OnDismissRequest` contract to preserve preventDefault
+  semantics (see `primitives::dialog` / `primitives::select`).
 
 ### Branches (DismissableLayerBranch)
 
@@ -127,8 +131,8 @@ Fret mapping:
 
 ## Gaps / intentional differences
 
-- Fret currently models `disableOutsidePointerEvents` through per-window overlay layers or explicit
-  modal barriers, not via a global `body { pointer-events: none }` equivalent.
+- Fret models `disableOutsidePointerEvents` via per-overlay pointer occlusion (not a global
+  `body { pointer-events: none }` equivalent).
 - DOM-specific details (capture/bubble ordering, touch delayed click) are not mirrored directly;
   only the observable outcomes (dismiss request routing + underlay blocking/consumption) are
   treated as alignment targets.
