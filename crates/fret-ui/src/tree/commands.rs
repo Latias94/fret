@@ -27,7 +27,7 @@ impl<H: UiHost> UiTree<H> {
             focus_is_text_input: self.focus_is_text_input(),
             edit_can_undo: true,
             edit_can_redo: true,
-            dispatch_phase: InputDispatchPhase::Normal,
+            dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
             if let Some(availability) = app
@@ -160,7 +160,7 @@ impl<H: UiHost> UiTree<H> {
                 focus_is_text_input: self.focus_is_text_input(),
                 edit_can_undo: true,
                 edit_can_redo: true,
-                dispatch_phase: InputDispatchPhase::Normal,
+                dispatch_phase: InputDispatchPhase::Bubble,
             };
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()

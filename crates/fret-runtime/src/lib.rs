@@ -45,7 +45,8 @@ pub use fret_core::{
 };
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
 pub use input::{
-    InputContext, InputDispatchPhase, KeyChord, Platform, format_chord, format_sequence,
+    DefaultAction, DefaultActionSet, InputContext, InputDispatchPhase, KeyChord, Platform,
+    format_chord, format_sequence,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};

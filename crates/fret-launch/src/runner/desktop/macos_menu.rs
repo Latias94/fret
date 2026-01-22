@@ -158,7 +158,7 @@ pub(crate) fn sync_input_context_from_app(app: &fret_app::App) {
                 focus_is_text_input: false,
                 edit_can_undo: true,
                 edit_can_redo: true,
-                dispatch_phase: InputDispatchPhase::Normal,
+                dispatch_phase: InputDispatchPhase::Bubble,
             });
         by_window.insert(window, input_ctx);
     }
@@ -228,7 +228,7 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
+        dispatch_phase: InputDispatchPhase::Bubble,
     };
 
     let Ok(mut state) = state.lock() else {
@@ -697,7 +697,7 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
+        dispatch_phase: InputDispatchPhase::Bubble,
     };
 
     let input_ctx = active_app_window_id(&state)

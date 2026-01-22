@@ -781,7 +781,7 @@ fn hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform
 
     impl<H: UiHost> Widget<H> for CountNormalDown {
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Bubble {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {

@@ -95,7 +95,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             }
         }
         Event::Pointer(fret_core::PointerEvent::Down { .. }) => {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
                 return;
             }
             let hook = crate::elements::with_element_state(

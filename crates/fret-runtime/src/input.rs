@@ -58,7 +58,7 @@ impl Default for InputContext {
             focus_is_text_input: false,
             edit_can_undo: true,
             edit_can_redo: true,
-            dispatch_phase: InputDispatchPhase::Normal,
+            dispatch_phase: InputDispatchPhase::Bubble,
         }
     }
 }
@@ -66,8 +66,27 @@ impl Default for InputContext {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum InputDispatchPhase {
     #[default]
-    Normal,
-    Observer,
+    Bubble,
+    Preview,
+    Capture,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DefaultAction {
+    FocusOnPointerDown,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct DefaultActionSet(u32);
+
+impl DefaultActionSet {
+    pub fn insert(&mut self, action: DefaultAction) {
+        self.0 |= 1 << (action as u32);
+    }
+
+    pub fn contains(self, action: DefaultAction) -> bool {
+        (self.0 & (1 << (action as u32))) != 0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -2170,6 +2170,39 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).and_then(|n| n.parent)
     }
 
+    pub fn first_focusable_ancestor_including_declarative(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        start: NodeId,
+    ) -> Option<NodeId> {
+        let mut node = Some(start);
+        while let Some(id) = node {
+            let focusable = if let Some(record) =
+                crate::declarative::element_record_for_node(app, window, id)
+            {
+                match &record.instance {
+                    crate::declarative::ElementInstance::TextInput(_) => true,
+                    crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
+                    _ => false,
+                }
+            } else {
+                self.nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.is_focusable())
+            };
+
+            if focusable {
+                return Some(id);
+            }
+
+            node = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        None
+    }
+
     pub fn first_focusable_descendant(&self, root: NodeId) -> Option<NodeId> {
         let mut stack = vec![root];
         while let Some(id) = stack.pop() {

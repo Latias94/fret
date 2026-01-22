@@ -89,7 +89,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
         }
 
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
@@ -131,7 +131,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
 
     impl<H: UiHost> Widget<H> for CountNormalDown {
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Bubble {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
@@ -244,7 +244,7 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
         }
 
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
@@ -286,7 +286,7 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
 
     impl<H: UiHost> Widget<H> for CountNormalDown {
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Bubble {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
@@ -449,10 +449,10 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
     let mut app = crate::test_host::TestHost::new();
     let observer_phase = app
         .models_mut()
-        .insert(fret_runtime::InputDispatchPhase::Normal);
+        .insert(fret_runtime::InputDispatchPhase::Bubble);
     let normal_phase = app
         .models_mut()
-        .insert(fret_runtime::InputDispatchPhase::Observer);
+        .insert(fret_runtime::InputDispatchPhase::Preview);
 
     let mut ui = UiTree::new();
     ui.set_window(window);
@@ -490,12 +490,12 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
 
     assert_eq!(
         app.models().get_copied(&observer_phase),
-        Some(fret_runtime::InputDispatchPhase::Observer),
+        Some(fret_runtime::InputDispatchPhase::Preview),
         "observer pass should tag InputContext as Observer"
     );
     assert_eq!(
         app.models().get_copied(&normal_phase),
-        Some(fret_runtime::InputDispatchPhase::Normal),
+        Some(fret_runtime::InputDispatchPhase::Bubble),
         "normal hit-tested dispatch should tag InputContext as Normal"
     );
 }
@@ -512,7 +512,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
         }
 
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
@@ -638,7 +638,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
         }
 
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
