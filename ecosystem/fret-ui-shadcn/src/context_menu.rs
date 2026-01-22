@@ -1811,7 +1811,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
     let panel_chrome = crate::ui_builder_ext::surfaces::menu_sub_style_chrome().rounded(Radius::Md);
     let ring = decl_style::focus_ring(&theme, radius_sm);
-    let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+    let pad_x = MetricRef::space(Space::N2).resolve(&theme);
     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
     let font_size = theme.metric_required("font.size");
@@ -2291,7 +2291,7 @@ impl ContextMenu {
                     let border = theme.color_required("border");
                     let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                     let ring = decl_style::focus_ring(&theme, radius_sm);
-                    let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+                    let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let font_size = theme.metric_required("font.size");

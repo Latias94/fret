@@ -731,6 +731,7 @@ fn build_context_menu_demo<H: UiHost>(
                     ContextMenuEntry::Item(
                         ContextMenuItem::new("Back")
                             .inset(true)
+                            .test_id("context-menu.back")
                             .trailing(ContextMenuShortcut::new("⌘[").into_element(cx)),
                     ),
                     ContextMenuEntry::Item(
@@ -744,19 +745,22 @@ fn build_context_menu_demo<H: UiHost>(
                             .inset(true)
                             .trailing(ContextMenuShortcut::new("⌘R").into_element(cx)),
                     ),
-                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").inset(true).submenu(
-                        vec![
-                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
-                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
-                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
-                            ContextMenuEntry::Separator,
-                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
-                            ContextMenuEntry::Separator,
-                            ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
-                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
-                            )),
-                        ],
-                    )),
+                    ContextMenuEntry::Item(
+                        ContextMenuItem::new("More Tools")
+                            .inset(true)
+                            .test_id("context-menu.more_tools")
+                            .submenu(vec![
+                                ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                                ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                                ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                                ContextMenuEntry::Separator,
+                                ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                                ContextMenuEntry::Separator,
+                                ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
+                                    fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                )),
+                            ]),
+                    ),
                     ContextMenuEntry::Separator,
                     ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
                         checked_bookmarks,
@@ -792,7 +796,9 @@ fn build_menubar_demo<H: UiHost>(
     Menubar::new(vec![
         MenubarMenu::new("File").entries(vec![
             MenubarEntry::Item(
-                MenubarItem::new("New Tab").trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+                MenubarItem::new("New Tab")
+                    .test_id("menubar.file.new_tab")
+                    .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
             ),
             MenubarEntry::Item(
                 MenubarItem::new("New Window")
@@ -800,11 +806,15 @@ fn build_menubar_demo<H: UiHost>(
             ),
             MenubarEntry::Item(MenubarItem::new("New Incognito Window").disabled(true)),
             MenubarEntry::Separator,
-            MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
-                MenubarEntry::Item(MenubarItem::new("Email link")),
-                MenubarEntry::Item(MenubarItem::new("Messages")),
-                MenubarEntry::Item(MenubarItem::new("Notes")),
-            ])),
+            MenubarEntry::Submenu(
+                MenubarItem::new("Share")
+                    .test_id("menubar.file.share")
+                    .submenu(vec![
+                        MenubarEntry::Item(MenubarItem::new("Email link")),
+                        MenubarEntry::Item(MenubarItem::new("Messages")),
+                        MenubarEntry::Item(MenubarItem::new("Notes")),
+                    ]),
+            ),
             MenubarEntry::Separator,
             MenubarEntry::Item(
                 MenubarItem::new("Print...").trailing(MenubarShortcut::new("⌘P").into_element(cx)),
@@ -7422,6 +7432,237 @@ fn web_vs_fret_context_menu_demo_menu_item_height_matches() {
     assert_context_menu_demo_constrained_menu_item_height_matches("context-menu-demo");
 }
 
+#[test]
+fn web_vs_fret_context_menu_demo_back_item_padding_and_shortcut_match() {
+    assert_context_menu_demo_back_item_padding_and_shortcut_match_impl("context-menu-demo");
+}
+
+fn assert_context_menu_demo_back_item_padding_and_shortcut_match_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_back_item = web_portal_nodes_by_data_slot(&theme, "context-menu-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("Back"))
+        })
+        .unwrap_or_else(|| panic!("missing web Back context-menu-item node for {web_name}"));
+
+    let expected_pad_left = web_css_px(web_back_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web Back paddingLeft for {web_name}"));
+    let expected_pad_right = web_css_px(web_back_item, "paddingRight")
+        .unwrap_or_else(|| panic!("missing web Back paddingRight for {web_name}"));
+    let expected_gap = web_css_px(web_back_item, "gap")
+        .unwrap_or_else(|| panic!("missing web Back gap for {web_name}"));
+    assert_close(
+        &format!("{web_name} web Back gap px"),
+        expected_gap,
+        8.0,
+        0.1,
+    );
+
+    let web_back_shortcut = find_first(web_back_item, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v.as_str() == "context-menu-shortcut")
+    })
+    .unwrap_or_else(|| panic!("missing web Back context-menu-shortcut node for {web_name}"));
+    let expected_shortcut_right_inset =
+        rect_right(web_back_item.rect) - rect_right(web_back_shortcut.rect);
+    assert_close(
+        &format!("{web_name} web Back shortcut right inset == paddingRight"),
+        expected_shortcut_right_inset,
+        expected_pad_right,
+        0.25,
+    );
+
+    let web_sub_trigger = web_portal_node_by_data_slot(&theme, "context-menu-sub-trigger");
+    let web_sub_trigger_pad_right =
+        web_css_px(web_sub_trigger, "paddingRight").unwrap_or_else(|| {
+            panic!("missing web context-menu-sub-trigger paddingRight for {web_name}")
+        });
+    let web_sub_trigger_chevron =
+        find_first(web_sub_trigger, &|n| n.tag == "svg").unwrap_or_else(|| {
+            panic!("missing web context-menu-sub-trigger chevron svg for {web_name}")
+        });
+    let expected_chevron_right_inset =
+        rect_right(web_sub_trigger.rect) - rect_right(web_sub_trigger_chevron.rect);
+    assert_close(
+        &format!("{web_name} web More Tools chevron right inset == paddingRight"),
+        expected_chevron_right_inset,
+        web_sub_trigger_pad_right,
+        0.25,
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_context_menu_demo(
+                cx,
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for frame in 2..=4 {
+        let request_semantics = frame == 4;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_context_menu_demo(
+                    cx,
+                    open.clone(),
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+
+    let back_item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItem
+                && n.test_id.as_deref() == Some("context-menu.back")
+                && n.label.as_deref() == Some("Back")
+        })
+        .unwrap_or_else(|| panic!("missing fret Back MenuItem semantics for {web_name}"));
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, back_item.bounds))
+        .unwrap_or_else(|| panic!("missing fret Menu containing Back item for {web_name}"));
+
+    let back_label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Back")
+                && fret_rect_contains(back_item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Back Text semantics for {web_name}"));
+    let back_shortcut_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("⌘[")
+                && fret_rect_contains(back_item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Back shortcut Text semantics for {web_name}"));
+
+    let actual_pad_left = back_label_text.bounds.origin.x.0 - back_item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Back paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    let back_right = back_item.bounds.origin.x.0 + back_item.bounds.size.width.0;
+    let shortcut_right =
+        back_shortcut_text.bounds.origin.x.0 + back_shortcut_text.bounds.size.width.0;
+    let actual_shortcut_right_inset = back_right - shortcut_right;
+    assert_close(
+        &format!("{web_name} Back shortcut right inset"),
+        actual_shortcut_right_inset,
+        expected_shortcut_right_inset,
+        1.0,
+    );
+
+    let more_tools_item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItem
+                && n.test_id.as_deref() == Some("context-menu.more_tools")
+                && n.label.as_deref() == Some("More Tools")
+                && fret_rect_contains(menu.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret More Tools MenuItem semantics for {web_name}"));
+
+    let more_tools_right = more_tools_item.bounds.origin.x.0 + more_tools_item.bounds.size.width.0;
+    let chevron_candidates: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| fret_rect_contains(more_tools_item.bounds, n.bounds))
+        .filter(|n| {
+            (n.bounds.size.width.0 - 16.0).abs() <= 1.0
+                && (n.bounds.size.height.0 - 16.0).abs() <= 1.0
+        })
+        .filter(|n| n.bounds.origin.x.0 >= more_tools_right - 48.0)
+        .collect();
+    let chevron = chevron_candidates
+        .into_iter()
+        .max_by(|a, b| {
+            let right_a = a.bounds.origin.x.0 + a.bounds.size.width.0;
+            let right_b = b.bounds.origin.x.0 + b.bounds.size.width.0;
+            right_a.total_cmp(&right_b)
+        })
+        .unwrap_or_else(|| {
+            let sample: Vec<_> = snap
+                .nodes
+                .iter()
+                .filter(|n| fret_rect_contains(more_tools_item.bounds, n.bounds))
+                .map(|n| (n.role, n.label.as_deref(), n.bounds))
+                .take(24)
+                .collect();
+            panic!(
+                "missing fret More Tools chevron candidate for {web_name}; sample(role,label,bounds)={sample:?}"
+            )
+        });
+
+    let chevron_right = chevron.bounds.origin.x.0 + chevron.bounds.size.width.0;
+    let actual_chevron_right_inset = more_tools_right - chevron_right;
+    assert_close(
+        &format!("{web_name} More Tools chevron right inset"),
+        actual_chevron_right_inset,
+        expected_chevron_right_inset,
+        1.0,
+    );
+}
+
 fn assert_context_menu_demo_constrained_menu_content_insets_match(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -10095,6 +10336,264 @@ fn web_vs_fret_menubar_demo_tiny_viewport_menu_item_height_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_menu_item_height_matches() {
     assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_item_padding_and_shortcut_match() {
+    assert_menubar_demo_item_padding_and_shortcut_match_impl("menubar-demo");
+}
+
+fn assert_menubar_demo_item_padding_and_shortcut_match_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_new_tab_item = web_portal_nodes_by_data_slot(&theme, "menubar-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("New Tab"))
+        })
+        .unwrap_or_else(|| panic!("missing web New Tab menubar-item node for {web_name}"));
+
+    let expected_pad_left = web_css_px(web_new_tab_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web New Tab paddingLeft for {web_name}"));
+    let expected_pad_right = web_css_px(web_new_tab_item, "paddingRight")
+        .unwrap_or_else(|| panic!("missing web New Tab paddingRight for {web_name}"));
+    let expected_gap = web_css_px(web_new_tab_item, "gap")
+        .unwrap_or_else(|| panic!("missing web New Tab gap for {web_name}"));
+    assert_close(
+        &format!("{web_name} web New Tab gap px"),
+        expected_gap,
+        8.0,
+        0.1,
+    );
+
+    let web_new_tab_shortcut = find_first(web_new_tab_item, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v.as_str() == "menubar-shortcut")
+    })
+    .unwrap_or_else(|| panic!("missing web New Tab menubar-shortcut node for {web_name}"));
+    let expected_shortcut_right_inset =
+        rect_right(web_new_tab_item.rect) - rect_right(web_new_tab_shortcut.rect);
+    assert_close(
+        &format!("{web_name} web New Tab shortcut right inset == paddingRight"),
+        expected_shortcut_right_inset,
+        expected_pad_right,
+        0.25,
+    );
+
+    let web_sub_trigger = web_portal_node_by_data_slot(&theme, "menubar-sub-trigger");
+    let web_sub_trigger_pad_right = web_css_px(web_sub_trigger, "paddingRight")
+        .unwrap_or_else(|| panic!("missing web menubar-sub-trigger paddingRight for {web_name}"));
+    let web_sub_trigger_chevron = find_first(web_sub_trigger, &|n| n.tag == "svg")
+        .unwrap_or_else(|| panic!("missing web menubar-sub-trigger chevron svg for {web_name}"));
+    let expected_chevron_right_inset =
+        rect_right(web_sub_trigger.rect) - rect_right(web_sub_trigger_chevron.rect);
+    assert_close(
+        &format!("{web_name} web Share chevron right inset == paddingRight"),
+        expected_chevron_right_inset,
+        web_sub_trigger_pad_right,
+        0.25,
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let menubar = build_menubar_demo(
+                cx,
+                view_bookmarks_bar.clone(),
+                view_full_urls.clone(),
+                profile_value.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), menubar)]
+        },
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+    let click_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let menubar = build_menubar_demo(
+                    cx,
+                    view_bookmarks_bar.clone(),
+                    view_full_urls.clone(),
+                    profile_value.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), menubar)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let new_tab_item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItem
+                && n.test_id.as_deref() == Some("menubar.file.new_tab")
+                && n.label.as_deref() == Some("New Tab")
+        })
+        .unwrap_or_else(|| panic!("missing fret New Tab MenuItem semantics for {web_name}"));
+
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, new_tab_item.bounds))
+        .unwrap_or_else(|| panic!("missing fret Menu containing New Tab item for {web_name}"));
+
+    let new_tab_label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("New Tab")
+                && fret_rect_contains(new_tab_item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret New Tab Text semantics for {web_name}"));
+    let new_tab_shortcut_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("⌘T")
+                && fret_rect_contains(new_tab_item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret New Tab shortcut Text semantics for {web_name}"));
+
+    let actual_pad_left = new_tab_label_text.bounds.origin.x.0 - new_tab_item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} New Tab paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    let new_tab_right = new_tab_item.bounds.origin.x.0 + new_tab_item.bounds.size.width.0;
+    let shortcut_right =
+        new_tab_shortcut_text.bounds.origin.x.0 + new_tab_shortcut_text.bounds.size.width.0;
+    let actual_shortcut_right_inset = new_tab_right - shortcut_right;
+    assert_close(
+        &format!("{web_name} New Tab shortcut right inset"),
+        actual_shortcut_right_inset,
+        expected_shortcut_right_inset,
+        1.0,
+    );
+
+    let share_item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItem
+                && n.test_id.as_deref() == Some("menubar.file.share")
+                && n.label.as_deref() == Some("Share")
+                && fret_rect_contains(menu.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Share MenuItem semantics for {web_name}"));
+
+    let share_right = share_item.bounds.origin.x.0 + share_item.bounds.size.width.0;
+    let chevron_candidates: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| fret_rect_contains(share_item.bounds, n.bounds))
+        .filter(|n| {
+            (n.bounds.size.width.0 - 16.0).abs() <= 1.0
+                && (n.bounds.size.height.0 - 16.0).abs() <= 1.0
+        })
+        .filter(|n| n.bounds.origin.x.0 >= share_right - 48.0)
+        .collect();
+    let chevron = chevron_candidates
+        .into_iter()
+        .max_by(|a, b| {
+            let right_a = a.bounds.origin.x.0 + a.bounds.size.width.0;
+            let right_b = b.bounds.origin.x.0 + b.bounds.size.width.0;
+            right_a.total_cmp(&right_b)
+        })
+        .unwrap_or_else(|| {
+            let sample: Vec<_> = snap
+                .nodes
+                .iter()
+                .filter(|n| fret_rect_contains(share_item.bounds, n.bounds))
+                .map(|n| (n.role, n.label.as_deref(), n.bounds))
+                .take(24)
+                .collect();
+            panic!(
+                "missing fret Share chevron candidate for {web_name}; sample(role,label,bounds)={sample:?}"
+            )
+        });
+
+    let chevron_right = chevron.bounds.origin.x.0 + chevron.bounds.size.width.0;
+    let actual_chevron_right_inset = share_right - chevron_right;
+    assert_close(
+        &format!("{web_name} Share chevron right inset"),
+        actual_chevron_right_inset,
+        expected_chevron_right_inset,
+        1.0,
+    );
 }
 
 fn assert_menubar_demo_constrained_menu_content_insets_match(web_name: &str) {

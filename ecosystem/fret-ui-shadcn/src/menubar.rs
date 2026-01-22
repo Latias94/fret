@@ -1253,7 +1253,7 @@ impl MenubarMenuEntries {
                         let border = theme.color_required("border");
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
-                        let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+                        let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                         let font_size = theme.metric_required("font.size");
                         let destructive_fg = theme.color_required("destructive");
