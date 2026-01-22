@@ -72,6 +72,9 @@ _None tracked at this time._
   (`radix_web_menubar_open_geometry_matches_fret`).
 - shadcn-web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_panel_chrome_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web root shadow gate (`shadow-xs`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_root_shadow_matches_web`, `web_vs_fret_menubar_root_shadow_matches_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
 - shadcn-web shadow gate (`shadow-md`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_demo_shadow_matches_web`, `web_vs_fret_menubar_demo_shadow_matches_web_dark`;
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).

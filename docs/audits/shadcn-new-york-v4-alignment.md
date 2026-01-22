@@ -162,6 +162,8 @@ Recent fixes:
 - Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
+  - Root shadow (`shadow-xs`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_root_shadow_matches_web`, `web_vs_fret_menubar_root_shadow_matches_web_dark`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_demo_shadow_matches_web`, `web_vs_fret_menubar_demo_shadow_matches_web_dark`).
   - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`

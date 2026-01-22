@@ -304,14 +304,15 @@ fn shadow_layer_style(
 }
 
 pub fn shadow_xs(theme: &Theme, radius: Px) -> ShadowStyle {
-    let color = shadow_color(theme, 0.12);
+    // Tailwind default (`shadow-xs`): `0 1px 2px 0 rgba(0,0,0,0.05)`.
+    let color = shadow_color(theme, 0.05);
     let primary = shadow_layer_style(
         theme,
         "component.shadow.xs.offset_x",
         "component.shadow.xs.offset_y",
         "component.shadow.xs.spread",
         "component.shadow.xs.softness",
-        (Px(0.0), Px(1.0), Px(0.0), Px(1.0)),
+        (Px(0.0), Px(1.0), Px(0.0), Px(2.0)),
         color,
     );
     ShadowStyle {
