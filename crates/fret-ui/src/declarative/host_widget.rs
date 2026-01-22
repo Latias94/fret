@@ -378,11 +378,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         if has_any_text {
                             return CommandAvailability::Available;
                         }
-                        return CommandAvailability::NotHandled;
+                        return CommandAvailability::Blocked;
                     }
                     "text.copy" => {
                         if !cx.input_ctx.caps.clipboard.text {
-                            return CommandAvailability::NotHandled;
+                            return CommandAvailability::Blocked;
                         }
                     }
                     _ => return CommandAvailability::NotHandled,
@@ -397,7 +397,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if has_selection {
                     CommandAvailability::Available
                 } else {
-                    CommandAvailability::NotHandled
+                    CommandAvailability::Blocked
                 }
             }
             ElementInstance::TextInput(_props) => self
