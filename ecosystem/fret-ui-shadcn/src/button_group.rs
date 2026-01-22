@@ -23,6 +23,7 @@ pub enum ButtonGroupItem {
     Button(Button),
     Group(Box<ButtonGroup>),
     Separator(Separator),
+    Element(AnyElement),
 }
 
 impl From<Button> for ButtonGroupItem {
@@ -40,6 +41,12 @@ impl From<ButtonGroup> for ButtonGroupItem {
 impl From<Separator> for ButtonGroupItem {
     fn from(value: Separator) -> Self {
         Self::Separator(value)
+    }
+}
+
+impl From<AnyElement> for ButtonGroupItem {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
     }
 }
 
@@ -174,6 +181,7 @@ impl ButtonGroup {
                             ButtonGroupItem::Separator(separator) => {
                                 separator.flex_stretch_cross_axis(true).into_element(cx)
                             }
+                            ButtonGroupItem::Element(element) => element,
                         })
                         .collect::<Vec<_>>()
                 })]
