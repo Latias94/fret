@@ -3704,6 +3704,344 @@ fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
 }
 
 #[test]
+fn web_vs_fret_combobox_dropdown_menu_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "combobox-dropdown-menu",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_kit::declarative::icon as decl_icon;
+            use fret_ui_shadcn::{
+                Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
+                DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
+                DropdownMenuShortcut,
+            };
+
+            let button = Button::new("More")
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::Sm)
+                .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
+
+            let dropdown = DropdownMenu::new(open.clone())
+                .align(DropdownMenuAlign::End)
+                // new-york-v4 combobox-dropdown-menu: `DropdownMenuContent className="w-[200px]"`.
+                .min_width(Px(200.0))
+                .into_element(
+                    cx,
+                    |cx| button.clone().into_element(cx),
+                    |cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
+                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Assign to...")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Set due date...")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Apply label")
+                                        .submenu(vec![DropdownMenuEntry::Item(
+                                            DropdownMenuItem::new("feature"),
+                                        )]),
+                                ),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Delete")
+                                        .variant(
+                                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                        )
+                                        .trailing(
+                                            DropdownMenuShortcut::new("⌘⌫").into_element(cx),
+                                        ),
+                                ),
+                            ])),
+                        ]
+                    },
+                );
+
+            cx.row(
+                RowProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    gap: Px(0.0),
+                    padding: Edges {
+                        top: Px(12.0),   // `py-3`
+                        right: Px(16.0), // `px-4`
+                        bottom: Px(12.0),
+                        left: Px(16.0),
+                    },
+                    justify: MainAlign::End,
+                    align: CrossAlign::Start,
+                },
+                |_cx| vec![dropdown],
+            )
+        },
+        SemanticsRole::Button,
+        Some("More"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_menu_item_height_matches() {
+    assert_combobox_dropdown_menu_constrained_menu_item_height_matches("combobox-dropdown-menu");
+}
+
+fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs =
+        web_portal_slot_heights(&theme, &["dropdown-menu-item", "dropdown-menu-sub-trigger"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web menu item rows for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_kit::declarative::icon as decl_icon;
+        use fret_ui_shadcn::{
+            Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+            DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuShortcut,
+        };
+
+        let button = Button::new("More")
+            .variant(ButtonVariant::Ghost)
+            .size(ButtonSize::Sm)
+            .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
+
+        let dropdown = DropdownMenu::new(open.clone())
+            .align(DropdownMenuAlign::End)
+            .min_width(Px(200.0))
+            .into_element(
+                cx,
+                |cx| button.clone().into_element(cx),
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Assign to...")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Set due date...")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Apply label").submenu(vec![
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("feature")),
+                                ]),
+                            ),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Delete")
+                                    .variant(
+                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    )
+                                    .trailing(DropdownMenuShortcut::new("⌘⌫").into_element(cx)),
+                            ),
+                        ])),
+                    ]
+                },
+            );
+
+        cx.row(
+            RowProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                gap: Px(0.0),
+                padding: Edges {
+                    top: Px(12.0),
+                    right: Px(16.0),
+                    bottom: Px(12.0),
+                    left: Px(16.0),
+                },
+                justify: MainAlign::End,
+                align: CrossAlign::Start,
+            },
+            |_cx| vec![dropdown],
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_menu_content_insets_match() {
+    assert_combobox_dropdown_menu_constrained_menu_content_insets_match("combobox-dropdown-menu");
+}
+
+fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_kit::declarative::icon as decl_icon;
+        use fret_ui_shadcn::{
+            Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+            DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuShortcut,
+        };
+
+        let button = Button::new("More")
+            .variant(ButtonVariant::Ghost)
+            .size(ButtonSize::Sm)
+            .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
+
+        let dropdown = DropdownMenu::new(open.clone())
+            .align(DropdownMenuAlign::End)
+            .min_width(Px(200.0))
+            .into_element(
+                cx,
+                |cx| button.clone().into_element(cx),
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Assign to...")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Set due date...")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Apply label").submenu(vec![
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("feature")),
+                                ]),
+                            ),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Delete")
+                                    .variant(
+                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    )
+                                    .trailing(DropdownMenuShortcut::new("⌘⌫").into_element(cx)),
+                            ),
+                        ])),
+                    ]
+                },
+            );
+
+        cx.row(
+            RowProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                gap: Px(0.0),
+                padding: Edges {
+                    top: Px(12.0),
+                    right: Px(16.0),
+                    bottom: Px(12.0),
+                    left: Px(16.0),
+                },
+                justify: MainAlign::End,
+                align: CrossAlign::Start,
+            },
+            |_cx| vec![dropdown],
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_breadcrumb_demo_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "breadcrumb-demo",
