@@ -1188,6 +1188,7 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     let block = code_view::CodeBlock::new(code)
         .language("rust")
         .show_line_numbers(true)
+        .windowed_lines(true)
         .show_scrollbar_y(true)
         .max_height(Px(420.0))
         .into_element(cx);
