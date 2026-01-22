@@ -102,10 +102,13 @@ substrate supports an additional per-overlay flag:
 Runtime mechanism:
 
 - While `disable_outside_pointer_events=true` and the overlay is open, the overlay controller
-  installs a **non-hit-testable input barrier layer** (no rendering; no hit target) that scopes
-  the active input layer stack so the underlay is not considered for pointer routing.
+  enables a **pointer occlusion** mechanism on the overlay layer that prevents pointer interactions
+  from reaching the underlay (ADR 0011 scoping still applies).
+- Default policy is **occlude mouse, except scroll**: underlay hover/move/down/up are blocked, but
+  wheel events are still allowed to route to the underlay scroll target. This matches common
+  desktop UI expectations and GPUI's `HitboxBehavior::BlockMouseExceptScroll`.
 - Outside-press dismissal still uses the observer pass described above (the overlay can close on
-  outside press even though the underlay is inert).
+  outside press even though the underlay is inert for non-scroll pointer interactions).
 
 This ADR intentionally does **not** define the accessibility / "hide others" outcome for menus.
 That is handled separately by the semantics/a11y architecture ADRs.
