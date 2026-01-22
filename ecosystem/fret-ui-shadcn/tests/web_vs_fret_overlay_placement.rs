@@ -3192,6 +3192,518 @@ fn web_vs_fret_mode_toggle_dropdown_menu_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_button_group_demo_menu_item_height_matches() {
+    assert_button_group_demo_constrained_menu_item_height_matches("button-group-demo");
+}
+
+fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs =
+        web_portal_slot_heights(&theme, &["dropdown-menu-item", "dropdown-menu-sub-trigger"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web menu item rows for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let label_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("personal")));
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+            DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+        };
+
+        fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(16.0));
+                        layout.size.height = Length::Px(Px(16.0));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )
+        }
+
+        DropdownMenu::new(open.clone())
+            .align(DropdownMenuAlign::End)
+            // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
+            .min_width(Px(208.0))
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("More Options")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Icon)
+                        .children([icon_stub(cx)])
+                        .into_element(cx)
+                },
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
+                            ),
+                        ])),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Label As...")
+                                    .leading(icon_stub(cx))
+                                    .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                        DropdownMenuRadioGroup::new(label_value.clone())
+                                            .item(DropdownMenuRadioItemSpec::new(
+                                                "personal", "Personal",
+                                            ))
+                                            .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                            .item(DropdownMenuRadioItemSpec::new("other", "Other")),
+                                    )]),
+                            ),
+                        ])),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Trash")
+                                    .leading(icon_stub(cx))
+                                    .variant(
+                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    ),
+                            ),
+                        ])),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_menu_content_insets_match() {
+    assert_button_group_demo_constrained_menu_content_insets_match("button-group-demo");
+}
+
+fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let label_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("personal")));
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+            DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+        };
+
+        fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(16.0));
+                        layout.size.height = Length::Px(Px(16.0));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )
+        }
+
+        DropdownMenu::new(open.clone())
+            .align(DropdownMenuAlign::End)
+            .min_width(Px(208.0))
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("More Options")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Icon)
+                        .children([icon_stub(cx)])
+                        .into_element(cx)
+                },
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
+                            ),
+                        ])),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Label As...")
+                                    .leading(icon_stub(cx))
+                                    .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                        DropdownMenuRadioGroup::new(label_value.clone())
+                                            .item(DropdownMenuRadioItemSpec::new(
+                                                "personal", "Personal",
+                                            ))
+                                            .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                            .item(DropdownMenuRadioItemSpec::new("other", "Other")),
+                                    )]),
+                            ),
+                        ])),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Trash")
+                                    .leading(icon_stub(cx))
+                                    .variant(
+                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    ),
+                            ),
+                        ])),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_mode_toggle_menu_item_height_matches() {
+    assert_mode_toggle_constrained_menu_item_height_matches("mode-toggle");
+}
+
+fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web menu item rows for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+            DropdownMenuItem,
+        };
+
+        fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(16.0));
+                        layout.size.height = Length::Px(Px(16.0));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )
+        }
+
+        DropdownMenu::new(open.clone())
+            .align(DropdownMenuAlign::End)
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("Toggle theme")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Icon)
+                        .children([icon_stub(cx)])
+                        .into_element(cx)
+                },
+                |_cx| {
+                    vec![
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Light")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Dark")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("System")),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_mode_toggle_menu_content_insets_match() {
+    assert_mode_toggle_constrained_menu_content_insets_match("mode-toggle");
+}
+
+fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+            DropdownMenuItem,
+        };
+
+        fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(16.0));
+                        layout.size.height = Length::Px(Px(16.0));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )
+        }
+
+        DropdownMenu::new(open.clone())
+            .align(DropdownMenuAlign::End)
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("Toggle theme")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Icon)
+                        .children([icon_stub(cx)])
+                        .into_element(cx)
+                },
+                |_cx| {
+                    vec![
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Light")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Dark")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("System")),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_breadcrumb_demo_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "breadcrumb-demo",
@@ -4993,6 +5505,71 @@ fn assert_dropdown_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
 }
 
 fn assert_button_group_demo_submenu_overlay_placement_matches(web_name: &str) {
+    let (web, snap) = build_button_group_demo_submenu_snapshot(web_name);
+    let theme = web_theme(&web);
+
+    let web_sub_menu = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-content");
+    let web_sub_trigger = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-trigger");
+
+    let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
+    let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
+    let expected_w = web_sub_menu.rect.w;
+    let expected_h = web_sub_menu.rect.h;
+
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Label As..."))
+        .expect("fret submenu trigger semantics (final)");
+
+    let menus: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .collect();
+    assert!(
+        menus.len() >= 2,
+        "expected at least 2 menu panels after opening submenu; got {}",
+        menus.len()
+    );
+
+    let root_menu = menus
+        .iter()
+        .find(|m| fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("root menu contains sub-trigger");
+    let submenu = menus
+        .iter()
+        .find(|m| !fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("submenu menu does not contain sub-trigger");
+
+    let actual_dx =
+        submenu.bounds.origin.x.0 - (trigger.bounds.origin.x.0 + trigger.bounds.size.width.0);
+    let actual_dy = submenu.bounds.origin.y.0 - trigger.bounds.origin.y.0;
+    let actual_w = submenu.bounds.size.width.0;
+    let actual_h = submenu.bounds.size.height.0;
+
+    assert_close(
+        &format!("{web_name} submenu dx"),
+        actual_dx,
+        expected_dx,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} submenu dy"),
+        actual_dy,
+        expected_dy,
+        2.0,
+    );
+    assert_close(&format!("{web_name} submenu w"), actual_w, expected_w, 2.0);
+    assert_close(&format!("{web_name} submenu h"), actual_h, expected_h, 2.0);
+
+    assert!(
+        root_menu.bounds.size.width.0 > 0.0 && root_menu.bounds.size.height.0 > 0.0,
+        "expected root menu bounds to be non-zero"
+    );
+}
+
+fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsSnapshot) {
     use fret_ui_shadcn::{
         Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
         DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
@@ -5016,14 +5593,6 @@ fn assert_button_group_demo_submenu_overlay_placement_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
-    let web_sub_menu = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-content");
-    let web_sub_trigger = web_portal_node_by_data_slot(theme, "dropdown-menu-sub-trigger");
-
-    let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
-    let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
-    let expected_w = web_sub_menu.rect.w;
-    let expected_h = web_sub_menu.rect.h;
-
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
@@ -5032,7 +5601,7 @@ fn assert_button_group_demo_submenu_overlay_placement_matches(web_name: &str) {
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
-    let bounds = bounds_for_web_theme(&theme);
+    let bounds = bounds_for_web_theme(theme);
 
     let open: Model<bool> = app.models_mut().insert(false);
     let label_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("personal")));
@@ -5052,29 +5621,50 @@ fn assert_button_group_demo_submenu_overlay_placement_matches(web_name: &str) {
                         .into_element(cx)
                 },
                 |cx| {
-                    vec![DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
-                        DropdownMenuEntry::Item(
-                            DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
-                        ),
-                        DropdownMenuEntry::Item(
-                            DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
-                        ),
-                        DropdownMenuEntry::Item(
-                            DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
-                        ),
-                        DropdownMenuEntry::Item(
-                            DropdownMenuItem::new("Label As...")
-                                .leading(icon_stub(cx))
-                                .submenu(vec![DropdownMenuEntry::RadioGroup(
-                                    DropdownMenuRadioGroup::new(label_value.clone())
-                                        .item(DropdownMenuRadioItemSpec::new(
-                                            "personal", "Personal",
-                                        ))
-                                        .item(DropdownMenuRadioItemSpec::new("work", "Work"))
-                                        .item(DropdownMenuRadioItemSpec::new("other", "Other")),
-                                )]),
-                        ),
-                    ]))]
+                    vec![
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
+                            ),
+                        ])),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                            ),
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Label As...")
+                                    .leading(icon_stub(cx))
+                                    .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                        DropdownMenuRadioGroup::new(label_value.clone())
+                                            .item(DropdownMenuRadioItemSpec::new(
+                                                "personal", "Personal",
+                                            ))
+                                            .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                            .item(DropdownMenuRadioItemSpec::new("other", "Other")),
+                                    )]),
+                            ),
+                        ])),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                            DropdownMenuEntry::Item(
+                                DropdownMenuItem::new("Trash")
+                                    .leading(icon_stub(cx))
+                                    .variant(
+                                        fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    ),
+                            ),
+                        ])),
+                    ]
                 },
             )
     };
@@ -5146,57 +5736,50 @@ fn assert_button_group_demo_submenu_overlay_placement_matches(web_name: &str) {
     }
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Label As..."))
-        .expect("fret submenu trigger semantics (final)");
+    (web, snap)
+}
 
-    let menus: Vec<_> = snap
-        .nodes
+fn assert_button_group_demo_submenu_constrained_menu_content_insets_match(web_name: &str) {
+    let (web, snap) = build_button_group_demo_submenu_snapshot(web_name);
+    let theme = web_theme(&web);
+    let expected_slots = ["dropdown-menu-content", "dropdown-menu-sub-content"];
+    let expected = web_menu_content_insets_for_slots(theme, &expected_slots);
+    let expected_hs: Vec<f32> = expected_slots
         .iter()
-        .filter(|n| n.role == SemanticsRole::Menu)
+        .map(|slot| web_portal_node_by_data_slot(theme, slot).rect.h)
         .collect();
+
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+
+    let mut actual_hs = fret_menu_heights(&snap);
     assert!(
-        menus.len() >= 2,
-        "expected at least 2 menu panels after opening submenu; got {}",
-        menus.len()
+        actual_hs.len() == expected_hs.len(),
+        "{web_name} expected {} menus, got {}",
+        expected_hs.len(),
+        actual_hs.len()
     );
+    let mut expected_hs = expected_hs;
+    expected_hs.sort_by(|a, b| b.total_cmp(a));
+    actual_hs.sort_by(|a, b| b.total_cmp(a));
+    for (i, (a, e)) in actual_hs.iter().zip(expected_hs.iter()).enumerate() {
+        assert_close(&format!("{web_name} menu[{i}] height"), *a, *e, 2.0);
+    }
+}
 
-    let root_menu = menus
+fn assert_button_group_demo_submenu_menu_item_height_matches(web_name: &str) {
+    let (web, snap) = build_button_group_demo_submenu_snapshot(web_name);
+    let theme = web_theme(&web);
+    let expected_hs =
+        web_portal_slot_heights(theme, &["dropdown-menu-item", "dropdown-menu-radio-item"]);
+    let expected_h = expected_hs
         .iter()
-        .find(|m| fret_rect_contains(m.bounds, trigger.bounds))
-        .expect("root menu contains sub-trigger");
-    let submenu = menus
-        .iter()
-        .find(|m| !fret_rect_contains(m.bounds, trigger.bounds))
-        .expect("submenu menu does not contain sub-trigger");
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web menu item rows for {web_name}"));
 
-    let actual_dx =
-        submenu.bounds.origin.x.0 - (trigger.bounds.origin.x.0 + trigger.bounds.size.width.0);
-    let actual_dy = submenu.bounds.origin.y.0 - trigger.bounds.origin.y.0;
-    let actual_w = submenu.bounds.size.width.0;
-    let actual_h = submenu.bounds.size.height.0;
-
-    assert_close(
-        &format!("{web_name} submenu dx"),
-        actual_dx,
-        expected_dx,
-        2.0,
-    );
-    assert_close(
-        &format!("{web_name} submenu dy"),
-        actual_dy,
-        expected_dy,
-        2.0,
-    );
-    assert_close(&format!("{web_name} submenu w"), actual_w, expected_w, 2.0);
-    assert_close(&format!("{web_name} submenu h"), actual_h, expected_h, 2.0);
-
-    assert!(
-        root_menu.bounds.size.width.0 > 0.0 && root_menu.bounds.size.height.0 > 0.0,
-        "expected root menu bounds to be non-zero"
-    );
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
 }
 
 #[test]
@@ -5212,6 +5795,18 @@ fn web_vs_fret_dropdown_menu_demo_submenu_hover_overlay_placement_matches() {
 #[test]
 fn web_vs_fret_button_group_demo_submenu_overlay_placement_matches() {
     assert_button_group_demo_submenu_overlay_placement_matches("button-group-demo.submenu-kbd");
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_submenu_menu_content_insets_match() {
+    assert_button_group_demo_submenu_constrained_menu_content_insets_match(
+        "button-group-demo.submenu-kbd",
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_submenu_menu_item_height_matches() {
+    assert_button_group_demo_submenu_menu_item_height_matches("button-group-demo.submenu-kbd");
 }
 
 #[test]
