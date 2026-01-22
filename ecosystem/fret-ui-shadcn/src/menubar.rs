@@ -1212,9 +1212,12 @@ impl MenubarMenuEntries {
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                         let font_size = theme.metric_required("font.size");
                         let font_line_height = theme.metric_required("font.line_height");
+                        let min_width = theme
+                            .metric_by_key("component.menubar.min_width")
+                            .unwrap_or(Px(192.0));
                         let mut desired = menu_panel_desired_size(
                             &entries,
-                            Px(192.0),
+                            min_width,
                             font_size,
                             font_line_height,
                             pad_x,
