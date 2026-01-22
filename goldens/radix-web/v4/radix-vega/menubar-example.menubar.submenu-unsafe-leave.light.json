@@ -2947,10 +2947,10 @@
                       },
                       "children": [],
                       "rect": {
-                        "x": 686.0054321289062,
-                        "y": 152.3922882080078,
-                        "w": 135.4864501953125,
-                        "h": 31.879165649414062
+                        "x": 686.0053100585938,
+                        "y": 152.3949737548828,
+                        "w": 135.48876953125,
+                        "h": 31.879714965820312
                       },
                       "text": "Share"
                     },
@@ -2968,10 +2968,10 @@
                       },
                       "children": [],
                       "rect": {
-                        "x": 682.0205078125,
-                        "y": 188.25634765625,
-                        "w": 143.456298828125,
-                        "h": 0.9962310791015625
+                        "x": 682.0203247070312,
+                        "y": 188.2596435546875,
+                        "w": 143.458740234375,
+                        "h": 0.996246337890625
                       }
                     },
                     {
@@ -3016,37 +3016,37 @@
                               },
                               "children": [],
                               "rect": {
-                                "x": 791.52734375,
-                                "y": 201.207275390625,
-                                "w": 21.9947509765625,
-                                "h": 15.9395751953125
+                                "x": 791.529052734375,
+                                "y": 201.21078491210938,
+                                "w": 21.9951171875,
+                                "h": 15.939849853515625
                               },
                               "text": "⌘P"
                             }
                           ],
                           "rect": {
-                            "x": 686.0054321289062,
-                            "y": 193.2374725341797,
-                            "w": 135.4864501953125,
-                            "h": 31.879165649414062
+                            "x": 686.0053100585938,
+                            "y": 193.24085998535156,
+                            "w": 135.48876953125,
+                            "h": 31.879714965820312
                           },
                           "text": "Print... ⌘P"
                         }
                       ],
                       "rect": {
-                        "x": 686.0054321289062,
-                        "y": 193.2374725341797,
-                        "w": 135.4864501953125,
-                        "h": 31.879165649414062
+                        "x": 686.0053100585938,
+                        "y": 193.24085998535156,
+                        "w": 135.48876953125,
+                        "h": 31.879714965820312
                       },
                       "text": "Print... ⌘P"
                     }
                   ],
                   "rect": {
-                    "x": 682.0205078125,
-                    "y": 148.4073944091797,
-                    "w": 143.456298828125,
-                    "h": 80.69413757324219
+                    "x": 682.0203247070312,
+                    "y": 148.41000366210938,
+                    "w": 143.458740234375,
+                    "h": 80.69552612304688
                   },
                   "text": "SharePrint... ⌘P"
                 }
@@ -5275,12 +5275,12 @@
             "role": "menu",
             "aria-orientation": "vertical",
             "data-state": "open",
-            "aria-labelledby": "radix-_r_2k_",
+            "aria-labelledby": "radix-_r_2o_",
             "data-slot": "menubar-content",
             "tabindex": "-1",
             "data-orientation": "vertical"
           },
-          "text": "SharePrint... ⌘P"
+          "text": "Undo ⌘ZRedo ⇧⌘ZFindCutCopyPaste"
         },
         "dom": {
           "tag": "body",
@@ -5514,13 +5514,12 @@
                                       "attrs": {
                                         "role": "menuitem",
                                         "aria-haspopup": "menu",
-                                        "aria-expanded": "true",
-                                        "data-state": "open",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed",
                                         "data-slot": "menubar-trigger",
-                                        "tabindex": "0",
+                                        "tabindex": "-1",
                                         "data-orientation": "horizontal",
-                                        "data-radix-collection-item": "",
-                                        "aria-controls": "radix-_r_2l_"
+                                        "data-radix-collection-item": ""
                                       },
                                       "children": [],
                                       "rect": {
@@ -5545,12 +5544,13 @@
                                       "attrs": {
                                         "role": "menuitem",
                                         "aria-haspopup": "menu",
-                                        "aria-expanded": "false",
-                                        "data-state": "closed",
+                                        "aria-expanded": "true",
+                                        "data-state": "open",
                                         "data-slot": "menubar-trigger",
-                                        "tabindex": "-1",
+                                        "tabindex": "0",
                                         "data-orientation": "horizontal",
-                                        "data-radix-collection-item": ""
+                                        "data-radix-collection-item": "",
+                                        "aria-controls": "radix-_r_2p_"
                                       },
                                       "children": [],
                                       "rect": {
@@ -6626,7 +6626,7 @@
                     "role": "menu",
                     "aria-orientation": "vertical",
                     "data-state": "open",
-                    "aria-labelledby": "radix-_r_2k_",
+                    "aria-labelledby": "radix-_r_2o_",
                     "data-slot": "menubar-content",
                     "tabindex": "-1",
                     "data-orientation": "vertical"
@@ -6640,53 +6640,6 @@
                         0
                       ],
                       "attrs": {
-                        "role": "menuitem",
-                        "aria-haspopup": "menu",
-                        "aria-expanded": "false",
-                        "aria-controls": "radix-_r_4m_",
-                        "data-state": "closed",
-                        "data-slot": "menubar-sub-trigger",
-                        "tabindex": "-1",
-                        "data-orientation": "vertical",
-                        "data-radix-collection-item": ""
-                      },
-                      "children": [],
-                      "rect": {
-                        "x": 686,
-                        "y": 153,
-                        "w": 136,
-                        "h": 32
-                      },
-                      "text": "Share"
-                    },
-                    {
-                      "tag": "div",
-                      "path": [
-                        18,
-                        0,
-                        1
-                      ],
-                      "attrs": {
-                        "role": "separator",
-                        "aria-orientation": "horizontal",
-                        "data-slot": "menubar-separator"
-                      },
-                      "children": [],
-                      "rect": {
-                        "x": 682,
-                        "y": 189,
-                        "w": 144,
-                        "h": 1
-                      }
-                    },
-                    {
-                      "tag": "div",
-                      "path": [
-                        18,
-                        0,
-                        2
-                      ],
-                      "attrs": {
                         "role": "group",
                         "data-slot": "menubar-group"
                       },
@@ -6696,7 +6649,7 @@
                           "path": [
                             18,
                             0,
-                            2,
+                            0,
                             0
                           ],
                           "attrs": {
@@ -6712,7 +6665,7 @@
                               "path": [
                                 18,
                                 0,
-                                2,
+                                0,
                                 0,
                                 0
                               ],
@@ -6721,48 +6674,254 @@
                               },
                               "children": [],
                               "rect": {
-                                "x": 791.921875,
-                                "y": 202,
-                                "w": 22.078125,
+                                "x": 835.546875,
+                                "y": 161,
+                                "w": 21.953125,
                                 "h": 16
                               },
-                              "text": "⌘P"
+                              "text": "⌘Z"
                             }
                           ],
                           "rect": {
-                            "x": 686,
-                            "y": 194,
+                            "x": 729.5,
+                            "y": 153,
                             "w": 136,
                             "h": 32
                           },
-                          "text": "Print... ⌘P"
+                          "text": "Undo ⌘Z"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            18,
+                            0,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "data-slot": "menubar-item",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [
+                            {
+                              "tag": "span",
+                              "path": [
+                                18,
+                                0,
+                                0,
+                                1,
+                                0
+                              ],
+                              "attrs": {
+                                "data-slot": "menubar-shortcut"
+                              },
+                              "children": [],
+                              "rect": {
+                                "x": 822.34375,
+                                "y": 193,
+                                "w": 35.15625,
+                                "h": 16
+                              },
+                              "text": "⇧⌘Z"
+                            }
+                          ],
+                          "rect": {
+                            "x": 729.5,
+                            "y": 185,
+                            "w": 136,
+                            "h": 32
+                          },
+                          "text": "Redo ⇧⌘Z"
                         }
                       ],
                       "rect": {
-                        "x": 686,
-                        "y": 194,
+                        "x": 729.5,
+                        "y": 153,
+                        "w": 136,
+                        "h": 64
+                      },
+                      "text": "Undo ⌘ZRedo ⇧⌘Z"
+                    },
+                    {
+                      "tag": "div",
+                      "path": [
+                        18,
+                        0,
+                        1
+                      ],
+                      "attrs": {
+                        "role": "separator",
+                        "aria-orientation": "horizontal",
+                        "data-slot": "menubar-separator"
+                      },
+                      "children": [],
+                      "rect": {
+                        "x": 725.5,
+                        "y": 221,
+                        "w": 144,
+                        "h": 1
+                      }
+                    },
+                    {
+                      "tag": "div",
+                      "path": [
+                        18,
+                        0,
+                        2
+                      ],
+                      "attrs": {
+                        "role": "menuitem",
+                        "aria-haspopup": "menu",
+                        "aria-expanded": "false",
+                        "aria-controls": "radix-_r_50_",
+                        "data-state": "closed",
+                        "data-slot": "menubar-sub-trigger",
+                        "tabindex": "-1",
+                        "data-orientation": "vertical",
+                        "data-radix-collection-item": ""
+                      },
+                      "children": [],
+                      "rect": {
+                        "x": 729.5,
+                        "y": 226,
                         "w": 136,
                         "h": 32
                       },
-                      "text": "Print... ⌘P"
+                      "text": "Find"
+                    },
+                    {
+                      "tag": "div",
+                      "path": [
+                        18,
+                        0,
+                        3
+                      ],
+                      "attrs": {
+                        "role": "separator",
+                        "aria-orientation": "horizontal",
+                        "data-slot": "menubar-separator"
+                      },
+                      "children": [],
+                      "rect": {
+                        "x": 725.5,
+                        "y": 262,
+                        "w": 144,
+                        "h": 1
+                      }
+                    },
+                    {
+                      "tag": "div",
+                      "path": [
+                        18,
+                        0,
+                        4
+                      ],
+                      "attrs": {
+                        "role": "group",
+                        "data-slot": "menubar-group"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            18,
+                            0,
+                            4,
+                            0
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "data-slot": "menubar-item",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "rect": {
+                            "x": 729.5,
+                            "y": 267,
+                            "w": 136,
+                            "h": 32
+                          },
+                          "text": "Cut"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            18,
+                            0,
+                            4,
+                            1
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "data-slot": "menubar-item",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "rect": {
+                            "x": 729.5,
+                            "y": 299,
+                            "w": 136,
+                            "h": 32
+                          },
+                          "text": "Copy"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            18,
+                            0,
+                            4,
+                            2
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "data-slot": "menubar-item",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "rect": {
+                            "x": 729.5,
+                            "y": 331,
+                            "w": 136,
+                            "h": 32
+                          },
+                          "text": "Paste"
+                        }
+                      ],
+                      "rect": {
+                        "x": 729.5,
+                        "y": 267,
+                        "w": 136,
+                        "h": 96
+                      },
+                      "text": "CutCopyPaste"
                     }
                   ],
                   "rect": {
-                    "x": 682,
+                    "x": 725.5,
                     "y": 149,
                     "w": 144,
-                    "h": 81
+                    "h": 218
                   },
-                  "text": "SharePrint... ⌘P"
+                  "text": "Undo ⌘ZRedo ⇧⌘ZFindCutCopyPaste"
                 }
               ],
               "rect": {
-                "x": 682,
+                "x": 725.5,
                 "y": 149,
                 "w": 144,
-                "h": 81
+                "h": 218
               },
-              "text": "SharePrint... ⌘P"
+              "text": "Undo ⌘ZRedo ⇧⌘ZFindCutCopyPaste"
             },
             {
               "tag": "span",
@@ -6829,12 +6988,12 @@
                 {
                   "role": "menuitem",
                   "name": "File",
-                  "expanded": true,
                   "haspopup": "menu"
                 },
                 {
                   "role": "menuitem",
                   "name": "Edit",
+                  "expanded": true,
                   "haspopup": "menu"
                 }
               ]
@@ -7001,18 +7160,34 @@
             },
             {
               "role": "menu",
-              "name": "File",
+              "name": "Edit",
               "focused": true,
               "orientation": "vertical",
               "children": [
                 {
                   "role": "menuitem",
-                  "name": "Share",
+                  "name": "Undo ⌘Z"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Redo ⇧⌘Z"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Find",
                   "haspopup": "menu"
                 },
                 {
                   "role": "menuitem",
-                  "name": "Print... ⌘P"
+                  "name": "Cut"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Copy"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Paste"
                 }
               ]
             },

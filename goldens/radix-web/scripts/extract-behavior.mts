@@ -1775,7 +1775,12 @@ const scenarios: Scenario[] = [
       )
       await pushStep(ctx, { kind: "hover", target: "menubar-sub-trigger:Share" })
 
-      await hoverFirstByText(ctx.page, '[data-slot="menubar-trigger"]', "Edit")
+      await hoverExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "Edit"
+      )
       await sleep(200)
       await waitForSelectorPresent(
         ctx.page,
