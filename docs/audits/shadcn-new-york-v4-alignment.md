@@ -293,6 +293,17 @@ Recent fixes:
   - Variant mapping: outline uses border + shadow-xs; destructive uses dedicated ring color.
   - Focus ring thickness (`3px`) and ring/border keys.
 
+Recent fixes:
+
+- Focus ring (`ring-[3px]`) now matches shadcn-web focus variant (`button-demo.focus`) and is gated via
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+  (`web_vs_fret_button_demo_focus_ring_matches`).
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_control_chrome_matches`).
+- Focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_focus_ring_matches`).
+
 ### `ButtonGroup`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx`

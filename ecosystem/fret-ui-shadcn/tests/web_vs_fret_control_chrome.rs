@@ -3726,6 +3726,62 @@ fn web_vs_fret_button_demo_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_button_demo_focus_ring_matches() {
+    let web = read_web_golden("button-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.text.as_deref() == Some("Button")
+    })
+    .expect("web button node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_button).expect("web button focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            vec![
+                fret_ui_shadcn::Button::new("Button")
+                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+                .map(|n| n.id)
+                .expect("missing fret button semantics node")
+        },
+    );
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+        .expect("missing semantics for button");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, button.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "button-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
 fn web_vs_fret_button_icon_control_chrome_matches() {
     let web = read_web_golden("button-icon");
     let theme = web
