@@ -134,3 +134,73 @@ fn pointer_occlusion_block_mouse_except_scroll_suppresses_underlay_hit_dispatch_
     assert_eq!(app.models().get_copied(&counts.downs).unwrap_or(0), 0);
     assert_eq!(app.models().get_copied(&counts.wheels).unwrap_or(0), 1);
 }
+
+#[test]
+fn pointer_occlusion_block_mouse_suppresses_underlay_hit_dispatch_including_wheel() {
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let counts = Counts {
+        moves: app.models_mut().insert(0u32),
+        downs: app.models_mut().insert(0u32),
+        wheels: app.models_mut().insert(0u32),
+    };
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CounterWidget {
+        counts: counts.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay_root = ui.create_node(HitTestTransparent);
+    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouse);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            position: Point::new(Px(10.0), Px(10.0)),
+            delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&counts.moves).unwrap_or(0), 0);
+    assert_eq!(app.models().get_copied(&counts.downs).unwrap_or(0), 0);
+    assert_eq!(app.models().get_copied(&counts.wheels).unwrap_or(0), 0);
+}
