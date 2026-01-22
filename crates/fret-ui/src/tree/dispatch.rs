@@ -1266,8 +1266,19 @@ impl<H: UiHost> UiTree<H> {
 
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(node_id, event);
+            let should_run_capture_phase = match event {
+                Event::Pointer(PointerEvent::Down { .. })
+                | Event::Pointer(PointerEvent::Up { .. })
+                | Event::Pointer(PointerEvent::Wheel { .. })
+                | Event::Pointer(PointerEvent::PinchGesture { .. })
+                | Event::PointerCancel(..) => true,
+                Event::Pointer(PointerEvent::Move { buttons, .. }) => {
+                    captured.is_some() || buttons.left || buttons.right || buttons.middle
+                }
+                _ => false,
+            };
             let mut stopped_in_capture = false;
-            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+            if should_run_capture_phase {
                 let mut capture_ctx = input_ctx.clone();
                 capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
@@ -1369,6 +1380,9 @@ impl<H: UiHost> UiTree<H> {
 
                     if stop_propagation {
                         stop_propagation_requested = true;
+                        if is_wheel && wheel_stop_node.is_none() {
+                            wheel_stop_node = Some(node_id);
+                        }
                         stopped_in_capture = true;
                         break;
                     }
@@ -2390,6 +2404,11 @@ impl<H: UiHost> UiTree<H> {
                 kind: e.kind.clone(),
                 modifiers: e.modifiers,
             }),
+            Event::PointerCancel(e) => {
+                let mut e = e.clone();
+                e.position = Some(position);
+                Event::PointerCancel(e)
+            }
             _ => event.clone(),
         }
     }
