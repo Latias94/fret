@@ -1688,6 +1688,10 @@ impl<H: UiHost> UiTree<H> {
         self.captured_for(PointerId(0))
     }
 
+    pub fn any_captured_node(&self) -> Option<NodeId> {
+        self.captured.values().copied().next()
+    }
+
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
     }

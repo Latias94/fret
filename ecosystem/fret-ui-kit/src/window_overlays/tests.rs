@@ -3845,6 +3845,102 @@ fn dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing() 
     assert_eq!(snap.topmost_pointer_occluding_overlay, None);
 }
 
+fn render_base_with_trigger_and_capture_underlay(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    open: Model<bool>,
+) -> (GlobalElementId, GlobalElementId) {
+    begin_frame(app, window);
+
+    let mut trigger_id: Option<GlobalElementId> = None;
+    let mut underlay_id: Option<GlobalElementId> = None;
+
+    let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+        vec![cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(80.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        Vec::new()
+                    },
+                );
+
+                let underlay = cx.pointer_region(
+                    PointerRegionProps {
+                        layout: {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(120.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(160.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        },
+                        enabled: true,
+                    },
+                    |cx| {
+                        cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {
+                            host.capture_pointer();
+                            true
+                        }));
+                        Vec::new()
+                    },
+                );
+                underlay_id = Some(underlay.id);
+
+                vec![trigger, underlay]
+            },
+        )]
+    });
+    ui.set_root(root);
+
+    (
+        trigger_id.expect("trigger id"),
+        underlay_id.expect("underlay id"),
+    )
+}
+
 #[test]
 fn dock_drag_does_not_restore_closed_non_modal_overlays_on_drag_end() {
     let window = AppWindowId::default();
@@ -3983,6 +4079,99 @@ fn dock_drag_does_not_restore_closed_non_modal_overlays_on_drag_end() {
     render(&mut ui, &mut app, &mut services, window, bounds);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn pointer_capture_forces_menu_like_overlay_to_close_and_drop_occlusion() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base and capture pointer 0 in the underlay (viewport-like capture).
+    let (trigger, _underlay) = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.any_captured_node().is_some(),
+        "expected pointer capture to be active before opening the menu-like overlay"
+    );
+
+    // Second frame: attempt to open a menu-like overlay that would normally enable pointer occlusion.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_copied(&open),
+        Some(false),
+        "expected capture to force-close menu-like overlays to avoid capture+occlusion overlap"
+    );
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None,
+        "expected forced close to drop pointer occlusion"
+    );
+    assert_eq!(snap.topmost_pointer_occluding_overlay, None);
 }
 
 #[test]

@@ -54,6 +54,7 @@ pub fn render<H: UiHost>(
     let dock_drag_affects_window = app.any_drag_session(|d| {
         d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
     });
+    let captured_layer = ui.any_captured_node().and_then(|node| ui.node_layer(node));
 
     let focused_now = app
         .global::<WindowMetricsService>()
@@ -444,6 +445,18 @@ pub fn render<H: UiHost>(
             entry.initial_focus = initial_focus;
             entry.consume_outside_pointer_events = consume_outside_pointer_events;
             entry.disable_outside_pointer_events = disable_outside_pointer_events;
+
+            // Input arbitration: if the window currently has an active pointer capture in a
+            // *different* layer (viewport-style drags, resizers, etc.), menu-like overlays must
+            // not introduce pointer occlusion mid-capture. Force-close the overlay to avoid
+            // capture+occlusion overlap and keep routing deterministic.
+            if open_now
+                && disable_outside_pointer_events
+                && captured_layer.is_some_and(|layer| layer != entry.layer)
+            {
+                let _ = app.models_mut().update(&open, |v| *v = false);
+                open_now = false;
+            }
 
             if open_now
                 && let Some(layer_root) = ui.layer_root(entry.layer)
