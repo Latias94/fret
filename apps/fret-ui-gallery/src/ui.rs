@@ -1185,10 +1185,19 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     );
 
     let code = code_view_torture_source();
+
+    let windowed =
+        match std::env::var_os("FRET_UI_GALLERY_CODE_VIEW_WINDOWED").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => true,
+        };
     let block = code_view::CodeBlock::new(code)
         .language("rust")
         .show_line_numbers(true)
-        .windowed_lines(true)
+        .windowed_lines(windowed)
         .show_scrollbar_y(true)
         .max_height(Px(420.0))
         .into_element(cx);
