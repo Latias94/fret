@@ -571,8 +571,37 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
+
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
+
+        // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
+        // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
+        //
+        // Modal barriers must continue to block wheel events while present.
+        let wheel_hit_test_layers: Option<Vec<NodeId>> = (is_wheel
+            && barrier_root.is_some_and(|barrier_root| {
+                self.root_to_layer
+                    .get(&barrier_root)
+                    .copied()
+                    .and_then(|layer| self.layers.get(layer))
+                    .is_some_and(|layer| !layer.hit_testable)
+            }))
+        .then(|| {
+            let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+            let mut roots: Vec<NodeId> = Vec::new();
+            for layer_id in visible.into_iter().rev() {
+                let layer = &self.layers[layer_id];
+                if layer.hit_testable {
+                    roots.push(layer.root);
+                }
+            }
+            roots
+        });
+        let hit_test_layer_roots: &[NodeId] = wheel_hit_test_layers
+            .as_deref()
+            .unwrap_or(active_layers.as_slice());
 
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
@@ -794,7 +823,6 @@ impl<H: UiHost> UiTree<H> {
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
-        let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
         let mut wheel_stop_node: Option<NodeId> = None;
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
         let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
@@ -877,10 +905,10 @@ impl<H: UiHost> UiTree<H> {
             // For now, only allow cached hit-test reuse for pointer-move events; other pointer
             // events clear the cache and rebuild it from a full hit-test pass.
             let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
 
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
@@ -1136,10 +1164,10 @@ impl<H: UiHost> UiTree<H> {
         } else if let Some(pos) = event_position(event) {
             // See the cached hit-test reuse note above.
             let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
 
             let hit = if matches!(event, Event::InternalDrag(_)) {
