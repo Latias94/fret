@@ -63,6 +63,19 @@ This refactor aims to:
 - Implementing new shadcn components; this effort focuses on substrate + contracts + tests.
 - Free-form, element-level painting escape hatches (GPUI `defer_draw` equivalents) unless strictly needed.
 
+## Portal / “escape painting” notes (non-normative)
+
+GPUI’s `Window::with_content_mask` and `defer_draw` provide element-level “paint outside parent bounds”
+escape hatches. In Fret, the **normative** escape hatch for most UI overlays is the window-scoped
+multi-root overlay model (ADR 0011) plus an explicit placement solver (ADR 0064).
+
+For a general-purpose UI framework, this is an intentional trade-off:
+
+- Overlays/popovers/menus/tooltips should be expressed as overlay roots (portals), not as local
+  absolute positioning inside potentially clipped dock panels.
+- Per-element “paint escape” mechanisms may still be useful for specialized effects, but they are
+  considered renderer/runtime *details* rather than the primary contract surface for overlay UI.
+
 ## Current Model (v1 summary)
 
 ### Layering
@@ -89,6 +102,28 @@ The policy layer (`fret-ui-kit/window_overlays`) maps Radix outcomes onto the ru
 This is directionally correct, but the barrier behavior is currently achieved by composing multiple
 runtime flags. We want a simpler *mechanism vocabulary* that makes those compositions obvious and
 hard to get wrong.
+
+### Implementation snapshot (as of 2026-01)
+
+The current `disableOutsidePointerEvents` outcome is implemented as a **separate, non-visual layer**
+in `fret-ui-kit`:
+
+- `ecosystem/fret-ui-kit/src/window_overlays/render.rs` installs an additional
+  `pointer_barrier_layer` with:
+  - `blocks_underlay_input = true` (reuses the modal barrier scoping mechanism),
+  - `hit_testable = false` (so it does not become the hit-tested target).
+- `crates/fret-ui/src/tree/dispatch.rs` contains a special-case for wheel events:
+  - when the topmost barrier root is **hit-test-inert**, wheel hit-testing is re-run against
+    hit-testable layers so the underlay scroll target can still receive `PointerEvent::Wheel`.
+
+This works, and it is already covered by tests in `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`.
+However, it has two structural drawbacks for a general-purpose framework baseline:
+
+1. The semantics are implicit (a “barrier” that is not hit-testable is a *different* concept than a
+   modal barrier, but the runtime does not model that explicitly).
+2. The policy layer is forced to create extra layer roots to express a runtime outcome, which makes
+   layering and debugging harder (especially once docking, viewports, and multi-pointer routing are
+   involved).
 
 ## Proposed Changes (v2)
 
@@ -118,6 +153,10 @@ Expected code touchpoints:
 
 - Extend `UiLayer` and expose `UiTree::set_layer_pointer_occlusion(...)` (or equivalent).
 - Update dispatch/hit-test to apply occlusion for non-modal layers without turning them into modal barriers.
+
+**Compatibility note:** v2 should preserve the existing v1 behavior as an internal implementation
+detail while migrating call sites, i.e. keep the “hit-test-inert barrier root” approach working
+until `fret-ui-kit` is fully migrated to the explicit occlusion mechanism.
 
 ### 2) Runtime: Make “Present vs Interactive” Routing Rules Hard (P0)
 
@@ -237,4 +276,3 @@ The intent is to keep `window_overlays` free to refactor while offering a stable
 - Should the runtime treat scroll routing as “wheel only” or include touchpad pan/gesture events as well?
 - Do we need a separate “keyboard occlusion” mechanism for non-modal overlays (e.g. prevent underlay shortcuts)
   without full modality, or is that strictly policy?
-
