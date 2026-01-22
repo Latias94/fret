@@ -924,20 +924,38 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
-                pointer_down_outside = self.dispatch_pointer_down_outside(
-                    app,
-                    services,
-                    PointerDownOutsideParams {
-                        input_ctx: &input_ctx,
-                        active_layer_roots: &active_layers,
-                        base_root,
-                        hit,
-                        event,
-                    },
-                    &mut invalidation_visited,
-                );
-                if pointer_down_outside.dispatched {
-                    needs_redraw = true;
+                let dock_drag_affects_window = app.any_drag_session(|d| {
+                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                        && (d.source_window == window || d.current_window == window)
+                });
+                if dock_drag_affects_window {
+                    // ADR 0072: while a dock drag session is active, outside-press dismissal must
+                    // not trigger. The drag owns input arbitration for the window.
+                    //
+                    // This is intentionally window-global (not pointer-local): a dock drag session
+                    // is exclusive for the window, and we do not want secondary pointers to dismiss
+                    // overlays or change focus while the drag is in progress.
+                    //
+                    // Note: overlay policy is expected to close/suspend non-modal overlays when a
+                    // dock drag starts; this suppression makes the routing rule durable even if a
+                    // layer remains mounted for a close transition.
+                    pointer_down_outside = PointerDownOutsideOutcome::default();
+                } else {
+                    pointer_down_outside = self.dispatch_pointer_down_outside(
+                        app,
+                        services,
+                        PointerDownOutsideParams {
+                            input_ctx: &input_ctx,
+                            active_layer_roots: &active_layers,
+                            base_root,
+                            hit,
+                            event,
+                        },
+                        &mut invalidation_visited,
+                    );
+                    if pointer_down_outside.dispatched {
+                        needs_redraw = true;
+                    }
                 }
             }
             let hovered_pressable: Option<crate::elements::GlobalElementId> =

@@ -233,6 +233,130 @@ fn outside_press_observer_respects_overlay_render_transform() {
 }
 
 #[test]
+fn outside_press_observer_is_suppressed_during_dock_drag() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_clicks = app.models_mut().insert(0u32);
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(ClickCounter {
+        clicks: underlay_clicks.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Establish baseline: without a dock drag, outside-press observer should run and still allow
+    // click-through to reach the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&underlay_clicks), Some(1));
+    assert_eq!(app.models().get_copied(&observer_down), Some(1));
+
+    // Start a dock drag session for this window (different pointer id).
+    app.begin_drag_with_kind(
+        fret_core::PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // With an active dock drag, outside-press observer must not run (ADR 0072), but hit-tested
+    // dispatch should still reach the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(20.0), Px(20.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(20.0), Px(20.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&underlay_clicks), Some(2));
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(1),
+        "expected outside-press observer to be suppressed during dock drag"
+    );
+}
+
+#[test]
 fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
     struct RecordObserverDown {
         observer: Model<u32>,
