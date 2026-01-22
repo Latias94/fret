@@ -311,7 +311,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
-                input.set_editable(props.editable);
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
                 <crate::text_input::BoundTextInput as Widget<H>>::command(input, cx, command)
@@ -333,7 +332,6 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
-                area.set_editable(props.editable);
                 <crate::text_area::BoundTextArea as Widget<H>>::command(area, cx, command)
             }
             ElementInstance::FocusScope(props) if props.trap_focus => {
