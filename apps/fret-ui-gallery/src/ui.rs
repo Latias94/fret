@@ -521,6 +521,7 @@ fn page_preview(
         PAGE_COMMAND => preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
         PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
+        PAGE_MATERIAL3_ICON_BUTTON => preview_material3_icon_button(cx),
         _ => preview_intro(cx, theme),
     };
 
@@ -1225,6 +1226,74 @@ fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         row(cx, material3::ButtonVariant::Elevated, "Elevated"),
         row(cx, material3::ButtonVariant::Outlined, "Outlined"),
         row(cx, material3::ButtonVariant::Text, "Text"),
+    ]
+}
+
+fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_icons::ids;
+
+    let row = |cx: &mut ElementContext<'_, App>,
+               variant: material3::IconButtonVariant,
+               label: &'static str| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::IconButton::new(ids::ui::CLOSE)
+                        .variant(variant)
+                        .a11y_label(label)
+                        .into_element(cx),
+                    material3::IconButton::new(ids::ui::CLOSE)
+                        .variant(variant)
+                        .a11y_label("Disabled")
+                        .disabled(true)
+                        .into_element(cx),
+                ]
+            },
+        )
+    };
+
+    let toggles = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                material3::IconButton::new(ids::ui::CHECK)
+                    .variant(material3::IconButtonVariant::Filled)
+                    .toggle(true)
+                    .selected(false)
+                    .a11y_label("Toggle off")
+                    .into_element(cx),
+                material3::IconButton::new(ids::ui::CHECK)
+                    .variant(material3::IconButtonVariant::Filled)
+                    .toggle(true)
+                    .selected(true)
+                    .a11y_label("Toggle on")
+                    .into_element(cx),
+                material3::IconButton::new(ids::ui::CHECK)
+                    .variant(material3::IconButtonVariant::Outlined)
+                    .toggle(true)
+                    .selected(false)
+                    .a11y_label("Outlined off")
+                    .into_element(cx),
+                material3::IconButton::new(ids::ui::CHECK)
+                    .variant(material3::IconButtonVariant::Outlined)
+                    .toggle(true)
+                    .selected(true)
+                    .a11y_label("Outlined on")
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Icon Buttons: token-driven colors + state layer + bounded ripple."),
+        row(cx, material3::IconButtonVariant::Standard, "Standard"),
+        row(cx, material3::IconButtonVariant::Filled, "Filled"),
+        row(cx, material3::IconButtonVariant::Tonal, "Tonal"),
+        row(cx, material3::IconButtonVariant::Outlined, "Outlined"),
+        toggles,
     ]
 }
 

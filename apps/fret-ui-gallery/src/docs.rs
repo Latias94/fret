@@ -147,6 +147,28 @@ let text = m3::Button::new("Text")
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_ICON_BUTTON: &str = r#"
+## Material 3 Icon Button (MVP)
+
+This page validates a second Material 3 component:
+
+- token-driven icon color + container color (variants)
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_ICON_BUTTON: &str = r#"
+```rust
+use fret_icons::ids;
+use fret_ui_material3 as m3;
+
+let close = m3::IconButton::new(ids::ui::CLOSE)
+    .variant(m3::IconButtonVariant::Standard)
+    .a11y_label("Close")
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 
