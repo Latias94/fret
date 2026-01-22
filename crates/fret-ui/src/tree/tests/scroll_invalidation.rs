@@ -94,6 +94,90 @@ fn scroll_wheel_invalidation_is_hit_test_only() {
 }
 
 #[test]
+fn virtual_list_wheel_scroll_is_hit_test_only_within_overscan_window() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "virtual-list",
+        |cx| {
+            let mut layout = crate::element::LayoutStyle::default();
+            layout.size.width = crate::element::Length::Fill;
+            layout.size.height = crate::element::Length::Fill;
+            layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.virtual_list_keyed_with_layout(
+                layout,
+                10_000,
+                crate::element::VirtualListOptions::fixed(Px(28.0), 10),
+                &scroll_handle,
+                |i| i as crate::ItemKey,
+                |cx, _i| cx.spacer(crate::element::SpacerProps::default()),
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let list_node = ui.children(root)[0];
+    let list_bounds = ui.debug_node_bounds(list_node).expect("list bounds");
+    let p = Point::new(
+        Px(list_bounds.origin.x.0 + 5.0),
+        Px(list_bounds.origin.y.0 + 5.0),
+    );
+
+    for (_, node) in ui.nodes.iter_mut() {
+        node.invalidation.clear();
+    }
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: PointerId(0),
+            position: p,
+            delta: Point::new(Px(0.0), Px(-56.0)),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected wheel to update scroll offset"
+    );
+
+    let flags = ui.nodes[list_node].invalidation;
+    assert!(
+        !flags.layout,
+        "expected virtual list wheel to avoid layout invalidation while still inside the overscan window"
+    );
+    assert!(
+        flags.hit_test && flags.paint,
+        "expected virtual list wheel to invalidate hit-test + paint"
+    );
+}
+
+#[test]
 fn scroll_offset_changes_do_not_replay_paint_cache() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();

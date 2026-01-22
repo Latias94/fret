@@ -3,6 +3,18 @@ use crate::declarative::prelude::*;
 
 const SCROLL_CONSUMED_EPS: f32 = 0.001;
 
+fn range_contains_visible_range(window: crate::virtual_list::VirtualRange, visible: crate::virtual_list::VirtualRange) -> bool {
+    if window.count != visible.count {
+        return false;
+    }
+    if window.count == 0 {
+        return true;
+    }
+    let window_start = window.start_index.saturating_sub(window.overscan);
+    let window_end = (window.end_index + window.overscan).min(window.count.saturating_sub(1));
+    window_start <= visible.start_index && window_end >= visible.end_index
+}
+
 pub(super) fn handle_virtual_list<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
@@ -42,9 +54,8 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         fret_core::Axis::Horizontal => prev.x,
                     };
                     let offset = state.metrics.clamp_offset(prev_offset, viewport);
-                    let prev_range = state
-                        .metrics
-                        .visible_range(offset, viewport, props.overscan);
+                    let prev_range = state.metrics.visible_range(offset, viewport, props.overscan);
+                    let prev_window = state.window_range.or(prev_range);
 
                     let delta = match axis {
                         fret_core::Axis::Vertical => delta.y,
@@ -72,7 +83,13 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         }
                         let next_range =
                             state.metrics.visible_range(next, viewport, props.overscan);
-                        let window_changed = prev_range != next_range;
+                        // Keep wheel scroll transform-only while the viewport is still covered by
+                        // the previous rendered window (overscan-inclusive). Only request a layout
+                        // rerender once the viewport would leave the rendered window.
+                        let window_changed = match (prev_window, state.metrics.visible_range(next, viewport, 0)) {
+                            (Some(window), Some(visible)) => !range_contains_visible_range(window, visible),
+                            _ => prev_range != next_range,
+                        };
                         Some(if window_changed {
                             Invalidation::Layout
                         } else {
