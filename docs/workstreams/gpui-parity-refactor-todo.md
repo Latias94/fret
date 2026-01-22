@@ -293,6 +293,14 @@ windows** + per-frame ephemeral items, while keeping caching gated by dirty view
 - [ ] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
   - Candidates: `ecosystem/fret-code-view/src/*`, text editor widgets, markdown/code blocks, diagnostics inspectors.
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
+  - Progress (v1):
+    - UI Gallery now has a dedicated harness page: `code_view_torture` (large code block with vertical scroll).
+    - Scripted scroll capture exists: `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json` (run with `fretboard diag run ...`).
+    - Stale-paint check is wired: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`.
+  - Evidence:
+    - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_VIEW_TORTURE`)
+    - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_view_torture`, `ui-gallery-code-view-root`)
+    - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json`
 - [ ] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
   - Candidates: `ecosystem/fret-node/src/*`, canvas/gizmo/viewport overlays, large scene editors.
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
