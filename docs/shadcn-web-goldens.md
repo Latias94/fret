@@ -57,7 +57,7 @@ when invoking the extractor from the outer repo root.
 
 Extract both closed + open overlay states (writes `*.open.json` alongside the base file):
 
-`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo dropdown-menu-dialog item-dropdown select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
 
 Extract open overlay states that require non-click input (the script infers the right open action per page):
 
