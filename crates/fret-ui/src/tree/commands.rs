@@ -8,6 +8,20 @@ impl<H: UiHost> UiTree<H> {
         self.command_availability(app, command) == CommandAvailability::Available
     }
 
+    /// GPUI naming parity: "is this action available along the dispatch path?"
+    ///
+    /// Note: Fret models "actions" as `CommandId` today (especially for widget-scoped commands).
+    #[stacksafe::stacksafe]
+    pub fn is_action_available(&mut self, app: &mut H, command: &CommandId) -> bool {
+        self.is_command_available(app, command)
+    }
+
+    /// GPUI naming parity for availability queries.
+    #[stacksafe::stacksafe]
+    pub fn action_availability(&mut self, app: &mut H, command: &CommandId) -> CommandAvailability {
+        self.command_availability(app, command)
+    }
+
     #[stacksafe::stacksafe]
     pub fn command_availability(
         &mut self,
@@ -52,7 +66,46 @@ impl<H: UiHost> UiTree<H> {
             return CommandAvailability::NotHandled;
         };
 
-        self.command_availability_from_node(app, &input_ctx, start, command)
+        let availability = self.command_availability_from_node(app, &input_ctx, start, command);
+
+        if availability == CommandAvailability::NotHandled
+            && matches!(command.as_str(), "focus.next" | "focus.previous")
+        {
+            return self.focus_traversal_command_availability(&active_layers, barrier_root);
+        }
+
+        availability
+    }
+
+    fn focus_traversal_command_availability(
+        &mut self,
+        active_layers: &[NodeId],
+        barrier_root: Option<NodeId>,
+    ) -> CommandAvailability {
+        let Some(base_root) = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+        else {
+            return CommandAvailability::NotHandled;
+        };
+
+        let scope_root = barrier_root.unwrap_or(base_root);
+        let scope_bounds = self
+            .nodes
+            .get(scope_root)
+            .map(|n| n.bounds)
+            .unwrap_or_default();
+
+        let mut focusables: Vec<NodeId> = Vec::new();
+        for &root in active_layers {
+            self.collect_focusables(root, active_layers, scope_bounds, &mut focusables);
+        }
+
+        if focusables.is_empty() {
+            CommandAvailability::NotHandled
+        } else {
+            CommandAvailability::Available
+        }
     }
 
     fn command_availability_start_node(
@@ -151,7 +204,9 @@ impl<H: UiHost> UiTree<H> {
                 CommandAvailability::Blocked => {
                     snapshot.insert(id, false);
                 }
-                CommandAvailability::NotHandled => {}
+                CommandAvailability::NotHandled => {
+                    snapshot.insert(id, false);
+                }
             }
         }
 
