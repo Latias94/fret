@@ -65,7 +65,13 @@ fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
     });
 
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(super::super::wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
@@ -128,7 +134,13 @@ fn wire_drag_hover_tracks_non_connectable_end_port_as_invalid() {
     });
 
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(super::super::wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
@@ -187,7 +199,13 @@ fn wire_drag_hover_marks_valid_target_port_as_valid() {
     });
 
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(super::super::wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,

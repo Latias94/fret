@@ -247,8 +247,13 @@ fn connect_drop_opens_conversion_picker_when_multiple_conversions() {
             Size::new(Px(800.0), Px(600.0)),
         );
         let mut services = NullServices::default();
-        let mut cx = event_cx(&mut host, &mut services, bounds);
-
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         let pos = Point::new(Px(400.0), Px(300.0));
         canvas.interaction.wire_drag = Some(WireDrag {
             kind: WireDragKind::New {
@@ -320,8 +325,13 @@ fn connect_drop_auto_inserts_conversion_when_single_choice() {
             Size::new(Px(800.0), Px(600.0)),
         );
         let mut services = NullServices::default();
-        let mut cx = event_cx(&mut host, &mut services, bounds);
-
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         let pos = Point::new(Px(400.0), Px(300.0));
         canvas.interaction.wire_drag = Some(WireDrag {
             kind: WireDragKind::New {
@@ -430,8 +440,13 @@ fn reconnect_preserves_edge_identity_and_updates_endpoint() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(420.0), Px(280.0));
     canvas.interaction.wire_drag = Some(WireDrag {
         kind: WireDragKind::Reconnect {

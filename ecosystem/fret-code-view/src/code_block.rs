@@ -772,6 +772,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
             },
             border_color: Some(theme.color_required("border")),
             corner_radii: fret_core::Corners::all(Px(0.0)),
+            ..Default::default()
         },
         |_cx| vec![line_numbers_text],
     );

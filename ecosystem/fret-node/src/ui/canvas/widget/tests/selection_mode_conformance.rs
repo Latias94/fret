@@ -30,8 +30,13 @@ fn marquee_partial_selects_intersecting_nodes() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Intersects node A (0..40, 0..20) but does not fully contain it.
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(super::super::left_click::handle_left_click_pointer_down(
@@ -83,8 +88,13 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Intersects node A (0..40, 0..20) but does not fully contain it.
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(super::super::left_click::handle_left_click_pointer_down(
@@ -114,7 +124,13 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
 
     // Now fully contain the node.
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(super::super::left_click::handle_left_click_pointer_down(
         &mut canvas,

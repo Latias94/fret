@@ -50,8 +50,13 @@ fn hit_testing_uses_custom_edge_path() {
         Size::new(Px(1200.0), Px(800.0)),
     );
     let mut services = NullServices::default();
-    let cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let snapshot = canvas.sync_view_state(cx.app);
     let zoom = snapshot.zoom;
     assert!((zoom - 1.0).abs() <= 1.0e-6);
@@ -154,8 +159,13 @@ fn spatial_index_includes_custom_edge_path_bounds() {
         Size::new(Px(1200.0), Px(800.0)),
     );
     let mut services = NullServices::default();
-    let cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let snapshot = canvas.sync_view_state(cx.app);
     let zoom = snapshot.zoom;
     assert!((zoom - 1.0).abs() <= 1.0e-6);

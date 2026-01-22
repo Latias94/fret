@@ -394,6 +394,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                     border: Edges::all(Px(1.0)),
                     border_color: Some(border),
                     corner_radii: Corners::all(radius),
+                    ..Default::default()
                 },
                 move |cx| {
                     vec![roving_focus_group::roving_focus_group_apg(
@@ -549,6 +550,7 @@ fn render_menu_from_runtime<H: UiHost>(
                 enabled,
                 focusable: true,
                 focus_ring: Some(ring),
+                focus_ring_bounds: None,
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::MenuItem),
                     label: Some(menu.title.clone()),
@@ -598,6 +600,7 @@ fn render_menu_from_runtime<H: UiHost>(
                     border: Edges::all(Px(0.0)),
                     border_color: None,
                     corner_radii: Corners::all(theme.metric_required("metric.radius.sm")),
+                    ..Default::default()
                 },
                 |_cx| vec![content],
             );
@@ -698,6 +701,7 @@ fn request_menu_overlay<H: UiHost>(
                     border: Edges::all(Px(1.0)),
                     border_color: Some(border),
                     corner_radii: Corners::all(radius),
+                    ..Default::default()
                 },
                 move |cx| {
                     vec![cx.scroll(
@@ -809,6 +813,7 @@ fn request_menu_overlay<H: UiHost>(
                                 border: Edges::all(Px(1.0)),
                                 border_color: Some(border),
                                 corner_radii: Corners::all(radius),
+                                ..Default::default()
                             },
                             move |cx| {
                                 let (submenu_labels, submenu_disabled) =
@@ -1037,6 +1042,7 @@ fn render_menu_item<H: UiHost>(
             enabled: !disabled,
             focusable: !disabled,
             focus_ring: None,
+            focus_ring_bounds: None,
             a11y: PressableA11y {
                 role: Some(SemanticsRole::MenuItem),
                 label: Some(item.label.clone()),
@@ -1123,6 +1129,7 @@ fn render_menu_item<H: UiHost>(
                 border: Edges::all(Px(0.0)),
                 border_color: None,
                 corner_radii: Corners::all(theme.metric_required("metric.radius.sm")),
+                ..Default::default()
             },
             move |cx| {
                 let mut inner_layout = LayoutStyle::default();

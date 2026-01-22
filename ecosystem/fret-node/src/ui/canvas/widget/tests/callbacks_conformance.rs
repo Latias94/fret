@@ -119,8 +119,13 @@ fn click_connect_emits_connect_start_and_committed_end() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(40.0), Px(40.0));
     canvas.interaction.pending_wire_drag = Some(PendingWireDrag {
         kind: WireDragKind::New {
@@ -180,8 +185,13 @@ fn escape_cancel_emits_connect_end_canceled() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(40.0), Px(40.0));
     canvas.interaction.wire_drag = Some(WireDrag {
         kind: WireDragKind::New {
@@ -218,8 +228,13 @@ fn rejected_drop_emits_connect_end_rejected() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.interaction.wire_drag = Some(WireDrag {
         kind: WireDragKind::New {
             from: a_out,
@@ -310,8 +325,13 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let kind = WireDragKind::Reconnect {
         edge,
         endpoint: EdgeEndpoint::To,
@@ -384,8 +404,13 @@ fn reconnect_escape_cancel_emits_reconnect_end_canceled() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     super::super::cancel::handle_escape_cancel(&mut canvas, &mut cx);
 
     let got = log.borrow().clone();
@@ -409,8 +434,13 @@ fn panning_emits_move_start_and_move_end() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(100.0), Px(100.0));
     assert!(super::super::pan_zoom::begin_panning(
         &mut canvas,
@@ -451,8 +481,13 @@ fn escape_cancel_panning_emits_move_end_canceled() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(100.0), Px(100.0));
     assert!(super::super::pan_zoom::begin_panning(
         &mut canvas,
@@ -488,8 +523,13 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(100.0), Px(100.0));
     canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
         primary: a,
@@ -540,8 +580,13 @@ fn pan_inertia_emits_move_end_after_inertia_stops() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(100.0), Px(100.0));
     assert!(super::super::pan_zoom::begin_panning(
         &mut canvas,
@@ -623,8 +668,13 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(super::super::node_drag::handle_node_drag_move(
         &mut canvas,
         &mut cx,
@@ -680,8 +730,13 @@ fn node_drag_move_emits_on_node_drag() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(super::super::node_drag::handle_node_drag_move(
         &mut canvas,
         &mut cx,
@@ -717,8 +772,13 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(100.0), Px(100.0));
     canvas.event(
         &mut cx,
@@ -769,8 +829,13 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(100.0), Px(100.0));
     canvas.event(
         &mut cx,
@@ -822,8 +887,13 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
 
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(100.0), Px(100.0));
     canvas.event(
         &mut cx,
@@ -869,8 +939,13 @@ fn double_click_background_zoom_emits_move_start_and_move_end() {
     let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_callbacks(recorder);
     let bounds = make_bounds();
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.event(
         &mut cx,
         &Event::Pointer(PointerEvent::Down {
@@ -910,7 +985,13 @@ fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
 
     let pos = Point::new(Px(100.0), Px(100.0));
     {
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {
@@ -931,7 +1012,13 @@ fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
     });
 
     {
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         canvas.event(
             &mut cx,
             &Event::Pointer(PointerEvent::Wheel {

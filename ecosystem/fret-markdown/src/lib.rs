@@ -493,6 +493,7 @@ fn render_thematic_break<H: UiHost>(
             border: Edges::all(Px(0.0)),
             border_color: None,
             corner_radii: Default::default(),
+            ..Default::default()
         },
         |_cx| Vec::new(),
     )
