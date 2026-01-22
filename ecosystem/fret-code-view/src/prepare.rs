@@ -16,7 +16,12 @@ impl CodeBlockPreparedState {
             return;
         }
         self.key = key;
-        self.prepared = Arc::new(prepare_code_block(code, language, show_line_numbers));
+        self.prepared = Arc::new(prepare_code_block(
+            code,
+            language,
+            show_line_numbers,
+            key.revision(),
+        ));
     }
 }
 
@@ -40,12 +45,24 @@ impl CodeBlockKey {
             show_line_numbers,
         }
     }
+
+    fn revision(&self) -> u64 {
+        let mut h = DefaultHasher::new();
+        self.code_hash.hash(&mut h);
+        self.code_len.hash(&mut h);
+        self.language_hash.hash(&mut h);
+        self.language_len.hash(&mut h);
+        self.show_line_numbers.hash(&mut h);
+        h.finish()
+    }
 }
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct PreparedCodeBlock {
+    pub(crate) revision: u64,
     pub(crate) show_line_numbers: bool,
     pub(crate) line_number_width: usize,
+    pub(crate) line_numbers: Vec<Arc<str>>,
     pub(crate) lines: Vec<PreparedLine>,
 }
 
@@ -64,6 +81,7 @@ fn prepare_code_block(
     code: &str,
     language: Option<&str>,
     show_line_numbers: bool,
+    revision: u64,
 ) -> PreparedCodeBlock {
     let spans = match language {
         Some(language) => fret_syntax::highlight(code, language).unwrap_or_default(),
@@ -128,8 +146,19 @@ fn prepare_code_block(
     }
 
     PreparedCodeBlock {
+        revision,
         show_line_numbers,
         line_number_width,
+        line_numbers: if show_line_numbers {
+            (0..prepared_lines.len())
+                .map(|i| {
+                    let n = i + 1;
+                    Arc::<str>::from(format!("{n:>width$}", n = n, width = line_number_width))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        },
         lines: prepared_lines,
     }
 }
