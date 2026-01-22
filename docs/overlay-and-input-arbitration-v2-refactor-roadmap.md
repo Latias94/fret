@@ -63,6 +63,25 @@ This refactor aims to:
 - Implementing new shadcn components; this effort focuses on substrate + contracts + tests.
 - Free-form, element-level painting escape hatches (GPUI `defer_draw` equivalents) unless strictly needed.
 
+## Terms (v2 vocabulary)
+
+To keep v2 refactors fearless, we use a small set of terms consistently across runtime, policy,
+tests, and diagnostics:
+
+- **Layer / root**: a window-scoped UI root in `UiTree` with explicit paint order (ADR 0011).
+- **Modal barrier**: a layer with `blocks_underlay_input = true`. This is the *authoritative*
+  “underlay inert” mechanism (pointer + keyboard + focus + semantics) while the barrier is present
+  (ADR 0011 / ADR 0067).
+- **Pointer occlusion**: a *pointer-only* underlay blocking mechanism for non-modal overlays
+  (Radix `disableOutsidePointerEvents` outcome; ADR 0069). This is intentionally weaker than a
+  modal barrier (no implied focus trap; no implied a11y inert).
+- **Hit-testable**: whether the layer participates in hit-testing *inside* its subtree
+  (`hit_testable = false` is “pointer transparent” for that layer).
+- **Outside-press observer**: the runtime observer pass that can deliver a synthetic
+  “pointer-down-outside” event to an overlay layer without stealing capture/focus (ADR 0069).
+- **Presence**: policy-owned mount/paint vs interactive split (`OverlayPresence { present,
+  interactive }`, ADR 0067).
+
 ## Portal / “escape painting” notes (non-normative)
 
 GPUI’s `Window::with_content_mask` and `defer_draw` provide element-level “paint outside parent bounds”
@@ -144,6 +163,30 @@ Key semantics:
 - `BlockMouseExceptScroll` blocks hover/move/down/up outside the overlay, but allows wheel/scroll
   events to route to the underlay scroll target (matching established desktop UX and GPUI outcomes).
 
+Interaction with existing knobs:
+
+- `blocks_underlay_input` still wins: when a modal barrier is active, underlay layers are excluded
+  by scope and occlusion is irrelevant for those layers.
+- `hit_testable=false` remains “pointer transparent *within that layer’s subtree*”. Occlusion is
+  about whether layers *behind* an overlay can be targeted when the pointer is *outside* the
+  overlay subtree.
+- Outside-press observer selection must remain compatible with occlusion: even when occlusion
+  prevents a normal hit-tested target from being found, the observer pass still needs to run so
+  policies can dismiss the overlay deterministically.
+
+Routing sketch (non-normative algorithm outline):
+
+1. Compute active input layer roots using the existing modal barrier scoping.
+2. For pointer events without capture, iterate layers from top → bottom:
+   - If the layer is not visible, skip.
+   - If the layer is hit-testable and the event hits a node in that layer, select it as the target
+     and stop (normal behavior).
+   - If the layer has `PointerOcclusion != None` and **no hit occurred in this layer or above**:
+     - For non-scroll events: stop and report “no underlay target” (underlay blocked).
+     - For scroll-like events and `BlockMouseExceptScroll`: continue scanning lower layers.
+3. Independently, run the outside-press observer selection pass (ADR 0069) against the topmost
+   eligible overlay layer, even when the normal target is “none”.
+
 Design constraints:
 
 - Keep it mechanism-only: “when to enable occlusion” remains policy-owned.
@@ -213,6 +256,21 @@ Where tests live:
 - Runtime mechanism tests: `crates/fret-ui/src/tree/tests/` (dispatch, occlusion, barrier scoping).
 - Policy tests: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (Radix mapping, focus restore, presence edges).
 - Shadcn parity tests remain in `ecosystem/fret-ui-shadcn` as integration coverage.
+
+### 4.1) Diagnostics-first testing (P0)
+
+Conformance tests must fail in a way that is explainable without a debugger.
+
+Minimum diagnostic anchors to require in tests:
+
+- `UiTree::debug_layers_in_paint_order()` for asserting layer ordering and flags.
+- `UiTree::debug_hit_test(...)` for asserting “which layer would win” at a given position.
+
+Recommended additions during v2 implementation (not required to land this doc):
+
+- A pointer-routing trace helper (e.g. “why was underlay blocked / which occluder stopped the scan”).
+- A tiny event-script harness for dispatch tests (aligned with `docs/ui-diagnostics-and-scripted-tests.md`),
+  so docking + viewport + overlays scenarios can be expressed as deterministic input scripts.
 
 ### 5) Ecosystem Extensibility: Stable Facades (P1, do early)
 
