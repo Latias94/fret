@@ -883,6 +883,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
             _ => fret_core::PointerId(0),
         };
 
+        let dock_drag_affects_window = cx.app.any_drag_session(|d| {
+            d.kind == DRAG_KIND_DOCK_PANEL
+                && (d.source_window == self.window || d.current_window == self.window)
+        });
         let dock_drag = cx.app.drag(pointer_id).and_then(|d| {
             d.payload::<DockPanelDragPayload>()
                 .map(|p| DockDragSnapshot {
@@ -899,7 +903,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         // While a dock drag session exists (even before it crosses the drag threshold), we must
         // not forward pointer moves/wheel to embedded viewports in this window. Docking owns the
         // interaction until the session ends (ADR 0072).
-        let allow_viewport_hover = dock_drag.is_none()
+        let allow_viewport_hover = !dock_drag_affects_window
+            && dock_drag.is_none()
             && !has_pending_dock_drag
             && cx.app.drag(pointer_id).is_none_or(|d| !d.dragging);
         let docking_interaction_settings = cx
@@ -958,7 +963,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             // Arbitration: while a dock drag session is active (or viewport capture is
                             // active), we do not allow starting competing capture sessions from a
                             // secondary button press. The active session owns the interaction.
-                            if dock_drag.is_some()
+                            if dock_drag_affects_window
                                 || has_pending_dock_drag
                                 || self.viewport_capture.is_some()
                                 || self.divider_drag.is_some()

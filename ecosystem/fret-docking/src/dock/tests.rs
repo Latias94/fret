@@ -2442,6 +2442,53 @@ fn viewport_capture_requests_animation_frames_while_active() {
 }
 
 #[test]
+fn dock_drag_suppresses_viewport_capture_start_for_other_pointer() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness.app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(7),
+        DRAG_KIND_DOCK_PANEL,
+        harness.window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.viewport"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+        },
+    );
+    let _ = harness.app.take_effects();
+
+    let down_pos = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected viewport capture not to start during dock drag, got: {effects:?}"
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected viewport capture not to request pointer capture during dock drag"
+    );
+}
+
+#[test]
 fn dock_split_handle_hover_sets_resize_cursor_effect() {
     let window = AppWindowId::default();
 
