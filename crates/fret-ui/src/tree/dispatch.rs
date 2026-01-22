@@ -1266,230 +1266,579 @@ impl<H: UiHost> UiTree<H> {
 
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(node_id, event);
-            for (node_id, event_for_node) in chain {
-                let (
-                    invalidations,
-                    requested_focus,
-                    requested_capture,
-                    requested_cursor,
-                    notify_requested,
-                    stop_propagation,
-                ) = self.with_widget_mut(node_id, |widget, tree| {
-                    let (children, bounds) = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| (n.children.as_slice(), n.bounds))
-                        .unwrap_or((&[][..], Rect::default()));
-                    let mut cx = EventCx {
-                        app,
-                        services: &mut *services,
-                        node: node_id,
-                        window: tree.window,
-                        pointer_id: event_pointer_id_for_capture,
-                        input_ctx: input_ctx.clone(),
-                        prevented_default_actions: &mut prevented_default_actions,
-                        children,
-                        focus: tree.focus,
-                        captured: event_pointer_id_for_capture
-                            .and_then(|p| tree.captured.get(&p).copied()),
-                        bounds,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
-                        notify_requested: false,
-                        stop_propagation: false,
-                    };
-                    widget.event(&mut cx, &event_for_node);
-                    (
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.requested_capture,
-                        cx.requested_cursor,
-                        cx.notify_requested,
-                        cx.stop_propagation,
-                    )
-                });
+            let mut stopped_in_capture = false;
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let mut capture_ctx = input_ctx.clone();
+                capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
-                if !invalidations.is_empty()
-                    || requested_focus.is_some()
-                    || requested_capture.is_some()
-                    || notify_requested
-                {
-                    needs_redraw = true;
-                }
+                for (node_id, event_for_node) in chain.iter().rev() {
+                    let node_id = *node_id;
+                    let (
+                        invalidations,
+                        requested_focus,
+                        requested_capture,
+                        requested_cursor,
+                        notify_requested,
+                        stop_propagation,
+                    ) = self.with_widget_mut(node_id, |widget, tree| {
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            window: tree.window,
+                            pointer_id: event_pointer_id_for_capture,
+                            input_ctx: capture_ctx.clone(),
+                            prevented_default_actions: &mut prevented_default_actions,
+                            children,
+                            focus: tree.focus,
+                            captured: event_pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            stop_propagation: false,
+                        };
+                        widget.event_capture(&mut cx, event_for_node);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.requested_cursor,
+                            cx.notify_requested,
+                            cx.stop_propagation,
+                        )
+                    });
 
-                for (id, inv) in invalidations {
-                    self.mark_invalidation(id, inv);
-                }
-                if notify_requested {
-                    self.mark_invalidation_with_source(
-                        node_id,
-                        Invalidation::Paint,
-                        UiDebugInvalidationSource::Notify,
-                    );
-                }
-
-                if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                {
-                    focus_requested = true;
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
+                    if !invalidations.is_empty()
+                        || requested_focus.is_some()
+                        || requested_capture.is_some()
+                        || notify_requested
+                    {
+                        needs_redraw = true;
                     }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
-                    self.scroll_node_into_view(app, focus);
-                } else if requested_focus.is_some() {
-                    focus_requested = true;
-                }
 
-                if let Some(capture) = requested_capture {
-                    if let Some(pointer_id) = event_pointer_id_for_capture {
-                        match capture {
-                            Some(node) => {
-                                self.captured.insert(pointer_id, node);
-                            }
-                            None => {
-                                self.captured.remove(&pointer_id);
+                    for (id, inv) in invalidations {
+                        self.mark_invalidation(id, inv);
+                    }
+                    if notify_requested {
+                        self.mark_invalidation_with_source(
+                            node_id,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Notify,
+                        );
+                    }
+
+                    if let Some(focus) = requested_focus
+                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    {
+                        focus_requested = true;
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                        self.scroll_node_into_view(app, focus);
+                    } else if requested_focus.is_some() {
+                        focus_requested = true;
+                    }
+
+                    if let Some(capture) = requested_capture {
+                        if let Some(pointer_id) = event_pointer_id_for_capture {
+                            match capture {
+                                Some(node) => {
+                                    self.captured.insert(pointer_id, node);
+                                }
+                                None => {
+                                    self.captured.remove(&pointer_id);
+                                }
                             }
                         }
                     }
-                }
 
-                if requested_cursor.is_some() && cursor_choice.is_none() {
-                    cursor_choice = requested_cursor;
-                }
+                    if requested_cursor.is_some() && cursor_choice.is_none() {
+                        cursor_choice = requested_cursor;
+                    }
 
-                if stop_propagation {
-                    stop_propagation_requested = true;
-                    if is_wheel && wheel_stop_node.is_none() {
-                        wheel_stop_node = Some(node_id);
+                    if stop_propagation {
+                        stop_propagation_requested = true;
+                        stopped_in_capture = true;
+                        break;
                     }
                 }
+            }
 
-                let captured_now =
-                    event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
-                if captured_now.is_some() || stop_propagation {
-                    break;
+            if !stopped_in_capture {
+                let mut bubble_ctx = input_ctx.clone();
+                bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+
+                for (node_id, event_for_node) in chain {
+                    let (
+                        invalidations,
+                        requested_focus,
+                        requested_capture,
+                        requested_cursor,
+                        notify_requested,
+                        stop_propagation,
+                    ) = self.with_widget_mut(node_id, |widget, tree| {
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            window: tree.window,
+                            pointer_id: event_pointer_id_for_capture,
+                            input_ctx: bubble_ctx.clone(),
+                            prevented_default_actions: &mut prevented_default_actions,
+                            children,
+                            focus: tree.focus,
+                            captured: event_pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            stop_propagation: false,
+                        };
+                        widget.event(&mut cx, &event_for_node);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.requested_cursor,
+                            cx.notify_requested,
+                            cx.stop_propagation,
+                        )
+                    });
+
+                    if !invalidations.is_empty()
+                        || requested_focus.is_some()
+                        || requested_capture.is_some()
+                        || notify_requested
+                    {
+                        needs_redraw = true;
+                    }
+
+                    for (id, inv) in invalidations {
+                        self.mark_invalidation(id, inv);
+                    }
+                    if notify_requested {
+                        self.mark_invalidation_with_source(
+                            node_id,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Notify,
+                        );
+                    }
+
+                    if let Some(focus) = requested_focus
+                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    {
+                        focus_requested = true;
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                        self.scroll_node_into_view(app, focus);
+                    } else if requested_focus.is_some() {
+                        focus_requested = true;
+                    }
+
+                    if let Some(capture) = requested_capture {
+                        if let Some(pointer_id) = event_pointer_id_for_capture {
+                            match capture {
+                                Some(node) => {
+                                    self.captured.insert(pointer_id, node);
+                                }
+                                None => {
+                                    self.captured.remove(&pointer_id);
+                                }
+                            }
+                        }
+                    }
+
+                    if requested_cursor.is_some() && cursor_choice.is_none() {
+                        cursor_choice = requested_cursor;
+                    }
+
+                    if stop_propagation {
+                        stop_propagation_requested = true;
+                        if is_wheel && wheel_stop_node.is_none() {
+                            wheel_stop_node = Some(node_id);
+                        }
+                    }
+
+                    let captured_now =
+                        event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+                    if captured_now.is_some() || stop_propagation {
+                        break;
+                    }
                 }
             }
         } else {
-            loop {
-                let (
-                    invalidations,
-                    requested_focus,
-                    requested_capture,
-                    requested_cursor,
-                    notify_requested,
-                    stop_propagation,
-                    parent,
-                ) = self.with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let (children, bounds) = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| (n.children.as_slice(), n.bounds))
-                        .unwrap_or((&[][..], Rect::default()));
-                    let mut cx = EventCx {
-                        app,
-                        services: &mut *services,
-                        node: node_id,
-                        window: tree.window,
-                        pointer_id: event_pointer_id_for_capture,
-                        input_ctx: input_ctx.clone(),
-                        prevented_default_actions: &mut prevented_default_actions,
-                        children,
-                        focus: tree.focus,
-                        captured: event_pointer_id_for_capture
-                            .and_then(|p| tree.captured.get(&p).copied()),
-                        bounds,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
-                        notify_requested: false,
-                        stop_propagation: false,
-                    };
-                    widget.event(&mut cx, event);
-                    (
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.requested_capture,
-                        cx.requested_cursor,
-                        cx.notify_requested,
-                        cx.stop_propagation,
-                        parent,
-                    )
-                });
+            if matches!(event, Event::KeyDown { .. }) {
+                let mut chain: Vec<NodeId> = Vec::new();
+                let mut cur = Some(node_id);
+                while let Some(id) = cur {
+                    chain.push(id);
+                    cur = self.nodes.get(id).and_then(|n| n.parent);
+                }
 
-                if !invalidations.is_empty()
-                    || requested_focus.is_some()
-                    || requested_capture.is_some()
-                    || notify_requested
+                let mut stopped_in_capture = false;
                 {
-                    needs_redraw = true;
-                }
+                    let mut capture_ctx = input_ctx.clone();
+                    capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
-                for (id, inv) in invalidations {
-                    self.mark_invalidation(id, inv);
-                }
-                if notify_requested {
-                    self.mark_invalidation_with_source(
-                        node_id,
-                        Invalidation::Paint,
-                        UiDebugInvalidationSource::Notify,
-                    );
-                }
+                    for &node_id in chain.iter().rev() {
+                        let (
+                            invalidations,
+                            requested_focus,
+                            requested_capture,
+                            requested_cursor,
+                            notify_requested,
+                            stop_propagation,
+                        ) = self.with_widget_mut(node_id, |widget, tree| {
+                            let (children, bounds) = tree
+                                .nodes
+                                .get(node_id)
+                                .map(|n| (n.children.as_slice(), n.bounds))
+                                .unwrap_or((&[][..], Rect::default()));
+                            let mut cx = EventCx {
+                                app,
+                                services: &mut *services,
+                                node: node_id,
+                                window: tree.window,
+                                pointer_id: event_pointer_id_for_capture,
+                                input_ctx: capture_ctx.clone(),
+                                prevented_default_actions: &mut prevented_default_actions,
+                                children,
+                                focus: tree.focus,
+                                captured: event_pointer_id_for_capture
+                                    .and_then(|p| tree.captured.get(&p).copied()),
+                                bounds,
+                                invalidations: Vec::new(),
+                                requested_focus: None,
+                                requested_capture: None,
+                                requested_cursor: None,
+                                notify_requested: false,
+                                stop_propagation: false,
+                            };
+                            widget.event_capture(&mut cx, event);
+                            (
+                                cx.invalidations,
+                                cx.requested_focus,
+                                cx.requested_capture,
+                                cx.requested_cursor,
+                                cx.notify_requested,
+                                cx.stop_propagation,
+                            )
+                        });
 
-                if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                {
-                    focus_requested = true;
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
-                    }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
-                    self.scroll_node_into_view(app, focus);
-                } else if requested_focus.is_some() {
-                    focus_requested = true;
-                }
+                        if !invalidations.is_empty()
+                            || requested_focus.is_some()
+                            || requested_capture.is_some()
+                            || notify_requested
+                        {
+                            needs_redraw = true;
+                        }
 
-                if let Some(capture) = requested_capture {
-                    if let Some(pointer_id) = event_pointer_id_for_capture {
-                        match capture {
-                            Some(node) => {
-                                self.captured.insert(pointer_id, node);
+                        for (id, inv) in invalidations {
+                            self.mark_invalidation(id, inv);
+                        }
+                        if notify_requested {
+                            self.mark_invalidation_with_source(
+                                node_id,
+                                Invalidation::Paint,
+                                UiDebugInvalidationSource::Notify,
+                            );
+                        }
+
+                        if let Some(focus) = requested_focus
+                            && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                &active_layers,
+                                focus,
+                            )
+                        {
+                            focus_requested = true;
+                            if let Some(prev) = self.focus {
+                                self.mark_invalidation(prev, Invalidation::Paint);
                             }
-                            None => {
-                                self.captured.remove(&pointer_id);
+                            self.focus = Some(focus);
+                            self.mark_invalidation(focus, Invalidation::Paint);
+                            self.scroll_node_into_view(app, focus);
+                        } else if requested_focus.is_some() {
+                            focus_requested = true;
+                        }
+
+                        if let Some(capture) = requested_capture {
+                            if let Some(pointer_id) = event_pointer_id_for_capture {
+                                match capture {
+                                    Some(node) => {
+                                        self.captured.insert(pointer_id, node);
+                                    }
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
+                                }
                             }
                         }
+
+                        if requested_cursor.is_some() && cursor_choice.is_none() {
+                            cursor_choice = requested_cursor;
+                        }
+
+                        if stop_propagation {
+                            stop_propagation_requested = true;
+                            stopped_in_capture = true;
+                            break;
+                        }
                     }
-                };
-
-                if requested_cursor.is_some() && cursor_choice.is_none() {
-                    cursor_choice = requested_cursor;
                 }
 
-                if stop_propagation {
-                    stop_propagation_requested = true;
-                    if is_wheel && wheel_stop_node.is_none() {
-                        wheel_stop_node = Some(node_id);
+                if !stopped_in_capture {
+                    let mut bubble_ctx = input_ctx.clone();
+                    bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+
+                    for node_id in chain {
+                        let (
+                            invalidations,
+                            requested_focus,
+                            requested_capture,
+                            requested_cursor,
+                            notify_requested,
+                            stop_propagation,
+                        ) = self.with_widget_mut(node_id, |widget, tree| {
+                            let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                            let _ = parent;
+                            let (children, bounds) = tree
+                                .nodes
+                                .get(node_id)
+                                .map(|n| (n.children.as_slice(), n.bounds))
+                                .unwrap_or((&[][..], Rect::default()));
+                            let mut cx = EventCx {
+                                app,
+                                services: &mut *services,
+                                node: node_id,
+                                window: tree.window,
+                                pointer_id: event_pointer_id_for_capture,
+                                input_ctx: bubble_ctx.clone(),
+                                prevented_default_actions: &mut prevented_default_actions,
+                                children,
+                                focus: tree.focus,
+                                captured: event_pointer_id_for_capture
+                                    .and_then(|p| tree.captured.get(&p).copied()),
+                                bounds,
+                                invalidations: Vec::new(),
+                                requested_focus: None,
+                                requested_capture: None,
+                                requested_cursor: None,
+                                notify_requested: false,
+                                stop_propagation: false,
+                            };
+                            widget.event(&mut cx, event);
+                            (
+                                cx.invalidations,
+                                cx.requested_focus,
+                                cx.requested_capture,
+                                cx.requested_cursor,
+                                cx.notify_requested,
+                                cx.stop_propagation,
+                            )
+                        });
+
+                        if !invalidations.is_empty()
+                            || requested_focus.is_some()
+                            || requested_capture.is_some()
+                            || notify_requested
+                        {
+                            needs_redraw = true;
+                        }
+
+                        for (id, inv) in invalidations {
+                            self.mark_invalidation(id, inv);
+                        }
+                        if notify_requested {
+                            self.mark_invalidation_with_source(
+                                node_id,
+                                Invalidation::Paint,
+                                UiDebugInvalidationSource::Notify,
+                            );
+                        }
+
+                        if let Some(focus) = requested_focus
+                            && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                &active_layers,
+                                focus,
+                            )
+                        {
+                            focus_requested = true;
+                            if let Some(prev) = self.focus {
+                                self.mark_invalidation(prev, Invalidation::Paint);
+                            }
+                            self.focus = Some(focus);
+                            self.mark_invalidation(focus, Invalidation::Paint);
+                            self.scroll_node_into_view(app, focus);
+                        } else if requested_focus.is_some() {
+                            focus_requested = true;
+                        }
+
+                        if let Some(capture) = requested_capture {
+                            if let Some(pointer_id) = event_pointer_id_for_capture {
+                                match capture {
+                                    Some(node) => {
+                                        self.captured.insert(pointer_id, node);
+                                    }
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
+                                }
+                            }
+                        }
+
+                        if requested_cursor.is_some() && cursor_choice.is_none() {
+                            cursor_choice = requested_cursor;
+                        }
+
+                        if stop_propagation {
+                            stop_propagation_requested = true;
+                            break;
+                        }
                     }
                 }
+            } else {
+                loop {
+                    let (
+                        invalidations,
+                        requested_focus,
+                        requested_capture,
+                        requested_cursor,
+                        notify_requested,
+                        stop_propagation,
+                        parent,
+                    ) = self.with_widget_mut(node_id, |widget, tree| {
+                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            window: tree.window,
+                            pointer_id: event_pointer_id_for_capture,
+                            input_ctx: input_ctx.clone(),
+                            prevented_default_actions: &mut prevented_default_actions,
+                            children,
+                            focus: tree.focus,
+                            captured: event_pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            stop_propagation: false,
+                        };
+                        widget.event(&mut cx, event);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.requested_cursor,
+                            cx.notify_requested,
+                            cx.stop_propagation,
+                            parent,
+                        )
+                    });
 
-                let captured_now =
-                    event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
-                if captured_now.is_some() || stop_propagation {
-                    break;
+                    if !invalidations.is_empty()
+                        || requested_focus.is_some()
+                        || requested_capture.is_some()
+                        || notify_requested
+                    {
+                        needs_redraw = true;
+                    }
+
+                    for (id, inv) in invalidations {
+                        self.mark_invalidation(id, inv);
+                    }
+                    if notify_requested {
+                        self.mark_invalidation_with_source(
+                            node_id,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Notify,
+                        );
+                    }
+
+                    if let Some(focus) = requested_focus
+                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    {
+                        focus_requested = true;
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                        self.scroll_node_into_view(app, focus);
+                    } else if requested_focus.is_some() {
+                        focus_requested = true;
+                    }
+
+                    if let Some(capture) = requested_capture {
+                        if let Some(pointer_id) = event_pointer_id_for_capture {
+                            match capture {
+                                Some(node) => {
+                                    self.captured.insert(pointer_id, node);
+                                }
+                                None => {
+                                    self.captured.remove(&pointer_id);
+                                }
+                            }
+                        }
+                    };
+
+                    if requested_cursor.is_some() && cursor_choice.is_none() {
+                        cursor_choice = requested_cursor;
+                    }
+
+                    if stop_propagation {
+                        stop_propagation_requested = true;
+                        if is_wheel && wheel_stop_node.is_none() {
+                            wheel_stop_node = Some(node_id);
+                        }
+                    }
+
+                    let captured_now =
+                        event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+                    if captured_now.is_some() || stop_propagation {
+                        break;
+                    }
+
+                    node_id = match parent {
+                        Some(parent) => parent,
+                        None => break,
+                    };
                 }
-
-                node_id = match parent {
-                    Some(parent) => parent,
-                    None => break,
-                };
             }
         }
 
