@@ -128,6 +128,9 @@ composing:
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar hover switching
   an open menu from File → Edit against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.hover-switch-trigger.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar closes when
+  clicking outside the menu content against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.outside-click-close.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates menubar submenu
   pointer grace corridor keeps the submenu open against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`).

@@ -1536,6 +1536,40 @@ const scenarios: Scenario[] = [
   },
   {
     primitive: "menubar",
+    scenario: "outside-click-close",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "File"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "menubar:with-submenu:file" })
+
+      // Click outside the menubar example to dismiss.
+      await ctx.page.mouse.click(5, 5)
+      await sleep(100)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        false,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "outside" })
+    },
+  },
+  {
+    primitive: "menubar",
     scenario: "submenu-keyboard-open-close",
     item: "menubar-example",
     async run(ctx) {

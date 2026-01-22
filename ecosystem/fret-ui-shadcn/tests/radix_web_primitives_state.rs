@@ -343,6 +343,11 @@ fn right_click_center(
     );
 }
 
+fn click_outside(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServices, bounds: Rect) {
+    let click = Point::new(Px(bounds.origin.x.0 + 5.0), Px(bounds.origin.y.0 + 5.0));
+    click_center(ui, app, services, click);
+}
+
 fn bounds_center(r: Rect) -> Point {
     Point::new(
         Px(r.origin.x.0 + r.size.width.0 * 0.5),
@@ -1224,6 +1229,129 @@ fn radix_web_menubar_hover_switch_trigger_matches_fret() {
             .flags
             .expanded,
         "expected File trigger to close after hover switch"
+    );
+}
+
+#[test]
+fn radix_web_menubar_outside_click_close_matches_fret() {
+    let golden = read_timeline("menubar-example.menubar.outside-click-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "menubar");
+    assert_eq!(golden.scenario, "outside-click-close");
+    assert!(golden.steps.len() >= 3);
+
+    let close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "outside"))
+        .expect("close step");
+    assert!(
+        !has_dom_node_attr(&close_step.snapshot.dom, "data-slot", "menubar-content"),
+        "web expected menubar content to be absent after outside click"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let build = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+
+        Menubar::new(vec![
+            MenubarMenu::new("File").entries(vec![
+                MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                    MenubarEntry::Group(MenubarGroup::new(vec![
+                        MenubarEntry::Item(MenubarItem::new("Email link")),
+                        MenubarEntry::Item(MenubarItem::new("Messages")),
+                        MenubarEntry::Item(MenubarItem::new("Notes")),
+                    ])),
+                ])),
+                MenubarEntry::Separator,
+                MenubarEntry::Group(MenubarGroup::new(vec![MenubarEntry::Item(
+                    MenubarItem::new("Print..."),
+                )])),
+            ]),
+            MenubarMenu::new("Edit").entries(vec![MenubarEntry::Group(MenubarGroup::new(vec![
+                MenubarEntry::Item(MenubarItem::new("Undo")),
+                MenubarEntry::Item(MenubarItem::new("Redo")),
+            ]))]),
+        ])
+        .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let file = find_semantics(&snap, SemanticsRole::MenuItem, "File");
+    click_center(&mut ui, &mut app, &mut services, bounds_center(file.bounds));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        find_semantics(&snap, SemanticsRole::MenuItem, "File")
+            .flags
+            .expanded,
+        "expected File menu to be open before outside click"
+    );
+
+    click_outside(&mut ui, &mut app, &mut services, bounds);
+    deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !find_semantics(&snap, SemanticsRole::MenuItem, "File")
+            .flags
+            .expanded,
+        "expected File menu to be closed after outside click"
     );
 }
 
