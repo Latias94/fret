@@ -46,19 +46,24 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
     copyable value.
   - Expected providers:
     - `BoundTextInput` / `BoundTextArea`
+      - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
+      - Declarative wiring: `crates/fret-ui/src/declarative/host_widget.rs` (forwards command/availability)
     - `SelectableText` (read-only selection)
 - `text.cut`
   - Availability should be `Blocked` when the focused widget is read-only.
   - Expected providers:
     - `BoundTextInput` / `BoundTextArea`
+      - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
 - `text.paste`
   - Availability depends on editability and clipboard capabilities.
   - Expected providers:
     - `BoundTextInput` / `BoundTextArea`
+      - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
 - `text.select_all`
   - Availability should be `Available` when the focused widget can select content.
   - Expected providers:
     - `BoundTextInput` / `BoundTextArea`
+      - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
     - `SelectableText`
 
 ## Known Gaps / Next Targets
