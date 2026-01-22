@@ -15,7 +15,8 @@ Implemented:
 
 Not implemented yet / known gaps:
 
-- Capture-phase dispatch as a first-class pass (separate from Preview/Bubble).
+- Capture-phase dispatch as a first-class pass (separate from Preview/Bubble), including a
+  dedicated capture hook to avoid double-running normal bubble handlers.
 - Action availability query API (`is_action_available` / dispatch-tree snapshot service).
 - Additional default actions beyond `FocusOnPointerDown` (intentionally deferred to keep v1 low risk).
 
@@ -134,6 +135,8 @@ Preview (Observer)  ->  Capture  ->  Bubble  ->  DefaultActions
 - **Capture**:
   - Runs from the dispatch root toward the target (root → leaf).
   - Intended for deterministic cleanup/pre-processing and for policies that must "see" events early.
+  - Delivered via a dedicated widget hook (`Widget::event_capture`) so the default widget `event()`
+    implementation continues to represent the Bubble phase only.
 - **Bubble**:
   - Runs from target toward the dispatch root (leaf → root).
   - The primary phase for component interaction logic.
