@@ -223,17 +223,28 @@ impl ItemMedia {
 #[derive(Debug, Clone)]
 pub struct ItemContent {
     children: Vec<AnyElement>,
+    gap: Option<Px>,
 }
 
 impl ItemContent {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            children,
+            gap: None,
+        }
+    }
+
+    pub fn gap(mut self, gap: Px) -> Self {
+        self.gap = Some(gap);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N1).resolve(&theme);
+        let gap = self
+            .gap
+            .unwrap_or_else(|| MetricRef::space(Space::N1).resolve(&theme));
         let layout =
             decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
         let children = self.children;

@@ -78,6 +78,9 @@ pub struct DropdownMenuItem {
     pub value: Arc<str>,
     pub inset: bool,
     pub leading: Option<AnyElement>,
+    pub content: Option<AnyElement>,
+    pub padding: Option<Edges>,
+    pub estimated_height: Option<Px>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -96,6 +99,9 @@ impl DropdownMenuItem {
             value: label,
             inset: false,
             leading: None,
+            content: None,
+            padding: None,
+            estimated_height: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -119,6 +125,21 @@ impl DropdownMenuItem {
 
     pub fn leading(mut self, element: AnyElement) -> Self {
         self.leading = Some(element);
+        self
+    }
+
+    pub fn content(mut self, element: AnyElement) -> Self {
+        self.content = Some(element);
+        self
+    }
+
+    pub fn padding(mut self, padding: Edges) -> Self {
+        self.padding = Some(padding);
+        self
+    }
+
+    pub fn estimated_height(mut self, height: Px) -> Self {
+        self.estimated_height = Some(height);
         self
     }
 
@@ -625,7 +646,13 @@ fn estimated_menu_panel_height_for_entries(
                 | DropdownMenuEntry::Item(_)
                 | DropdownMenuEntry::CheckboxItem(_)
                 | DropdownMenuEntry::RadioItem(_) => {
-                    *height += row_height.max(0.0);
+                    let entry_height = match entry {
+                        DropdownMenuEntry::Item(item) => {
+                            item.estimated_height.map(|h| h.0).unwrap_or(row_height)
+                        }
+                        _ => row_height,
+                    };
+                    *height += entry_height.max(0.0);
                 }
                 DropdownMenuEntry::Group(group) => add_entries(height, &group.entries, row_height),
                 DropdownMenuEntry::RadioGroup(group) => {
@@ -1908,6 +1935,9 @@ impl DropdownMenu {
                                                         let command = item.command;
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
+                                                        let content = item.content.clone();
+                                                        let padding_override = item.padding;
+                                                        let estimated_height = item.estimated_height;
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
                                                         let submenu_entries_for_hint = item.submenu.clone();
@@ -1998,7 +2028,11 @@ impl DropdownMenu {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
                                                                         layout.size.width = Length::Fill;
-                                                                        layout.size.min_height = Some(Px(28.0));
+                                                                        layout.size.min_height = Some(row_height);
+                                                                        if let Some(h) = estimated_height {
+                                                                            layout.size.height = Length::Px(h);
+                                                                            layout.size.min_height = Some(h);
+                                                                        }
                                                                         layout
                                                                     },
                                                                     enabled: !disabled,
@@ -2044,20 +2078,26 @@ impl DropdownMenu {
                                                                     })
                                                                 };
 
+                                                                let row_padding = padding_override.unwrap_or(Edges {
+                                                                    top: pad_y,
+                                                                    right: pad_x,
+                                                                    bottom: pad_y,
+                                                                    left: pad_left,
+                                                                });
+
                                                                 let children = vec![cx.container(
                                                                         ContainerProps {
                                                                             layout: LayoutStyle::default(),
-                                                                            padding: Edges {
-                                                                                top: pad_y,
-                                                                                right: pad_x,
-                                                                                bottom: pad_y,
-                                                                                left: pad_left,
-                                                                            },
+                                                                            padding: row_padding,
                                                                             background: Some(row_bg),
                                                                             corner_radii: fret_core::Corners::all(radius_sm),
                                                                             ..Default::default()
                                                                         },
                                                                     move |cx| {
+                                                                        if let Some(custom) = content.clone() {
+                                                                            return vec![custom];
+                                                                        }
+
                                                                         let mut row: Vec<AnyElement> = Vec::with_capacity(
                                                                             2 + usize::from(
                                                                                 leading.is_some()
