@@ -122,6 +122,31 @@ let btn = shadcn::Button::new("Save")
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_BUTTON: &str = r#"
+## Material 3 Button (MVP)
+
+This page validates the first Material 3 outcome-aligned component surface:
+
+- state layer (hover / pressed / focus) driven by Material tokens
+- bounded ripple (pointer-origin) driven by motion tokens
+
+This is intentionally *not* a full `@material/web` parity port: it focuses on the interaction + visual outcomes within Fret's retained scene model.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_BUTTON: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+let filled = m3::Button::new("Filled")
+    .variant(m3::ButtonVariant::Filled)
+    .into_element(cx);
+
+let text = m3::Button::new("Text")
+    .variant(m3::ButtonVariant::Text)
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 

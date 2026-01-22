@@ -121,6 +121,7 @@ pub(crate) const PAGE_PROGRESS: &str = "progress";
 pub(crate) const PAGE_MENUS: &str = "menus";
 pub(crate) const PAGE_COMMAND: &str = "command";
 pub(crate) const PAGE_TOAST: &str = "toast";
+pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
@@ -151,6 +152,7 @@ pub(crate) const CMD_NAV_PROGRESS: &str = "ui_gallery.nav.select.progress";
 pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
 pub(crate) const CMD_NAV_COMMAND: &str = "ui_gallery.nav.select.command";
 pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
+pub(crate) const CMD_NAV_MATERIAL3_BUTTON: &str = "ui_gallery.nav.select.material3_button";
 
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
@@ -532,6 +534,19 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_OVERLAY,
             ),
         ],
+    },
+    PageGroupSpec {
+        title: "Material 3",
+        items: &[PageSpec::new(
+            PAGE_MATERIAL3_BUTTON,
+            "Button",
+            "Material 3 Button (MVP)",
+            "fret-ui-material3",
+            CMD_NAV_MATERIAL3_BUTTON,
+            &["material3", "button", "state-layer", "ripple", "motion"],
+            docs::DOC_MATERIAL3_BUTTON,
+            docs::USAGE_MATERIAL3_BUTTON,
+        )],
     },
 ];
 

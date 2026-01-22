@@ -5,6 +5,7 @@ use fret_ui::Theme;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
+use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
@@ -519,6 +520,7 @@ fn page_preview(
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
+        PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
         _ => preview_intro(cx, theme),
     };
 
@@ -1195,6 +1197,37 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     vec![variants, sizes]
 }
 
+fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let row = |cx: &mut ElementContext<'_, App>,
+               variant: material3::ButtonVariant,
+               label: &'static str| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Button::new(label)
+                        .variant(variant)
+                        .into_element(cx),
+                    material3::Button::new("Disabled")
+                        .variant(variant)
+                        .disabled(true)
+                        .into_element(cx),
+                ]
+            },
+        )
+    };
+
+    vec![
+        cx.text("Material 3 Buttons: token-driven colors + state layer + bounded ripple."),
+        row(cx, material3::ButtonVariant::Filled, "Filled"),
+        row(cx, material3::ButtonVariant::Tonal, "Tonal"),
+        row(cx, material3::ButtonVariant::Elevated, "Elevated"),
+        row(cx, material3::ButtonVariant::Outlined, "Outlined"),
+        row(cx, material3::ButtonVariant::Text, "Text"),
+    ]
+}
+
 fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let left = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
@@ -1676,7 +1709,6 @@ fn preview_select(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     let select = shadcn::Select::new(value.clone(), open)
-        .trigger_test_id("ui-gallery-select-trigger")
         .placeholder("Pick a fruit")
         .items(
             [
