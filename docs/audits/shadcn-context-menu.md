@@ -87,6 +87,9 @@ _None tracked at this time._
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
 - Web menu row height gate (root): `web_vs_fret_context_menu_demo_menu_item_height_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
+- Web checkbox/radio indicator slot inset gate (root): `web_vs_fret_context_menu_demo_checkbox_indicator_slot_inset_matches_web`,
+  `web_vs_fret_context_menu_demo_radio_indicator_slot_inset_matches_web`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
 - Web item padding + shortcut alignment gate (root): `web_vs_fret_context_menu_demo_back_item_padding_and_shortcut_match`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
 - Web menu content inset gate (root): `web_vs_fret_context_menu_demo_menu_content_insets_match`

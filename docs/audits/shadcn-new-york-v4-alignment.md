@@ -147,6 +147,8 @@ Recent fixes:
     (`web_vs_fret_context_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_context_menu_demo_submenu_shadow_matches_web_dark`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_overlay_placement_matches`, `web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matches`).
   - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches`).
+  - Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_context_menu_demo_checkbox_indicator_slot_inset_matches_web`, `web_vs_fret_context_menu_demo_radio_indicator_slot_inset_matches_web`).
   - Item row padding + shortcut/chevron alignment: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
     (`web_vs_fret_context_menu_demo_back_item_padding_and_shortcut_match`).
   - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_match`).

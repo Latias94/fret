@@ -7663,6 +7663,241 @@ fn assert_context_menu_demo_back_item_padding_and_shortcut_match_impl(web_name: 
     );
 }
 
+#[test]
+fn web_vs_fret_context_menu_demo_checkbox_indicator_slot_inset_matches_web() {
+    assert_context_menu_demo_checkbox_indicator_slot_inset_matches_web_impl("context-menu-demo");
+}
+
+fn assert_context_menu_demo_checkbox_indicator_slot_inset_matches_web_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_item = web_portal_nodes_by_data_slot(&theme, "context-menu-checkbox-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("Show Bookmarks"))
+        })
+        .unwrap_or_else(|| {
+            panic!("missing web Show Bookmarks context-menu-checkbox-item node for {web_name}")
+        });
+    let expected_pad_left = web_css_px(web_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web Show Bookmarks paddingLeft for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_context_menu_demo(
+                cx,
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for frame in 2..=4 {
+        let request_semantics = frame == 4;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_context_menu_demo(
+                    cx,
+                    open.clone(),
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItemCheckbox
+                && n.label.as_deref() == Some("Show Bookmarks")
+        })
+        .unwrap_or_else(|| panic!("missing fret Show Bookmarks MenuItemCheckbox for {web_name}"));
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, item.bounds))
+        .unwrap_or_else(|| panic!("missing fret Menu containing Show Bookmarks for {web_name}"));
+
+    let label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Show Bookmarks")
+                && fret_rect_contains(item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Show Bookmarks Text node for {web_name}"));
+
+    let actual_pad_left = label_text.bounds.origin.x.0 - item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Show Bookmarks paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    assert!(fret_rect_contains(menu.bounds, item.bounds));
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_radio_indicator_slot_inset_matches_web() {
+    assert_context_menu_demo_radio_indicator_slot_inset_matches_web_impl("context-menu-demo");
+}
+
+fn assert_context_menu_demo_radio_indicator_slot_inset_matches_web_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_item = web_portal_nodes_by_data_slot(&theme, "context-menu-radio-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("Pedro Duarte"))
+        })
+        .unwrap_or_else(|| {
+            panic!("missing web Pedro Duarte context-menu-radio-item node for {web_name}")
+        });
+    let expected_pad_left = web_css_px(web_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web Pedro Duarte paddingLeft for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_context_menu_demo(
+                cx,
+                open.clone(),
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for frame in 2..=4 {
+        let request_semantics = frame == 4;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_context_menu_demo(
+                    cx,
+                    open.clone(),
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItemRadio && n.label.as_deref() == Some("Pedro Duarte")
+        })
+        .unwrap_or_else(|| panic!("missing fret Pedro Duarte MenuItemRadio for {web_name}"));
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, item.bounds))
+        .unwrap_or_else(|| panic!("missing fret Menu containing Pedro Duarte for {web_name}"));
+
+    let label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Pedro Duarte")
+                && fret_rect_contains(item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Pedro Duarte Text node for {web_name}"));
+
+    let actual_pad_left = label_text.bounds.origin.x.0 - item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Pedro Duarte paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    assert!(fret_rect_contains(menu.bounds, item.bounds));
+}
+
 fn assert_context_menu_demo_constrained_menu_content_insets_match(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
