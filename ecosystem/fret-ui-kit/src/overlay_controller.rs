@@ -572,6 +572,7 @@ impl OverlayController {
     pub fn arbitration_snapshot<H: UiHost>(ui: &UiTree<H>) -> OverlayArbitrationSnapshot {
         use fret_ui::tree::PointerOcclusion;
 
+        let runtime = ui.input_arbitration_snapshot();
         let base_root = ui.base_root();
         let layers = ui.debug_layers_in_paint_order();
 
@@ -579,23 +580,14 @@ impl OverlayController {
         out.has_any_overlays = layers
             .iter()
             .any(|l| l.visible && base_root.is_none_or(|base| l.root != base));
-        out.modal_barrier_active = layers.iter().any(|l| {
-            l.visible && base_root.is_none_or(|base| l.root != base) && l.blocks_underlay_input
-        });
+        out.modal_barrier_active = runtime.modal_barrier_root.is_some();
 
         if out.modal_barrier_active {
             out.pointer_occlusion = PointerOcclusion::None;
             return out;
         }
 
-        out.pointer_occlusion = layers
-            .iter()
-            .rev()
-            .filter(|l| l.visible && base_root.is_none_or(|base| l.root != base))
-            .find_map(|l| {
-                (l.pointer_occlusion != PointerOcclusion::None).then_some(l.pointer_occlusion)
-            })
-            .unwrap_or(PointerOcclusion::None);
+        out.pointer_occlusion = runtime.pointer_occlusion;
         out
     }
 
