@@ -225,12 +225,12 @@ impl std::fmt::Debug for CollapsibleTrigger {
 }
 
 impl CollapsibleTrigger {
-    pub fn new(open: Model<bool>, children: Vec<AnyElement>) -> Self {
+    pub fn new(open: Model<bool>, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             open,
             disabled: false,
             a11y_label: None,
-            children,
+            children: children.into_iter().collect(),
         }
     }
 

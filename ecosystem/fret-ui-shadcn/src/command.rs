@@ -469,11 +469,11 @@ impl std::fmt::Debug for Command {
 }
 
 impl Command {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            children,
+            children: children.into_iter().collect(),
         }
     }
 
@@ -788,8 +788,8 @@ impl CommandItem {
         self
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 }

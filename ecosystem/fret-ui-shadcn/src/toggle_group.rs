@@ -94,10 +94,10 @@ impl std::fmt::Debug for ToggleGroupItem {
 }
 
 impl ToggleGroupItem {
-    pub fn new(value: impl Into<Arc<str>>, children: Vec<AnyElement>) -> Self {
+    pub fn new(value: impl Into<Arc<str>>, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             value: value.into(),
-            children,
+            children: children.into_iter().collect(),
             disabled: false,
             a11y_label: None,
         }

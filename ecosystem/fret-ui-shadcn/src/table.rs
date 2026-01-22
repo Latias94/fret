@@ -213,10 +213,10 @@ impl std::fmt::Debug for TableRow {
 }
 
 impl TableRow {
-    pub fn new(cols: u16, children: Vec<AnyElement>) -> Self {
+    pub fn new(cols: u16, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             cols: cols.max(1),
-            children,
+            children: children.into_iter().collect(),
             selected: false,
             enabled: true,
             on_click: None,

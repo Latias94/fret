@@ -203,10 +203,10 @@ pub struct TabsContent {
 }
 
 impl TabsContent {
-    pub fn new(value: impl Into<Arc<str>>, children: Vec<AnyElement>) -> Self {
+    pub fn new(value: impl Into<Arc<str>>, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             value: value.into(),
-            children,
+            children: children.into_iter().collect(),
         }
     }
 }
@@ -429,18 +429,19 @@ impl TabsItem {
     pub fn new(
         value: impl Into<Arc<str>>,
         label: impl Into<Arc<str>>,
-        content: Vec<AnyElement>,
+        content: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         Self {
             value: value.into(),
             label: label.into(),
-            content,
+            content: content.into_iter().collect(),
             trigger: None,
             disabled: false,
         }
     }
 
-    pub fn trigger_children(mut self, children: Vec<AnyElement>) -> Self {
+    pub fn trigger_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children: Vec<AnyElement> = children.into_iter().collect();
         if children.is_empty() {
             self.trigger = None;
         } else {

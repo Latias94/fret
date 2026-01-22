@@ -55,13 +55,13 @@ impl InputGroup {
         }
     }
 
-    pub fn leading(mut self, children: Vec<AnyElement>) -> Self {
-        self.leading = children;
+    pub fn leading(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.leading = children.into_iter().collect();
         self
     }
 
-    pub fn trailing(mut self, children: Vec<AnyElement>) -> Self {
-        self.trailing = children;
+    pub fn trailing(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.trailing = children.into_iter().collect();
         self
     }
 
