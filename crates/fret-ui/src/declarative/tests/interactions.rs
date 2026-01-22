@@ -946,6 +946,131 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
 }
 
 #[test]
+fn text_input_cut_updates_model_and_availability() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-cut-updates-model",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let copy = CommandId::from("text.copy");
+    let cut = CommandId::from("text.cut");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be available for focused text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &cut),
+        "expected text.cut to be unavailable without a selection"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected text.select_all to be handled by text input"
+    );
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be available after select_all"
+    );
+    assert!(
+        ui.is_command_available(&mut app, &cut),
+        "expected text.cut to be available after select_all"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &cut),
+        "expected text.cut to be handled by text input"
+    );
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some(""),
+        "expected cut to update the bound model"
+    );
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardSetText { .. })),
+        "expected text.cut to emit ClipboardSetText"
+    );
+}
+
+#[test]
+fn text_input_paste_requests_clipboard_text_when_editable() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-paste-clipboard-get",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let paste = CommandId::from("text.paste");
+    assert!(
+        ui.is_command_available(&mut app, &paste),
+        "expected text.paste to be available for focused editable text input"
+    );
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &paste),
+        "expected text.paste to be handled by text input"
+    );
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardGetText { .. })),
+        "expected text.paste to request ClipboardGetText"
+    );
+}
+
+#[test]
 fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
