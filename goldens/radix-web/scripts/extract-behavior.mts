@@ -907,6 +907,67 @@ const scenarios: Scenario[] = [
   },
   {
     primitive: "dropdown-menu",
+    scenario: "submenu-unsafe-leave",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu:with-submenu" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-trigger"]',
+        "Invite users"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, {
+        kind: "hover",
+        target: "dropdown-menu-sub-trigger:Invite users",
+      })
+
+      await hoverFirstByText(ctx.page, '[data-slot="dropdown-menu-item"]', "Team")
+      await sleep(200)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        false,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-unsafe-leave: submenu content did not close after leaving: ${String(
+            err
+          )}`
+        )
+      })
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "dropdown-menu-item:Team" })
+    },
+  },
+  {
+    primitive: "dropdown-menu",
     scenario: "submenu-keyboard-open-close",
     item: "dropdown-menu-example",
     async run(ctx) {
@@ -1152,6 +1213,73 @@ const scenarios: Scenario[] = [
       await sleep(50)
       await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "click", target: "context-menu-sub-item:Save Page" })
+    },
+  },
+  {
+    primitive: "context-menu",
+    scenario: "submenu-unsafe-leave",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="context-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "click", target: "context-menu:with-submenu" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="context-menu-sub-trigger"]',
+        "More Tools"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "context-menu-sub-trigger:More Tools" })
+
+      const copyItem = await findFirstByText(
+        ctx.page,
+        '[data-slot="context-menu-item"]',
+        "Copy"
+      )
+      await moveMouseTo(copyItem, ctx.page)
+      // Ensure we register a leftwards pointer direction so Radix doesn't treat this as moving
+      // towards the submenu.
+      const { x: copyX, y: copyY } = await centerOf(copyItem)
+      await ctx.page.mouse.move(copyX - 10, copyY)
+      await sleep(200)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        false,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-unsafe-leave: context submenu content did not close after leaving: ${String(
+            err
+          )}`
+        )
+      })
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "context-menu-item:Copy" })
     },
   },
   {
@@ -1552,6 +1680,65 @@ const scenarios: Scenario[] = [
         Math.min(15000, ctx.timeoutMs)
       )
       await pushStep(ctx, { kind: "click", target: "menubar-sub-item:Email link" })
+    },
+  },
+  {
+    primitive: "menubar",
+    scenario: "submenu-unsafe-leave",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleWithinSelectorByText(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="menubar-trigger"]',
+        "File"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "menubar:with-submenu:file" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="menubar-sub-trigger"]',
+        "Share"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "menubar-sub-trigger:Share" })
+
+      await hoverFirstByText(ctx.page, '[data-slot="menubar-trigger"]', "Edit")
+      await sleep(200)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-sub-content"]',
+        false,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-unsafe-leave: menubar submenu content did not close after leaving: ${String(
+            err
+          )}`
+        )
+      })
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="menubar-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "hover", target: "menubar-trigger:Edit" })
     },
   },
   {
