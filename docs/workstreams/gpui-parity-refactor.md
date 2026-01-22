@@ -144,6 +144,10 @@ Even with dirty views + cache roots in place, “stable feel + stable perf” re
 
 - **Windowed surfaces beyond VirtualList**: code/text/markdown surfaces and 2D canvas/node graphs must be able to update
   their visible window (scroll/camera) without forcing cache-root rerenders for small deltas (ADR 0190, MVP5).
+- **Nested-cache composition**: our v1 cache-root model is subtree-replay-based, which tends to “bubble dirtiness” to
+  ancestor cache roots. If we want GPUI-like “local dirtiness, stable outer shells”, we likely need a more composable
+  recording boundary (e.g. prepaint/paint range reuse that can tolerate dirty descendants) or better cache-root
+  placement guidance in ecosystem surfaces.
 - **Cache key precision**: view-cache reuse must remain gated by explicit cache keys, but we should gradually refine the
   recommended key inputs toward GPUI’s `bounds/content_mask/text_style` model (ADR 1152 §7).
 - **Explainability under reuse**: diagnostics bundles should make it obvious whether we missed reuse due to dirtiness vs

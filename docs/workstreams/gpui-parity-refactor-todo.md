@@ -284,6 +284,12 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
         `debug.dirty_views` entry with `detail=scroll_handle_layout`, and `render_window_range` should match `window_range`.
       - Perf capture: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --top 10 --sort time --warmup-frames 5 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
         produced worst bundle `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` (top.us(total/layout/prepaint/paint)=503161/476991/241/25929).
+      - Bundle note (v1, to be refined): in `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` at `tick_id=7` / `frame_id=6`,
+        `debug.dirty_views` shows `detail=scroll_handle_layout` for two cache roots even though `debug.virtual_list_windows.window_mismatch=false`
+        and `offset/viewport` are unchanged. This suggests either:
+        - the scroll-handle change was classified as `Layout` due to a non-offset dimension (e.g. content-size change), or
+        - some binding is still upgrading to layout too eagerly (bug / missing guard).
+        Track this under `GPUI-MVP5-perf-003`.
 
 ## MVP5 — Prepaint-driven Ephemeral Windows (Beyond VirtualList)
 
@@ -364,6 +370,15 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
   - Baseline note: current worst-tick bundles remain layout-dominated and frequently attribute dirty views to
     `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:417`.
+- [ ] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
+  - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
+  - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).
+  - Proposed work:
+    - Extend debug export to include the reason why a scroll-handle key was reported as `Layout` vs `HitTestOnly` (bounded debug-only).
+    - Tighten classification so “no-op updates” (offset unchanged, content size unchanged) do not generate a change key.
+    - Add a focused regression harness derived from `tools/diag-scripts/ui-gallery-virtual-list-torture.json` that targets the tick in
+      `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` and asserts that `scroll_handle_layout` implies a window mismatch,
+      a content-size/viewport delta, or a deferred command consumption (observable in the bundle).
 
 ## Open Questions (Keep Short)
 
