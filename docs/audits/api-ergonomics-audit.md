@@ -41,6 +41,17 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [x] Examples for both integration styles exist:
   - `apps/fret-examples/src/todo_interop_kit_demo.rs`
   - `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`
+- [x] Command palette gating consumes the data-only snapshots:
+  - `WindowCommandEnabledService` (explicit overrides) and `InputContext`/`WhenExpr` (catalog gating).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`, `ecosystem/fret-ui-shadcn/src/command.rs`.
+- [x] Desktop system menus consume the data-only snapshots (Windows/macOS):
+  - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs`, `crates/fret-launch/src/runner/desktop/macos_menu.rs`.
+- [x] A consumption-focused per-window gating snapshot aggregates all data-only inputs (P0):
+  - `WindowCommandGatingSnapshot` unifies `InputContext` + overrides.
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs`,
+    `crates/fret-launch/src/runner/desktop/windows_menu.rs`,
+    `crates/fret-launch/src/runner/desktop/macos_menu.rs`,
+    `ecosystem/fret-bootstrap/src/ui_app_driver.rs`.
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)

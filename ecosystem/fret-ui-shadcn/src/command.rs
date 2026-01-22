@@ -10,6 +10,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::WindowCommandEnabledService;
+use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
     format_sequence,
@@ -47,7 +48,7 @@ pub struct CommandCatalogOptions {
     pub hide_disabled: bool,
 }
 
-fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
+pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
     let caps = app
         .global::<PlatformCapabilities>()
         .cloned()
@@ -107,6 +108,45 @@ fn command_item_from_meta<H: UiHost>(
     item
 }
 
+fn command_item_from_meta_with_gating<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    gating: &WindowCommandGatingSnapshot,
+    id: &CommandId,
+    meta: &CommandMeta,
+) -> CommandItem {
+    let input_ctx = gating.input_ctx();
+
+    let mut keywords: Vec<Arc<str>> = meta.keywords.clone();
+    keywords.push(Arc::from(id.as_str()));
+    if let Some(category) = meta.category.as_ref() {
+        keywords.push(category.clone());
+    }
+    if let Some(description) = meta.description.as_ref() {
+        keywords.push(description.clone());
+    }
+
+    let shortcut: Option<Arc<str>> = cx
+        .app
+        .global::<KeymapService>()
+        .and_then(|svc| {
+            svc.keymap
+                .display_shortcut_for_command_sequence(input_ctx, id)
+        })
+        .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)));
+
+    let disabled = !gating.is_enabled_for_command(id, meta);
+
+    let mut item = CommandItem::new(meta.title.clone())
+        .value(Arc::from(id.as_str()))
+        .keywords(keywords)
+        .disabled(disabled)
+        .on_select(id.clone());
+    if let Some(shortcut) = shortcut {
+        item = item.shortcut(shortcut);
+    }
+    item
+}
+
 pub fn command_entries_from_host_commands<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Vec<CommandEntry> {
@@ -153,6 +193,58 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
         }
 
         let item = command_item_from_meta(cx, &input_ctx, id, meta);
+
+        if let Some(category) = meta.category.clone() {
+            groups.entry(category).or_default().push(item);
+        } else {
+            root_items.push(item);
+        }
+    }
+
+    let mut entries: Vec<CommandEntry> = Vec::new();
+    entries.extend(root_items.into_iter().map(CommandEntry::Item));
+    entries.extend(
+        groups.into_iter().map(|(category, items)| {
+            CommandEntry::Group(CommandGroup::new(items).heading(category))
+        }),
+    );
+    entries
+}
+
+pub fn command_entries_from_host_commands_with_gating_snapshot<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    options: CommandCatalogOptions,
+    gating: &WindowCommandGatingSnapshot,
+) -> Vec<CommandEntry> {
+    let mut commands: Vec<(CommandId, CommandMeta)> = cx
+        .app
+        .commands()
+        .iter()
+        .filter_map(|(id, meta)| (!meta.hidden).then_some((id.clone(), meta.clone())))
+        .collect();
+
+    commands.sort_by(|(a_id, a_meta), (b_id, b_meta)| {
+        match (&a_meta.category, &b_meta.category) {
+            (None, Some(_)) => std::cmp::Ordering::Less,
+            (Some(_), None) => std::cmp::Ordering::Greater,
+            (Some(a), Some(b)) => a.as_ref().cmp(b.as_ref()),
+            (None, None) => std::cmp::Ordering::Equal,
+        }
+        .then_with(|| a_meta.title.as_ref().cmp(b_meta.title.as_ref()))
+        .then_with(|| a_id.as_str().cmp(b_id.as_str()))
+    });
+
+    let mut root_items: Vec<CommandItem> = Vec::new();
+    let mut groups: std::collections::BTreeMap<Arc<str>, Vec<CommandItem>> =
+        std::collections::BTreeMap::new();
+
+    for (id, meta) in &commands {
+        let disabled = !gating.is_enabled_for_command(id, meta);
+        if disabled && options.hide_disabled {
+            continue;
+        }
+
+        let item = command_item_from_meta_with_gating(cx, gating, id, meta);
 
         if let Some(category) = meta.category.clone() {
             groups.entry(category).or_default().push(item);

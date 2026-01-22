@@ -325,6 +325,7 @@ pub struct CommandPaletteModels {
 #[derive(Debug, Default)]
 pub struct CommandPaletteService {
     by_window: HashMap<AppWindowId, CommandPaletteModels>,
+    gating_by_window: HashMap<AppWindowId, fret_runtime::WindowCommandGatingSnapshot>,
 }
 
 #[cfg(feature = "ui-app-command-palette")]
@@ -333,6 +334,12 @@ impl CommandPaletteService {
         self.by_window.get(&window).cloned()
     }
 
+    pub fn gating(
+        &self,
+        window: AppWindowId,
+    ) -> Option<&fret_runtime::WindowCommandGatingSnapshot> {
+        self.gating_by_window.get(&window)
+    }
     fn ensure_window(&mut self, app: &mut App, window: AppWindowId) -> CommandPaletteModels {
         if let Some(existing) = self.by_window.get(&window) {
             return existing.clone();
@@ -1127,8 +1134,29 @@ fn ui_app_handle_command<S>(
         app.with_global_mut(CommandPaletteService::default, |svc, app| {
             let models = svc.ensure_window(app, window);
             let is_open = app.models().get_copied(&models.open).unwrap_or(false);
-            let _ = app.models_mut().update(&models.open, |v| *v = !is_open);
+            let next_open = !is_open;
+            let _ = app.models_mut().update(&models.open, |v| *v = next_open);
             let _ = app.models_mut().update(&models.query, |v| v.clear());
+
+            if next_open {
+                let fallback_input_ctx =
+                    fret_ui_shadcn::command::command_palette_input_context(app);
+                let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                    app,
+                    window,
+                    fallback_input_ctx,
+                );
+
+                let mut input_ctx = snapshot.input_ctx().clone();
+                input_ctx.ui_has_modal = true;
+                input_ctx.focus_is_text_input = false;
+                input_ctx.dispatch_phase = fret_runtime::InputDispatchPhase::Bubble;
+
+                svc.gating_by_window
+                    .insert(window, snapshot.with_input_ctx(input_ctx));
+            } else {
+                svc.gating_by_window.remove(&window);
+            }
         });
         app.request_redraw(window);
         return;
@@ -1534,16 +1562,43 @@ fn ui_app_render<S>(
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled
-                        && let Some(models) = cx
-                            .app
-                            .global::<CommandPaletteService>()
-                            .and_then(|svc| svc.models(cx.window))
+                        && let Some((models, gating)) =
+                            cx.app.global::<CommandPaletteService>().and_then(|svc| {
+                                let models = svc.models(cx.window)?;
+                                let gating = svc.gating(cx.window).cloned();
+                                Some((models, gating))
+                            })
                     {
-                        let dialog = fret_ui_shadcn::CommandDialog::new_with_host_commands(
-                            cx,
+                        let open_now = cx
+                            .app
+                            .models()
+                            .get_copied(&models.open)
+                            .unwrap_or(false);
+                        let entries = if open_now {
+                            let gating = gating.unwrap_or_else(|| {
+                                let fallback =
+                                    fret_ui_shadcn::command::command_palette_input_context(&*cx.app);
+                                fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                                    &*cx.app,
+                                    cx.window,
+                                    fallback,
+                                )
+                            });
+                            fret_ui_shadcn::command::command_entries_from_host_commands_with_gating_snapshot(
+                                cx,
+                                fret_ui_shadcn::command::CommandCatalogOptions::default(),
+                                &gating,
+                            )
+                        } else {
+                            Vec::new()
+                        };
+
+                        let dialog = fret_ui_shadcn::CommandDialog::new(
                             models.open,
                             models.query,
+                            Vec::new(),
                         )
+                        .entries(entries)
                         .a11y_label("Command palette")
                         .into_element(cx, |cx| {
                             cx.interactivity_gate_props(
@@ -1571,23 +1626,50 @@ fn ui_app_render<S>(
             #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
             {
                 let out = direction_prim::with_direction_provider(cx, dir, |cx| {
-                    let mut out = (driver.view)(cx, &mut state.state);
+                    let out = (driver.view)(cx, &mut state.state);
 
                     #[cfg(feature = "ui-app-command-palette")]
                     let mut out = out;
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled
-                        && let Some(models) = cx
-                            .app
-                            .global::<CommandPaletteService>()
-                            .and_then(|svc| svc.models(cx.window))
+                        && let Some((models, gating)) =
+                            cx.app.global::<CommandPaletteService>().and_then(|svc| {
+                                let models = svc.models(cx.window)?;
+                                let gating = svc.gating(cx.window).cloned();
+                                Some((models, gating))
+                            })
                     {
-                        let dialog = fret_ui_shadcn::CommandDialog::new_with_host_commands(
-                            cx,
+                        let open_now = cx
+                            .app
+                            .models()
+                            .get_copied(&models.open)
+                            .unwrap_or(false);
+                        let entries = if open_now {
+                            let gating = gating.unwrap_or_else(|| {
+                                let fallback =
+                                    fret_ui_shadcn::command::command_palette_input_context(&*cx.app);
+                                fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                                    &*cx.app,
+                                    cx.window,
+                                    fallback,
+                                )
+                            });
+                            fret_ui_shadcn::command::command_entries_from_host_commands_with_gating_snapshot(
+                                cx,
+                                fret_ui_shadcn::command::CommandCatalogOptions::default(),
+                                &gating,
+                            )
+                        } else {
+                            Vec::new()
+                        };
+
+                        let dialog = fret_ui_shadcn::CommandDialog::new(
                             models.open,
                             models.query,
+                            Vec::new(),
                         )
+                        .entries(entries)
                         .a11y_label("Command palette")
                         .into_element(cx, |cx| {
                             cx.interactivity_gate_props(
@@ -1667,7 +1749,7 @@ fn ui_app_render<S>(
         let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
     }
-    let mut layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
+    let layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));

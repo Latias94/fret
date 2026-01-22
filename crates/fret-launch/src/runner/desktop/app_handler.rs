@@ -312,7 +312,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
                 #[cfg(target_os = "macos")]
                 RunnerUserEvent::MacosMenuWillOpen => {
-                    macos_menu::sync_input_context_from_app(&self.app);
+                    macos_menu::sync_command_gating_from_app(&self.app);
                 }
             }
         }

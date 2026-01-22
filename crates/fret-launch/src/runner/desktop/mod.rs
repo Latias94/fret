@@ -2565,6 +2565,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 svc.remove_window(window);
             },
         );
+        self.app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
         self.app
             .with_global_mut(WindowMetricsService::default, |svc, _app| {
                 svc.remove(window);
@@ -3870,11 +3876,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if changed.contains(&TypeId::of::<fret_runtime::KeymapService>()) {
                 windows_menu::sync_keymap_from_app(&self.app);
             }
-            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>()) {
-                windows_menu::sync_input_context_from_app(&self.app);
-            }
-            if changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>()) {
-                windows_menu::sync_command_enabled_from_app(&self.app);
+            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
+            {
+                windows_menu::sync_command_gating_from_app(&self.app);
             }
         }
 
@@ -3884,11 +3889,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if keymap_changed {
                 macos_menu::sync_keymap_from_app(&self.app);
             }
-            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>()) {
-                macos_menu::sync_input_context_from_app(&self.app);
-            }
-            if changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>()) {
-                macos_menu::sync_command_enabled_from_app(&self.app);
+            if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
+            {
+                macos_menu::sync_command_gating_from_app(&self.app);
             }
             if keymap_changed && let Some(menu_bar) = self.menu_bar.clone() {
                 macos_menu::set_app_menu_bar(&self.app, &menu_bar);
