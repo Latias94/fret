@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use fret_core::AppWindowId;
 
 use crate::GlobalsHost;
+use crate::WindowCommandActionAvailabilityService;
 use crate::{CommandId, CommandMeta, CommandScope, InputContext, WhenExpr};
 use crate::{WindowCommandEnabledService, WindowInputContextService};
 
@@ -33,6 +35,7 @@ impl WindowCommandGatingService {
 pub struct WindowCommandGatingSnapshot {
     input_ctx: InputContext,
     enabled_overrides: HashMap<CommandId, bool>,
+    action_availability: Option<Arc<HashMap<CommandId, bool>>>,
 }
 
 impl WindowCommandGatingSnapshot {
@@ -40,6 +43,7 @@ impl WindowCommandGatingSnapshot {
         Self {
             input_ctx,
             enabled_overrides,
+            action_availability: None,
         }
     }
 
@@ -56,12 +60,31 @@ impl WindowCommandGatingSnapshot {
         &self.enabled_overrides
     }
 
+    pub fn action_availability(&self) -> Option<&HashMap<CommandId, bool>> {
+        self.action_availability.as_deref()
+    }
+
+    pub fn with_action_availability(
+        mut self,
+        action_availability: Option<Arc<HashMap<CommandId, bool>>>,
+    ) -> Self {
+        self.action_availability = action_availability;
+        self
+    }
+
     pub fn is_enabled_for_meta(
         &self,
         command: &CommandId,
-        _scope: CommandScope,
+        scope: CommandScope,
         when: Option<&WhenExpr>,
     ) -> bool {
+        if scope == CommandScope::Widget
+            && let Some(map) = self.action_availability.as_ref()
+            && let Some(is_available) = map.get(command).copied()
+            && !is_available
+        {
+            return false;
+        }
         if when.is_some_and(|w| !w.eval(&self.input_ctx)) {
             return false;
         }
@@ -98,5 +121,10 @@ pub fn snapshot_for_window_with_input_ctx_fallback(
         .cloned()
         .unwrap_or_default();
 
+    let action_availability = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .and_then(|svc| svc.snapshot_arc(window));
+
     WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+        .with_action_availability(action_availability)
 }

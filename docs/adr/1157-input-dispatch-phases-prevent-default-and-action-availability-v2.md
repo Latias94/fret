@@ -12,21 +12,16 @@ Implemented:
 - `prevent_default` plumbing: `crates/fret-runtime/src/input.rs` (`DefaultAction`, `DefaultActionSet`) and `crates/fret-ui/src/widget.rs` (`EventCx::{prevent_default,default_prevented}`).
 - Default actions step (v1): `DefaultAction::FocusOnPointerDown` is applied by default during event dispatch and can be suppressed via `prevent_default`: `crates/fret-ui/src/tree/dispatch.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/prevent_default.rs`.
+- Dispatch-path action availability query (retained `UiTree`):
+  - `Widget::command_availability` returns `CommandAvailability::{NotHandled,Available,Blocked}`.
+  - `UiTree::{command_availability,is_command_available}` provides a best-effort query suitable for gating UI surfaces.
+  - Data-only runner bridge: `WindowCommandActionAvailabilityService` publishes per-window availability snapshots.
 
 Not implemented yet / known gaps:
 
 - Capture-phase dispatch as a first-class pass (separate from Preview/Bubble), including a
   dedicated capture hook to avoid double-running normal bubble handlers.
-- Action availability query API (`is_action_available` / dispatch-tree snapshot service).
 - Additional default actions beyond `FocusOnPointerDown` (intentionally deferred to keep v1 low risk).
-
-Prototype / in-progress (see `refactor/input-dispatch-v2` branch):
-
-- Dispatch-path availability query on retained trees:
-  - `Widget::command_availability` returns `CommandAvailability::{NotHandled,Available,Blocked}`.
-  - `UiTree::is_command_available` provides a `bool` query suitable for gating UI surfaces.
-- Data-only runner bridge:
-  - `WindowCommandActionAvailabilityService` holds window-scoped per-command availability snapshots.
 
 ## Context
 

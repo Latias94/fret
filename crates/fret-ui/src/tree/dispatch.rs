@@ -2133,9 +2133,11 @@ impl<H: UiHost> UiTree<H> {
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
-                    svc.set_snapshot(window, input_ctx);
+                    svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+
+            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
 

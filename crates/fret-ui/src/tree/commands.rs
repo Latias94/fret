@@ -1,6 +1,168 @@
 use super::*;
+use crate::widget::{CommandAvailability, CommandAvailabilityCx};
+use fret_runtime::CommandScope;
 
 impl<H: UiHost> UiTree<H> {
+    #[stacksafe::stacksafe]
+    pub fn is_command_available(&mut self, app: &mut H, command: &CommandId) -> bool {
+        self.command_availability(app, command) == CommandAvailability::Available
+    }
+
+    #[stacksafe::stacksafe]
+    pub fn command_availability(
+        &mut self,
+        app: &mut H,
+        command: &CommandId,
+    ) -> CommandAvailability {
+        let Some(base_root) = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+        else {
+            return CommandAvailability::NotHandled;
+        };
+
+        let (active_layers, barrier_root) = self.active_input_layers();
+        let caps = app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        let mut input_ctx: InputContext = InputContext {
+            platform: Platform::current(),
+            caps,
+            ui_has_modal: barrier_root.is_some(),
+            focus_is_text_input: self.focus_is_text_input(),
+            edit_can_undo: true,
+            edit_can_redo: true,
+            dispatch_phase: InputDispatchPhase::Bubble,
+        };
+        if let Some(window) = self.window {
+            if let Some(availability) = app
+                .global::<fret_runtime::WindowCommandAvailabilityService>()
+                .and_then(|svc| svc.snapshot(window))
+                .copied()
+            {
+                input_ctx.edit_can_undo = availability.edit_can_undo;
+                input_ctx.edit_can_redo = availability.edit_can_redo;
+            }
+        }
+
+        let Some(start) =
+            self.command_availability_start_node(base_root, &active_layers, barrier_root)
+        else {
+            return CommandAvailability::NotHandled;
+        };
+
+        self.command_availability_from_node(app, &input_ctx, start, command)
+    }
+
+    fn command_availability_start_node(
+        &mut self,
+        base_root: NodeId,
+        active_layers: &[NodeId],
+        barrier_root: Option<NodeId>,
+    ) -> Option<NodeId> {
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+        {
+            self.focus = None;
+        }
+
+        let default_root = barrier_root.unwrap_or(base_root);
+        self.focus.or(Some(default_root))
+    }
+
+    #[stacksafe::stacksafe]
+    fn command_availability_from_node(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+        start: NodeId,
+        command: &CommandId,
+    ) -> CommandAvailability {
+        let mut node_id = start;
+        loop {
+            let (availability, parent) = self.with_widget_mut(node_id, |widget, tree| {
+                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                let window = tree.window;
+                let focus = tree.focus;
+                let mut cx = CommandAvailabilityCx {
+                    app,
+                    tree: &*tree,
+                    node: node_id,
+                    window,
+                    input_ctx: input_ctx.clone(),
+                    focus,
+                };
+                (widget.command_availability(&mut cx, command), parent)
+            });
+
+            match availability {
+                CommandAvailability::Available | CommandAvailability::Blocked => {
+                    return availability;
+                }
+                CommandAvailability::NotHandled => {}
+            }
+
+            node_id = match parent {
+                Some(parent) => parent,
+                None => break,
+            };
+        }
+
+        CommandAvailability::NotHandled
+    }
+
+    pub(crate) fn publish_window_command_action_availability_snapshot(
+        &mut self,
+        app: &mut H,
+        input_ctx: &InputContext,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let Some(base_root) = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+        else {
+            return;
+        };
+        let (active_layers, barrier_root) = self.active_input_layers();
+        let Some(start) =
+            self.command_availability_start_node(base_root, &active_layers, barrier_root)
+        else {
+            return;
+        };
+
+        let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+        let widget_commands: Vec<CommandId> = app
+            .commands()
+            .iter()
+            .filter_map(|(id, meta)| (meta.scope == CommandScope::Widget).then_some(id.clone()))
+            .collect();
+
+        for id in widget_commands {
+            let availability = self.command_availability_from_node(app, input_ctx, start, &id);
+            match availability {
+                CommandAvailability::Available => {
+                    snapshot.insert(id, true);
+                }
+                CommandAvailability::Blocked => {
+                    snapshot.insert(id, false);
+                }
+                CommandAvailability::NotHandled => {}
+            }
+        }
+
+        app.with_global_mut(
+            fret_runtime::WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+    }
+
     #[stacksafe::stacksafe]
     pub fn dispatch_command(
         &mut self,
@@ -173,9 +335,11 @@ impl<H: UiHost> UiTree<H> {
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
-                    svc.set_snapshot(window, input_ctx);
+                    svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+
+            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
 
         handled

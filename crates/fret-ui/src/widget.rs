@@ -177,6 +177,32 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
     }
 }
 
+/// Command availability query result used by `UiTree::is_command_available` (ADR 1157).
+///
+/// This is a pure query signal (no side effects). Consumers typically interpret:
+/// - `Available`: command should be treated as enabled for the current dispatch path.
+/// - `Blocked`: command must not bubble further to ancestors for availability purposes.
+/// - `NotHandled`: this node does not participate in availability for this command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandAvailability {
+    NotHandled,
+    Available,
+    Blocked,
+}
+
+/// Context passed to `Widget::command_availability`.
+///
+/// This is intentionally read-only (no `UiServices`, no invalidations) to keep availability a pure
+/// query.
+pub struct CommandAvailabilityCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub tree: &'a crate::tree::UiTree<H>,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub input_ctx: InputContext,
+    pub focus: Option<NodeId>,
+}
+
 pub struct LayoutCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub tree: &'a mut crate::tree::UiTree<H>,
@@ -689,6 +715,15 @@ pub trait Widget<H: UiHost> {
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
+    }
+
+    /// Pure query: does this node participate in availability for `command`?
+    fn command_availability(
+        &self,
+        _cx: &mut CommandAvailabilityCx<'_, H>,
+        _command: &CommandId,
+    ) -> CommandAvailability {
+        CommandAvailability::NotHandled
     }
     fn cleanup_resources(&mut self, _services: &mut dyn UiServices) {}
     /// Optional affine transform applied to both paint and input for the subtree rooted at this node.

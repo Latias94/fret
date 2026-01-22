@@ -1,7 +1,7 @@
 use super::frame::ElementInstance;
 use super::frame::element_record_for_node;
 use super::prelude::*;
-use crate::widget::{CommandCx, MeasureCx};
+use crate::widget::{CommandAvailability, CommandAvailabilityCx, CommandCx, MeasureCx};
 use fret_runtime::CommandId;
 
 mod event;
@@ -307,6 +307,27 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 true
             }
             _ => false,
+        }
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> CommandAvailability {
+        let Some(window) = cx.window else {
+            return CommandAvailability::NotHandled;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return CommandAvailability::NotHandled;
+        };
+
+        match instance {
+            ElementInstance::FocusScope(props) if props.trap_focus => match command.as_str() {
+                "focus.next" | "focus.previous" => CommandAvailability::Available,
+                _ => CommandAvailability::NotHandled,
+            },
+            _ => CommandAvailability::NotHandled,
         }
     }
 

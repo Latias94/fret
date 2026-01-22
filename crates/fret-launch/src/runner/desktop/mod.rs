@@ -2554,6 +2554,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             },
         );
         self.app.with_global_mut(
+            fret_runtime::WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
+        self.app.with_global_mut(
             fret_runtime::WindowCommandAvailabilityService::default,
             |svc, _app| {
                 svc.remove_window(window);
@@ -3878,6 +3884,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
             if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
                 || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
+                || changed.contains(&TypeId::of::<
+                    fret_runtime::WindowCommandActionAvailabilityService,
+                >())
             {
                 windows_menu::sync_command_gating_from_app(&self.app);
             }
@@ -3891,6 +3900,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
             if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
                 || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
+                || changed.contains(&TypeId::of::<
+                    fret_runtime::WindowCommandActionAvailabilityService,
+                >())
             {
                 macos_menu::sync_command_gating_from_app(&self.app);
             }
