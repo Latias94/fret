@@ -103,10 +103,12 @@ Conformance gates:
   (`web_vs_fret_dropdown_menu_demo_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`).
 - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`).
-- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_checkboxes_overlay_placement_matches`, `web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches`).
 - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches`).
 - Item row padding + shortcut alignment: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
   (`web_vs_fret_dropdown_menu_demo_profile_item_padding_and_shortcut_match`).
+- Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_web`, `web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web`).
 - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_match`).
 
 ### `Command` / `CommandDialog`

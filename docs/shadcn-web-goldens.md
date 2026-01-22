@@ -63,6 +63,10 @@ Extract open overlay states that require non-click input (the script infers the 
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo command-dialog --modes=open --update --baseUrl=http://localhost:4020`
 
+DropdownMenu open-state examples (checkboxes / radio group):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-checkboxes dropdown-menu-radio-group --modes=open --update --baseUrl=http://localhost:4020`
+
 Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --openSelector=\"[data-fret-golden-target] button[role='combobox']\"`

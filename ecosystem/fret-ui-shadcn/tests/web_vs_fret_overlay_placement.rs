@@ -2804,6 +2804,168 @@ fn web_vs_fret_dropdown_menu_demo_overlay_placement_matches() {
     );
 }
 
+fn build_dropdown_menu_checkboxes_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+    checked_status_bar: Model<bool>,
+    checked_activity_bar: Model<bool>,
+    checked_panel: Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry,
+        DropdownMenuLabel,
+    };
+
+    DropdownMenu::new(open.clone())
+        // new-york-v4 dropdown-menu-checkboxes: `DropdownMenuContent className="w-56"`.
+        .min_width(Px(224.0))
+        .into_element(
+            cx,
+            |cx| {
+                Button::new("Open")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![
+                    DropdownMenuEntry::Label(DropdownMenuLabel::new("Appearance")),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                        checked_status_bar,
+                        "Status Bar",
+                    )),
+                    DropdownMenuEntry::CheckboxItem(
+                        DropdownMenuCheckboxItem::new(checked_activity_bar, "Activity Bar")
+                            .disabled(true),
+                    ),
+                    DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                        checked_panel,
+                        "Panel",
+                    )),
+                ]
+            },
+        )
+}
+
+fn build_dropdown_menu_radio_group_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+    position: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuLabel,
+        DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
+
+    DropdownMenu::new(open.clone())
+        // new-york-v4 dropdown-menu-radio-group: `DropdownMenuContent className="w-56"`.
+        .min_width(Px(224.0))
+        .into_element(
+            cx,
+            |cx| {
+                Button::new("Open")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![
+                    DropdownMenuEntry::Label(DropdownMenuLabel::new("Panel Position")),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::RadioGroup(
+                        DropdownMenuRadioGroup::new(position)
+                            .item(DropdownMenuRadioItemSpec::new("top", "Top"))
+                            .item(DropdownMenuRadioItemSpec::new("bottom", "Bottom"))
+                            .item(DropdownMenuRadioItemSpec::new("right", "Right")),
+                    ),
+                ]
+            },
+        )
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_checkboxes_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "dropdown-menu-checkboxes",
+        Some("menu"),
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                checked_status_bar: Option<Model<bool>>,
+                checked_activity_bar: Option<Model<bool>>,
+                checked_panel: Option<Model<bool>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| {
+                match (
+                    st.checked_status_bar.as_ref(),
+                    st.checked_activity_bar.as_ref(),
+                    st.checked_panel.as_ref(),
+                ) {
+                    (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+                    _ => None,
+                }
+            });
+
+            let (checked_status_bar, checked_activity_bar, checked_panel) =
+                if let Some(existing) = existing {
+                    existing
+                } else {
+                    let checked_status_bar = cx.app.models_mut().insert(true);
+                    let checked_activity_bar = cx.app.models_mut().insert(false);
+                    let checked_panel = cx.app.models_mut().insert(false);
+
+                    cx.with_state(Models::default, |st| {
+                        st.checked_status_bar = Some(checked_status_bar.clone());
+                        st.checked_activity_bar = Some(checked_activity_bar.clone());
+                        st.checked_panel = Some(checked_panel.clone());
+                    });
+
+                    (checked_status_bar, checked_activity_bar, checked_panel)
+                };
+
+            build_dropdown_menu_checkboxes_demo(
+                cx,
+                open,
+                checked_status_bar,
+                checked_activity_bar,
+                checked_panel,
+            )
+        },
+        SemanticsRole::Button,
+        Some("Open"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "dropdown-menu-radio-group",
+        Some("menu"),
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                position: Option<Model<Option<Arc<str>>>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.position.as_ref().cloned());
+
+            let position = if let Some(existing) = existing {
+                existing
+            } else {
+                let position = cx.app.models_mut().insert(Some(Arc::from("bottom")));
+                cx.with_state(Models::default, |st| st.position = Some(position.clone()));
+                position
+            };
+
+            build_dropdown_menu_radio_group_demo(cx, open, position)
+        },
+        SemanticsRole::Button,
+        Some("Open"),
+        SemanticsRole::Menu,
+    );
+}
+
 #[test]
 fn web_vs_fret_breadcrumb_demo_overlay_placement_matches() {
     assert_overlay_placement_matches(
@@ -3837,6 +3999,226 @@ fn assert_dropdown_menu_demo_profile_item_padding_and_shortcut_match_impl(web_na
         expected_chevron_right_inset,
         1.0,
     );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_web() {
+    assert_dropdown_menu_checkboxes_indicator_slot_inset_matches_web_impl(
+        "dropdown-menu-checkboxes",
+    );
+}
+
+fn assert_dropdown_menu_checkboxes_indicator_slot_inset_matches_web_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_item = web_portal_nodes_by_data_slot(&theme, "dropdown-menu-checkbox-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("Status Bar"))
+        })
+        .unwrap_or_else(|| {
+            panic!("missing web Status Bar dropdown-menu-checkbox-item node for {web_name}")
+        });
+    let expected_pad_left = web_css_px(web_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web Status Bar paddingLeft for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let checked_status_bar: Model<bool> = app.models_mut().insert(true);
+    let checked_activity_bar: Model<bool> = app.models_mut().insert(false);
+    let checked_panel: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_checkboxes_demo(
+                cx,
+                &open,
+                checked_status_bar.clone(),
+                checked_activity_bar.clone(),
+                checked_panel.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        let request_semantics = frame == 2 + settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_dropdown_menu_checkboxes_demo(
+                    cx,
+                    &open,
+                    checked_status_bar.clone(),
+                    checked_activity_bar.clone(),
+                    checked_panel.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItemCheckbox && n.label.as_deref() == Some("Status Bar")
+        })
+        .unwrap_or_else(|| panic!("missing fret Status Bar MenuItemCheckbox for {web_name}"));
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, item.bounds))
+        .unwrap_or_else(|| panic!("missing fret Menu containing Status Bar for {web_name}"));
+    let label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Status Bar")
+                && fret_rect_contains(item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Status Bar Text node for {web_name}"));
+
+    let actual_pad_left = label_text.bounds.origin.x.0 - item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Status Bar paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    assert!(fret_rect_contains(menu.bounds, item.bounds));
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web() {
+    assert_dropdown_menu_radio_group_indicator_slot_inset_matches_web_impl(
+        "dropdown-menu-radio-group",
+    );
+}
+
+fn assert_dropdown_menu_radio_group_indicator_slot_inset_matches_web_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_item = web_portal_nodes_by_data_slot(&theme, "dropdown-menu-radio-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("Bottom"))
+        })
+        .unwrap_or_else(|| {
+            panic!("missing web Bottom dropdown-menu-radio-item node for {web_name}")
+        });
+    let expected_pad_left = web_css_px(web_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web Bottom paddingLeft for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let position: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("bottom")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        let request_semantics = frame == 2 + settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let item = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItemRadio && n.label.as_deref() == Some("Bottom"))
+        .unwrap_or_else(|| panic!("missing fret Bottom MenuItemRadio for {web_name}"));
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .find(|menu| fret_rect_contains(menu.bounds, item.bounds))
+        .unwrap_or_else(|| panic!("missing fret Menu containing Bottom for {web_name}"));
+
+    let label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Bottom")
+                && fret_rect_contains(item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Bottom Text node for {web_name}"));
+
+    let actual_pad_left = label_text.bounds.origin.x.0 - item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Bottom paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+
+    assert!(fret_rect_contains(menu.bounds, item.bounds));
 }
 
 #[test]
