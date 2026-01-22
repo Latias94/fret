@@ -245,6 +245,11 @@ pub fn install_web_cursor_listener(
 pub struct WinitInputState {
     pub cursor_pos: Point,
     pub cursor_pos_physical: Option<PhysicalPosition<f64>>,
+    /// Mouse button state for the primary mouse pointer (`PointerId(0)`).
+    ///
+    /// This is a compatibility view used by higher-level runner glue. Multi-pointer state is
+    /// tracked in `pointers`.
+    pub pressed_buttons: MouseButtons,
     pub modifiers: Modifiers,
     pub raw_modifiers: ModifiersState,
     pub alt_gr_down: bool,
@@ -468,10 +473,17 @@ impl WinitWindowState {
 
 impl WinitInputState {
     fn pointer_state_mut(&mut self, pointer_id: PointerId) -> &mut PointerState {
-        self.pointers.entry(pointer_id).or_default()
+        let state = self.pointers.entry(pointer_id).or_default();
+        if pointer_id == PointerId(0) {
+            state.buttons = self.pressed_buttons;
+        }
+        state
     }
 
     fn pointer_buttons(&self, pointer_id: PointerId) -> MouseButtons {
+        if pointer_id == PointerId(0) {
+            return self.pressed_buttons;
+        }
         self.pointers
             .get(&pointer_id)
             .map(|state| state.buttons)
@@ -589,6 +601,9 @@ impl WinitInputState {
                 // `PointerLeft` may arrive without a matching button release (e.g. touch tracking
                 // canceled by the OS). Reset runner-side state to avoid stuck buttons/click counts.
                 self.pointers.remove(&pointer_id);
+                if pointer_id == PointerId(0) {
+                    self.pressed_buttons = MouseButtons::default();
+                }
             }
             WindowEvent::PointerButton {
                 state,
@@ -615,32 +630,40 @@ impl WinitInputState {
                     return;
                 };
                 let pressed = matches!(state, ElementState::Pressed);
-                let pointer_state = self.pointer_state_mut(pointer_id);
-                set_mouse_buttons(&mut pointer_state.buttons, winit_button, pressed);
-
                 let mapped_button = map_mouse_button(winit_button);
 
-                let evt = if pressed {
-                    let click_count = pointer_state.click.begin_press(mapped_button, pos);
-                    PointerEvent::Down {
-                        pointer_id,
-                        position: pos,
-                        button: mapped_button,
-                        modifiers: self.modifiers,
-                        click_count,
-                        pointer_type,
-                    }
-                } else {
-                    let click_count = pointer_state.click.end_press(mapped_button, pos);
-                    PointerEvent::Up {
-                        pointer_id,
-                        position: pos,
-                        button: mapped_button,
-                        modifiers: self.modifiers,
-                        click_count,
-                        pointer_type,
-                    }
+                let (evt, buttons_now) = {
+                    let pointer_state = self.pointer_state_mut(pointer_id);
+                    set_mouse_buttons(&mut pointer_state.buttons, winit_button, pressed);
+                    let buttons_now = pointer_state.buttons;
+
+                    let evt = if pressed {
+                        let click_count = pointer_state.click.begin_press(mapped_button, pos);
+                        PointerEvent::Down {
+                            pointer_id,
+                            position: pos,
+                            button: mapped_button,
+                            modifiers: self.modifiers,
+                            click_count,
+                            pointer_type,
+                        }
+                    } else {
+                        let click_count = pointer_state.click.end_press(mapped_button, pos);
+                        PointerEvent::Up {
+                            pointer_id,
+                            position: pos,
+                            button: mapped_button,
+                            modifiers: self.modifiers,
+                            click_count,
+                            pointer_type,
+                        }
+                    };
+
+                    (evt, buttons_now)
                 };
+                if pointer_id == PointerId(0) {
+                    self.pressed_buttons = buttons_now;
+                }
                 out.push(Event::Pointer(evt));
             }
             WindowEvent::MouseWheel { delta, .. } => {
