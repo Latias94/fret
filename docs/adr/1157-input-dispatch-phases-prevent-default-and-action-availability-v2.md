@@ -10,6 +10,7 @@ Implemented:
 
 - Dispatch phase enum: `crates/fret-runtime/src/input.rs` (`InputDispatchPhase::{Preview,Capture,Bubble}`).
 - `prevent_default` plumbing: `crates/fret-runtime/src/input.rs` (`DefaultAction`, `DefaultActionSet`) and `crates/fret-ui/src/widget.rs` (`EventCx::{prevent_default,default_prevented}`).
+- Observer pass contract: outside-press uses `Widget::event_observer` with `ObserverCx` (Preview phase) so routing state (focus/capture/propagation/default actions) cannot be mutated: `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/tree/dispatch.rs`.
 - Default actions step (v1): `DefaultAction::FocusOnPointerDown` is applied by default during event dispatch and can be suppressed via `prevent_default`: `crates/fret-ui/src/tree/dispatch.rs`.
 - Capture-phase dispatch (root → target): key down/up and pointer interactions (down/up/wheel/pinch/cancel, and move when buttons are pressed or capture is active): `crates/fret-ui/src/tree/dispatch.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/prevent_default.rs`.
@@ -73,8 +74,8 @@ These problems tend to cause large rewrites if decided late because they cut acr
 
 - Input dispatch is primarily "hit-test then bubble to root", with pointer capture overriding hit-test.
 - A dedicated observer path exists for outside-press click-through overlay dismissal:
-  - `InputDispatchPhase::{Normal,Observer}` in `crates/fret-runtime/src/input.rs`
-  - invariants: observer dispatch must not mutate focus/capture/propagation (ADR 0069).
+  - `InputDispatchPhase::Preview` is used for observer dispatch, routed through `Widget::event_observer`.
+  - invariants: observer dispatch must not mutate focus/capture/propagation/default actions (ADR 0069).
 - Some default-behavior suppression exists but is *component-specific*:
   - `PressablePointerDownResult::{Continue,SkipDefault,...}` in `crates/fret-ui/src/action.rs`.
 - Command availability exists only as a minimal runner-facing snapshot (undo/redo):

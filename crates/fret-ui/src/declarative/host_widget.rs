@@ -477,6 +477,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.event_impl(cx, event);
     }
 
+    fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+        self.event_observer_impl(cx, event);
+    }
+
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         if let Some(blob) = self.text_cache.blob.take() {
             services.text().release(blob);

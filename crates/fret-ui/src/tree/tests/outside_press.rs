@@ -88,10 +88,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -243,10 +240,7 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -415,7 +409,7 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -511,10 +505,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -637,10 +628,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app

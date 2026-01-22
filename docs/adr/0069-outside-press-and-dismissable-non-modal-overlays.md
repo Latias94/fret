@@ -77,6 +77,9 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
   - it must not override focus,
   - it must not block/bubble-stop the subsequent normal dispatch *except* when the layer is
     explicitly configured to consume outside pointer-down events as described above.
+  - Implementation note: observer dispatch is routed through `Widget::event_observer` with an
+    `ObserverCx` (instead of `Widget::event` / `EventCx`), so it cannot request focus/capture,
+    stop propagation, or suppress runtime default actions.
 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.

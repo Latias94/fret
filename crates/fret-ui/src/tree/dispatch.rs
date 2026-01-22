@@ -2185,7 +2185,6 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
-        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
@@ -2200,30 +2199,23 @@ impl<H: UiHost> UiTree<H> {
                             .unwrap_or((&[][..], Rect::default()));
                         let mut observer_ctx = input_ctx.clone();
                         observer_ctx.dispatch_phase = InputDispatchPhase::Preview;
-                        let mut cx = EventCx {
+                        let mut cx = crate::widget::ObserverCx {
                             app,
                             services: &mut *services,
                             node: node_id,
                             window: tree.window,
                             pointer_id: pointer_id_for_capture,
                             input_ctx: observer_ctx,
-                            prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
                             captured: pointer_id_for_capture
                                 .and_then(|p| tree.captured.get(&p).copied()),
                             bounds,
                             invalidations: Vec::new(),
-                            requested_focus: None,
-                            requested_capture: None,
-                            requested_cursor: None,
                             notify_requested: false,
-                            stop_propagation: false,
                         };
-                        widget.event(&mut cx, &event_for_node);
+                        widget.event_observer(&mut cx, &event_for_node);
 
-                        // Observer dispatch must not mutate routing state (capture/focus/propagation). It
-                        // exists to allow click-through outside-press policies, not to intercept input.
                         (cx.invalidations, cx.notify_requested, parent)
                     });
 
@@ -2266,30 +2258,23 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or((&[][..], Rect::default()));
                     let mut observer_ctx = input_ctx.clone();
                     observer_ctx.dispatch_phase = InputDispatchPhase::Preview;
-                    let mut cx = EventCx {
+                    let mut cx = crate::widget::ObserverCx {
                         app,
                         services: &mut *services,
                         node: node_id,
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: observer_ctx,
-                        prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
                         captured: pointer_id_for_capture
                             .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
                         notify_requested: false,
-                        stop_propagation: false,
                     };
-                    widget.event(&mut cx, event);
+                    widget.event_observer(&mut cx, event);
 
-                    // Observer dispatch must not mutate routing state (capture/focus/propagation). It
-                    // exists to allow click-through outside-press policies, not to intercept input.
                     (cx.invalidations, cx.notify_requested, parent)
                 });
 

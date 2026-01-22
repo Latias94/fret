@@ -13,6 +13,12 @@ fn pointer_move_is_forwarded_to_previous_hover_target() {
                 self.moves.fetch_add(1, Ordering::SeqCst);
             }
         }
+
+        fn event_observer(&mut self, _cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                self.moves.fetch_add(1, Ordering::SeqCst);
+            }
+        }
     }
 
     let mut app = crate::test_host::TestHost::new();

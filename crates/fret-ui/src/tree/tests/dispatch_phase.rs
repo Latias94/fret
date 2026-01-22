@@ -361,3 +361,35 @@ fn pointer_move_without_buttons_skips_capture() {
         ]
     );
 }
+
+#[test]
+fn pointer_cancel_without_position_dispatches_capture_then_bubble_via_focus_path() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, child) = setup_ui(log.clone(), false);
+    ui.set_focus(Some(child));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: None,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Capture, "root"),
+            (fret_runtime::InputDispatchPhase::Capture, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
