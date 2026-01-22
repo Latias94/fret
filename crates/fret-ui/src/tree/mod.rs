@@ -761,6 +761,7 @@ pub struct UiTree<H: UiHost> {
     focus: Option<NodeId>,
     captured: HashMap<PointerId, NodeId>,
     last_pointer_move_hit: HashMap<PointerId, Option<NodeId>>,
+    touch_pointer_down_outside_candidates: HashMap<PointerId, TouchPointerDownOutsideCandidate>,
     hit_test_path_cache: Option<HitTestPathCache>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
@@ -819,6 +820,16 @@ pub struct UiTree<H: UiHost> {
     deferred_cleanup: Vec<Box<dyn Widget<H>>>,
 }
 
+#[derive(Clone)]
+struct TouchPointerDownOutsideCandidate {
+    layer_id: UiLayerId,
+    root: NodeId,
+    consume: bool,
+    down_event: Event,
+    start_pos: Point,
+    moved: bool,
+}
+
 impl<H: UiHost> Default for UiTree<H> {
     fn default() -> Self {
         Self {
@@ -830,6 +841,7 @@ impl<H: UiHost> Default for UiTree<H> {
             focus: None,
             captured: HashMap::new(),
             last_pointer_move_hit: HashMap::new(),
+            touch_pointer_down_outside_candidates: HashMap::new(),
             hit_test_path_cache: None,
             last_internal_drag_target: None,
             window: None,
@@ -1795,6 +1807,25 @@ impl<H: UiHost> UiTree<H> {
         self.focus = focus;
     }
 
+    const TOUCH_POINTER_DOWN_OUTSIDE_SLOP_PX: f32 = 6.0;
+
+    fn update_touch_pointer_down_outside_move(&mut self, pointer_id: PointerId, position: Point) {
+        let Some(candidate) = self
+            .touch_pointer_down_outside_candidates
+            .get_mut(&pointer_id)
+        else {
+            return;
+        };
+        if candidate.moved {
+            return;
+        }
+        let dx = position.x.0 - candidate.start_pos.x.0;
+        let dy = position.y.0 - candidate.start_pos.y.0;
+        if (dx * dx + dy * dy).sqrt() > Self::TOUCH_POINTER_DOWN_OUTSIDE_SLOP_PX {
+            candidate.moved = true;
+        }
+    }
+
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
         self.nodes.insert(Node::new(widget))
     }
@@ -2377,10 +2408,28 @@ impl<H: UiHost> UiTree<H> {
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
-        let event_pointer_id = match params.event {
-            Event::Pointer(PointerEvent::Down { pointer_id, .. }) => Some(*pointer_id),
-            _ => None,
+
+        let (event_pointer_id, touch_candidate): (
+            Option<PointerId>,
+            Option<(PointerId, Point, Event)>,
+        ) = match params.event {
+            Event::Pointer(PointerEvent::Down {
+                pointer_id,
+                position,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            }) => (
+                Some(*pointer_id),
+                Some((*pointer_id, *position, params.event.clone())),
+            ),
+            Event::Pointer(PointerEvent::Down { pointer_id, .. }) => (Some(*pointer_id), None),
+            _ => (None, None),
         };
+
+        if let Some((pointer_id, _, _)) = touch_candidate {
+            self.touch_pointer_down_outside_candidates
+                .remove(&pointer_id);
+        }
 
         // Only the topmost "dismissable" non-modal overlay should observe outside presses.
         // This mirrors Radix-style DismissableLayer semantics while staying click-through:
@@ -2443,6 +2492,24 @@ impl<H: UiHost> UiTree<H> {
 
             let root = layer.root;
             let consume = layer.consume_pointer_down_outside_events;
+
+            if let Some((pointer_id, position, down_event)) = touch_candidate {
+                // Radix-aligned touch behavior: delay outside-press dismissal until pointer-up,
+                // and cancel it when the touch turns into a scroll/drag gesture.
+                self.touch_pointer_down_outside_candidates.insert(
+                    pointer_id,
+                    TouchPointerDownOutsideCandidate {
+                        layer_id,
+                        root,
+                        consume,
+                        down_event,
+                        start_pos: position,
+                        moved: false,
+                    },
+                );
+                return PointerDownOutsideOutcome::default();
+            }
+
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,

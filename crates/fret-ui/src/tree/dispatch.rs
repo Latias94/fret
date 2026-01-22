@@ -866,6 +866,7 @@ impl<H: UiHost> UiTree<H> {
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
+        let mut suppress_touch_up_outside_dispatch = false;
         let mut suppress_pointer_dispatch = false;
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
         let mut wheel_stop_node: Option<NodeId> = None;
@@ -939,6 +940,15 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let captured = event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+        if let Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position,
+            pointer_type: fret_core::PointerType::Touch,
+            ..
+        }) = event
+        {
+            self.update_touch_pointer_down_outside_move(*pointer_id, *position);
+        }
         let (dock_drag_affects_window, dock_drag_capture_anchor) = self
             .window
             .map(|window| {
@@ -984,6 +994,56 @@ impl<H: UiHost> UiTree<H> {
                 self.hit_test_path_cache = None;
                 self.hit_test_layers_cached(&active_layers, pos)
             };
+
+            if let Event::Pointer(PointerEvent::Up {
+                pointer_id,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            }) = event
+                && captured.is_none()
+            {
+                if dock_drag_affects_window {
+                    self.touch_pointer_down_outside_candidates
+                        .remove(pointer_id);
+                } else if let Some(candidate) = self
+                    .touch_pointer_down_outside_candidates
+                    .remove(pointer_id)
+                {
+                    if let Some(layer) = self.layers.get(candidate.layer_id) {
+                        let foreign_capture_active = self.captured.iter().any(|(pid, node)| {
+                            *pid != *pointer_id
+                                && self
+                                    .node_layer(*node)
+                                    .is_some_and(|layer_id| layer_id != candidate.layer_id)
+                        });
+
+                        if !foreign_capture_active && !candidate.moved {
+                            let hit_root = hit.and_then(|n| self.node_root(n));
+                            let hit_is_inside_layer = hit_root == Some(layer.root);
+                            let hit_is_inside_branch = hit.is_some_and(|hit| {
+                                layer
+                                    .pointer_down_outside_branches
+                                    .iter()
+                                    .copied()
+                                    .any(|branch| self.is_descendant(branch, hit))
+                            });
+
+                            if !hit_is_inside_layer && !hit_is_inside_branch {
+                                self.dispatch_event_to_node_chain_observer(
+                                    app,
+                                    services,
+                                    &input_ctx,
+                                    candidate.root,
+                                    &candidate.down_event,
+                                    &mut invalidation_visited,
+                                );
+                                needs_redraw = true;
+                                suppress_touch_up_outside_dispatch = candidate.consume;
+                            }
+                        }
+                    }
+                }
+            }
 
             // Pointer occlusion is a window-level layer substrate mechanism (policy-owned).
             //
@@ -1284,6 +1344,15 @@ impl<H: UiHost> UiTree<H> {
 
         if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
             && pointer_down_outside.suppress_hit_test_dispatch
+        {
+            if needs_redraw {
+                self.request_redraw_coalesced(app);
+            }
+            return;
+        }
+
+        if matches!(event, Event::Pointer(PointerEvent::Up { .. }))
+            && suppress_touch_up_outside_dispatch
         {
             if needs_redraw {
                 self.request_redraw_coalesced(app);
@@ -1687,6 +1756,11 @@ impl<H: UiHost> UiTree<H> {
                     );
                 }
             }
+        }
+
+        if let Event::PointerCancel(e) = event {
+            self.touch_pointer_down_outside_candidates
+                .remove(&e.pointer_id);
         }
 
         if defer_keydown_shortcuts_until_after_dispatch

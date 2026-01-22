@@ -233,6 +233,192 @@ fn outside_press_observer_respects_overlay_render_transform() {
 }
 
 #[test]
+fn outside_press_observer_is_delayed_for_touch_until_pointer_up() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let clicks = app.models_mut().insert(0u32);
+    let observer = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&observer), Some(0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&observer), Some(1));
+    assert_eq!(app.models().get_copied(&clicks), Some(1));
+}
+
+#[test]
+fn outside_press_observer_is_canceled_for_touch_drags() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let clicks = app.models_mut().insert(0u32);
+    let observer = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(30.0), Px(10.0)),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..fret_core::MouseButtons::default()
+            },
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(30.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&observer), Some(0));
+}
+
+#[test]
 fn outside_press_observer_is_suppressed_during_dock_drag() {
     struct RecordObserverDown {
         observer: Model<u32>,

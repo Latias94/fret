@@ -77,6 +77,13 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
   - it must not override focus,
   - it must not block/bubble-stop the subsequent normal dispatch *except* when the layer is
     explicitly configured to consume outside pointer-down events as described above.
+- Touch pointers are treated differently to preserve scroll/drag ergonomics:
+  - the runtime records a touch pointer-down-outside candidate on `PointerDown`,
+  - cancels it once the pointer moves beyond a small slop threshold,
+  - and dispatches the outside-press observer event on `PointerUp` only when the candidate remains
+    valid.
+  - When `consume_pointer_down_outside_events = true`, the runtime suppresses the normal hit-tested
+    **pointer-up** dispatch for the same touch interaction.
 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.
