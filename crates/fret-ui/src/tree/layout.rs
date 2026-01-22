@@ -8,6 +8,69 @@ use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
 impl<H: UiHost> UiTree<H> {
+    fn virtual_list_scroll_handle_requires_layout(
+        app: &mut H,
+        window: AppWindowId,
+        element: GlobalElementId,
+        props: &crate::element::VirtualListProps,
+    ) -> bool {
+        crate::elements::with_element_state(
+            &mut *app,
+            window,
+            element,
+            crate::element::VirtualListState::default,
+            |state| {
+                state.metrics.ensure_with_mode(
+                    props.measure_mode,
+                    props.len,
+                    props.estimate_row_height,
+                    props.gap,
+                    props.scroll_margin,
+                );
+
+                let viewport = match props.axis {
+                    fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                    fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                };
+                if viewport.0 <= 0.0 || props.len == 0 {
+                    return false;
+                }
+
+                let offset_point = props.scroll_handle.offset();
+                let offset_axis = match props.axis {
+                    fret_core::Axis::Vertical => offset_point.y,
+                    fret_core::Axis::Horizontal => offset_point.x,
+                };
+                let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+
+                let Some(visible) = state.metrics.visible_range(offset_axis, viewport, 0) else {
+                    return false;
+                };
+
+                let Some(window_range) =
+                    state
+                        .render_window_range
+                        .or(state.window_range)
+                        .filter(|r| {
+                            r.count == props.len
+                                && r.overscan == props.overscan
+                                && r.start_index <= r.end_index
+                                && r.end_index < r.count
+                        })
+                else {
+                    return false;
+                };
+
+                let window_start = window_range
+                    .start_index
+                    .saturating_sub(window_range.overscan);
+                let window_end = (window_range.end_index + window_range.overscan)
+                    .min(window_range.count.saturating_sub(1));
+                window_start > visible.start_index || window_end < visible.end_index
+            },
+        )
+    }
+
     pub(crate) fn invalidate_scroll_handle_bindings_for_changed_handles(
         &mut self,
         app: &mut H,
@@ -27,20 +90,6 @@ impl<H: UiHost> UiTree<H> {
 
         let mut visited = HashMap::<NodeId, u8>::new();
         for change in changed {
-            let detail = match change.kind {
-                crate::declarative::frame::ScrollHandleChangeKind::Layout => {
-                    UiDebugInvalidationDetail::ScrollHandleLayout
-                }
-                crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
-                    UiDebugInvalidationDetail::ScrollHandleHitTestOnly
-                }
-            };
-            let inv = match change.kind {
-                crate::declarative::frame::ScrollHandleChangeKind::Layout => Invalidation::Layout,
-                crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
-                    Invalidation::HitTestOnly
-                }
-            };
             let handle_key = change.handle_key;
             let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
                 &mut *app, window, handle_key,
@@ -54,6 +103,44 @@ impl<H: UiHost> UiTree<H> {
                 ) else {
                     continue;
                 };
+
+                let mut inv = match change.kind {
+                    crate::declarative::frame::ScrollHandleChangeKind::Layout => {
+                        Invalidation::Layout
+                    }
+                    crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                        Invalidation::HitTestOnly
+                    }
+                };
+                let mut detail = match change.kind {
+                    crate::declarative::frame::ScrollHandleChangeKind::Layout => {
+                        UiDebugInvalidationDetail::ScrollHandleLayout
+                    }
+                    crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                        UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+                    }
+                };
+
+                // VirtualList needs a layout-driven rerender only when the viewport leaves the
+                // last rendered overscan window. For scroll-handle offset changes (HitTestOnly),
+                // upgrade to Layout only when necessary. This also covers out-of-band
+                // `set_offset(...)` updates that do not go through pointer wheel events.
+                if inv == Invalidation::HitTestOnly
+                    && let Some(record) =
+                        crate::declarative::frame::element_record_for_node(&mut *app, window, node)
+                    && let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                        &record.instance
+                    && Self::virtual_list_scroll_handle_requires_layout(
+                        &mut *app,
+                        window,
+                        record.element,
+                        props,
+                    )
+                {
+                    inv = Invalidation::Layout;
+                    detail = UiDebugInvalidationDetail::ScrollHandleLayout;
+                }
+
                 self.mark_invalidation_dedup_with_detail(
                     node,
                     inv,

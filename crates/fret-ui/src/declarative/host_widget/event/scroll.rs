@@ -3,20 +3,8 @@ use crate::declarative::prelude::*;
 
 const SCROLL_CONSUMED_EPS: f32 = 0.001;
 
-fn range_contains_visible_range(window: crate::virtual_list::VirtualRange, visible: crate::virtual_list::VirtualRange) -> bool {
-    if window.count != visible.count {
-        return false;
-    }
-    if window.count == 0 {
-        return true;
-    }
-    let window_start = window.start_index.saturating_sub(window.overscan);
-    let window_end = (window.end_index + window.overscan).min(window.count.saturating_sub(1));
-    window_start <= visible.start_index && window_end >= visible.end_index
-}
-
 pub(super) fn handle_virtual_list<H: UiHost>(
-    this: &mut ElementHostWidget,
+    _this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
     window: AppWindowId,
     props: crate::element::VirtualListProps,
@@ -29,78 +17,35 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         fret_core::PointerEvent::Wheel {
             delta, modifiers, ..
         } => {
-            let scroll_invalidation = crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                this.element,
-                crate::element::VirtualListState::default,
-                |state| {
-                    let axis = props.axis;
-                    state.metrics.ensure_with_mode(
-                        props.measure_mode,
-                        props.len,
-                        props.estimate_row_height,
-                        props.gap,
-                        props.scroll_margin,
-                    );
-                    let viewport = match axis {
-                        fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
-                        fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
-                    };
-
-                    let prev = props.scroll_handle.offset();
-                    let prev_offset = match axis {
-                        fret_core::Axis::Vertical => prev.y,
-                        fret_core::Axis::Horizontal => prev.x,
-                    };
-                    let offset = state.metrics.clamp_offset(prev_offset, viewport);
-                    let prev_range = state.metrics.visible_range(offset, viewport, props.overscan);
-                    let prev_window = state.window_range.or(prev_range);
-
-                    let delta = match axis {
-                        fret_core::Axis::Vertical => delta.y,
-                        fret_core::Axis::Horizontal => {
-                            if modifiers.shift {
-                                delta.y
-                            } else {
-                                delta.x
-                            }
-                        }
-                    };
-                    let next = state.metrics.clamp_offset(Px(offset.0 - delta.0), viewport);
-                    if (prev_offset.0 - next.0).abs() > SCROLL_CONSUMED_EPS {
-                        match axis {
-                            fret_core::Axis::Vertical => {
-                                props
-                                    .scroll_handle
-                                    .set_offset(fret_core::Point::new(prev.x, next));
-                            }
-                            fret_core::Axis::Horizontal => {
-                                props
-                                    .scroll_handle
-                                    .set_offset(fret_core::Point::new(next, prev.y));
-                            }
-                        }
-                        let next_range =
-                            state.metrics.visible_range(next, viewport, props.overscan);
-                        // Keep wheel scroll transform-only while the viewport is still covered by
-                        // the previous rendered window (overscan-inclusive). Only request a layout
-                        // rerender once the viewport would leave the rendered window.
-                        let window_changed = match (prev_window, state.metrics.visible_range(next, viewport, 0)) {
-                            (Some(window), Some(visible)) => !range_contains_visible_range(window, visible),
-                            _ => prev_range != next_range,
-                        };
-                        Some(if window_changed {
-                            Invalidation::Layout
-                        } else {
-                            Invalidation::HitTestOnly
-                        })
+            let axis = props.axis;
+            let delta = match axis {
+                fret_core::Axis::Vertical => delta.y,
+                fret_core::Axis::Horizontal => {
+                    if modifiers.shift {
+                        delta.y
                     } else {
-                        None
+                        delta.x
                     }
-                },
-            );
-            if let Some(inv) = scroll_invalidation {
+                }
+            };
+
+            let prev = props.scroll_handle.offset();
+            let desired = match axis {
+                fret_core::Axis::Vertical => fret_core::Point::new(prev.x, Px(prev.y.0 - delta.0)),
+                fret_core::Axis::Horizontal => {
+                    fret_core::Point::new(Px(prev.x.0 - delta.0), prev.y)
+                }
+            };
+            props.scroll_handle.set_offset(desired);
+            let next = props.scroll_handle.offset();
+
+            let consumed = match axis {
+                fret_core::Axis::Vertical => (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS,
+                fret_core::Axis::Horizontal => (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS,
+            };
+
+            if consumed {
+                let inv = Invalidation::HitTestOnly;
                 super::invalidate_scroll_handle_bindings(
                     cx,
                     window,
