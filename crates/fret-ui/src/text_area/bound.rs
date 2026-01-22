@@ -1,7 +1,9 @@
 use fret_core::{Event, Px, Size, TextStyle};
 use fret_runtime::Model;
 
-use crate::widget::{EventCx, LayoutCx, PaintCx, Widget};
+use crate::widget::{
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx, Widget,
+};
 use crate::{Invalidation, UiHost};
 
 use super::{TextArea, TextAreaStyle};
@@ -119,6 +121,55 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         true
     }
 
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_runtime::CommandId) -> bool {
+        let before = self.area.text.clone();
+        let handled = <TextArea as Widget<H>>::command(&mut self.area, cx, command);
+        if handled && self.area.text != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+            cx.invalidate_self(Invalidation::Layout);
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
+        handled
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut CommandAvailabilityCx<'_, H>,
+        command: &fret_runtime::CommandId,
+    ) -> CommandAvailability {
+        if cx.focus != Some(cx.node) {
+            return CommandAvailability::NotHandled;
+        }
+
+        let cmd = command.as_str();
+        if !cmd.starts_with("text.") {
+            return CommandAvailability::NotHandled;
+        }
+
+        let clipboard_text = cx.input_ctx.caps.clipboard.text;
+        let (start, end) = self.area.selection_range();
+        let has_selection = start != end;
+
+        match cmd {
+            "text.copy" | "text.cut" => {
+                if !clipboard_text {
+                    return CommandAvailability::Blocked;
+                }
+                has_selection
+                    .then_some(CommandAvailability::Available)
+                    .unwrap_or(CommandAvailability::Blocked)
+            }
+            "text.paste" => {
+                if !clipboard_text {
+                    return CommandAvailability::Blocked;
+                }
+                CommandAvailability::Available
+            }
+            _ => CommandAvailability::Available,
+        }
+    }
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         <TextArea as Widget<H>>::cleanup_resources(&mut self.area, services);
     }
