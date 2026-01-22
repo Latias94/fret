@@ -802,7 +802,26 @@ impl<H: UiHost> UiTree<H> {
             ..
         } = event
             && let Some(window) = self.window
-            && self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
+            && {
+                let dock_drag_affects_window = app.any_drag_session(|d| {
+                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                        && (d.source_window == window || d.current_window == window)
+                });
+                if dock_drag_affects_window {
+                    // ADR 0072: Escape cancels the active dock drag session, and must not be
+                    // routed to overlays while the drag is in progress.
+                    let canceled = app.cancel_drag_sessions(|d| {
+                        d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                            && (d.source_window == window || d.current_window == window)
+                    });
+                    for pointer_id in canceled {
+                        self.captured.remove(&pointer_id);
+                    }
+                    true
+                } else {
+                    self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
+                }
+            }
         {
             self.request_redraw_coalesced(app);
             return;
