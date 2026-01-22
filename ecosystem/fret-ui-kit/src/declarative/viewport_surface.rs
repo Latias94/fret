@@ -53,6 +53,8 @@ fn push_viewport_input(
     window: fret_core::AppWindowId,
     props: ViewportSurfacePanelProps,
     pixels_per_point: f32,
+    pointer_id: fret_core::PointerId,
+    pointer_type: fret_core::PointerType,
     position: fret_core::Point,
     kind: ViewportInputKind,
     clamped: bool,
@@ -64,6 +66,8 @@ fn push_viewport_input(
             props.target,
             &mapping,
             pixels_per_point,
+            pointer_id,
+            pointer_type,
             position,
             kind,
         )
@@ -73,6 +77,8 @@ fn push_viewport_input(
             props.target,
             &mapping,
             pixels_per_point,
+            pointer_id,
+            pointer_type,
             position,
             kind,
         ) else {
@@ -108,6 +114,8 @@ pub fn viewport_surface_panel<H: UiHost>(
                 action_cx.window,
                 props_c,
                 down.pixels_per_point,
+                down.pointer_id,
+                down.pointer_type,
                 down.position,
                 ViewportInputKind::PointerDown {
                     button: down.button,
@@ -151,6 +159,8 @@ pub fn viewport_surface_panel<H: UiHost>(
                 action_cx.window,
                 props_c,
                 mv.pixels_per_point,
+                mv.pointer_id,
+                mv.pointer_type,
                 mv.position,
                 ViewportInputKind::PointerMove {
                     buttons: mv.buttons,
@@ -183,6 +193,8 @@ pub fn viewport_surface_panel<H: UiHost>(
                 action_cx.window,
                 props_c,
                 up.pixels_per_point,
+                up.pointer_id,
+                up.pointer_type,
                 up.position,
                 ViewportInputKind::PointerUp {
                     button: up.button,
@@ -217,6 +229,8 @@ pub fn viewport_surface_panel<H: UiHost>(
                 action_cx.window,
                 props_c,
                 wheel.pixels_per_point,
+                wheel.pointer_id,
+                wheel.pointer_type,
                 wheel.position,
                 ViewportInputKind::Wheel {
                     delta: wheel.delta,

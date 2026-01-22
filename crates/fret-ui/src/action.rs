@@ -97,6 +97,7 @@ pub struct WheelCx {
     pub pixels_per_point: f32,
     pub delta: Point,
     pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
 }
 
 /// Pinch (magnify) gesture payload for component-owned pinch handlers.

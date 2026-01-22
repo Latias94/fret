@@ -958,6 +958,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             button,
                             modifiers,
                             click_count,
+                            pointer_type,
                             ..
                         } => {
                             // Arbitration: while a dock drag session is active (or viewport capture is
@@ -965,10 +966,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             // secondary button press. The active session owns the interaction.
                             if dock_drag_affects_window
                                 || has_pending_dock_drag
-                                || self.viewport_capture.is_some()
                                 || self.divider_drag.is_some()
                                 || self.floating_drag.is_some()
                             {
+                                return;
+                            }
+                            if let Some(capture) = self.viewport_capture.as_ref() {
+                                if docking_interaction_settings
+                                    .suppress_context_menu_during_viewport_capture
+                                    && *button == fret_core::MouseButton::Right
+                                    && capture.button != fret_core::MouseButton::Right
+                                {
+                                    stop_propagation = true;
+                                }
                                 return;
                             }
 
@@ -1167,6 +1177,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     self.window,
                                     hit.clone(),
                                     pixels_per_point,
+                                    pointer_id,
+                                    *pointer_type,
                                     *position,
                                     ViewportInputKind::PointerDown {
                                         button: *button,
@@ -1179,6 +1191,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 }
 
                                 self.viewport_capture = Some(ViewportCaptureState {
+                                    pointer_id,
                                     hit,
                                     button: *button,
                                     start: *position,
@@ -1191,8 +1204,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             position,
                             buttons,
                             modifiers,
+                            pointer_type,
                             ..
                         } => {
+                            if self
+                                .viewport_capture
+                                .as_ref()
+                                .is_some_and(|capture| capture.pointer_id != pointer_id)
+                            {
+                                return;
+                            }
                             if let Some(drag) = self.floating_drag {
                                 let desired = Rect::new(
                                     Point::new(
@@ -1400,11 +1421,28 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 }
 
                                 if let Some(capture) = self.viewport_capture.as_mut() {
+                                    if !capture.moved
+                                        && capture.button == fret_core::MouseButton::Right
+                                    {
+                                        let dx = position.x.0 - capture.start.x.0;
+                                        let dy = position.y.0 - capture.start.y.0;
+                                        let dist2 = dx * dx + dy * dy;
+                                        let threshold = docking_interaction_settings
+                                            .viewport_context_menu_drag_threshold
+                                            .0
+                                            .max(0.0);
+                                        if dist2 >= threshold * threshold {
+                                            capture.moved = true;
+                                        }
+                                    }
+
                                     let hit = capture.hit.clone();
                                     let e = viewport_input_from_hit_clamped(
                                         self.window,
                                         hit,
                                         pixels_per_point,
+                                        pointer_id,
+                                        *pointer_type,
                                         *position,
                                         ViewportInputKind::PointerMove {
                                             buttons: *buttons,
@@ -1441,6 +1479,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 self.window,
                                                 hit,
                                                 pixels_per_point,
+                                                pointer_id,
+                                                *pointer_type,
                                                 *position,
                                                 ViewportInputKind::PointerMove {
                                                     buttons: *buttons,
@@ -1463,6 +1503,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             position,
                             delta,
                             modifiers,
+                            pointer_type,
                             ..
                         } => {
                             let bounds = self.last_bounds;
@@ -1531,6 +1572,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     self.window,
                                     hit,
                                     pixels_per_point,
+                                    pointer_id,
+                                    *pointer_type,
                                     *position,
                                     ViewportInputKind::Wheel {
                                         delta: *delta,
@@ -1548,8 +1591,21 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             button,
                             modifiers,
                             click_count,
+                            pointer_type,
                             ..
                         } => {
+                            if docking_interaction_settings
+                                .suppress_context_menu_during_viewport_capture
+                                && *button == fret_core::MouseButton::Right
+                                && self
+                                    .viewport_capture
+                                    .as_ref()
+                                    .is_some_and(|c| c.button != fret_core::MouseButton::Right)
+                            {
+                                stop_propagation = true;
+                                return;
+                            }
+
                             let mut handled = false;
                             if *button == fret_core::MouseButton::Left && has_pending_dock_drag {
                                 self.pending_dock_drags.remove(&pointer_id);
@@ -1687,16 +1743,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             }
 
                             if !handled {
-                                let released_capture = self
-                                    .viewport_capture
-                                    .as_ref()
-                                    .is_some_and(|c| c.button == *button);
+                                let released_capture =
+                                    self.viewport_capture.as_ref().is_some_and(|c| {
+                                        c.pointer_id == pointer_id && c.button == *button
+                                    });
                                 if released_capture {
                                     let capture = self.viewport_capture.take().unwrap();
                                     let e = viewport_input_from_hit_clamped(
                                         self.window,
                                         capture.hit.clone(),
                                         pixels_per_point,
+                                        pointer_id,
+                                        *pointer_type,
                                         *position,
                                         ViewportInputKind::PointerUp {
                                             button: *button,
@@ -1710,6 +1768,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     dock.hover = None;
                                     request_pointer_capture = Some(None);
                                     invalidate_paint = true;
+                                    if docking_interaction_settings
+                                        .suppress_context_menu_during_viewport_capture
+                                        && capture.button == fret_core::MouseButton::Right
+                                        && capture.moved
+                                    {
+                                        stop_propagation = true;
+                                    }
                                 }
 
                                 if !released_capture
@@ -1776,6 +1841,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             self.window,
                                             hit,
                                             pixels_per_point,
+                                            pointer_id,
+                                            *pointer_type,
                                             *position,
                                             ViewportInputKind::PointerUp {
                                                 button: *button,

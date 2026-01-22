@@ -76,6 +76,8 @@ pub struct ViewportInputGeometry {
 pub struct ViewportInputEvent {
     pub window: AppWindowId,
     pub target: RenderTargetId,
+    pub pointer_id: PointerId,
+    pub pointer_type: PointerType,
     pub geometry: ViewportInputGeometry,
     /// Cursor position in window-local **logical pixels** as reported by the UI event system.
     ///
@@ -93,6 +95,8 @@ Normative unit rules:
 - `Rect`/`Point` values in `geometry` and `cursor_px` are **logical pixels** (ADR 0017).
 - `target_px_size` and `target_px` are **physical pixels** for the engine target.
 - `pixels_per_point` is the conversion factor from logical → physical pixels.
+- `pointer_id` and `pointer_type` mirror the originating UI pointer stream, enabling tooling to
+  disambiguate multi-pointer interactions (touch/pen + mouse) without relying on global state.
 
 ### 2) Update viewport widgets to emit the explicit-units event
 

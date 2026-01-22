@@ -278,7 +278,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             delta,
             modifiers,
             pointer_id,
-            pointer_type: _,
+            pointer_type,
             ..
         }) => {
             let hook = crate::elements::with_element_state(
@@ -300,6 +300,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 pixels_per_point,
                 delta: *delta,
                 modifiers: *modifiers,
+                pointer_type: *pointer_type,
             };
 
             let mut host = PointerHookHost {

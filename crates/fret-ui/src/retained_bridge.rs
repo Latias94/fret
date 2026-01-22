@@ -147,6 +147,8 @@ pub mod viewport_surface {
                 button,
                 modifiers,
                 click_count,
+                pointer_id,
+                pointer_type,
                 ..
             }) => {
                 let kind = ViewportInputKind::PointerDown {
@@ -159,6 +161,8 @@ pub mod viewport_surface {
                     target,
                     &mapping,
                     pixels_per_point,
+                    *pointer_id,
+                    *pointer_type,
                     *position,
                     kind,
                 ) else {
@@ -185,6 +189,8 @@ pub mod viewport_surface {
                 position,
                 buttons,
                 modifiers,
+                pointer_id,
+                pointer_type,
                 ..
             }) => {
                 if let Some(c) = capture
@@ -201,6 +207,8 @@ pub mod viewport_surface {
                         c.target,
                         &c.mapping,
                         pixels_per_point,
+                        *pointer_id,
+                        *pointer_type,
                         *position,
                         ViewportInputKind::PointerMove {
                             buttons: *buttons,
@@ -217,6 +225,8 @@ pub mod viewport_surface {
                     target,
                     &mapping,
                     pixels_per_point,
+                    *pointer_id,
+                    *pointer_type,
                     *position,
                     ViewportInputKind::PointerMove {
                         buttons: *buttons,
@@ -234,6 +244,8 @@ pub mod viewport_surface {
                 button,
                 modifiers,
                 click_count,
+                pointer_id,
+                pointer_type,
                 ..
             }) => {
                 let Some(c) = *capture else {
@@ -253,6 +265,8 @@ pub mod viewport_surface {
                     c.target,
                     &c.mapping,
                     pixels_per_point,
+                    *pointer_id,
+                    *pointer_type,
                     *position,
                     ViewportInputKind::PointerUp {
                         button: *button,
@@ -275,6 +289,8 @@ pub mod viewport_surface {
                 position,
                 delta,
                 modifiers,
+                pointer_id,
+                pointer_type,
                 ..
             }) => {
                 let Some(evt) = ViewportInputEvent::from_mapping_window_point(
@@ -282,6 +298,8 @@ pub mod viewport_surface {
                     target,
                     &mapping,
                     pixels_per_point,
+                    *pointer_id,
+                    *pointer_type,
                     *position,
                     ViewportInputKind::Wheel {
                         delta: *delta,

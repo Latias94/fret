@@ -19,7 +19,8 @@ Tier A is the recommended choice for:
   - `WinitAppDriver::record_engine_frame(...) -> EngineFrameUpdate` (ADR 0038).
 - Input is forwarded from UI to the app via:
   - `Effect::ViewportInput(ViewportInputEvent)` (ADR 0007 / ADR 0098),
-  - `ViewportInputEvent` carries `target`, `uv` and `pos_px` (viewport-local), plus button/modifiers.
+  - `ViewportInputEvent` carries `target`, `cursor_px` (window logical px), `uv`, `target_px`, plus
+    button/modifiers and pointer identity (ADR 0147).
 
 ## End-to-end shape (recommended)
 
@@ -112,7 +113,7 @@ Tier A options:
 ## Common pitfalls
 
 - **Don’t pass window-space pointer coordinates into the engine.** Always use `ViewportInputEvent.uv` or
-  `pos_px` (viewport-local).
+  `ViewportInputEvent.target_px` (viewport-local in render-target pixels).
 - **Be explicit about color space** for render targets (`RenderTargetColorSpace::Srgb` vs `Linear`).
 - **Don’t leak wgpu into components.** Keep engine rendering in the driver/engine subsystem (Tier A),
   keep UI policy in ecosystem components (Tier B).

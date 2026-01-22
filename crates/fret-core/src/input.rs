@@ -365,6 +365,8 @@ pub struct ViewportInputGeometry {
 pub struct ViewportInputEvent {
     pub window: AppWindowId,
     pub target: RenderTargetId,
+    pub pointer_id: PointerId,
+    pub pointer_type: PointerType,
     pub geometry: ViewportInputGeometry,
     /// Cursor position in window-local logical pixels (ADR 0017).
     pub cursor_px: Point,
@@ -445,6 +447,8 @@ impl ViewportInputEvent {
         target: RenderTargetId,
         mapping: &ViewportMapping,
         pixels_per_point: f32,
+        pointer_id: PointerId,
+        pointer_type: PointerType,
         position: Point,
         kind: ViewportInputKind,
     ) -> Option<Self> {
@@ -454,6 +458,8 @@ impl ViewportInputEvent {
         Some(Self {
             window,
             target,
+            pointer_id,
+            pointer_type,
             geometry: ViewportInputGeometry {
                 content_rect_px: mapping.content_rect,
                 draw_rect_px: mapped.draw_rect,
@@ -473,6 +479,8 @@ impl ViewportInputEvent {
         target: RenderTargetId,
         mapping: &ViewportMapping,
         pixels_per_point: f32,
+        pointer_id: PointerId,
+        pointer_type: PointerType,
         position: Point,
         kind: ViewportInputKind,
     ) -> Self {
@@ -482,6 +490,8 @@ impl ViewportInputEvent {
         Self {
             window,
             target,
+            pointer_id,
+            pointer_type,
             geometry: ViewportInputGeometry {
                 content_rect_px: mapping.content_rect,
                 draw_rect_px: mapped.draw_rect,
@@ -506,6 +516,8 @@ mod viewport_input_event_tests {
         ViewportInputEvent {
             window: AppWindowId::default(),
             target: RenderTargetId::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
             geometry: ViewportInputGeometry {
                 content_rect_px: Rect::new(
                     Point::new(Px(0.0), Px(0.0)),
