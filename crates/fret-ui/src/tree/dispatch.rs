@@ -9,6 +9,12 @@ struct PendingInvalidation {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn event_is_scroll_like(event: &Event) -> bool {
+        // Wheel-only for now (trackpad pan / inertial scrolling can be added later as explicit
+        // inputs without changing the meaning of "Wheel" today).
+        matches!(event, Event::Pointer(PointerEvent::Wheel { .. }))
+    }
+
     fn run_pressable_hover_hook(
         app: &mut H,
         window: AppWindowId,
@@ -869,6 +875,7 @@ impl<H: UiHost> UiTree<H> {
         let mut suppress_touch_up_outside_dispatch = false;
         let mut suppress_pointer_dispatch = false;
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
+        let is_scroll_like = Self::event_is_scroll_like(event);
         let mut wheel_stop_node: Option<NodeId> = None;
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
 
@@ -1081,7 +1088,7 @@ impl<H: UiHost> UiTree<H> {
                     let blocks_pointer_dispatch = match occlusion {
                         PointerOcclusion::None => false,
                         PointerOcclusion::BlockMouse => true,
-                        PointerOcclusion::BlockMouseExceptScroll => !is_wheel,
+                        PointerOcclusion::BlockMouseExceptScroll => !is_scroll_like,
                     };
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
