@@ -75,6 +75,8 @@ struct WebNode {
     #[serde(default)]
     attrs: BTreeMap<String, String>,
     rect: WebRect,
+    #[serde(rename = "computedStyle", default)]
+    computed_style: BTreeMap<String, String>,
     #[serde(default)]
     text: Option<String>,
     #[serde(default)]
@@ -1006,6 +1008,15 @@ fn parse_align(value: &str) -> Option<Align> {
     })
 }
 
+fn parse_px(value: &str) -> Option<f32> {
+    let value = value.trim();
+    if value == "0" {
+        return Some(0.0);
+    }
+    let value = value.strip_suffix("px").unwrap_or(value);
+    value.parse::<f32>().ok()
+}
+
 fn rect_right(r: WebRect) -> f32 {
     r.x + r.w
 }
@@ -1037,6 +1048,38 @@ fn point_rect(p: WebPoint) -> WebRect {
         w: 0.0,
         h: 0.0,
     }
+}
+
+fn web_css_px(node: &WebNode, key: &str) -> Option<f32> {
+    node.computed_style.get(key).and_then(|v| parse_px(v))
+}
+
+fn web_portal_nodes_by_data_slot<'a>(theme: &'a WebGoldenTheme, slot: &str) -> Vec<&'a WebNode> {
+    let mut nodes = Vec::new();
+    let mut walk = |root: &'a WebNode| {
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            if node
+                .attrs
+                .get("data-slot")
+                .is_some_and(|s| s.as_str() == slot)
+            {
+                nodes.push(node);
+            }
+            for child in &node.children {
+                stack.push(child);
+            }
+        }
+    };
+
+    for portal in &theme.portals {
+        walk(portal);
+    }
+    for wrapper in &theme.portal_wrappers {
+        walk(wrapper);
+    }
+
+    nodes
 }
 
 fn rect_main_gap(side: Side, trigger: WebRect, content: WebRect) -> f32 {
@@ -3507,6 +3550,283 @@ fn assert_dropdown_menu_demo_constrained_menu_item_height_matches(web_name: &str
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual_hs = fret_menu_item_heights_in_menus(&snap);
     assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_profile_item_padding_and_shortcut_match() {
+    assert_dropdown_menu_demo_profile_item_padding_and_shortcut_match_impl("dropdown-menu-demo");
+}
+
+fn assert_dropdown_menu_demo_profile_item_padding_and_shortcut_match_impl(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_profile_item = web_portal_nodes_by_data_slot(&theme, "dropdown-menu-item")
+        .into_iter()
+        .find(|n| {
+            n.text
+                .as_deref()
+                .is_some_and(|text| text.starts_with("Profile"))
+        })
+        .unwrap_or_else(|| panic!("missing web Profile dropdown-menu-item node for {web_name}"));
+
+    let expected_pad_left = web_css_px(web_profile_item, "paddingLeft")
+        .unwrap_or_else(|| panic!("missing web Profile paddingLeft for {web_name}"));
+    let expected_pad_right = web_css_px(web_profile_item, "paddingRight")
+        .unwrap_or_else(|| panic!("missing web Profile paddingRight for {web_name}"));
+    let expected_gap = web_css_px(web_profile_item, "gap")
+        .unwrap_or_else(|| panic!("missing web Profile gap for {web_name}"));
+    assert_close(
+        &format!("{web_name} web Profile gap px"),
+        expected_gap,
+        8.0,
+        0.1,
+    );
+
+    let web_profile_shortcut = find_first(web_profile_item, &|n| {
+        n.attrs
+            .get("data-slot")
+            .is_some_and(|v| v.as_str() == "dropdown-menu-shortcut")
+    })
+    .unwrap_or_else(|| panic!("missing web Profile dropdown-menu-shortcut node for {web_name}"));
+    let expected_shortcut_right_inset =
+        rect_right(web_profile_item.rect) - rect_right(web_profile_shortcut.rect);
+    assert_close(
+        &format!("{web_name} web Profile shortcut right inset == paddingRight"),
+        expected_shortcut_right_inset,
+        expected_pad_right,
+        0.25,
+    );
+
+    let web_sub_trigger = web_portal_node_by_data_slot(&theme, "dropdown-menu-sub-trigger");
+    let web_sub_trigger_pad_right =
+        web_css_px(web_sub_trigger, "paddingRight").unwrap_or_else(|| {
+            panic!("missing web dropdown-menu-sub-trigger paddingRight for {web_name}")
+        });
+    let web_sub_trigger_chevron =
+        find_first(web_sub_trigger, &|n| n.tag == "svg").unwrap_or_else(|| {
+            panic!("missing web dropdown-menu-sub-trigger chevron svg for {web_name}")
+        });
+    let expected_chevron_right_inset =
+        rect_right(web_sub_trigger.rect) - rect_right(web_sub_trigger_chevron.rect);
+    assert_close(
+        &format!("{web_name} web Invite users chevron right inset == paddingRight"),
+        expected_chevron_right_inset,
+        web_sub_trigger_pad_right,
+        0.25,
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+            DropdownMenuLabel, DropdownMenuShortcut,
+        };
+
+        DropdownMenu::new(open.clone())
+            .min_width(Px(224.0))
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Profile")
+                                .test_id("dropdown-menu.profile")
+                                .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Billing")
+                                .trailing(DropdownMenuShortcut::new("⌘B").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Settings")
+                                .trailing(DropdownMenuShortcut::new("⌘S").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Keyboard shortcuts")
+                                .trailing(DropdownMenuShortcut::new("⌘K").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Team")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Invite users").submenu(
+                            vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ],
+                        )),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("New Team")
+                                .trailing(DropdownMenuShortcut::new("⌘+T").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Support")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("API").disabled(true)),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Log out")
+                                .trailing(DropdownMenuShortcut::new("⇧⌘Q").into_element(cx)),
+                        ),
+                    ]
+                },
+            )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let menu = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| {
+            let area_a = a.bounds.size.width.0 * a.bounds.size.height.0;
+            let area_b = b.bounds.size.width.0 * b.bounds.size.height.0;
+            area_a.total_cmp(&area_b)
+        })
+        .unwrap_or_else(|| panic!("missing fret Menu semantics for {web_name}"));
+
+    let profile_item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItem
+                && n.test_id.as_deref() == Some("dropdown-menu.profile")
+                && fret_rect_contains(menu.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Profile MenuItem semantics for {web_name}"));
+    let profile_label_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("Profile")
+                && fret_rect_contains(profile_item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Profile Text semantics for {web_name}"));
+    let profile_shortcut_text = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Text
+                && n.label.as_deref() == Some("⇧⌘P")
+                && fret_rect_contains(profile_item.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Profile shortcut Text semantics for {web_name}"));
+
+    let actual_pad_left = profile_label_text.bounds.origin.x.0 - profile_item.bounds.origin.x.0;
+    assert_close(
+        &format!("{web_name} Profile paddingLeft"),
+        actual_pad_left,
+        expected_pad_left,
+        1.5,
+    );
+    let profile_right = profile_item.bounds.origin.x.0 + profile_item.bounds.size.width.0;
+    let shortcut_right =
+        profile_shortcut_text.bounds.origin.x.0 + profile_shortcut_text.bounds.size.width.0;
+    let actual_shortcut_right_inset = profile_right - shortcut_right;
+    assert_close(
+        &format!("{web_name} Profile shortcut right inset"),
+        actual_shortcut_right_inset,
+        expected_shortcut_right_inset,
+        1.0,
+    );
+
+    let invite_users_item = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::MenuItem
+                && n.label.as_deref() == Some("Invite users")
+                && fret_rect_contains(menu.bounds, n.bounds)
+        })
+        .unwrap_or_else(|| panic!("missing fret Invite users MenuItem semantics for {web_name}"));
+    let invite_right = invite_users_item.bounds.origin.x.0 + invite_users_item.bounds.size.width.0;
+    let chevron_candidates: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| fret_rect_contains(invite_users_item.bounds, n.bounds))
+        .filter(|n| {
+            (n.bounds.size.width.0 - 16.0).abs() <= 1.0
+                && (n.bounds.size.height.0 - 16.0).abs() <= 1.0
+        })
+        .filter(|n| n.bounds.origin.x.0 >= invite_right - 48.0)
+        .collect();
+    let chevron = chevron_candidates
+        .into_iter()
+        .max_by(|a, b| {
+            let right_a = a.bounds.origin.x.0 + a.bounds.size.width.0;
+            let right_b = b.bounds.origin.x.0 + b.bounds.size.width.0;
+            right_a.total_cmp(&right_b)
+        })
+        .unwrap_or_else(|| {
+            let sample: Vec<_> = snap
+                .nodes
+                .iter()
+                .filter(|n| fret_rect_contains(invite_users_item.bounds, n.bounds))
+                .map(|n| (n.role, n.label.as_deref(), n.bounds))
+                .take(24)
+                .collect();
+            panic!(
+                "missing fret Invite users chevron candidate for {web_name}; sample(role,label,bounds)={sample:?}"
+            )
+        });
+
+    let chevron_right = chevron.bounds.origin.x.0 + chevron.bounds.size.width.0;
+    let actual_chevron_right_inset = invite_right - chevron_right;
+    assert_close(
+        &format!("{web_name} Invite users chevron right inset"),
+        actual_chevron_right_inset,
+        expected_chevron_right_inset,
+        1.0,
+    );
 }
 
 #[test]
