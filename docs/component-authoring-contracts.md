@@ -44,6 +44,46 @@ at least one regression test before expanding usage.
 - Anchoring helpers for overlays: `fret_ui_kit::overlay::*`
 - Control chrome wrapper (focus ring + clipping split): `fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props`
 - Styling refinements: `fret_ui_kit::{ChromeRefinement, LayoutRefinement, StyledExt, Space, Radius, ColorRef, MetricRef}`
+- Unified authoring builder surface (ADR 0175): `fret_ui_kit::{UiExt, UiPatchTarget, UiIntoElement, UiBuilder}`
+
+## Unified authoring builder surface (ADR 0175)
+
+Goal: allow ecosystem and third-party crates to compose components with a single default “dialect”:
+
+- `component.ui().px_3().py_2().w_full().into_element(cx)`
+
+This is an ecosystem-only surface (lives in `fret-ui-kit`) and is expected to evolve faster than
+kernel contracts.
+
+### Minimal third-party integration contract
+
+If you want other crates to style/layout your component in a uniform way, implement these traits on
+your public component types:
+
+- `UiPatchTarget`: apply aggregated `{ chrome, layout }` patches.
+- `UiIntoElement`: render into `AnyElement` (so `UiBuilder::into_element(cx)` works).
+- `UiSupportsChrome` / `UiSupportsLayout` (optional): enable the full fluent method set.
+
+Practical pattern (recommended):
+
+1. Keep your type as a plain builder struct that stores fields (`chrome`, `layout`, `children`, etc.).
+2. Implement your rendering as an inherent `into_element(self, cx)` method (or `RenderOnce` if needed).
+3. Implement `UiPatchTarget` by delegating to your existing `refine_style/refine_layout` methods.
+
+### Children collection rule (ecosystem convention)
+
+Public constructors/setters that accept children should use:
+
+- `children: impl IntoIterator<Item = AnyElement>` (call-site flexible),
+- store internally as `Vec<AnyElement>` (stable storage),
+- avoid forcing `vec![...]` at the call site.
+
+### What not to do
+
+- Do not install global policy as a side effect of constructing a component (e.g. overlay controllers,
+  keymaps, theme registries). Use explicit `install(...)` entrypoints in app-facing crates instead.
+- Do not leak kernel-level props types in your public API unless you are intentionally exposing a
+  mechanism surface.
 
 ## Identity and element-local state (hard-to-change contract)
 

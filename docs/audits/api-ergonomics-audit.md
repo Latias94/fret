@@ -45,7 +45,9 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
   - Evidence: `ecosystem/fret-ui-shadcn/src/{collapsible,command,input_group,table,tabs,toggle_group}.rs`
-- [ ] Consolidate third-party “component integration contract” guidance (P2) with a short checklist + examples.
+- [x] Consolidate third-party “component integration contract” guidance (P2) with a short checklist.
+  - Evidence: `docs/component-authoring-contracts.md`
+  - Evidence: `docs/component-author-guide.md`
 
 ## Comparison Matrix (Iced vs GPUI vs Fret)
 
