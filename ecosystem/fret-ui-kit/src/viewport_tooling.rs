@@ -51,6 +51,7 @@ pub struct ViewportToolArbitrator {
     hot: Option<ViewportToolId>,
     active: Option<ViewportToolId>,
     active_button: Option<MouseButton>,
+    active_pointer_id: Option<fret_core::PointerId>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -58,6 +59,7 @@ pub struct ViewportToolRouterState {
     pub hot: Option<ViewportToolId>,
     pub active: Option<ViewportToolId>,
     pub active_button: Option<MouseButton>,
+    pub active_pointer_id: Option<fret_core::PointerId>,
 }
 
 pub struct ViewportToolEntry<T> {
@@ -97,6 +99,7 @@ pub fn cancel_active_viewport_tools<T>(
     state.hot = None;
     state.active = None;
     state.active_button = None;
+    state.active_pointer_id = None;
     true
 }
 
@@ -111,31 +114,35 @@ pub fn route_viewport_tools<T>(
         state.hot = None;
         state.active = None;
         state.active_button = None;
+        state.active_pointer_id = None;
         return false;
     }
 
     tools.sort_by_key(|t| Reverse(t.priority.0));
 
     if let ViewportInputKind::PointerCancel { .. } = event.kind {
-        let mut handled = false;
-        if state.active.is_some() {
-            handled |= cancel_active_viewport_tools(state, host, tools);
-        } else if let Some(hot) = state.hot
-            && let Some(entry) = tools.iter_mut().find(|t| t.id == hot)
-        {
-            call_set_hot(host, entry, false);
-            state.hot = None;
-            handled = true;
+        let active_pointer_matches = state
+            .active_pointer_id
+            .is_none_or(|p| p == event.pointer_id);
+        if state.active.is_some() && active_pointer_matches {
+            return cancel_active_viewport_tools(state, host, tools);
         }
-        state.active = None;
-        state.active_button = None;
-        return handled;
+        return false;
     }
 
     let input = derive_input(config, state.active_button, event);
     let cx = ViewportToolCx { event, input };
 
     if let Some(active) = state.active {
+        if let Some(active_pointer_id) = state.active_pointer_id
+            && active_pointer_id != event.pointer_id
+        {
+            return false;
+        }
+        if state.active_pointer_id.is_none() {
+            state.active_pointer_id = Some(event.pointer_id);
+        }
+
         force_hot(state, host, tools, active);
         let handled = if let Some(entry) = tools.iter_mut().find(|t| t.id == active) {
             (entry.handle_event)(host, cx, true, true).handled
@@ -146,6 +153,7 @@ pub fn route_viewport_tools<T>(
         if !cx.input.dragging {
             state.active = None;
             state.active_button = None;
+            state.active_pointer_id = None;
         }
         return handled;
     }
@@ -276,6 +284,7 @@ fn dispatch_pointer_down<T>(
         if res.capture {
             state.active = Some(id);
             state.active_button = down_button;
+            state.active_pointer_id = Some(cx.event.pointer_id);
             force_hot(state, host, tools, id);
         }
         return true;
@@ -333,6 +342,7 @@ impl ViewportToolArbitrator {
             hot: None,
             active: None,
             active_button: None,
+            active_pointer_id: None,
         }
     }
 
@@ -354,6 +364,7 @@ impl ViewportToolArbitrator {
         self.hot = None;
         self.active = None;
         self.active_button = None;
+        self.active_pointer_id = None;
     }
 
     pub fn clear_tools(&mut self) {
@@ -361,6 +372,7 @@ impl ViewportToolArbitrator {
         self.hot = None;
         self.active = None;
         self.active_button = None;
+        self.active_pointer_id = None;
     }
 
     pub fn cancel_active(&mut self) {
@@ -371,6 +383,7 @@ impl ViewportToolArbitrator {
         }
         self.active = None;
         self.active_button = None;
+        self.active_pointer_id = None;
     }
 
     /// Cancels the active interaction (if any) and clears the hot tool.
@@ -389,20 +402,37 @@ impl ViewportToolArbitrator {
             self.hot = None;
             self.active = None;
             self.active_button = None;
+            self.active_pointer_id = None;
             return false;
         }
 
         if let ViewportInputKind::PointerCancel { .. } = event.kind {
-            let had_active = self.active.is_some();
-            let had_hot = self.hot.is_some();
-            self.cancel_active_and_clear_hot();
-            return had_active || had_hot;
+            if self
+                .active_pointer_id
+                .is_some_and(|p| p != event.pointer_id)
+            {
+                return false;
+            }
+            if self.active.is_some() {
+                self.cancel_active_and_clear_hot();
+                return true;
+            }
+            return false;
         }
 
         let input = self.derive_input(event);
         let cx = ViewportToolCx { event, input };
 
         if let Some(active) = self.active {
+            if let Some(active_pointer_id) = self.active_pointer_id
+                && active_pointer_id != event.pointer_id
+            {
+                return false;
+            }
+            if self.active_pointer_id.is_none() {
+                self.active_pointer_id = Some(event.pointer_id);
+            }
+
             self.force_hot(active);
             let handled = if let Some(idx) = self.index_of(active) {
                 self.tools[idx].handle_event(cx, true, true).handled
@@ -413,6 +443,7 @@ impl ViewportToolArbitrator {
             if !cx.input.dragging {
                 self.active = None;
                 self.active_button = None;
+                self.active_pointer_id = None;
             }
             return handled;
         }
@@ -524,6 +555,7 @@ impl ViewportToolArbitrator {
             if res.capture {
                 self.active = Some(id);
                 self.active_button = down_button;
+                self.active_pointer_id = Some(cx.event.pointer_id);
                 self.force_hot(id);
             }
             return true;
@@ -790,6 +822,7 @@ mod tests {
             hot: Some(ViewportToolId(1)),
             active: Some(ViewportToolId(1)),
             active_button: Some(MouseButton::Left),
+            active_pointer_id: Some(fret_core::PointerId(0)),
         };
         let mut tools = [ViewportToolEntry {
             id: ViewportToolId(1),
@@ -807,5 +840,115 @@ mod tests {
         assert_eq!(state.hot, None);
         assert_eq!(state.active, None);
         assert_eq!(state.active_button, None);
+        assert_eq!(state.active_pointer_id, None);
+    }
+
+    #[test]
+    fn callback_router_active_tool_is_pointer_local() {
+        #[derive(Default)]
+        struct Host {
+            moves_active: u32,
+        }
+
+        fn set_hot(_host: &mut Host, _hot: bool) {}
+        fn hit_test(_host: &mut Host, _cx: ViewportToolCx<'_>) -> bool {
+            true
+        }
+        fn handle_event(
+            host: &mut Host,
+            cx: ViewportToolCx<'_>,
+            _hot: bool,
+            active: bool,
+        ) -> ViewportToolResult {
+            match cx.event.kind {
+                ViewportInputKind::PointerDown { .. } => ViewportToolResult::handled_and_capture(),
+                ViewportInputKind::PointerMove { .. } if active => {
+                    host.moves_active += 1;
+                    ViewportToolResult::handled()
+                }
+                _ => ViewportToolResult::unhandled(),
+            }
+        }
+
+        let mut host = Host::default();
+        let mut state = ViewportToolRouterState::default();
+        let mut tools = [ViewportToolEntry {
+            id: ViewportToolId(1),
+            priority: ViewportToolPriority(0),
+            set_hot: Some(set_hot),
+            hit_test,
+            handle_event,
+            cancel: None,
+        }];
+
+        let mut down = dummy_event(ViewportInputKind::PointerDown {
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+        });
+        down.pointer_id = fret_core::PointerId(0);
+        assert!(route_viewport_tools(
+            &mut state,
+            Default::default(),
+            &mut host,
+            &down,
+            &mut tools
+        ));
+        assert_eq!(state.active, Some(ViewportToolId(1)));
+        assert_eq!(state.active_pointer_id, Some(fret_core::PointerId(0)));
+
+        let mut move_other = dummy_event(ViewportInputKind::PointerMove {
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+        });
+        move_other.pointer_id = fret_core::PointerId(1);
+        assert!(!route_viewport_tools(
+            &mut state,
+            Default::default(),
+            &mut host,
+            &move_other,
+            &mut tools
+        ));
+        assert_eq!(host.moves_active, 0);
+        assert_eq!(state.active, Some(ViewportToolId(1)));
+
+        let mut move_active = move_other;
+        move_active.pointer_id = fret_core::PointerId(0);
+        assert!(route_viewport_tools(
+            &mut state,
+            Default::default(),
+            &mut host,
+            &move_active,
+            &mut tools
+        ));
+        assert_eq!(host.moves_active, 1);
+    }
+
+    #[test]
+    fn arbitrator_active_tool_is_pointer_local() {
+        let mut a = TestTool::new(1, 0);
+        a.hit = true;
+        a.down_handled = true;
+        a.down_capture = true;
+
+        let mut arb = ViewportToolArbitrator::new(Default::default());
+        arb.set_tools(vec![Box::new(a)]);
+
+        let mut down = dummy_event(ViewportInputKind::PointerDown {
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+        });
+        down.pointer_id = fret_core::PointerId(0);
+        assert!(arb.handle_event(&down));
+        assert_eq!(arb.active_tool(), Some(ViewportToolId(1)));
+
+        let mut move_other = dummy_event(ViewportInputKind::PointerMove {
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+        });
+        move_other.pointer_id = fret_core::PointerId(1);
+        assert!(!arb.handle_event(&move_other));
+        assert_eq!(arb.active_tool(), Some(ViewportToolId(1)));
     }
 }
