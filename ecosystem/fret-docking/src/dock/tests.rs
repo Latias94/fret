@@ -2059,6 +2059,105 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
 }
 
 #[test]
+fn pointer_occlusion_blocks_viewport_hover_and_down_but_allows_wheel_forwarding() {
+    struct HitTestTransparent;
+
+    impl<H: UiHost> Widget<H> for HitTestTransparent {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    // Install a window-level pointer occlusion layer (Radix `disableOutsidePointerEvents`-like).
+    let overlay_root = harness.ui.create_node_retained(HitTestTransparent);
+    let overlay_layer = harness.ui.push_overlay_root_ex(overlay_root, false, true);
+    harness.ui.set_layer_pointer_occlusion(
+        overlay_layer,
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+    );
+    harness.layout();
+    let _ = harness.app.take_effects();
+
+    let position = harness.viewport_point();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected pointer occlusion to suppress viewport hover forwarding, got: {effects:?}",
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected pointer occlusion to suppress viewport capture start, got: {effects:?}",
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected pointer occlusion to prevent viewport capture from requesting pointer capture"
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Wheel {
+            position,
+            delta: Point::new(Px(0.0), Px(12.0)),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    let Some(Effect::ViewportInput(input)) = effects
+        .iter()
+        .find(|e| matches!(e, Effect::ViewportInput(_)))
+    else {
+        panic!(
+            "expected wheel forwarding to still emit a ViewportInput under pointer occlusion, got: {effects:?}"
+        );
+    };
+    assert!(
+        matches!(input.kind, fret_core::ViewportInputKind::Wheel { .. }),
+        "expected wheel forwarding to remain active under BlockMouseExceptScroll, got: {input:?}",
+    );
+}
+
+#[test]
 fn pending_dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
