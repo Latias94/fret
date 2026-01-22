@@ -1356,6 +1356,166 @@ fn radix_web_menubar_outside_click_close_matches_fret() {
 }
 
 #[test]
+fn radix_web_menubar_submenu_outside_click_close_matches_fret() {
+    let golden = read_timeline("menubar-example.menubar.submenu-outside-click-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "menubar");
+    assert_eq!(golden.scenario, "submenu-outside-click-close");
+    assert!(golden.steps.len() >= 4);
+
+    let close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "outside"))
+        .expect("close step");
+    assert!(
+        !has_dom_node_attr(&close_step.snapshot.dom, "data-slot", "menubar-content"),
+        "web expected menubar content to be absent after outside click"
+    );
+    assert!(
+        !has_dom_node_attr(&close_step.snapshot.dom, "data-slot", "menubar-sub-content"),
+        "web expected menubar submenu content to be absent after outside click"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let build = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu};
+
+        Menubar::new(vec![
+            MenubarMenu::new("File").entries(vec![
+                MenubarEntry::Submenu(MenubarItem::new("Share").submenu(vec![
+                    MenubarEntry::Group(MenubarGroup::new(vec![
+                        MenubarEntry::Item(MenubarItem::new("Email link")),
+                        MenubarEntry::Item(MenubarItem::new("Messages")),
+                        MenubarEntry::Item(MenubarItem::new("Notes")),
+                    ])),
+                ])),
+                MenubarEntry::Separator,
+                MenubarEntry::Group(MenubarGroup::new(vec![MenubarEntry::Item(
+                    MenubarItem::new("Print..."),
+                )])),
+            ]),
+            MenubarMenu::new("Edit").entries(vec![MenubarEntry::Group(MenubarGroup::new(vec![
+                MenubarEntry::Item(MenubarItem::new("Undo")),
+                MenubarEntry::Item(MenubarItem::new("Redo")),
+            ]))]),
+        ])
+        .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let file = find_semantics(&snap, SemanticsRole::MenuItem, "File");
+    click_center(&mut ui, &mut app, &mut services, bounds_center(file.bounds));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let share = find_semantics(&snap, SemanticsRole::MenuItem, "Share");
+    move_pointer(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(share.bounds),
+    );
+    deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    snap.nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email link"))
+        .expect("submenu Email link item should be present after hover");
+
+    click_outside(&mut ui, &mut app, &mut services, bounds);
+    deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(4 + tick),
+            request_semantics,
+            |cx| vec![build(cx)],
+        );
+        deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !find_semantics(&snap, SemanticsRole::MenuItem, "File")
+            .flags
+            .expanded,
+        "expected File menu to be closed after outside click"
+    );
+    assert!(
+        snap.nodes
+            .iter()
+            .all(|n| n.label.as_deref().is_none_or(|l| l != "Email link")),
+        "submenu content should be closed after outside click"
+    );
+}
+
+#[test]
 fn radix_web_navigation_menu_open_close_matches_fret() {
     let golden = read_timeline("navigation-menu-example.navigation-menu.open-close.light");
     assert!(golden.version >= 1);
