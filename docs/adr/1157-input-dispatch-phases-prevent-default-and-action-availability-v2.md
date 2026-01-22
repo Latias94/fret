@@ -2,6 +2,23 @@
 
 Status: Proposed
 
+## Implementation Status
+
+This ADR is partially implemented.
+
+Implemented:
+
+- Dispatch phase enum: `crates/fret-runtime/src/input.rs` (`InputDispatchPhase::{Preview,Capture,Bubble}`).
+- `prevent_default` plumbing: `crates/fret-runtime/src/input.rs` (`DefaultAction`, `DefaultActionSet`) and `crates/fret-ui/src/widget.rs` (`EventCx::{prevent_default,default_prevented}`).
+- Default actions step (v1): `DefaultAction::FocusOnPointerDown` is applied by default during event dispatch and can be suppressed via `prevent_default`: `crates/fret-ui/src/tree/dispatch.rs`.
+- Tests: `crates/fret-ui/src/tree/tests/prevent_default.rs`.
+
+Not implemented yet / known gaps:
+
+- Capture-phase dispatch as a first-class pass (separate from Preview/Bubble).
+- Action availability query API (`is_action_available` / dispatch-tree snapshot service).
+- Additional default actions beyond `FocusOnPointerDown` (intentionally deferred to keep v1 low risk).
+
 ## Context
 
 Fret is a non-DOM UI runtime targeting editor-grade interaction workloads (multi-root overlays,
