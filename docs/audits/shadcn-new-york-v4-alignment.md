@@ -70,10 +70,12 @@ Recent fixes:
 - Trigger sizing now matches new-york-v4 defaults (no forced `w-full`/`min-w` on the trigger; dropdown min width defaults to `8rem`).
 - Trigger chrome/content width now tracks the trigger width mode (auto vs fixed), preventing “ellipsis even when there is space” cases.
 - `fret-icons-radix` now vendors `chevron-up.svg`, so Radix-backed semantic `ui.chevron.up` resolves correctly.
+- Trigger `aria-invalid` border + focus ring (including shadcn's invalid ring override colors) now match shadcn-web (`select-demo.invalid`, `select-demo.invalid-focus`).
 
 Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_select_panel_chrome_matches`).
+- Trigger chrome + focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`, `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`, `web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches`).
 - Scroll buttons + viewport inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_listbox_option_insets_match`, `web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match`).
 
@@ -238,7 +240,25 @@ Recent fixes:
     `web_vs_fret_layout_input_group_text_email_geometry_matches`,
     `web_vs_fret_layout_input_group_text_textarea_count_geometry_matches`).
 - Gaps to check next:
-  - Error state (`aria-invalid`) ring/border behavior.
+  - Placeholder + selection colors for group control content (ensure they match upstream shadcn tokens).
+
+### `Textarea`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/textarea.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/textarea.rs`
+- Notes:
+  - Upstream uses the same control chrome taxonomy as `Input` (`border-input`, `shadow-xs`, `focus-visible:ring-[3px]`),
+    including `aria-invalid:border-destructive` and `aria-invalid:ring-destructive/*` overrides.
+- Recent fixes:
+  - `aria-invalid=true` border color now matches shadcn-web (`textarea-demo.invalid`) and is gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_textarea_demo_aria_invalid_border_color_matches`).
+  - Focus ring (`ring-[3px]`) and ring color overrides now match shadcn-web focus variants
+    (`textarea-demo.focus`, `textarea-demo.invalid-focus`) and are gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_textarea_demo_focus_ring_matches`, `web_vs_fret_textarea_demo_aria_invalid_focus_ring_matches`).
+  - Note: shadcn's `aria-invalid:ring-*` is a ring color override; the ring only becomes visible when
+    `focus-visible:ring-[3px]` is also active.
 
 ### `Breadcrumb`
 

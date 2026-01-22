@@ -4145,6 +4145,175 @@ fn web_vs_fret_textarea_demo_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_textarea_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("textarea-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_textarea = find_first(&theme.root, &|n| {
+        n.tag == "textarea" && n.attrs.get("aria-invalid").is_some_and(|v| v == "true")
+    })
+    .expect("web textarea node");
+
+    let web_border_color = web_textarea
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Textarea::new(model)
+                .a11y_label("TextareaInvalid")
+                .aria_invalid(true)
+                .into_element(cx),
+        ]
+    });
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField && n.label.as_deref() == Some("TextareaInvalid")
+        })
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::TextField)
+        })
+        .expect("fret textarea semantics node");
+
+    let quad = find_best_quad(&scene, textarea.bounds).expect("painted quad for textarea");
+    assert_color_close(
+        "textarea aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_textarea_demo_focus_ring_matches() {
+    let web = read_web_golden("textarea-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_textarea =
+        find_first(&theme.root, &|n| n.tag == "textarea").expect("web textarea node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_textarea).expect("web textarea focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Textarea::new(model)
+                    .a11y_label("TextareaFocus")
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("TextareaFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret textarea semantics node")
+        },
+    );
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::TextField && n.label.as_deref() == Some("TextareaFocus"))
+        .expect("missing semantics for textarea");
+
+    let ring_quad = find_focus_ring_quad(&scene, textarea.bounds, expected_ring_spread)
+        .expect("focus ring quad");
+    assert_color_close(
+        "textarea-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_textarea_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("textarea-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_textarea =
+        find_first(&theme.root, &|n| n.tag == "textarea").expect("web textarea node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_textarea).expect("web textarea invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Textarea::new(model)
+                    .a11y_label("TextareaInvalidFocus")
+                    .aria_invalid(true)
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("TextareaInvalidFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret textarea semantics node")
+        },
+    );
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField && n.label.as_deref() == Some("TextareaInvalidFocus")
+        })
+        .expect("missing semantics for textarea");
+
+    let ring_quad = find_focus_ring_quad(&scene, textarea.bounds, expected_ring_spread)
+        .expect("focus ring quad");
+    assert_color_close(
+        "textarea-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
 fn web_vs_fret_select_scrollable_trigger_chrome_matches() {
     let web = read_web_golden("select-scrollable");
     let theme = web
@@ -4194,6 +4363,189 @@ fn web_vs_fret_select_scrollable_trigger_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("select radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_select_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("select-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|v| v == "combobox")
+            && n.attrs.get("aria-invalid").is_some_and(|v| v == "true")
+    })
+    .expect("web select trigger node");
+
+    let web_border_color = web_trigger
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            fret_ui_shadcn::Select::new(model, open)
+                .a11y_label("SelectInvalid")
+                .aria_invalid(true)
+                .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                .into_element(cx),
+        ]
+    });
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectInvalid"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::ComboBox)
+        })
+        .expect("fret select semantics node");
+
+    let quad = find_best_quad(&scene, select.bounds).expect("painted quad for select trigger");
+    assert_color_close(
+        "select aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_focus_ring_matches() {
+    let web = read_web_golden("select-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web select trigger node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_trigger).expect("web select focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Select::new(model, open)
+                    .a11y_label("SelectFocus")
+                    .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                    .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret select semantics node")
+        },
+    );
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectFocus"))
+        .expect("missing semantics for select");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, select.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "select-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("select-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web select trigger node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_trigger).expect("web select invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Select::new(model, open)
+                    .a11y_label("SelectInvalidFocus")
+                    .aria_invalid(true)
+                    .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                    .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::ComboBox
+                        && n.label.as_deref() == Some("SelectInvalidFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret select semantics node")
+        },
+    );
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectInvalidFocus")
+        })
+        .expect("missing semantics for select");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, select.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "select-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
 }
 
 #[test]
