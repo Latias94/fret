@@ -12,6 +12,7 @@ This document tracks executable TODOs for the GPUI parity refactor workstream. I
 - Dirty views + notify: `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
 - Interactivity pseudoclasses + structural stability: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
 - Prepaint + interaction stream range reuse: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
+- Prepaint-windowed virtual surfaces: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md`
 - Cache roots (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
 - Paint-stream replay caching baseline: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 

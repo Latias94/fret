@@ -19,6 +19,7 @@ Tracking:
   - Dirty views + notify: `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
   - Interactivity pseudoclasses + structural stability: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
   - Prepaint + interaction stream range reuse: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
+  - Prepaint-windowed virtual surfaces: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md`
 
 ---
 
@@ -133,6 +134,25 @@ Alignment checklist (v1; what must be derived per frame / per dirty view):
 Audit heuristic: if a component’s child set (or a large portion of its render work) depends on scroll offset / viewport
 and the current implementation rebuilds that structure in the declarative render pass, it is a prime candidate for
 prepaint-driven windows + per-frame ephemeral items.
+
+### 1.6 Ecosystem adoption patterns (how we get ROI beyond a single widget)
+
+To avoid a second “big rewrite” later, we should treat the v1 primitive as an ecosystem-facing building block, not as a
+one-off VirtualList optimization.
+
+Recommended patterns:
+
+- **`fret-ui` provides the mechanism**: a small contract for prepaint-driven windowing and per-frame ephemeral items
+  (e.g. “windowed surfaces”), plus diagnostics hooks to make it explainable.
+- **`fret-ui-kit` provides policy + convenience**:
+  - a `windowed_list` helper that can back lists, tables, and trees,
+  - a `windowed_text_lines` helper for code/text views,
+  - a `windowed_canvas_cull` helper for node graphs/canvas scenes.
+- **`fret-ui-shadcn` and apps consume the helpers**: demos and policy-heavy components migrate first to validate
+  real-world ergonomics and performance.
+
+This keeps `crates/fret-ui` mechanism-only (ADR 0066) while enabling multiple ecosystem crates to benefit from the same
+closed-loop caching and invalidation semantics.
 
 ### 1.4 Contract gates (ADRs)
 
