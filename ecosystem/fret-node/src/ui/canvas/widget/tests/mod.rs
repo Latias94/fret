@@ -1352,6 +1352,21 @@ impl DragHost for TestUiHostImpl {
         self.drag.as_ref().is_some_and(|d| predicate(d))
     }
 
+    fn cancel_drag_sessions(
+        &mut self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Vec<fret_core::PointerId> {
+        let Some(drag) = self.drag.as_ref() else {
+            return Vec::new();
+        };
+        if !predicate(drag) {
+            return Vec::new();
+        }
+        let pointer_id = drag.pointer_id;
+        self.drag = None;
+        vec![pointer_id]
+    }
+
     fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
         self.drag
             .as_mut()
