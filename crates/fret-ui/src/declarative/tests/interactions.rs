@@ -843,6 +843,109 @@ fn selectable_text_sets_active_text_selection() {
 }
 
 #[test]
+fn selectable_text_copy_availability_requires_selection() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root_name = "selectable-text-copy-availability";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    ui.set_focus(Some(selectable_node));
+
+    let copy = CommandId::from("text.copy");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be available for focused selectable text"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be unavailable without a selection"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected text.select_all to be handled by selectable text"
+    );
+
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be available when a selection exists"
+    );
+}
+
+#[test]
+fn selectable_text_copy_availability_respects_clipboard_capabilities() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities {
+        clipboard: fret_runtime::capabilities::ClipboardCapabilities {
+            text: false,
+            files: false,
+        },
+        ..fret_runtime::PlatformCapabilities::default()
+    });
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root_name = "selectable-text-copy-availability-clipboard-caps";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    ui.set_focus(Some(selectable_node));
+
+    let copy = CommandId::from("text.copy");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected text.select_all to be handled by selectable text"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be unavailable when clipboard text is unsupported"
+    );
+    assert!(
+        !ui.dispatch_command(&mut app, &mut services, &copy),
+        "expected text.copy to not be handled when clipboard text is unsupported"
+    );
+}
+
+#[test]
 fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

@@ -326,12 +326,26 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         };
 
         match instance {
-            ElementInstance::SelectableText(_props) => {
+            ElementInstance::SelectableText(props) => {
                 if cx.focus != Some(cx.node) {
                     return CommandAvailability::NotHandled;
                 }
-                if command.as_str() != "text.copy" || !cx.input_ctx.caps.clipboard.text {
-                    return CommandAvailability::NotHandled;
+                match command.as_str() {
+                    "text.select_all" => {
+                        // A focused selectable text surface should always be able to select its full
+                        // content (if non-empty), even though it is not an editable text input.
+                        let has_any_text = !props.rich.text.is_empty();
+                        if has_any_text {
+                            return CommandAvailability::Available;
+                        }
+                        return CommandAvailability::NotHandled;
+                    }
+                    "text.copy" => {
+                        if !cx.input_ctx.caps.clipboard.text {
+                            return CommandAvailability::NotHandled;
+                        }
+                    }
+                    _ => return CommandAvailability::NotHandled,
                 }
                 let has_selection = crate::elements::with_element_state(
                     &mut *cx.app,
