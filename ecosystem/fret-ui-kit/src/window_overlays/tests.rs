@@ -3720,6 +3720,132 @@ fn dock_drag_closes_non_modal_overlays_for_entire_window() {
 }
 
 #[test]
+fn dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Second frame: open a menu-like overlay that enables pointer occlusion.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _trigger2 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+        "expected menu-like overlay to enable pointer occlusion while open"
+    );
+    assert_eq!(snap.topmost_pointer_occluding_overlay, Some(trigger));
+
+    // Start a dock drag session for a *different* pointer id (window-global suppression).
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // Third frame: re-request the overlay; window_overlays policy should force it closed and
+    // drop pointer occlusion even if the layer remains present.
+    begin_frame(&mut app, window);
+    let _trigger3 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(app.models().get_copied(&open), Some(false));
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None,
+        "expected dock drag to force menu-like overlay to drop pointer occlusion"
+    );
+    assert_eq!(snap.topmost_pointer_occluding_overlay, None);
+}
+
+#[test]
 fn dock_drag_does_not_restore_closed_non_modal_overlays_on_drag_end() {
     let window = AppWindowId::default();
     let mut app = App::new();

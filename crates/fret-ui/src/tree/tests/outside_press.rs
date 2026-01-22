@@ -322,6 +322,133 @@ fn outside_press_observer_is_delayed_for_touch_until_pointer_up() {
 }
 
 #[test]
+fn dock_drag_suppresses_outside_press_observer_dispatch_window_globally() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct CountNormalDown {
+        normal: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountNormalDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            true
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.normal, |v: &mut u32| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_down = app.models_mut().insert(0u32);
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CountNormalDown {
+        normal: underlay_down.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Baseline: without dock drag, outside-press observer should run (click-through).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&observer_down), Some(1));
+    assert_eq!(app.models().get_copied(&underlay_down), Some(1));
+
+    // Start a dock drag session for a different pointer id: suppression is window-global.
+    app.begin_cross_window_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(1),
+        "expected dock drag to suppress observer outside-press dispatch"
+    );
+    assert_eq!(app.models().get_copied(&underlay_down), Some(2));
+}
+
+#[test]
 fn outside_press_observer_is_canceled_for_touch_drags() {
     struct RecordObserverDown {
         observer: Model<u32>,
