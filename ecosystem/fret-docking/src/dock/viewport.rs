@@ -19,6 +19,7 @@ pub(super) struct ViewportCaptureState {
     pub(super) hit: ViewportHit,
     pub(super) button: fret_core::MouseButton,
     pub(super) start: Point,
+    pub(super) last: Point,
     pub(super) moved: bool,
 }
 

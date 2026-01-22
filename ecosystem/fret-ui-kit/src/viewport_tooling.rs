@@ -116,6 +116,22 @@ pub fn route_viewport_tools<T>(
 
     tools.sort_by_key(|t| Reverse(t.priority.0));
 
+    if let ViewportInputKind::PointerCancel { .. } = event.kind {
+        let mut handled = false;
+        if state.active.is_some() {
+            handled |= cancel_active_viewport_tools(state, host, tools);
+        } else if let Some(hot) = state.hot
+            && let Some(entry) = tools.iter_mut().find(|t| t.id == hot)
+        {
+            call_set_hot(host, entry, false);
+            state.hot = None;
+            handled = true;
+        }
+        state.active = None;
+        state.active_button = None;
+        return handled;
+    }
+
     let input = derive_input(config, state.active_button, event);
     let cx = ViewportToolCx { event, input };
 
@@ -139,6 +155,7 @@ pub fn route_viewport_tools<T>(
         | ViewportInputKind::PointerDown { .. }
         | ViewportInputKind::Wheel { .. } => update_hot(state, host, tools, cx),
         ViewportInputKind::PointerUp { .. } => {}
+        ViewportInputKind::PointerCancel { .. } => {}
     }
 
     match event.kind {
@@ -147,6 +164,7 @@ pub fn route_viewport_tools<T>(
             dispatch_hot_only(state, host, tools, cx)
         }
         ViewportInputKind::Wheel { .. } => dispatch_wheel(state, host, tools, cx),
+        ViewportInputKind::PointerCancel { .. } => false,
     }
 }
 
@@ -374,6 +392,13 @@ impl ViewportToolArbitrator {
             return false;
         }
 
+        if let ViewportInputKind::PointerCancel { .. } = event.kind {
+            let had_active = self.active.is_some();
+            let had_hot = self.hot.is_some();
+            self.cancel_active_and_clear_hot();
+            return had_active || had_hot;
+        }
+
         let input = self.derive_input(event);
         let cx = ViewportToolCx { event, input };
 
@@ -400,6 +425,7 @@ impl ViewportToolArbitrator {
             ViewportInputKind::Wheel { .. } => {
                 self.update_hot(cx);
             }
+            ViewportInputKind::PointerCancel { .. } => {}
         }
 
         match event.kind {
@@ -407,6 +433,7 @@ impl ViewportToolArbitrator {
             ViewportInputKind::PointerMove { .. } => self.dispatch_hot_only(cx),
             ViewportInputKind::PointerUp { .. } => self.dispatch_hot_only(cx),
             ViewportInputKind::Wheel { .. } => self.dispatch_wheel(cx),
+            ViewportInputKind::PointerCancel { .. } => false,
         }
     }
 
@@ -641,6 +668,9 @@ mod tests {
                 ViewportInputKind::Wheel { .. } => {
                     self.calls
                         .push(if hot { "wheel_hot" } else { "wheel_cold" });
+                }
+                ViewportInputKind::PointerCancel { .. } => {
+                    self.calls.push("pointer_cancel");
                 }
             }
             ViewportToolResult::unhandled()

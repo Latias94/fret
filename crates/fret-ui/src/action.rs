@@ -116,6 +116,21 @@ pub struct PinchGestureCx {
     pub pointer_type: PointerType,
 }
 
+/// Pointer cancel payload for component-owned pointer handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PointerCancelCx {
+    pub pointer_id: PointerId,
+    /// When provided by the platform, this is the last known pointer position (logical pixels).
+    pub position: Option<Point>,
+    pub tick_id: TickId,
+    /// Pixels-per-point (a.k.a. window scale factor) for `position`.
+    pub pixels_per_point: f32,
+    pub buttons: fret_core::MouseButtons,
+    pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
+    pub reason: fret_core::PointerCancelReason,
+}
+
 /// Pointer up payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerUpCx {
@@ -367,6 +382,9 @@ pub type OnPinchGesture =
 pub type OnPointerUp =
     Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> bool + 'static>;
 
+pub type OnPointerCancel =
+    Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerCancelCx) -> bool + 'static>;
+
 #[derive(Default)]
 pub(crate) struct PointerActionHooks {
     pub on_pointer_down: Option<OnPointerDown>,
@@ -374,6 +392,7 @@ pub(crate) struct PointerActionHooks {
     pub on_wheel: Option<OnWheel>,
     pub on_pinch_gesture: Option<OnPinchGesture>,
     pub on_pointer_up: Option<OnPointerUp>,
+    pub on_pointer_cancel: Option<OnPointerCancel>,
 }
 
 pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx) -> bool + 'static>;

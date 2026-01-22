@@ -10,8 +10,8 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 use crate::action::OnHoverChange;
 use crate::action::{
     CommandActionHooks, DismissibleActionHooks, KeyActionHooks, OnActivate, OnCommand,
-    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerDown,
-    OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
+    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel,
+    OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
     OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer,
     OnWheel, PointerActionHooks, PressableActionHooks, PressableHoverActionHooks,
     PressablePointerUpResult, RovingActionHooks, TimerActionHooks,
@@ -1407,6 +1407,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn pointer_region_on_pointer_up(&mut self, handler: OnPointerUp) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pointer_up = Some(handler);
+        });
+    }
+
+    /// Register a component-owned pointer cancel handler for the current pointer region element.
+    ///
+    /// This hook is invoked when the runtime receives `Event::PointerCancel` for a pointer stream
+    /// that was previously interacting with this region (typically via pointer capture).
+    pub fn pointer_region_on_pointer_cancel(&mut self, handler: OnPointerCancel) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_cancel = Some(handler);
         });
     }
 

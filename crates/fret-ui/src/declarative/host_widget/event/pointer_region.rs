@@ -441,6 +441,58 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 cx.release_pointer_capture();
             }
         }
+        Event::PointerCancel(e) => {
+            let was_captured = cx.captured == Some(cx.node);
+
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::action::PointerActionHooks::default,
+                |hooks| hooks.on_pointer_cancel.clone(),
+            );
+
+            if let Some(h) = hook {
+                let cancel = action::PointerCancelCx {
+                    pointer_id: e.pointer_id,
+                    position: e.position,
+                    tick_id: cx.app.tick_id(),
+                    pixels_per_point,
+                    buttons: e.buttons,
+                    modifiers: e.modifiers,
+                    pointer_type: e.pointer_type,
+                    reason: e.reason,
+                };
+
+                let mut host = PointerHookHost {
+                    app: &mut *cx.app,
+                    window,
+                    element: this.element,
+                    node: cx.node,
+                    bounds: cx.bounds,
+                    input_ctx: &cx.input_ctx,
+                    requested_focus: &mut cx.requested_focus,
+                    requested_capture: &mut cx.requested_capture,
+                    requested_cursor: &mut cx.requested_cursor,
+                };
+                let handled = h(
+                    &mut host,
+                    action::ActionCx {
+                        window,
+                        target: this.element,
+                    },
+                    cancel,
+                );
+
+                if handled {
+                    cx.stop_propagation();
+                }
+            }
+
+            if was_captured {
+                cx.release_pointer_capture();
+            }
+        }
         _ => {}
     }
 }

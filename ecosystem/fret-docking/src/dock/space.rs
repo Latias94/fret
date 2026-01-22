@@ -1195,6 +1195,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     hit,
                                     button: *button,
                                     start: *position,
+                                    last: *position,
                                     moved: false,
                                 });
                                 request_pointer_capture = Some(Some(dock_space_node));
@@ -1421,6 +1422,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 }
 
                                 if let Some(capture) = self.viewport_capture.as_mut() {
+                                    capture.last = *position;
                                     if !capture.moved
                                         && capture.button == fret_core::MouseButton::Right
                                     {
@@ -2034,6 +2036,34 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             dock.hover = None;
                             invalidate_paint = true;
                             pending_redraws.push(self.window);
+                        }
+                        if self
+                            .viewport_capture
+                            .as_ref()
+                            .is_some_and(|capture| capture.pointer_id == e.pointer_id)
+                        {
+                            let capture = self.viewport_capture.take().unwrap();
+                            let position = e.position.unwrap_or(capture.last);
+                            let evt = viewport_input_from_hit_clamped(
+                                self.window,
+                                capture.hit,
+                                pixels_per_point,
+                                e.pointer_id,
+                                e.pointer_type,
+                                position,
+                                ViewportInputKind::PointerCancel {
+                                    buttons: e.buttons,
+                                    modifiers: e.modifiers,
+                                    reason: e.reason,
+                                },
+                            );
+                            pending_effects.push(Effect::ViewportInput(evt));
+                            pending_redraws.push(self.window);
+
+                            request_pointer_capture = Some(None);
+                            dock.hover = None;
+                            invalidate_paint = true;
+                            stop_propagation = true;
                         }
                         if dock_drag.is_some() {
                             dock.hover = None;

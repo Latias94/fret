@@ -12,7 +12,7 @@ use fret_core::{
     ViewportMapping,
 };
 use fret_runtime::{Effect, Model};
-use fret_ui::action::{OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
+use fret_ui::action::{OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
 use fret_ui::element::{AnyElement, Length, PointerRegionProps};
 use fret_ui::{ElementContext, UiHost};
 
@@ -98,9 +98,12 @@ pub fn viewport_surface_panel<H: UiHost>(
 ) -> AnyElement {
     let capture_button: Model<Option<MouseButton>> =
         use_controllable_model(cx, None::<Model<Option<MouseButton>>>, || None).model();
+    let last_position: Model<Option<fret_core::Point>> =
+        use_controllable_model(cx, None::<Model<Option<fret_core::Point>>>, || None).model();
 
     let props_c = props;
     let capture_button_c = capture_button.clone();
+    let last_position_c = last_position.clone();
     let on_down: OnPointerDown = Arc::new(
         move |host: &mut dyn fret_ui::action::UiPointerActionHost,
               action_cx: fret_ui::action::ActionCx,
@@ -109,6 +112,9 @@ pub fn viewport_surface_panel<H: UiHost>(
                 return false;
             }
 
+            let _ = host
+                .models_mut()
+                .update(&last_position_c, |p| *p = Some(down.position));
             let ok = push_viewport_input(
                 host,
                 action_cx.window,
@@ -139,6 +145,7 @@ pub fn viewport_surface_panel<H: UiHost>(
 
     let props_c = props;
     let capture_button_c = capture_button.clone();
+    let last_position_c = last_position.clone();
     let on_move: OnPointerMove = Arc::new(
         move |host: &mut dyn fret_ui::action::UiPointerActionHost,
               action_cx: fret_ui::action::ActionCx,
@@ -147,6 +154,9 @@ pub fn viewport_surface_panel<H: UiHost>(
                 return false;
             }
 
+            let _ = host
+                .models_mut()
+                .update(&last_position_c, |p| *p = Some(mv.position));
             let captured = host
                 .models_mut()
                 .read(&capture_button_c, |b| *b)
@@ -173,6 +183,7 @@ pub fn viewport_surface_panel<H: UiHost>(
 
     let props_c = props;
     let capture_button_c = capture_button.clone();
+    let last_position_c = last_position.clone();
     let on_up: OnPointerUp = Arc::new(
         move |host: &mut dyn fret_ui::action::UiPointerActionHost,
               action_cx: fret_ui::action::ActionCx,
@@ -181,6 +192,9 @@ pub fn viewport_surface_panel<H: UiHost>(
                 return false;
             }
 
+            let _ = host
+                .models_mut()
+                .update(&last_position_c, |p| *p = Some(up.position));
             let captured_button = host
                 .models_mut()
                 .read(&capture_button_c, |b| *b)
@@ -241,6 +255,61 @@ pub fn viewport_surface_panel<H: UiHost>(
         },
     );
 
+    let props_c = props;
+    let capture_button_c = capture_button.clone();
+    let last_position_c = last_position.clone();
+    let on_cancel: OnPointerCancel = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              cancel: fret_ui::action::PointerCancelCx| {
+            if !props_c.forward_input {
+                return false;
+            }
+
+            let position = cancel
+                .position
+                .or_else(|| {
+                    host.models_mut()
+                        .read(&last_position_c, |p| *p)
+                        .ok()
+                        .flatten()
+                })
+                .unwrap_or_else(|| host.bounds().origin);
+
+            let captured = host
+                .models_mut()
+                .read(&capture_button_c, |b| *b)
+                .ok()
+                .flatten()
+                .is_some();
+
+            let ok = push_viewport_input(
+                host,
+                action_cx.window,
+                props_c,
+                cancel.pixels_per_point,
+                cancel.pointer_id,
+                cancel.pointer_type,
+                position,
+                ViewportInputKind::PointerCancel {
+                    buttons: cancel.buttons,
+                    modifiers: cancel.modifiers,
+                    reason: cancel.reason,
+                },
+                captured,
+            );
+
+            let _ = host.models_mut().update(&capture_button_c, |b| *b = None);
+            let _ = host.models_mut().update(&last_position_c, |p| *p = None);
+            if captured {
+                host.release_pointer_capture();
+                host.request_redraw(action_cx.window);
+            }
+
+            ok
+        },
+    );
+
     let mut region = PointerRegionProps::default();
     region.layout.size.width = Length::Fill;
     region.layout.size.height = Length::Fill;
@@ -249,6 +318,7 @@ pub fn viewport_surface_panel<H: UiHost>(
         cx.pointer_region_on_pointer_down(on_down);
         cx.pointer_region_on_pointer_move(on_move);
         cx.pointer_region_on_pointer_up(on_up);
+        cx.pointer_region_on_pointer_cancel(on_cancel);
         cx.pointer_region_on_wheel(on_wheel);
 
         let mut props2 = fret_ui::element::ViewportSurfaceProps::new(props.target);

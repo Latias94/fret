@@ -2607,6 +2607,64 @@ fn viewport_capture_requests_animation_frames_while_active() {
 }
 
 #[test]
+fn viewport_capture_emits_pointer_cancel_and_releases_capture() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let down_pos = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        Some(harness.root),
+        "expected viewport capture to request pointer capture on down"
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: None,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected pointer capture to be released on cancel",
+    );
+
+    let effects = harness.app.take_effects();
+    let Some(Effect::ViewportInput(evt)) = effects
+        .iter()
+        .find(|e| matches!(e, Effect::ViewportInput(_)))
+    else {
+        panic!("expected viewport cancel input effect, got: {effects:?}");
+    };
+    assert!(
+        matches!(evt.kind, fret_core::ViewportInputKind::PointerCancel { .. }),
+        "expected ViewportInputKind::PointerCancel, got: {evt:?}",
+    );
+}
+
+#[test]
 fn dock_drag_suppresses_viewport_capture_start_for_other_pointer() {
     let mut harness = DockViewportHarness::new();
     harness.layout();

@@ -97,6 +97,8 @@ Normative unit rules:
 - `pixels_per_point` is the conversion factor from logical → physical pixels.
 - `pointer_id` and `pointer_type` mirror the originating UI pointer stream, enabling tooling to
   disambiguate multi-pointer interactions (touch/pen + mouse) without relying on global state.
+- Pointer stream cancellation is forwarded as `ViewportInputKind::PointerCancel` so tools can
+  reliably teardown in-progress interactions when the platform cancels a pointer stream.
 
 ### 2) Update viewport widgets to emit the explicit-units event
 

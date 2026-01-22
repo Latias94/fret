@@ -90,7 +90,7 @@ Tool input handling should expose phases:
 - `Begin` (capture start),
 - `Update` (dragging/moving),
 - `Commit` (capture end),
-- `Cancel` (escape / tool abort).
+- `Cancel` (escape / tool abort / pointer stream cancellation).
 
 This aligns with undo coalescing boundaries described in ADR 0024, without forcing undo policy into
 the framework.

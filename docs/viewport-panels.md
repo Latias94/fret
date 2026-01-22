@@ -98,6 +98,9 @@ In your driver, implement:
 
 and route events to the engine subsystem that owns `event.target`.
 
+When consuming viewport input for editor-style tooling, treat `ViewportInputKind::PointerCancel`
+as an explicit teardown signal for pointer capture (e.g. clear hot/active tool state).
+
 ## Video playback guidance
 
 Tier A options:

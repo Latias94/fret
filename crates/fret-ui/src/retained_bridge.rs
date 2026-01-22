@@ -118,6 +118,7 @@ pub mod viewport_surface {
         pub target: RenderTargetId,
         pub mapping: ViewportMapping,
         pub button: MouseButton,
+        pub last_cursor_px: fret_core::Point,
     }
 
     /// Forwards pointer + wheel events into a viewport surface using `ViewportMapping`.
@@ -178,6 +179,7 @@ pub mod viewport_surface {
                     target,
                     mapping,
                     button: *button,
+                    last_cursor_px: *position,
                 });
                 cx.capture_pointer(cx.node);
                 cx.invalidate_self(Invalidation::Paint);
@@ -197,6 +199,7 @@ pub mod viewport_surface {
                     && c.window == window
                     && cx.captured == Some(cx.node)
                 {
+                    c.last_cursor_px = *position;
                     let pixels_per_point = cx
                         .app
                         .global::<WindowMetricsService>()
@@ -235,6 +238,9 @@ pub mod viewport_surface {
                 ) else {
                     return false;
                 };
+                if let Some(c) = capture {
+                    c.last_cursor_px = *position;
+                }
                 cx.app.push_effect(Effect::ViewportInput(evt));
                 cx.stop_propagation();
                 true
@@ -308,7 +314,40 @@ pub mod viewport_surface {
                 ) else {
                     return false;
                 };
+                if let Some(c) = capture {
+                    c.last_cursor_px = *position;
+                }
                 cx.app.push_effect(Effect::ViewportInput(evt));
+                cx.stop_propagation();
+                true
+            }
+            Event::PointerCancel(e) => {
+                let position = e
+                    .position
+                    .or_else(|| capture.as_ref().map(|c| c.last_cursor_px))
+                    .unwrap_or_else(|| mapping.map().draw_rect.origin);
+                let evt = ViewportInputEvent::from_mapping_window_point_clamped(
+                    window,
+                    target,
+                    &mapping,
+                    pixels_per_point,
+                    e.pointer_id,
+                    e.pointer_type,
+                    position,
+                    ViewportInputKind::PointerCancel {
+                        buttons: e.buttons,
+                        modifiers: e.modifiers,
+                        reason: e.reason,
+                    },
+                );
+                cx.app.push_effect(Effect::ViewportInput(evt));
+
+                *capture = None;
+                if cx.captured == Some(cx.node) {
+                    cx.release_pointer_capture();
+                }
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
                 cx.stop_propagation();
                 true
             }

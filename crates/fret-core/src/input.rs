@@ -588,6 +588,11 @@ pub enum ViewportInputKind {
         /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
         click_count: u8,
     },
+    PointerCancel {
+        buttons: MouseButtons,
+        modifiers: Modifiers,
+        reason: PointerCancelReason,
+    },
     Wheel {
         delta: Point,
         modifiers: Modifiers,

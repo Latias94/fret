@@ -553,6 +553,7 @@ fn viewport_modifiers(kind: ViewportInputKind) -> fret_core::Modifiers {
         ViewportInputKind::PointerMove { modifiers, .. } => modifiers,
         ViewportInputKind::PointerDown { modifiers, .. } => modifiers,
         ViewportInputKind::PointerUp { modifiers, .. } => modifiers,
+        ViewportInputKind::PointerCancel { modifiers, .. } => modifiers,
         ViewportInputKind::Wheel { modifiers, .. } => modifiers,
     }
 }

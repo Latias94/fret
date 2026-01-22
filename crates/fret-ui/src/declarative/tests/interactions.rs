@@ -235,6 +235,115 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
 }
 
 #[test]
+fn declarative_pointer_region_can_handle_pointer_cancel() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-pointer-cancel",
+        |cx| {
+            let counter_down = counter.clone();
+            let counter_cancel = counter.clone();
+
+            let on_down = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      down: crate::action::PointerDownCx| {
+                    if down.button != MouseButton::Left {
+                        return false;
+                    }
+                    host.capture_pointer();
+                    let _ = host
+                        .models_mut()
+                        .update(&counter_down, |v: &mut u32| *v = v.saturating_add(1));
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
+            let on_cancel = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      cancel: crate::action::PointerCancelCx| {
+                    host.release_pointer_capture();
+                    let _ = host.models_mut().update(&counter_cancel, |v: &mut u32| {
+                        *v = v.saturating_add(match cancel.reason {
+                            fret_core::PointerCancelReason::LeftWindow => 100,
+                        })
+                    });
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
+            let mut props = crate::element::PointerRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.pointer_region(props, |cx| {
+                cx.pointer_region_on_pointer_down(on_down);
+                cx.pointer_region_on_pointer_cancel(on_cancel);
+                Vec::new()
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region = ui.children(root)[0];
+    let region_bounds = ui.debug_node_bounds(region).expect("pointer region bounds");
+    let inside = Point::new(
+        Px(region_bounds.origin.x.0 + 5.0),
+        Px(region_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(fret_core::PointerId(0)), Some(region));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: None,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(fret_core::PointerId(0)), None);
+    assert_eq!(app.models().get_copied(&counter), Some(101));
+}
+
+#[test]
 fn declarative_pointer_region_can_handle_wheel() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
