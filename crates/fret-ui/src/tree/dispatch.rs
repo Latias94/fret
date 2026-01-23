@@ -1,7 +1,9 @@
 use super::*;
 use std::collections::HashMap;
 
-use crate::WindowInputArbitrationService;
+use fret_runtime::{
+    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
+};
 
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
@@ -395,7 +397,7 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         services: &mut *services,
                         node: node_id,
-                        layer_id: tree.node_layer(node_id),
+                        layer_root: tree.node_root(node_id),
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
@@ -527,7 +529,7 @@ impl<H: UiHost> UiTree<H> {
                     app,
                     services: &mut *services,
                     node: node_id,
-                    layer_id: tree.node_layer(node_id),
+                    layer_root: tree.node_root(node_id),
                     window: tree.window,
                     pointer_id: pointer_id_for_capture,
                     input_ctx: input_ctx.clone(),
@@ -704,7 +706,30 @@ impl<H: UiHost> UiTree<H> {
                 },
             );
             app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
-                svc.set_snapshot(window, self.input_arbitration_snapshot());
+                let snapshot = self.input_arbitration_snapshot();
+                svc.set_snapshot(
+                    window,
+                    WindowInputArbitrationSnapshot {
+                        modal_barrier_root: snapshot.modal_barrier_root,
+                        pointer_occlusion: match snapshot.pointer_occlusion {
+                            PointerOcclusion::None => WindowPointerOcclusion::None,
+                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
+                            PointerOcclusion::BlockMouseExceptScroll => {
+                                WindowPointerOcclusion::BlockMouseExceptScroll
+                            }
+                        },
+                        pointer_occlusion_root: snapshot
+                            .pointer_occlusion_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_active: snapshot.pointer_capture_active,
+                        pointer_capture_root: snapshot
+                            .pointer_capture_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
+                            || (snapshot.pointer_capture_active
+                                && snapshot.pointer_capture_layer.is_none()),
+                    },
+                );
             });
         }
 
@@ -1395,7 +1420,7 @@ impl<H: UiHost> UiTree<H> {
                             app,
                             services: &mut *services,
                             node: node_id,
-                            layer_id: tree.node_layer(node_id),
+                            layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
                             input_ctx: input_ctx.clone(),
@@ -1512,7 +1537,7 @@ impl<H: UiHost> UiTree<H> {
                             app,
                             services: &mut *services,
                             node: node_id,
-                            layer_id: tree.node_layer(node_id),
+                            layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
                             input_ctx: input_ctx.clone(),
@@ -1943,7 +1968,30 @@ impl<H: UiHost> UiTree<H> {
                 },
             );
             app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
-                svc.set_snapshot(window, self.input_arbitration_snapshot());
+                let snapshot = self.input_arbitration_snapshot();
+                svc.set_snapshot(
+                    window,
+                    WindowInputArbitrationSnapshot {
+                        modal_barrier_root: snapshot.modal_barrier_root,
+                        pointer_occlusion: match snapshot.pointer_occlusion {
+                            PointerOcclusion::None => WindowPointerOcclusion::None,
+                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
+                            PointerOcclusion::BlockMouseExceptScroll => {
+                                WindowPointerOcclusion::BlockMouseExceptScroll
+                            }
+                        },
+                        pointer_occlusion_root: snapshot
+                            .pointer_occlusion_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_active: snapshot.pointer_capture_active,
+                        pointer_capture_root: snapshot
+                            .pointer_capture_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
+                            || (snapshot.pointer_capture_active
+                                && snapshot.pointer_capture_layer.is_none()),
+                    },
+                );
             });
         }
     }
@@ -1986,7 +2034,7 @@ impl<H: UiHost> UiTree<H> {
                             app,
                             services: &mut *services,
                             node: node_id,
-                            layer_id: tree.node_layer(node_id),
+                            layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: pointer_id_for_capture,
                             input_ctx: observer_ctx,
@@ -2052,7 +2100,7 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         services: &mut *services,
                         node: node_id,
-                        layer_id: tree.node_layer(node_id),
+                        layer_root: tree.node_root(node_id),
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: observer_ctx,

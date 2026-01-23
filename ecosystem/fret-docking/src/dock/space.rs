@@ -941,26 +941,26 @@ impl<H: UiHost> Widget<H> for DockSpace {
             cx.input_ctx.caps.ui.window_tear_off && cx.input_ctx.caps.ui.multi_window;
         let foreign_capture_active = cx
             .app
-            .global::<fret_ui::WindowInputArbitrationService>()
+            .global::<fret_runtime::WindowInputArbitrationService>()
             .and_then(|svc| svc.snapshot(self.window))
             .is_some_and(|snapshot| {
                 if !snapshot.pointer_capture_active {
                     return false;
                 }
 
-                let Some(dock_layer) = cx.layer_id else {
+                let Some(dock_root) = cx.layer_root else {
                     // If the dock space's layer cannot be determined, be conservative: treat
                     // captures as foreign so we don't start competing interactions.
                     return true;
                 };
 
-                if snapshot.pointer_capture_multiple_layers {
+                if snapshot.pointer_capture_multiple_roots {
                     return true;
                 }
 
                 snapshot
-                    .pointer_capture_layer
-                    .is_none_or(|layer| layer != dock_layer)
+                    .pointer_capture_root
+                    .is_none_or(|root| root != dock_root)
             });
 
         if cx.app.global::<DockManager>().is_none() {

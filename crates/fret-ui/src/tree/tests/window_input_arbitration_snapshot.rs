@@ -56,14 +56,16 @@ fn dispatch_event_publishes_post_dispatch_input_arbitration_snapshot() {
     let layer = ui
         .node_layer(capture)
         .expect("expected capture node to be attached to a layer");
+    let layer_root = ui.layer_root(layer).expect("expected layer root");
 
     let arbitration = app
-        .global::<crate::WindowInputArbitrationService>()
+        .global::<fret_runtime::WindowInputArbitrationService>()
         .and_then(|svc| svc.snapshot(window))
+        .copied()
         .expect("expected a window input arbitration snapshot");
     assert!(arbitration.pointer_capture_active);
-    assert_eq!(arbitration.pointer_capture_layer, Some(layer));
-    assert!(!arbitration.pointer_capture_multiple_layers);
+    assert_eq!(arbitration.pointer_capture_root, Some(layer_root));
+    assert!(!arbitration.pointer_capture_multiple_roots);
 }
 
 #[test]
@@ -115,8 +117,9 @@ fn dispatch_command_publishes_post_dispatch_input_arbitration_snapshot() {
     ui.dispatch_command(&mut app, &mut services, &CommandId::from("test.open_modal"));
 
     let arbitration = app
-        .global::<crate::WindowInputArbitrationService>()
+        .global::<fret_runtime::WindowInputArbitrationService>()
         .and_then(|svc| svc.snapshot(window))
+        .copied()
         .expect("expected a window input arbitration snapshot");
     assert_eq!(
         arbitration.modal_barrier_root,

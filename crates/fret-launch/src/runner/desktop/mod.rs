@@ -2575,6 +2575,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             },
         );
         self.app.with_global_mut(
+            fret_runtime::WindowInputArbitrationService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
+        self.app.with_global_mut(
             fret_runtime::WindowCommandAvailabilityService::default,
             |svc, _app| {
                 svc.remove_window(window);
