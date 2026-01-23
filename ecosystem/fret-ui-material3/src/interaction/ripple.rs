@@ -61,7 +61,11 @@ impl RippleAnimator {
     pub fn advance(&mut self, now_frame: u64, base_opacity: f32) -> Option<RipplePaintFrame> {
         let pulse = self.active?;
 
-        let expand_elapsed = now_frame.saturating_sub(pulse.start_frame);
+        // Ensure the first rendered frame has a non-zero radius so the ripple becomes visible
+        // immediately on press (instead of being delayed by one frame).
+        let expand_elapsed = now_frame
+            .saturating_sub(pulse.start_frame)
+            .saturating_add(1);
         let expand_t = (expand_elapsed as f32 / pulse.expand_frames as f32).clamp(0.0, 1.0);
         let expand_e = cubic_bezier_ease(pulse.easing, expand_t);
         let radius = Px(pulse.max_radius.0 * expand_e);
