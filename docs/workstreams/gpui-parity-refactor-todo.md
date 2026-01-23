@@ -367,9 +367,19 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       - `windowed_rows_surface_scroll_refresh`: worst tick ~2.6ms (layout-dominated).
       - `virtual_list_torture`: worst tick ~29.8ms (layout-dominated).
       - Takeaway: large headroom remains for `GPUI-MVP5-virt-001` (prepaint-driven window to reduce scroll-time rerender/layout work).
-- [ ] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
+- [~] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
   - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.
+  - Progress (v1):
+    - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_DATA_TABLE_TORTURE`)
+    - Harness implementation: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_table_torture`, `ui-gallery-data-table-torture-root`)
+    - Scripted scroll capture: `tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json`
+    - Bundle-based stale-paint check:
+      - Generate (example): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --dir target/fret-diag-perf-data-table-torture --launch -- cargo run -p fret-ui-gallery --release`
+      - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-data-table-torture-root`
+    - Baseline perf (one run, release, view-cache + shell enabled):
+      - `ui-gallery-data-table-torture-scroll-refresh`: worst tick ~14.3ms (layout-dominated).
+      - Example bundle: `target/fret-diag-perf-data-table-torture/1769145770765-script-step-0009-wheel/bundle.json`
 - [~] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
   - Candidates: `ecosystem/fret-code-view/src/*`, text editor widgets, markdown/code blocks, diagnostics inspectors.
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
