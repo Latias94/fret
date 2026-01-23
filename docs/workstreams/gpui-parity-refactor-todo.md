@@ -461,6 +461,12 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
   - Baseline note: current worst-tick bundles remain layout-dominated and frequently attribute dirty views to
     `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:417`.
+  - Progress (v1):
+    - `Pressable` no longer implicitly calls `notify()` after invoking `on_activate`. If a hook mutates non-model state
+      that must be reflected in declarative render under view-cache reuse, it should call `host.notify(action_cx)`
+      explicitly.
+      - Anchors: `crates/fret-ui/src/action.rs` (`UiActionHost::notify`), `crates/fret-ui/src/declarative/host_widget/event/pressable.rs`
+      - Example adoption: `ecosystem/fret-code-view/src/copy_button.rs` (Copied feedback uses `host.notify(...)` from both activate + timer hooks).
 - [x] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
   - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
   - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).
