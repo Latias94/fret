@@ -3582,6 +3582,571 @@ fn web_vs_fret_dropdown_menu_demo_tiny_viewport_shadow_matches_web_dark() {
     );
 }
 
+fn build_shadcn_button_group_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui::element::{ContainerProps, LayoutStyle, Length};
+    use fret_ui_shadcn::{
+        Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+        DropdownMenuGroup, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
+
+    fn icon_stub(cx: &mut ElementContext<'_, App>) -> AnyElement {
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(16.0));
+                    layout.size.height = Length::Px(Px(16.0));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
+    }
+
+    #[derive(Default)]
+    struct Models {
+        label_value: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let existing = cx.with_state(Models::default, |st| st.label_value.as_ref().cloned());
+    let label_value = if let Some(existing) = existing {
+        existing
+    } else {
+        let model: Model<Option<Arc<str>>> =
+            cx.app.models_mut().insert(Some(Arc::from("personal")));
+        cx.with_state(Models::default, |st| st.label_value = Some(model.clone()));
+        model
+    };
+
+    DropdownMenu::new(open.clone())
+        .align(DropdownMenuAlign::End)
+        .min_width(Px(208.0))
+        .into_element(
+            cx,
+            |cx| {
+                Button::new("More Options")
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Icon)
+                    .children([icon_stub(cx)])
+                    .into_element(cx)
+            },
+            |cx| {
+                vec![
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
+                        ),
+                    ])),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Label As...")
+                                .leading(icon_stub(cx))
+                                .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                    DropdownMenuRadioGroup::new(label_value.clone())
+                                        .item(DropdownMenuRadioItemSpec::new(
+                                            "personal", "Personal",
+                                        ))
+                                        .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                        .item(DropdownMenuRadioItemSpec::new("other", "Other")),
+                                )]),
+                        ),
+                    ])),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Trash")
+                                .leading(icon_stub(cx))
+                                .variant(
+                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            ),
+                        ),
+                    ])),
+                ]
+            },
+        )
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "button-group-demo",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_button_group_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "button-group-demo",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_button_group_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "button-group-demo",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_button_group_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "button-group-demo",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_button_group_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_submenu_kbd_surface_colors_match_web() {
+    let web = read_web_golden_open("button-group-demo.submenu-kbd");
+    let bounds = web
+        .themes
+        .get("light")
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(1440.0), Px(900.0)),
+            )
+        });
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    assert_menu_subcontent_surface_colors_match_by_portal_slot_theme_keyboard_submenu(
+        "button-group-demo.submenu-kbd",
+        "dropdown-menu-sub-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        bounds,
+        settle_frames,
+        settle_frames,
+        |_ui, app, _services, _bounds, open| {
+            let _ = app.models_mut().update(open, |v| *v = true);
+        },
+        "Label As...",
+        build_shadcn_button_group_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_submenu_kbd_surface_colors_match_web_dark() {
+    let web = read_web_golden_open("button-group-demo.submenu-kbd");
+    let bounds = web
+        .themes
+        .get("dark")
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(1440.0), Px(900.0)),
+            )
+        });
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    assert_menu_subcontent_surface_colors_match_by_portal_slot_theme_keyboard_submenu(
+        "button-group-demo.submenu-kbd",
+        "dropdown-menu-sub-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        bounds,
+        settle_frames,
+        settle_frames,
+        |_ui, app, _services, _bounds, open| {
+            let _ = app.models_mut().update(open, |v| *v = true);
+        },
+        "Label As...",
+        build_shadcn_button_group_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_submenu_kbd_shadow_matches_web() {
+    let web = read_web_golden_open("button-group-demo.submenu-kbd");
+    let bounds = web
+        .themes
+        .get("light")
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(1440.0), Px(900.0)),
+            )
+        });
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    assert_menu_subcontent_shadow_insets_match_by_portal_slot_theme_keyboard_submenu(
+        "button-group-demo.submenu-kbd",
+        "dropdown-menu-sub-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        bounds,
+        settle_frames,
+        settle_frames,
+        |_ui, app, _services, _bounds, open| {
+            let _ = app.models_mut().update(open, |v| *v = true);
+        },
+        "Label As...",
+        build_shadcn_button_group_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_submenu_kbd_shadow_matches_web_dark() {
+    let web = read_web_golden_open("button-group-demo.submenu-kbd");
+    let bounds = web
+        .themes
+        .get("dark")
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(1440.0), Px(900.0)),
+            )
+        });
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    assert_menu_subcontent_shadow_insets_match_by_portal_slot_theme_keyboard_submenu(
+        "button-group-demo.submenu-kbd",
+        "dropdown-menu-sub-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        bounds,
+        settle_frames,
+        settle_frames,
+        |_ui, app, _services, _bounds, open| {
+            let _ = app.models_mut().update(open, |v| *v = true);
+        },
+        "Label As...",
+        build_shadcn_button_group_demo,
+    );
+}
+
+fn build_shadcn_combobox_dropdown_menu_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui::element::{CrossAlign, LayoutStyle, Length, MainAlign, RowProps};
+    use fret_ui_kit::declarative::icon as decl_icon;
+    use fret_ui_shadcn::{
+        Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
+        DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuShortcut,
+    };
+
+    let button = Button::new("More")
+        .variant(ButtonVariant::Ghost)
+        .size(ButtonSize::Sm)
+        .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
+
+    let dropdown = DropdownMenu::new(open.clone())
+        .align(DropdownMenuAlign::End)
+        .min_width(Px(200.0))
+        .into_element(
+            cx,
+            |cx| button.clone().into_element(cx),
+            |cx| {
+                vec![
+                    DropdownMenuEntry::Label(DropdownMenuLabel::new("Actions")),
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Assign to...")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Set due date...")),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Apply label").submenu(
+                            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("feature"))],
+                        )),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Delete")
+                                .variant(
+                                    fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                )
+                                .trailing(DropdownMenuShortcut::new("⌘⌫").into_element(cx)),
+                        ),
+                    ])),
+                ]
+            },
+        );
+
+    cx.row(
+        RowProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
+            gap: Px(0.0),
+            padding: fret_core::Edges {
+                top: Px(12.0),
+                right: Px(16.0),
+                bottom: Px(12.0),
+                left: Px(16.0),
+            },
+            justify: MainAlign::End,
+            align: CrossAlign::Start,
+        },
+        |_cx| vec![dropdown],
+    )
+}
+
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "combobox-dropdown-menu",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_combobox_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "combobox-dropdown-menu",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_combobox_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "combobox-dropdown-menu",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_combobox_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "combobox-dropdown-menu",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_combobox_dropdown_menu_demo,
+    );
+}
+
+fn build_shadcn_breadcrumb_dropdown_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui::element::PressableProps;
+    use fret_ui_shadcn::breadcrumb::primitives as bc;
+    use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
+
+    let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+    bc::Breadcrumb::new().into_element(cx, |cx| {
+        vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+            vec![
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                }),
+                bc::BreadcrumbSeparator::new()
+                    .kind(bc::BreadcrumbSeparatorKind::Slash)
+                    .into_element(cx),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![dropdown.into_element(
+                        cx,
+                        |cx| {
+                            let theme = fret_ui::Theme::global(&*cx.app).clone();
+                            let muted = theme.color_required("muted-foreground");
+
+                            let mut props = PressableProps::default();
+                            props.a11y.role = Some(SemanticsRole::Button);
+                            props.a11y.label = Some(Arc::from("Components"));
+
+                            cx.pressable(props, move |cx, _st| {
+                                vec![
+                                    cx.text("Components"),
+                                    fret_ui_kit::declarative::icon::icon_with(
+                                        cx,
+                                        fret_icons::ids::ui::CHEVRON_DOWN,
+                                        Some(Px(14.0)),
+                                        Some(fret_ui_kit::ColorRef::Color(muted)),
+                                    ),
+                                ]
+                            })
+                        },
+                        |_cx| {
+                            vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Documentation")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                            ]
+                        },
+                    )]
+                }),
+                bc::BreadcrumbSeparator::new()
+                    .kind(bc::BreadcrumbSeparatorKind::Slash)
+                    .into_element(cx),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                }),
+            ]
+        })]
+    })
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-dropdown",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-dropdown",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-dropdown",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-dropdown",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_small_viewport_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-dropdown.vp1440x320",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_small_viewport_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-dropdown.vp1440x320",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_small_viewport_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-dropdown.vp1440x320",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_small_viewport_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-dropdown.vp1440x320",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_dropdown_demo,
+    );
+}
+
 #[test]
 fn web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web() {
     use fret_ui_shadcn::{
