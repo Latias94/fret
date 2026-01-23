@@ -118,6 +118,9 @@ The policy layer (`fret-ui-kit/window_overlays`) maps Radix outcomes onto the ru
 - Presence (mount vs interactive) is represented via `OverlayPresence { present, interactive }`.
 - Menu-like overlays implement `disableOutsidePointerEvents` by enabling pointer occlusion
   (`PointerOcclusion::BlockMouseExceptScroll`) on the overlay layer.
+- View caching support: overlay requests are cached and may be synthesized when the producer subtree
+  is skipped by view caching. Hover/tooltips participate with a short TTL so stale cached requests
+  cannot keep ephemeral overlays alive indefinitely (`ecosystem/fret-ui-kit/src/window_overlays/render.rs`).
 
 This is directionally correct, but the barrier behavior is currently achieved by composing multiple
 runtime flags. We want a simpler *mechanism vocabulary* that makes those compositions obvious and

@@ -376,6 +376,26 @@ impl Tooltip {
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let focused = cx.is_focused_element(trigger_id);
             let event_models = tooltip_trigger_event_models(cx);
+            let tooltip_id = cx.root_id();
+
+            #[derive(Default)]
+            struct TooltipOpenModelState {
+                model: Option<Model<bool>>,
+            }
+
+            let open = cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                st.model.clone()
+            });
+            let open = if let Some(model) = open {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+            let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let close_requested = cx
                 .watch_model(&event_models.close_requested)
@@ -505,6 +525,11 @@ impl Tooltip {
             );
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
+
+            if update.open != open_now {
+                let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
+                open_now = update.open;
+            }
 
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
                 base_trigger.clone(),
@@ -638,7 +663,6 @@ impl Tooltip {
                 return out;
             }
 
-            let tooltip_id = cx.root_id();
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.opacity;
             let scale = motion.scale;
@@ -743,8 +767,12 @@ impl Tooltip {
                 )]
             });
 
-            let mut request =
-                radix_tooltip::tooltip_request(tooltip_id, overlay_presence, overlay_children);
+            let mut request = radix_tooltip::tooltip_request(
+                tooltip_id,
+                open.clone(),
+                overlay_presence,
+                overlay_children,
+            );
             request.trigger = Some(trigger_id);
             request.dismissible_on_dismiss_request = Some(radix_dismissable_layer::handler({
                 let close_requested = event_models.close_requested.clone();

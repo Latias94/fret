@@ -15,8 +15,8 @@ use crate::primitives::focus_scope as focus_scope_prim;
 
 use super::state::{
     ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip,
-    NonModalDismissibleLayerPolicy, OverlayLayer, WindowOverlays, apply_modal_layer,
-    apply_non_modal_dismissible_layer,
+    NonModalDismissibleLayerPolicy, OVERLAY_CACHE_TTL_FRAMES, OverlayLayer, WindowOverlays,
+    apply_modal_layer, apply_non_modal_dismissible_layer,
 };
 use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{
@@ -52,6 +52,7 @@ pub fn render<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
 ) {
+    let frame_id = app.frame_id();
     let dock_drag_affects_window = app.any_drag_session(|d| {
         d.kind == DRAG_KIND_DOCK_PANEL && (d.source_window == window || d.current_window == window)
     });
@@ -139,14 +140,18 @@ pub fn render<H: UiHost>(
     let modal_request_ids: HashSet<GlobalElementId> = modal_requests.iter().map(|r| r.id).collect();
     let popover_request_ids: HashSet<GlobalElementId> =
         popover_requests.iter().map(|r| r.id).collect();
+    let hover_request_ids: HashSet<GlobalElementId> =
+        hover_overlay_requests.iter().map(|r| r.id).collect();
+    let tooltip_request_ids: HashSet<GlobalElementId> =
+        tooltip_requests.iter().map(|r| r.id).collect();
     let toast_request_ids: HashSet<GlobalElementId> = toast_requests.iter().map(|r| r.id).collect();
 
     let (extra_modals, extra_popovers, extra_hover_overlays, extra_tooltips, extra_toasts) = app
         .with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut modals: Vec<ModalRequest> = Vec::new();
             let mut popovers: Vec<DismissiblePopoverRequest> = Vec::new();
-            let hover_overlays: Vec<HoverOverlayRequest> = Vec::new();
-            let tooltips: Vec<TooltipRequest> = Vec::new();
+            let mut hover_overlays: Vec<HoverOverlayRequest> = Vec::new();
+            let mut tooltips: Vec<TooltipRequest> = Vec::new();
             let mut toasts: Vec<ToastLayerRequest> = Vec::new();
 
             for ((w, id), req) in overlays.cached_modal_requests.iter() {
@@ -175,20 +180,45 @@ pub fn render<H: UiHost>(
                 popovers.push(req);
             }
 
-            // Hover overlays currently have no authoritative open/present model (unlike
-            // popovers/modals). Re-emitting cached hover overlays would therefore keep them alive
-            // even after the source subtree stops requesting them, which breaks Radix-style
-            // unmount expectations (e.g. `HoverCard` closing on blur).
-            //
-            // Treat hover overlays as strictly per-frame requests until we introduce an explicit
-            // presence contract for `HoverOverlayRequest`.
+            // Hover overlays and tooltips participate in view-caching synthesis, but with a short
+            // TTL so stale cached requests cannot keep "ephemeral" overlays alive indefinitely.
+            for ((w, id), req) in overlays.cached_hover_overlay_requests.iter() {
+                if *w != window || hover_request_ids.contains(id) {
+                    continue;
+                }
+                let Some(active) = overlays.hover_overlays.get(&(window, *id)) else {
+                    continue;
+                };
+                if frame_id.0.saturating_sub(active.last_seen_frame.0) > OVERLAY_CACHE_TTL_FRAMES {
+                    continue;
+                }
+                let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+                if !open_now {
+                    continue;
+                }
+                let mut req = req.clone();
+                req.present = true;
+                hover_overlays.push(req);
+            }
 
-            // Tooltips have the same challenge as hover overlays: without an explicit open/present
-            // model, cached synthesis can keep tooltips alive even after their producer stops
-            // requesting them (e.g. when hoverable content becomes disabled).
-            //
-            // Keep tooltips strictly per-frame until `TooltipRequest` has an authoritative open
-            // signal that survives view caching.
+            for ((w, id), req) in overlays.cached_tooltip_requests.iter() {
+                if *w != window || tooltip_request_ids.contains(id) {
+                    continue;
+                }
+                let Some(active) = overlays.tooltips.get(&(window, *id)) else {
+                    continue;
+                };
+                if frame_id.0.saturating_sub(active.last_seen_frame.0) > OVERLAY_CACHE_TTL_FRAMES {
+                    continue;
+                }
+                let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+                if !open_now {
+                    continue;
+                }
+                let mut req = req.clone();
+                req.present = true;
+                tooltips.push(req);
+            }
 
             for ((w, id), req) in overlays.cached_toast_layer_requests.iter() {
                 if *w != window || toast_request_ids.contains(id) {
@@ -697,8 +727,13 @@ pub fn render<H: UiHost>(
             continue;
         }
 
+        if !req.present {
+            continue;
+        }
+        let from_producer = hover_request_ids.contains(&req.id);
         seen_hover_overlays.insert(req.id);
 
+        let open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let root = fret_ui::declarative::render_root(
             ui,
             app,
@@ -718,10 +753,16 @@ pub fn render<H: UiHost>(
                     layer: ui.push_overlay_root_ex(root, false, true),
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
+                    open: req.open.clone(),
+                    last_seen_frame: frame_id,
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            OverlayLayer::hover(true).apply(ui, entry.layer);
+            entry.open = req.open;
+            if from_producer {
+                entry.last_seen_frame = frame_id;
+            }
+            OverlayLayer::hover(true, open_now).apply(ui, entry.layer);
         });
     }
 
@@ -752,8 +793,13 @@ pub fn render<H: UiHost>(
     }
 
     for req in tooltip_requests {
+        if !req.present {
+            continue;
+        }
+        let from_producer = tooltip_request_ids.contains(&req.id);
         seen_tooltips.insert(req.id);
 
+        let open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let on_dismiss_request = req.on_dismiss_request.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
@@ -783,9 +829,15 @@ pub fn render<H: UiHost>(
                 .or_insert_with(|| ActiveTooltip {
                     layer: ui.push_overlay_root_ex(root, false, false),
                     root_name: req.root_name.clone(),
+                    open: req.open.clone(),
+                    last_seen_frame: frame_id,
                 });
             entry.root_name = req.root_name.clone();
-            OverlayLayer::tooltip(true).apply(ui, entry.layer);
+            entry.open = req.open;
+            if from_producer {
+                entry.last_seen_frame = frame_id;
+            }
+            OverlayLayer::tooltip(true, open_now).apply(ui, entry.layer);
 
             ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
         });

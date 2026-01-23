@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
-use fret_runtime::FrameId;
+use fret_runtime::{FrameId, Model};
 use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 
@@ -9,6 +9,8 @@ use super::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
 };
 use fret_ui::elements::GlobalElementId;
+
+pub(crate) const OVERLAY_CACHE_TTL_FRAMES: u64 = 3;
 
 #[derive(Default)]
 pub(super) struct WindowOverlayFrame {
@@ -51,6 +53,8 @@ pub(super) struct ActiveModal {
 pub(super) struct ActiveTooltip {
     pub(super) layer: UiLayerId,
     pub(super) root_name: String,
+    pub(super) open: Model<bool>,
+    pub(super) last_seen_frame: FrameId,
 }
 
 pub(super) struct ActiveToastLayer {
@@ -62,6 +66,8 @@ pub(super) struct ActiveHoverOverlay {
     pub(super) layer: UiLayerId,
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
+    pub(super) open: Model<bool>,
+    pub(super) last_seen_frame: FrameId,
 }
 
 #[derive(Default)]
@@ -141,18 +147,18 @@ impl OverlayLayerState {
         }
     }
 
-    fn tooltip(present: bool) -> Self {
+    fn tooltip(present: bool, interactive: bool) -> Self {
         Self {
             present,
-            interactive: false,
+            interactive,
             wants_timer_events: false,
         }
     }
 
-    fn hover(present: bool) -> Self {
+    fn hover(present: bool, interactive: bool) -> Self {
         Self {
             present,
-            interactive: present,
+            interactive,
             wants_timer_events: false,
         }
     }
@@ -196,8 +202,8 @@ fn apply_overlay_layer_state<H: UiHost>(
         OverlayLayerKind::Tooltip => {
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, false);
-            ui.set_layer_wants_pointer_down_outside_events(layer, st.present);
-            ui.set_layer_wants_pointer_move_events(layer, st.present);
+            ui.set_layer_wants_pointer_down_outside_events(layer, st.interactive);
+            ui.set_layer_wants_pointer_move_events(layer, st.interactive);
         }
         OverlayLayerKind::Hover => {
             ui.set_layer_visible(layer, st.present);
@@ -293,15 +299,18 @@ impl OverlayLayer {
         Self::hidden(OverlayLayerKind::Toast)
     }
 
-    pub(super) fn tooltip(present: bool) -> Self {
+    pub(super) fn tooltip(present: bool, interactive: bool) -> Self {
         Self::new(
             OverlayLayerKind::Tooltip,
-            OverlayLayerState::tooltip(present),
+            OverlayLayerState::tooltip(present, interactive),
         )
     }
 
-    pub(super) fn hover(present: bool) -> Self {
-        Self::new(OverlayLayerKind::Hover, OverlayLayerState::hover(present))
+    pub(super) fn hover(present: bool, interactive: bool) -> Self {
+        Self::new(
+            OverlayLayerKind::Hover,
+            OverlayLayerState::hover(present, interactive),
+        )
     }
 
     pub(super) fn toast(present: bool, wants_timer_events: bool) -> Self {

@@ -15,7 +15,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::primitives::popper;
-use crate::{OverlayController, OverlayRequest};
+use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Stable per-overlay root naming convention for hover cards.
 pub fn hover_card_root_name(id: GlobalElementId) -> String {
@@ -89,9 +89,11 @@ pub fn hover_card_use_open_model<H: UiHost>(
 pub fn hover_card_request(
     id: GlobalElementId,
     trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
-    let mut request = OverlayRequest::hover(id, trigger, children);
+    let mut request = OverlayRequest::hover(id, trigger, open, presence, children);
     request.root_name = Some(hover_card_root_name(id));
     request
 }
@@ -178,6 +180,7 @@ mod tests {
     #[test]
     fn hover_card_request_sets_default_root_name() {
         let mut app = App::new();
+        let open = app.models_mut().insert(true);
         fret_ui::elements::with_element_cx(
             &mut app,
             Default::default(),
@@ -186,7 +189,13 @@ mod tests {
             |_cx| {
                 let id = GlobalElementId(0x123);
                 let trigger = GlobalElementId(0x456);
-                let req = hover_card_request(id, trigger, Vec::new());
+                let req = hover_card_request(
+                    id,
+                    trigger,
+                    open.clone(),
+                    OverlayPresence::instant(true),
+                    Vec::new(),
+                );
                 let expected = hover_card_root_name(id);
                 assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
             },

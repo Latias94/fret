@@ -18,7 +18,9 @@ use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
+};
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
@@ -641,8 +643,17 @@ impl HoverCard {
                 )]
             });
 
-            let request =
-                radix_hover_card::hover_card_request(hover_card_id, trigger_id, overlay_children);
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: update.open,
+            };
+            let request = radix_hover_card::hover_card_request(
+                hover_card_id,
+                trigger_id,
+                open.clone(),
+                overlay_presence,
+                overlay_children,
+            );
             radix_hover_card::request_hover_card(cx, request);
 
             out
