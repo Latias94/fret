@@ -374,6 +374,10 @@ topics (if/when we implement them):
     - Bundles can export VirtualList window telemetry via `UiTreeDebugSnapshotV1.virtual_list_windows` (debug-only, bounded) for postmortem analysis.
     - Bundles expose `debug.dirty_views[*].detail` to distinguish `scroll_handle_hit_test_only` vs `scroll_handle_layout`, making “why did this cache
       root rerender?” explainable for VirtualList scroll/scroll_to_item flows.
+    - `Widget::prepaint(PrepaintCx)` hook exists and is invoked for view-cache roots during the prepaint pass, even when the interaction cache replays.
+      - Anchors: `crates/fret-ui/src/widget.rs` (`PrepaintCx`, `Widget::prepaint`),
+        `crates/fret-ui/src/tree/prepaint.rs` (prepaint traversal),
+        `crates/fret-ui/src/tree/tests/prepaint.rs` (`prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache`).
 - [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
