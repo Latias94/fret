@@ -1,0 +1,3753 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "dropdown-menu-example",
+  "primitive": "dropdown-menu",
+  "scenario": "outside-click-close",
+  "url": "http://localhost:4020/preview/radix/dropdown-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/dropdown-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "BasicOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 122.640625,
+                                    "h": 36
+                                  },
+                                  "text": "Complex Menu"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Complex Menu"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "ComplexComplex Menu"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With IconsOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With ShortcutsOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With SubmenuOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 104.890625,
+                                    "h": 36
+                                  },
+                                  "text": "Checkboxes"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Checkboxes"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With CheckboxesCheckboxes"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 107.09375,
+                                    "h": 36
+                                  },
+                                  "text": "Notifications"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Notifications"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "Checkboxes with IconsNotifications"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 104.46875,
+                                    "h": 36
+                                  },
+                                  "text": "Radio Group"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Radio Group"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With Radio GroupRadio Group"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 725,
+                                    "w": 135.609375,
+                                    "h": 36
+                                  },
+                                  "text": "Payment Method"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Payment Method"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "Radio with IconsPayment Method"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 725,
+                                    "w": 72.609375,
+                                    "h": 36
+                                  },
+                                  "text": "Actions"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Actions"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With Destructive ItemsActions"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            10
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                10,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    10,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        10,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-fallback"
+                                              },
+                                              "children": [],
+                                              "rect": {
+                                                "x": 210,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              },
+                                              "text": "CN"
+                                            }
+                                          ],
+                                          "rect": {
+                                            "x": 210,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          },
+                                          "text": "CN"
+                                        }
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 879,
+                                        "w": 200,
+                                        "h": 48
+                                      },
+                                      "text": "CNshadcnshadcn@example.com"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        10,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-fallback"
+                                              },
+                                              "children": [],
+                                              "rect": {
+                                                "x": 565,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              },
+                                              "text": "LR"
+                                            }
+                                          ],
+                                          "rect": {
+                                            "x": 565,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          },
+                                          "text": "LR"
+                                        }
+                                      ],
+                                      "rect": {
+                                        "x": 563,
+                                        "y": 885,
+                                        "w": 36,
+                                        "h": 36
+                                      },
+                                      "text": "LR"
+                                    }
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 879,
+                                    "w": 398,
+                                    "h": 48
+                                  },
+                                  "text": "CNshadcnshadcn@example.comLR"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
+                              "text": "CNshadcnshadcn@example.comLR"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
+                          "text": "With AvatarCNshadcnshadcn@example.comLR"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            11
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                11,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    11,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dialog-trigger",
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_1l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 879,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1000
+                      },
+                      "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
+                    }
+                  ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1000
+                  },
+                  "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
+                }
+              ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1000
+              },
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 1280,
+                "h": 0
+              }
+            }
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1000
+          }
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "dropdown-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Complex"
+            },
+            {
+              "role": "button",
+              "name": "Complex Menu",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icons"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Shortcuts"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Submenu"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Checkboxes"
+            },
+            {
+              "role": "button",
+              "name": "Checkboxes",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Checkboxes with Icons"
+            },
+            {
+              "role": "button",
+              "name": "Notifications",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Radio Group"
+            },
+            {
+              "role": "button",
+              "name": "Radio Group",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Radio with Icons"
+            },
+            {
+              "role": "button",
+              "name": "Payment Method",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Destructive Items"
+            },
+            {
+              "role": "button",
+              "name": "Actions",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Avatar"
+            },
+            {
+              "role": "button",
+              "name": "CN shadcn shadcn@example.com",
+              "haspopup": "menu"
+            },
+            {
+              "role": "button",
+              "name": "LR",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "dropdown-menu:with-submenu"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "div",
+          "path": [
+            18,
+            0
+          ],
+          "attrs": {
+            "data-side": "bottom",
+            "data-align": "start",
+            "role": "menu",
+            "aria-orientation": "vertical",
+            "data-state": "open",
+            "aria-labelledby": "radix-_r_14_",
+            "data-slot": "dropdown-menu-content",
+            "tabindex": "-1",
+            "data-orientation": "vertical"
+          },
+          "text": "TeamInvite usersNew Team⌘+T"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "span",
+              "path": [
+                0
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
+            },
+            {
+              "tag": "div",
+              "path": [
+                1
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 0,
+                "h": 0
+              }
+            },
+            {
+              "tag": "div",
+              "path": [
+                3
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    3
+                  ],
+                  "attrs": {
+                    "aria-hidden": "true"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        3,
+                        3,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "BasicOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 122.640625,
+                                    "h": 36
+                                  },
+                                  "text": "Complex Menu"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Complex Menu"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "ComplexComplex Menu"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With IconsOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With ShortcutsOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "true",
+                                    "data-state": "open",
+                                    "aria-controls": "radix-_r_15_"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With SubmenuOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 104.890625,
+                                    "h": 36
+                                  },
+                                  "text": "Checkboxes"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Checkboxes"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With CheckboxesCheckboxes"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 107.09375,
+                                    "h": 36
+                                  },
+                                  "text": "Notifications"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Notifications"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "Checkboxes with IconsNotifications"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 104.46875,
+                                    "h": 36
+                                  },
+                                  "text": "Radio Group"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Radio Group"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With Radio GroupRadio Group"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 725,
+                                    "w": 135.609375,
+                                    "h": 36
+                                  },
+                                  "text": "Payment Method"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Payment Method"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "Radio with IconsPayment Method"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 725,
+                                    "w": 72.609375,
+                                    "h": 36
+                                  },
+                                  "text": "Actions"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Actions"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With Destructive ItemsActions"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            10
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                10,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    10,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        10,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-fallback"
+                                              },
+                                              "children": [],
+                                              "rect": {
+                                                "x": 210,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              },
+                                              "text": "CN"
+                                            }
+                                          ],
+                                          "rect": {
+                                            "x": 210,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          },
+                                          "text": "CN"
+                                        }
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 879,
+                                        "w": 200,
+                                        "h": 48
+                                      },
+                                      "text": "CNshadcnshadcn@example.com"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        10,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            3,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                3,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-fallback"
+                                              },
+                                              "children": [],
+                                              "rect": {
+                                                "x": 565,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              },
+                                              "text": "LR"
+                                            }
+                                          ],
+                                          "rect": {
+                                            "x": 565,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          },
+                                          "text": "LR"
+                                        }
+                                      ],
+                                      "rect": {
+                                        "x": 563,
+                                        "y": 885,
+                                        "w": 36,
+                                        "h": 36
+                                      },
+                                      "text": "LR"
+                                    }
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 879,
+                                    "w": 398,
+                                    "h": 48
+                                  },
+                                  "text": "CNshadcnshadcn@example.comLR"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
+                              "text": "CNshadcnshadcn@example.comLR"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
+                          "text": "With AvatarCNshadcnshadcn@example.comLR"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            11
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                11,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    11,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dialog-trigger",
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_1l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 879,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1000
+                      },
+                      "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
+                    }
+                  ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1000
+                  },
+                  "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
+                }
+              ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1000
+              },
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                4
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 1280,
+                "h": 0
+              }
+            },
+            {
+              "tag": "next-route-announcer",
+              "path": [
+                17
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 0,
+                "h": 0
+              }
+            },
+            {
+              "tag": "div",
+              "path": [
+                18
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    18,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "bottom",
+                    "data-align": "start",
+                    "role": "menu",
+                    "aria-orientation": "vertical",
+                    "data-state": "open",
+                    "aria-labelledby": "radix-_r_14_",
+                    "data-slot": "dropdown-menu-content",
+                    "tabindex": "-1",
+                    "data-orientation": "vertical"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        18,
+                        0,
+                        0
+                      ],
+                      "attrs": {
+                        "role": "group",
+                        "data-slot": "dropdown-menu-group"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            18,
+                            0,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "data-slot": "dropdown-menu-item",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "rect": {
+                            "x": 205.0030059814453,
+                            "y": 460.40216064453125,
+                            "w": 119.54978942871094,
+                            "h": 31.87994384765625
+                          },
+                          "text": "Team"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            18,
+                            0,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "aria-haspopup": "menu",
+                            "aria-expanded": "false",
+                            "aria-controls": "radix-_r_1p_",
+                            "data-state": "closed",
+                            "data-slot": "dropdown-menu-sub-trigger",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "rect": {
+                            "x": 205.0030059814453,
+                            "y": 492.2821044921875,
+                            "w": 119.54978942871094,
+                            "h": 31.87994384765625
+                          },
+                          "text": "Invite users"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            18,
+                            0,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "data-slot": "dropdown-menu-item",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [
+                            {
+                              "tag": "span",
+                              "path": [
+                                18,
+                                0,
+                                0,
+                                2,
+                                0
+                              ],
+                              "attrs": {
+                                "data-slot": "dropdown-menu-shortcut"
+                              },
+                              "children": [],
+                              "rect": {
+                                "x": 286.2906494140625,
+                                "y": 542.0945434570312,
+                                "w": 30.29217529296875,
+                                "h": 15.93994140625
+                              },
+                              "text": "⌘+T"
+                            }
+                          ],
+                          "rect": {
+                            "x": 205.0030059814453,
+                            "y": 524.1620483398438,
+                            "w": 119.54978942871094,
+                            "h": 51.804931640625
+                          },
+                          "text": "New Team⌘+T"
+                        }
+                      ],
+                      "rect": {
+                        "x": 205.0030059814453,
+                        "y": 460.40216064453125,
+                        "w": 119.54978942871094,
+                        "h": 115.5648193359375
+                      },
+                      "text": "TeamInvite usersNew Team⌘+T"
+                    }
+                  ],
+                  "rect": {
+                    "x": 201.0180206298828,
+                    "y": 456.41717529296875,
+                    "w": 127.51976013183594,
+                    "h": 123.5347900390625
+                  },
+                  "text": "TeamInvite usersNew Team⌘+T"
+                }
+              ],
+              "rect": {
+                "x": 201,
+                "y": 457,
+                "w": 128,
+                "h": 124
+              },
+              "text": "TeamInvite usersNew Team⌘+T"
+            },
+            {
+              "tag": "span",
+              "path": [
+                19
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 0,
+                "h": 0
+              }
+            }
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1000
+          }
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "dropdown-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "menu",
+              "name": "Open",
+              "focused": true,
+              "orientation": "vertical",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Team"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Invite users",
+                  "haspopup": "menu"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "New Team ⌘+T"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "outside"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            4,
+            1,
+            0
+          ],
+          "attrs": {
+            "data-slot": "dropdown-menu-trigger",
+            "aria-haspopup": "menu",
+            "aria-expanded": "false",
+            "data-state": "closed"
+          },
+          "text": "Open"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {
+                        "data-slot": "example-wrapper"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 109,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "BasicOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 109,
+                                    "w": 122.640625,
+                                    "h": 36
+                                  },
+                                  "text": "Complex Menu"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 84,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Complex Menu"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 48,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "ComplexComplex Menu"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With IconsOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 263,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 238,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 202,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With ShortcutsOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 417,
+                                    "w": 58.046875,
+                                    "h": 36
+                                  },
+                                  "text": "Open"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Open"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With SubmenuOpen"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 417,
+                                    "w": 104.890625,
+                                    "h": 36
+                                  },
+                                  "text": "Checkboxes"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 392,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Checkboxes"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 356,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With CheckboxesCheckboxes"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 571,
+                                    "w": 107.09375,
+                                    "h": 36
+                                  },
+                                  "text": "Notifications"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Notifications"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "Checkboxes with IconsNotifications"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 571,
+                                    "w": 104.46875,
+                                    "h": 36
+                                  },
+                                  "text": "Radio Group"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 546,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Radio Group"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 510,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With Radio GroupRadio Group"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 725,
+                                    "w": 135.609375,
+                                    "h": 36
+                                  },
+                                  "text": "Payment Method"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Payment Method"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "Radio with IconsPayment Method"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dropdown-menu-trigger",
+                                    "aria-haspopup": "menu",
+                                    "aria-expanded": "false",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 725,
+                                    "w": 72.609375,
+                                    "h": 36
+                                  },
+                                  "text": "Actions"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 700,
+                                "w": 448,
+                                "h": 86
+                              },
+                              "text": "Actions"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 664,
+                            "w": 448,
+                            "h": 122
+                          },
+                          "text": "With Destructive ItemsActions"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            10
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                10,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    10,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        10,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-fallback"
+                                              },
+                                              "children": [],
+                                              "rect": {
+                                                "x": 210,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              },
+                                              "text": "CN"
+                                            }
+                                          ],
+                                          "rect": {
+                                            "x": 210,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          },
+                                          "text": "CN"
+                                        }
+                                      ],
+                                      "rect": {
+                                        "x": 201,
+                                        "y": 879,
+                                        "w": 200,
+                                        "h": 48
+                                      },
+                                      "text": "CNshadcnshadcn@example.com"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        10,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-slot": "dropdown-menu-trigger",
+                                        "aria-haspopup": "menu",
+                                        "aria-expanded": "false",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            10,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-slot": "avatar"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                10,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-slot": "avatar-fallback"
+                                              },
+                                              "children": [],
+                                              "rect": {
+                                                "x": 565,
+                                                "y": 887,
+                                                "w": 32,
+                                                "h": 32
+                                              },
+                                              "text": "LR"
+                                            }
+                                          ],
+                                          "rect": {
+                                            "x": 565,
+                                            "y": 887,
+                                            "w": 32,
+                                            "h": 32
+                                          },
+                                          "text": "LR"
+                                        }
+                                      ],
+                                      "rect": {
+                                        "x": 563,
+                                        "y": 885,
+                                        "w": 36,
+                                        "h": 36
+                                      },
+                                      "text": "LR"
+                                    }
+                                  ],
+                                  "rect": {
+                                    "x": 201,
+                                    "y": 879,
+                                    "w": 398,
+                                    "h": 48
+                                  },
+                                  "text": "CNshadcnshadcn@example.comLR"
+                                }
+                              ],
+                              "rect": {
+                                "x": 176,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
+                              "text": "CNshadcnshadcn@example.comLR"
+                            }
+                          ],
+                          "rect": {
+                            "x": 176,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
+                          "text": "With AvatarCNshadcnshadcn@example.comLR"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            11
+                          ],
+                          "attrs": {
+                            "data-slot": "example"
+                          },
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                11,
+                                1
+                              ],
+                              "attrs": {
+                                "data-slot": "example-content"
+                              },
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    11,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-slot": "dialog-trigger",
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_1l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "rect": {
+                                    "x": 681,
+                                    "y": 879,
+                                    "w": 104.015625,
+                                    "h": 36
+                                  },
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "rect": {
+                                "x": 656,
+                                "y": 854,
+                                "w": 448,
+                                "h": 98
+                              },
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "rect": {
+                            "x": 656,
+                            "y": 818,
+                            "w": 448,
+                            "h": 134
+                          },
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "rect": {
+                        "x": 128,
+                        "y": 0,
+                        "w": 1024,
+                        "h": 1000
+                      },
+                      "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
+                    }
+                  ],
+                  "rect": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 1280,
+                    "h": 1000
+                  },
+                  "text": "BasicOpenComplexComplex MenuWith IconsOpenWith ShortcutsOpenWith SubmenuOpenWith CheckboxesCheckboxesCheckboxes with Ico…"
+                }
+              ],
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "w": 1280,
+                "h": 1000
+              },
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": [],
+              "rect": {
+                "x": 0,
+                "y": 1000,
+                "w": 1280,
+                "h": 0
+              }
+            }
+          ],
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1280,
+            "h": 1000
+          }
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "dropdown-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Complex"
+            },
+            {
+              "role": "button",
+              "name": "Complex Menu",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icons"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Shortcuts"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Submenu"
+            },
+            {
+              "role": "button",
+              "name": "Open",
+              "focused": true,
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Checkboxes"
+            },
+            {
+              "role": "button",
+              "name": "Checkboxes",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Checkboxes with Icons"
+            },
+            {
+              "role": "button",
+              "name": "Notifications",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Radio Group"
+            },
+            {
+              "role": "button",
+              "name": "Radio Group",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Radio with Icons"
+            },
+            {
+              "role": "button",
+              "name": "Payment Method",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Destructive Items"
+            },
+            {
+              "role": "button",
+              "name": "Actions",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Avatar"
+            },
+            {
+              "role": "button",
+              "name": "CN shadcn shadcn@example.com",
+              "haspopup": "menu"
+            },
+            {
+              "role": "button",
+              "name": "LR",
+              "haspopup": "menu"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

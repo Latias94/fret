@@ -5973,3 +5973,1417 @@ fn radix_web_scroll_area_scroll_top_delta_matches_fret() {
         "scroll-area delta mismatch: web_delta_y={web_delta_y} fret_delta_y={fret_delta_y}"
     );
 }
+
+#[test]
+fn radix_web_dropdown_menu_submenu_arrowleft_escape_close_matches_fret() {
+    let golden =
+        read_timeline("dropdown-menu-example.dropdown-menu.submenu-arrowleft-escape-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "dropdown-menu");
+    assert_eq!(golden.scenario, "submenu-arrowleft-escape-close");
+    assert!(golden.steps.len() >= 5);
+
+    let sub_open_step = golden
+        .steps
+        .iter()
+        .find(|s| {
+            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+        })
+        .expect("submenu open step");
+    assert!(
+        has_dom_node_attr(
+            &sub_open_step.snapshot.dom,
+            "data-slot",
+            "dropdown-menu-sub-content"
+        ),
+        "web expected submenu content to be present after ArrowRight"
+    );
+
+    let sub_close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "ArrowLeft"))
+        .expect("submenu close step");
+    assert!(
+        !has_dom_node_attr(
+            &sub_close_step.snapshot.dom,
+            "data-slot",
+            "dropdown-menu-sub-content"
+        ),
+        "web expected submenu content to be absent after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step.snapshot.focus.text.as_deref(),
+        Some("Invite users"),
+        "web expected focus to return to the submenu trigger after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("dropdown-menu-sub-trigger"),
+        "web expected focused element to be the dropdown-menu submenu trigger after ArrowLeft"
+    );
+
+    let close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "Escape"))
+        .expect("close step");
+    assert!(
+        !has_dom_node_attr(
+            &close_step.snapshot.dom,
+            "data-slot",
+            "dropdown-menu-content"
+        ),
+        "web expected dropdown menu content to be absent after Escape"
+    );
+    assert_eq!(
+        close_step.snapshot.focus.text.as_deref(),
+        Some("Open"),
+        "web expected focus to return to the trigger after Escape"
+    );
+    assert_eq!(
+        close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("dropdown-menu-trigger"),
+        "web expected focused element to be the dropdown-menu trigger after Escape"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                fret_ui_shadcn::Button::new("Open")
+                    .toggle_model(open.clone())
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
+                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
+                        ),
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                fret_ui_shadcn::DropdownMenuEntry::Group(
+                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        ),
+                                    ]),
+                                ),
+                                fret_ui_shadcn::DropdownMenuEntry::Separator,
+                                fret_ui_shadcn::DropdownMenuEntry::Group(
+                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("More..."),
+                                        ),
+                                    ]),
+                                ),
+                            ]),
+                        ),
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("New Team"),
+                        ),
+                    ]),
+                )]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Open");
+    ui.set_focus(Some(trigger.id));
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let focused_role = snap.nodes.iter().find(|n| n.flags.focused).map(|n| n.role);
+    assert_eq!(
+        focused_role,
+        Some(SemanticsRole::MenuItem),
+        "expected ArrowDown to focus the first menu item"
+    );
+
+    let mut frame = 3;
+    for _ in 0..20 {
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("semantics snapshot");
+        let focused_label = snap
+            .nodes
+            .iter()
+            .find(|n| n.flags.focused)
+            .and_then(|n| n.label.as_deref());
+        if focused_label == Some("Invite users") {
+            break;
+        }
+
+        dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            |cx| vec![build(cx, &open)],
+        );
+        frame += 1;
+    }
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    timers.ingest_effects(&mut app);
+    timers.fire_after(Duration::from_millis(0), &mut ui, &mut app, &mut services);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email")),
+        "submenu should be open after ArrowRight"
+    );
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !snap
+            .nodes
+            .iter()
+            .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email")),
+        "submenu should be closed after ArrowLeft"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Invite users"),
+        "expected focus to return to the submenu trigger after ArrowLeft"
+    );
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| vec![build(cx, &open)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "expected dropdown menu to be closed after Escape"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().all(|n| {
+            n.role != SemanticsRole::MenuItem || n.label.as_deref().is_none_or(|l| l != "Team")
+        }),
+        "expected dropdown menu content to be absent after Escape"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Open"),
+        "expected focus to return to the trigger after Escape"
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(focused.id),
+        "expected UiTree focus to match focused semantics node"
+    );
+}
+
+#[test]
+fn radix_web_context_menu_submenu_arrowleft_escape_close_matches_fret() {
+    let golden =
+        read_timeline("context-menu-example.context-menu.submenu-arrowleft-escape-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "context-menu");
+    assert_eq!(golden.scenario, "submenu-arrowleft-escape-close");
+    assert!(golden.steps.len() >= 5);
+
+    let sub_open_step = golden
+        .steps
+        .iter()
+        .find(|s| {
+            matches!(&s.action, Action::Press { key } if key.split(',').last() == Some("ArrowRight"))
+        })
+        .expect("submenu open step");
+    assert!(
+        has_dom_node_attr(
+            &sub_open_step.snapshot.dom,
+            "data-slot",
+            "context-menu-sub-content"
+        ),
+        "web expected submenu content to be present after ArrowRight"
+    );
+
+    let sub_close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "ArrowLeft"))
+        .expect("submenu close step");
+    assert!(
+        !has_dom_node_attr(
+            &sub_close_step.snapshot.dom,
+            "data-slot",
+            "context-menu-sub-content"
+        ),
+        "web expected submenu content to be absent after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step.snapshot.focus.text.as_deref(),
+        Some("More Tools"),
+        "web expected focus to return to the submenu trigger after ArrowLeft"
+    );
+    assert_eq!(
+        sub_close_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("context-menu-sub-trigger"),
+        "web expected focused element to be the context-menu submenu trigger after ArrowLeft"
+    );
+
+    let close_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Press { key } if key == "Escape"))
+        .expect("close step");
+    assert!(
+        !has_dom_node_attr(
+            &close_step.snapshot.dom,
+            "data-slot",
+            "context-menu-content"
+        ),
+        "web expected context menu content to be absent after Escape"
+    );
+    assert_eq!(
+        close_step.snapshot.focus.tag, "body",
+        "web expected focus to be restored to <body/> after Escape"
+    );
+    assert!(
+        close_step.snapshot.focus.attrs.is_empty(),
+        "web expected focus attrs to be empty after Escape"
+    );
+    assert_eq!(
+        close_step.snapshot.focus.text.as_deref(),
+        None,
+        "web expected focused element text to be absent after Escape"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+            cx,
+            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |_cx| {
+                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+
+                vec![
+                    ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                        ContextMenuEntry::Item(ContextMenuItem::new("Copy")),
+                        ContextMenuEntry::Item(ContextMenuItem::new("Cut")),
+                    ])),
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").submenu(vec![
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(
+                                ContextMenuItem::new("Delete")
+                                    .variant(ContextMenuItemVariant::Destructive),
+                            ),
+                        ])),
+                    ])),
+                ]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Right click here");
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    let mut frame = 3;
+    for _ in 0..20 {
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("semantics snapshot");
+        let focused_label = snap
+            .nodes
+            .iter()
+            .find(|n| n.flags.focused)
+            .and_then(|n| n.label.as_deref());
+        if focused_label == Some("More Tools") {
+            break;
+        }
+
+        dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            |cx| vec![build(cx, &open)],
+        );
+        frame += 1;
+    }
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    timers.ingest_effects(&mut app);
+    timers.fire_after(Duration::from_millis(0), &mut ui, &mut app, &mut services);
+    timers.ingest_effects(&mut app);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page...")
+        }),
+        "submenu should be open after ArrowRight"
+    );
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::ArrowLeft);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+    frame += 1;
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        !snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page...")
+        }),
+        "submenu should be closed after ArrowLeft"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("More Tools"),
+        "expected focus to return to the submenu trigger after ArrowLeft"
+    );
+
+    dispatch_web_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| vec![build(cx, &open)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "expected context menu to be closed after Escape"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().all(|n| !n.flags.focused),
+        "expected focus to be cleared after closing the context menu"
+    );
+    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
+}
+
+#[test]
+fn radix_web_dropdown_menu_outside_click_close_matches_fret() {
+    let golden = read_timeline("dropdown-menu-example.dropdown-menu.outside-click-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "dropdown-menu");
+    assert_eq!(golden.scenario, "outside-click-close");
+    assert!(golden.steps.len() >= 3);
+
+    let outside_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "outside"))
+        .expect("outside click step");
+    assert!(
+        !has_dom_node_attr(
+            &outside_step.snapshot.dom,
+            "data-slot",
+            "dropdown-menu-content"
+        ),
+        "web expected dropdown menu content to be absent after outside click"
+    );
+    assert_eq!(
+        outside_step.snapshot.focus.text.as_deref(),
+        Some("Open"),
+        "web expected focus to return to the trigger after outside click"
+    );
+    assert_eq!(
+        outside_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("dropdown-menu-trigger"),
+        "web expected focused element to be the dropdown-menu trigger after outside click"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                fret_ui_shadcn::Button::new("Open")
+                    .toggle_model(open.clone())
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
+                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
+                        ),
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                fret_ui_shadcn::DropdownMenuEntry::Group(
+                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        ),
+                                    ]),
+                                ),
+                            ]),
+                        ),
+                    ]),
+                )]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Open");
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    click_outside(&mut ui, &mut app, &mut services, bounds);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            request_semantics,
+            |cx| vec![build(cx, &open)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "expected dropdown menu to be closed after outside click"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .all(|n| n.label.as_deref().is_none_or(|l| l != "Team")),
+        "expected dropdown menu content to be absent after outside click"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Open"),
+        "expected focus to return to the trigger after outside click"
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(focused.id),
+        "expected UiTree focus to match focused semantics node"
+    );
+}
+
+#[test]
+fn radix_web_dropdown_menu_submenu_outside_click_close_matches_fret() {
+    let golden =
+        read_timeline("dropdown-menu-example.dropdown-menu.submenu-outside-click-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "dropdown-menu");
+    assert_eq!(golden.scenario, "submenu-outside-click-close");
+    assert!(golden.steps.len() >= 4);
+
+    let outside_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "outside"))
+        .expect("outside click step");
+    assert!(
+        !has_dom_node_attr(
+            &outside_step.snapshot.dom,
+            "data-slot",
+            "dropdown-menu-content"
+        ),
+        "web expected dropdown menu content to be absent after outside click"
+    );
+    assert!(
+        !has_dom_node_attr(
+            &outside_step.snapshot.dom,
+            "data-slot",
+            "dropdown-menu-sub-content"
+        ),
+        "web expected dropdown menu submenu content to be absent after outside click"
+    );
+    assert_eq!(
+        outside_step.snapshot.focus.text.as_deref(),
+        Some("Open"),
+        "web expected focus to return to the trigger after outside click"
+    );
+    assert_eq!(
+        outside_step
+            .snapshot
+            .focus
+            .attrs
+            .get("data-slot")
+            .map(String::as_str),
+        Some("dropdown-menu-trigger"),
+        "web expected focused element to be the dropdown-menu trigger after outside click"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
+            cx,
+            |cx| {
+                fret_ui_shadcn::Button::new("Open")
+                    .toggle_model(open.clone())
+                    .into_element(cx)
+            },
+            |_cx| {
+                vec![fret_ui_shadcn::DropdownMenuEntry::Group(
+                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("Team"),
+                        ),
+                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                            fret_ui_shadcn::DropdownMenuItem::new("Invite users").submenu(vec![
+                                fret_ui_shadcn::DropdownMenuEntry::Group(
+                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Email"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Message"),
+                                        ),
+                                    ]),
+                                ),
+                            ]),
+                        ),
+                    ]),
+                )]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Open");
+    click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let invite = find_semantics(&snap, SemanticsRole::MenuItem, "Invite users");
+    move_pointer(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(invite.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    snap.nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email"))
+        .expect("submenu should be open after hover");
+
+    click_outside(&mut ui, &mut app, &mut services, bounds);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(4 + tick),
+            request_semantics,
+            |cx| vec![build(cx, &open)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "expected dropdown menu to be closed after outside click"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .all(|n| n.label.as_deref().is_none_or(|l| l != "Email")),
+        "expected dropdown menu submenu content to be absent after outside click"
+    );
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Open"),
+        "expected focus to return to the trigger after outside click"
+    );
+}
+
+#[test]
+fn radix_web_context_menu_outside_click_close_matches_fret() {
+    let golden = read_timeline("context-menu-example.context-menu.outside-click-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "context-menu");
+    assert_eq!(golden.scenario, "outside-click-close");
+    assert!(golden.steps.len() >= 3);
+
+    let outside_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "outside"))
+        .expect("outside click step");
+    assert!(
+        !has_dom_node_attr(
+            &outside_step.snapshot.dom,
+            "data-slot",
+            "context-menu-content"
+        ),
+        "web expected context menu content to be absent after outside click"
+    );
+    assert_eq!(
+        outside_step.snapshot.focus.tag, "body",
+        "web expected focus to be restored to <body/> after outside click"
+    );
+    assert!(
+        outside_step.snapshot.focus.attrs.is_empty(),
+        "web expected focus attrs to be empty after outside click"
+    );
+    assert_eq!(
+        outside_step.snapshot.focus.text.as_deref(),
+        None,
+        "web expected focused element text to be absent after outside click"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+            cx,
+            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |_cx| {
+                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+
+                vec![
+                    ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                        ContextMenuEntry::Item(ContextMenuItem::new("Copy")),
+                        ContextMenuEntry::Item(ContextMenuItem::new("Cut")),
+                    ])),
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").submenu(vec![
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(
+                                ContextMenuItem::new("Delete")
+                                    .variant(ContextMenuItemVariant::Destructive),
+                            ),
+                        ])),
+                    ])),
+                ]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Right click here");
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    assert!(app.models().get_copied(&open).unwrap_or(false));
+
+    click_outside(&mut ui, &mut app, &mut services, bounds);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            request_semantics,
+            |cx| vec![build(cx, &open)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "expected context menu to be closed after outside click"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().all(|n| !n.flags.focused),
+        "expected focus to be cleared after closing the context menu"
+    );
+    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
+}
+
+#[test]
+fn radix_web_context_menu_submenu_outside_click_close_matches_fret() {
+    let golden =
+        read_timeline("context-menu-example.context-menu.submenu-outside-click-close.light");
+    assert!(golden.version >= 1);
+    assert_eq!(golden.base, "radix");
+    assert_eq!(golden.primitive, "context-menu");
+    assert_eq!(golden.scenario, "submenu-outside-click-close");
+    assert!(golden.steps.len() >= 4);
+
+    let outside_step = golden
+        .steps
+        .iter()
+        .find(|s| matches!(&s.action, Action::Click { target } if target == "outside"))
+        .expect("outside click step");
+    assert!(
+        !has_dom_node_attr(
+            &outside_step.snapshot.dom,
+            "data-slot",
+            "context-menu-content"
+        ),
+        "web expected context menu content to be absent after outside click"
+    );
+    assert!(
+        !has_dom_node_attr(
+            &outside_step.snapshot.dom,
+            "data-slot",
+            "context-menu-sub-content"
+        ),
+        "web expected context menu submenu content to be absent after outside click"
+    );
+    assert_eq!(
+        outside_step.snapshot.focus.tag, "body",
+        "web expected focus to be restored to <body/> after outside click"
+    );
+    assert!(
+        outside_step.snapshot.focus.attrs.is_empty(),
+        "web expected focus attrs to be empty after outside click"
+    );
+    assert_eq!(
+        outside_step.snapshot.focus.text.as_deref(),
+        None,
+        "web expected focused element text to be absent after outside click"
+    );
+
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+        fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+            cx,
+            |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+            |_cx| {
+                use fret_ui_shadcn::context_menu::ContextMenuItemVariant;
+                use fret_ui_shadcn::{ContextMenuEntry, ContextMenuGroup, ContextMenuItem};
+
+                vec![
+                    ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                        ContextMenuEntry::Item(ContextMenuItem::new("Copy")),
+                        ContextMenuEntry::Item(ContextMenuItem::new("Cut")),
+                    ])),
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").submenu(vec![
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                        ])),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Group(ContextMenuGroup::new(vec![
+                            ContextMenuEntry::Item(
+                                ContextMenuItem::new("Delete")
+                                    .variant(ContextMenuItemVariant::Destructive),
+                            ),
+                        ])),
+                    ])),
+                ]
+            },
+        )
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let trigger = find_semantics(&snap, SemanticsRole::Button, "Right click here");
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    let more_tools = find_semantics(&snap, SemanticsRole::MenuItem, "More Tools");
+    move_pointer(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(more_tools.bounds),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    snap.nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page..."))
+        .expect("submenu should be open after hover");
+
+    click_outside(&mut ui, &mut app, &mut services, bounds);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(4 + tick),
+            request_semantics,
+            |cx| vec![build(cx, &open)],
+        );
+        timers.ingest_effects(&mut app);
+        timers.fire_all(&mut ui, &mut app, &mut services);
+    }
+
+    assert!(
+        !app.models().get_copied(&open).unwrap_or(false),
+        "expected context menu to be closed after outside click"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .all(|n| n.label.as_deref().is_none_or(|l| l != "Save Page...")),
+        "expected context menu submenu content to be absent after outside click"
+    );
+    assert!(
+        snap.nodes.iter().all(|n| !n.flags.focused),
+        "expected focus to be cleared after closing the context menu"
+    );
+    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
+}

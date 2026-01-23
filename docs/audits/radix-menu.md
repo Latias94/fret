@@ -104,10 +104,30 @@ composing:
   keyboard open/close (ArrowRight open, ArrowLeft close + focus restore) against the Radix Vega web
   golden
   (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates layered keyboard close
+  (ArrowLeft closes submenu + restores focus; Escape closes root + restores focus) against the
+  Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-arrowleft-escape-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu closes
+  when clicking outside the menu content against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.outside-click-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates dropdown-menu closes
+  when clicking outside while a submenu is open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-outside-click-close.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
   keyboard open/close (ArrowRight open, ArrowLeft close + focus restore) against the Radix Vega web
   golden
   (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-keyboard-open-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates layered keyboard close
+  (ArrowLeft closes submenu + restores focus; Escape closes root + clears focus) against the Radix
+  Vega web golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-arrowleft-escape-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu closes when
+  clicking outside the menu content against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.outside-click-close.light.json`).
+- `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu closes when
+  clicking outside while a submenu is open against the Radix Vega web golden
+  (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-outside-click-close.light.json`).
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` validates context-menu submenu
   hover-open + item select closes the root menu against the Radix Vega web golden
   (`goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-hover-select.light.json`).

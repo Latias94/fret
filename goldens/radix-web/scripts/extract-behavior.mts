@@ -1024,6 +1024,145 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    primitive: "dropdown-menu",
+    scenario: "submenu-arrowleft-escape-close",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await focusExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await press(ctx.page, "ArrowDown")
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs)).catch(
+        (err) => {
+          throw new Error(
+            `submenu-arrowleft-escape-close: menu did not open after ArrowDown: ${String(err)}`
+          )
+        }
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowDown" })
+
+      const pressed = await pressUntilActiveElementContainsText(
+        ctx.page,
+        "ArrowDown",
+        "Invite users",
+        20
+      )
+      await press(ctx.page, "ArrowRight")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-arrowleft-escape-close: submenu did not open after ArrowRight: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "press", key: [...pressed, "ArrowRight"].join(",") })
+
+      await press(ctx.page, "ArrowLeft")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        false,
+        ctx.timeoutMs
+      ).catch((err) => {
+        throw new Error(
+          `submenu-arrowleft-escape-close: submenu did not close after ArrowLeft: ${String(err)}`
+        )
+      })
+      await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
+
+      await press(ctx.page, "Escape")
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs)).catch(
+        (err) => {
+          throw new Error(
+            `submenu-arrowleft-escape-close: menu did not close after Escape: ${String(err)}`
+          )
+        }
+      )
+      await pushStep(ctx, { kind: "press", key: "Escape" })
+    },
+  },
+  {
+    primitive: "dropdown-menu",
+    scenario: "outside-click-close",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu:with-submenu" })
+
+      // Click outside to dismiss (non-click-through).
+      await ctx.page.mouse.click(5, 5)
+      await sleep(100)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "outside" })
+    },
+  },
+  {
+    primitive: "dropdown-menu",
+    scenario: "submenu-outside-click-close",
+    item: "dropdown-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await clickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="dropdown-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "click", target: "dropdown-menu:with-submenu" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-trigger"]',
+        "Invite users"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="dropdown-menu-sub-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "hover", target: "dropdown-menu-sub-trigger:Invite users" })
+
+      // Click outside to dismiss both layers.
+      await ctx.page.mouse.click(5, 5)
+      await sleep(100)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "outside" })
+    },
+  },
+  {
     primitive: "context-menu",
     scenario: "context-open-close",
     item: "context-menu-example",
@@ -1086,6 +1225,114 @@ const scenarios: Scenario[] = [
         ctx.timeoutMs
       )
       await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
+    },
+  },
+  {
+    primitive: "context-menu",
+    scenario: "submenu-arrowleft-escape-close",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="context-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "context-menu:with-submenu" })
+
+      const pressed = await pressUntilActiveElementContainsText(
+        ctx.page,
+        "ArrowDown",
+        "More Tools",
+        20
+      )
+      await press(ctx.page, "ArrowRight")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: [...pressed, "ArrowRight"].join(",") })
+
+      await press(ctx.page, "ArrowLeft")
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        false,
+        ctx.timeoutMs
+      )
+      await pushStep(ctx, { kind: "press", key: "ArrowLeft" })
+
+      await press(ctx.page, "Escape")
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "press", key: "Escape" })
+    },
+  },
+  {
+    primitive: "context-menu",
+    scenario: "outside-click-close",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="context-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "context-menu:with-submenu" })
+
+      // Click outside to dismiss (non-click-through).
+      await ctx.page.mouse.click(5, 5)
+      await sleep(100)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "outside" })
+    },
+  },
+  {
+    primitive: "context-menu",
+    scenario: "submenu-outside-click-close",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickExampleTrigger(
+        ctx.page,
+        "With Submenu",
+        '[data-slot="context-menu-trigger"]'
+      )
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "context-menu:with-submenu" })
+
+      await hoverFirstByText(
+        ctx.page,
+        '[data-slot="context-menu-sub-trigger"]',
+        "More Tools"
+      )
+      await sleep(50)
+      await waitForSelectorPresent(
+        ctx.page,
+        '[data-slot="context-menu-sub-content"]',
+        true,
+        Math.min(15000, ctx.timeoutMs)
+      )
+      await pushStep(ctx, { kind: "hover", target: "context-menu-sub-trigger:More Tools" })
+
+      // Click outside to dismiss both layers.
+      await ctx.page.mouse.click(5, 5)
+      await sleep(100)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "click", target: "outside" })
     },
   },
   {

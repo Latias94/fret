@@ -225,12 +225,28 @@ It complements (but does not replace) ADRs:
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-outside-click-close.light.json`
     - Added menubar submenu-arrowleft-escape-close (ArrowLeft closes submenu; Escape closes root) timeline:
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-arrowleft-escape-close.light.json`
+    - Added dropdown-menu submenu-arrowleft-escape-close (ArrowLeft closes submenu; Escape closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-arrowleft-escape-close.light.json`
+    - Added context-menu submenu-arrowleft-escape-close (ArrowLeft closes submenu; Escape closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-arrowleft-escape-close.light.json`
+    - Added dropdown-menu outside-click-close (click outside closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.outside-click-close.light.json`
+    - Added dropdown-menu submenu-outside-click-close (click outside closes root + submenu) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-outside-click-close.light.json`
+    - Added context-menu outside-click-close (click outside closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.outside-click-close.light.json`
+    - Added context-menu submenu-outside-click-close (click outside closes root + submenu) timeline:
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-outside-click-close.light.json`
     - Added Fret gates covering pointer-grace corridor staying open: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added submenu keyboard open/close timelines:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`
       - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-keyboard-open-close.light.json`
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-keyboard-open-close.light.json`
     - Added Fret gates covering submenu ArrowRight open + ArrowLeft close + focus restore:
+      `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+    - Added Fret gates covering layered submenu close (ArrowLeft closes submenu; Escape closes root):
+      `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+    - Added Fret gates covering outside click closes (root-only + with-submenu):
       `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added/updated Radix Vega timeline state gates for:
       - tooltip hover open/close + Escape dismissal,
