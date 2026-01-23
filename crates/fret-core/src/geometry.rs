@@ -111,7 +111,7 @@ impl RectPx {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Corners {
     pub top_left: Px,
     pub top_right: Px,

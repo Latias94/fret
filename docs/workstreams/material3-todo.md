@@ -41,10 +41,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 
 ## Progress (completed)
 
-- [x] ThemeConfig v2 supports extra token kinds (number/duration/easing/text-style).
+- [x] ThemeConfig v2 supports extra token kinds (number/duration/easing/text-style/corners).
   - Evidence: `crates/fret-ui/src/theme.rs` (`ThemeConfig`, `Theme::{number_by_key,...}`),
     `crates/fret-ui/src/theme_registry.rs` (`ThemeTokenKind`),
     `crates/fret-core/src/geometry.rs` (`Px` serde),
+    `crates/fret-core/src/geometry.rs` (`Corners` serde),
     `crates/fret-core/src/text.rs` (`TextStyle` serde),
     tests in `crates/fret-ui/src/theme.rs` (`theme_config_v2_parses_additional_token_kinds`).
 - [x] Mechanism-level state layer painting primitive.
@@ -130,7 +131,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_outlined_text_field_scalars`,
         `inject_comp_filled_text_field_scalars`).
     - [ ] Expand scalar import coverage for other MVP components.
-    - [ ] Decide how to represent non-scalar tokens (corner sets, etc.) in ThemeConfig.
+    - [x] Represent corner sets via `ThemeConfig.corners` (per-corner radii); other structured tokens TBD.
 - [x] Add support for non-color/non-px token kinds needed by Material:
   - [x] scalar numbers (e.g. state-layer opacity)
   - [x] durations (ms)
@@ -168,6 +169,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 
 - [ ] Elevation mapping (MD3 levels → shadow parameters).
 - [ ] Shape mapping (corner tokens, per-state expressive shape where applicable).
+  - [x] Corner set tokens (`md.sys.shape.corner.*.(top|start|end)`) and component shapes that depend on them.
 - [ ] Typography mapping (typescale roles).
 
 ### Component Surface (MVP set)

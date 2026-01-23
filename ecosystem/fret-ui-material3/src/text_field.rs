@@ -308,17 +308,21 @@ fn container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
 }
 
 fn outlined_container_corner(theme: &Theme) -> Corners {
-    let r = theme
-        .metric_by_key("md.comp.outlined-text-field.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
-        .unwrap_or(Px(4.0));
-    Corners::all(r)
+    theme
+        .corners_by_key("md.comp.outlined-text-field.container.shape")
+        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
+        .unwrap_or_else(|| Corners::all(Px(4.0)))
 }
 
 fn filled_container_corner(theme: &Theme) -> Corners {
+    if let Some(corners) = theme.corners_by_key("md.comp.filled-text-field.container.shape") {
+        return corners;
+    }
+    if let Some(corners) = theme.corners_by_key("md.sys.shape.corner.extra-small.top") {
+        return corners;
+    }
     let r = theme
-        .metric_by_key("md.comp.filled-text-field.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
+        .metric_by_key("md.sys.shape.corner.extra-small")
         .unwrap_or(Px(4.0));
     Corners {
         top_left: r,

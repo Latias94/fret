@@ -487,9 +487,14 @@ fn primary_tab_indicator<H: UiHost>(
     } else {
         Color::TRANSPARENT
     };
-    let radius = theme
-        .metric_by_key("md.comp.primary-navigation-tab.active-indicator.shape")
-        .unwrap_or(Px(3.0));
+    let corner_radii = theme
+        .corners_by_key("md.comp.primary-navigation-tab.active-indicator.shape")
+        .unwrap_or(Corners {
+            top_left: Px(3.0),
+            top_right: Px(3.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        });
 
     let mut props = fret_ui::element::ContainerProps::default();
     props.layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -498,12 +503,7 @@ fn primary_tab_indicator<H: UiHost>(
     props.layout.inset.bottom = Some(Px(0.0));
     props.layout.size.height = Length::Px(height);
     props.background = Some(color);
-    props.corner_radii = Corners {
-        top_left: radius,
-        top_right: radius,
-        bottom_right: Px(0.0),
-        bottom_left: Px(0.0),
-    };
+    props.corner_radii = corner_radii;
     cx.container(props, |_cx| vec![])
 }
 

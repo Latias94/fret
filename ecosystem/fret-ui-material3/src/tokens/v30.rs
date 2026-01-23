@@ -4,7 +4,7 @@
 //! stable "inject tokens into ThemeConfig" surface. It does not attempt to mirror the
 //! `@material/web` API or DOM/Lit implementation details.
 
-use fret_core::FontId;
+use fret_core::{Corners, FontId, Px};
 use fret_ui::theme::ThemeConfig;
 use material_colors::color::Argb;
 use material_colors::dynamic_color::Variant as MaterialVariant;
@@ -1250,22 +1250,46 @@ fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
 fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_text_field_scalars(cfg);
 
-    // Material Web v30 models `md.comp.filled-text-field.container.shape` as a corner set
-    // (`md-sys-shape.$corner-extra-small-top`). Our `ThemeConfig` currently stores a single scalar
-    // corner radius, so we approximate with the common extra-small radius (4px).
-    cfg.metrics
-        .insert("md.comp.filled-text-field.container.shape".to_string(), 4.0);
+    if let Some(corners) = cfg
+        .corners
+        .get("md.sys.shape.corner.extra-small.top")
+        .copied()
+    {
+        cfg.corners.insert(
+            "md.comp.filled-text-field.container.shape".to_string(),
+            corners,
+        );
+        return;
+    }
+
+    let r = cfg
+        .metrics
+        .get("md.sys.shape.corner.extra-small")
+        .copied()
+        .unwrap_or(4.0);
+    cfg.corners.insert(
+        "md.comp.filled-text-field.container.shape".to_string(),
+        Corners {
+            top_left: Px(r),
+            top_right: Px(r),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
 }
 
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
 
-    // Note: the upstream `md.comp.primary-navigation-tab.active-indicator.shape` token is a 4-corner
-    // set (e.g. `3px 3px 0px 0px`). Until ThemeConfig gains structured corner tokens, we store the
-    // top-corner radius scalar and build the composite shape in the component recipe.
-    cfg.metrics.insert(
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-primary-navigation-tab.scss
+    cfg.corners.insert(
         "md.comp.primary-navigation-tab.active-indicator.shape".to_string(),
-        3.0,
+        Corners {
+            top_left: Px(3.0),
+            top_right: Px(3.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
     );
 }
 
@@ -1760,9 +1784,6 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
 
 fn inject_sys_shape(cfg: &mut ThemeConfig) {
     // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-shape.scss
-    //
-    // Note: Material also defines composite corner sets (e.g. `corner.large.top`) which require a
-    // structured token kind. For now we only inject the single-radius variants into `metrics`.
 
     for (key, px) in [
         ("md.sys.shape.corner-value.none", 0.0),
@@ -1787,6 +1808,52 @@ fn inject_sys_shape(cfg: &mut ThemeConfig) {
     ] {
         cfg.metrics.insert(key.to_string(), px);
     }
+
+    cfg.corners.insert(
+        "md.sys.shape.corner.extra-small.top".to_string(),
+        Corners {
+            top_left: Px(4.0),
+            top_right: Px(4.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.sys.shape.corner.large.top".to_string(),
+        Corners {
+            top_left: Px(16.0),
+            top_right: Px(16.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.sys.shape.corner.extra-large.top".to_string(),
+        Corners {
+            top_left: Px(28.0),
+            top_right: Px(28.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.sys.shape.corner.large.start".to_string(),
+        Corners {
+            top_left: Px(16.0),
+            top_right: Px(0.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(16.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.sys.shape.corner.large.end".to_string(),
+        Corners {
+            top_left: Px(0.0),
+            top_right: Px(16.0),
+            bottom_right: Px(16.0),
+            bottom_left: Px(0.0),
+        },
+    );
 }
 
 #[cfg(test)]

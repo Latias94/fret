@@ -93,6 +93,8 @@ we will not hesitate to propose core changes if they are required for correct ou
 
 These are *candidates*, not guaranteed core work:
 
+- **Structured corner sets**: implemented via `ThemeConfig.corners` + `Theme::corners_by_key` to
+  represent Material corner-set tokens (e.g. `corner-extra-small-top`).
 - **Scoped theme / content defaults**: a local theme overlay / “content color” propagation
   mechanism would reduce boilerplate and mismatch risk.
 - **Subcompose-like measurement**: for tabs (indicator “match content size”) and other

@@ -1,4 +1,4 @@
-use fret_core::{Color, Px, TextStyle};
+use fret_core::{Color, Corners, Px, TextStyle};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -269,6 +269,7 @@ pub struct ThemeConfig {
     pub url: Option<String>,
     pub colors: HashMap<String, String>,
     pub metrics: HashMap<String, f32>,
+    pub corners: HashMap<String, Corners>,
     pub numbers: HashMap<String, f32>,
     pub durations_ms: HashMap<String, u32>,
     pub easings: HashMap<String, CubicBezier>,
@@ -283,6 +284,7 @@ impl Default for ThemeConfig {
             url: None,
             colors: HashMap::new(),
             metrics: HashMap::new(),
+            corners: HashMap::new(),
             numbers: HashMap::new(),
             durations_ms: HashMap::new(),
             easings: HashMap::new(),
@@ -500,12 +502,14 @@ pub struct Theme {
     pub metrics: ThemeMetrics,
     extra_colors: HashMap<String, Color>,
     extra_metrics: HashMap<String, Px>,
+    extra_corners: HashMap<String, Corners>,
     extra_numbers: HashMap<String, f32>,
     extra_durations_ms: HashMap<String, u32>,
     extra_easings: HashMap<String, CubicBezier>,
     extra_text_styles: HashMap<String, TextStyle>,
     configured_colors: HashSet<String>,
     configured_metrics: HashSet<String>,
+    configured_corners: HashSet<String>,
     configured_numbers: HashSet<String>,
     configured_durations_ms: HashSet<String>,
     configured_easings: HashSet<String>,
@@ -554,6 +558,19 @@ impl Theme {
             .unwrap_or_else(|| panic!("missing theme metric token {key}"))
     }
 
+    pub fn corners_by_key(&self, key: &str) -> Option<Corners> {
+        let key = canonicalize_token_key(ThemeTokenKind::Corners, key);
+        self.extra_corners
+            .get(key)
+            .copied()
+            .or_else(|| self.metric_by_key(key).map(Corners::all))
+    }
+
+    pub fn corners_required(&self, key: &str) -> Corners {
+        self.corners_by_key(key)
+            .unwrap_or_else(|| panic!("missing theme corners token {key}"))
+    }
+
     pub fn number_by_key(&self, key: &str) -> Option<f32> {
         let key = canonicalize_token_key(ThemeTokenKind::Number, key);
         self.extra_numbers.get(key).copied()
@@ -600,6 +617,10 @@ impl Theme {
 
     pub fn metric_key_configured(&self, key: &str) -> bool {
         self.configured_metrics.contains(key.trim())
+    }
+
+    pub fn corners_key_configured(&self, key: &str) -> bool {
+        self.configured_corners.contains(key.trim())
     }
 
     pub fn number_key_configured(&self, key: &str) -> bool {
@@ -653,6 +674,7 @@ impl Theme {
         let mut next_durations_ms = HashMap::new();
         let mut next_easings = HashMap::new();
         let mut next_text_styles = HashMap::new();
+        let mut next_corners = HashMap::new();
 
         macro_rules! apply_semantic_color {
             ($key:literal, $set:expr) => {
@@ -971,6 +993,10 @@ impl Theme {
             next_text_styles.insert(k.clone(), v.clone());
         }
 
+        for (k, v) in &cfg.corners {
+            next_corners.insert(k.clone(), *v);
+        }
+
         let next_configured_colors: HashSet<String> = cfg.colors.keys().cloned().collect();
         if self.configured_colors != next_configured_colors {
             self.configured_colors = next_configured_colors;
@@ -981,6 +1007,11 @@ impl Theme {
             self.configured_metrics = next_configured_metrics;
             changed = true;
         }
+        let next_configured_corners: HashSet<String> = cfg.corners.keys().cloned().collect();
+        if self.configured_corners != next_configured_corners {
+            self.configured_corners = next_configured_corners;
+            changed = true;
+        }
 
         if self.extra_colors != next_colors {
             self.extra_colors = next_colors;
@@ -988,6 +1019,10 @@ impl Theme {
         }
         if self.extra_metrics != next_metrics {
             self.extra_metrics = next_metrics;
+            changed = true;
+        }
+        if self.extra_corners != next_corners {
+            self.extra_corners = next_corners;
             changed = true;
         }
 
@@ -1074,6 +1109,20 @@ impl Theme {
                 Some(prev) if prev == px => {}
                 _ => {
                     self.extra_metrics.insert(key.to_string(), px);
+                    changed = true;
+                }
+            }
+        }
+
+        for (k, v) in &cfg.corners {
+            let key = k.trim();
+            if key.is_empty() {
+                continue;
+            }
+            match self.extra_corners.get(key).copied() {
+                Some(prev) if prev == *v => {}
+                _ => {
+                    self.extra_corners.insert(key.to_string(), *v);
                     changed = true;
                 }
             }
@@ -1200,12 +1249,14 @@ fn default_theme() -> &'static Theme {
             colors,
             extra_colors: default_color_tokens(colors),
             extra_metrics: default_metric_tokens(metrics),
+            extra_corners: HashMap::new(),
             extra_numbers: HashMap::new(),
             extra_durations_ms: HashMap::new(),
             extra_easings: HashMap::new(),
             extra_text_styles: HashMap::new(),
             configured_colors: HashSet::new(),
             configured_metrics: HashSet::new(),
+            configured_corners: HashSet::new(),
             configured_numbers: HashSet::new(),
             configured_durations_ms: HashSet::new(),
             configured_easings: HashSet::new(),
@@ -1411,7 +1462,7 @@ mod tests {
     use super::parse_color_to_linear;
     use super::{CubicBezier, Theme, ThemeConfig};
     use crate::{ThemeColorKey, ThemeMetricKey};
-    use fret_core::{FontId, FontWeight, Px, TextSlant, TextStyle};
+    use fret_core::{Corners, FontId, FontWeight, Px, TextSlant, TextStyle};
     use std::collections::HashMap;
 
     #[test]
@@ -1599,6 +1650,7 @@ mod tests {
   "numbers": { "md.sys.state.hover.state-layer-opacity": 0.08 },
   "durations_ms": { "md.sys.motion.duration.short3": 150 },
   "easings": { "md.sys.motion.easing.emphasized.accelerate": { "x1": 0.3, "y1": 0.0, "x2": 0.8, "y2": 0.15 } },
+  "corners": { "md.sys.shape.corner.extra-small.top": { "top_left": 4, "top_right": 4, "bottom_right": 0, "bottom_left": 0 } },
   "text_styles": {
     "md.sys.typescale.body-medium": { "font": "ui", "size": 14, "weight": 400, "slant": "normal" }
   }
@@ -1630,6 +1682,17 @@ mod tests {
                 y2: 0.15
             })
         );
+        assert_eq!(
+            cfg.corners
+                .get("md.sys.shape.corner.extra-small.top")
+                .copied(),
+            Some(Corners {
+                top_left: Px(4.0),
+                top_right: Px(4.0),
+                bottom_right: Px(0.0),
+                bottom_left: Px(0.0),
+            })
+        );
         assert!(cfg.text_styles.contains_key("md.sys.typescale.body-medium"));
     }
 
@@ -1640,6 +1703,15 @@ mod tests {
 
         theme.apply_config(&ThemeConfig {
             name: "md3".to_string(),
+            corners: HashMap::from([(
+                "c".to_string(),
+                Corners {
+                    top_left: Px(1.0),
+                    top_right: Px(2.0),
+                    bottom_right: Px(3.0),
+                    bottom_left: Px(4.0),
+                },
+            )]),
             numbers: HashMap::from([("n".to_string(), 1.25)]),
             durations_ms: HashMap::from([("d".to_string(), 120)]),
             easings: HashMap::from([(
@@ -1665,6 +1737,15 @@ mod tests {
             ..ThemeConfig::default()
         });
 
+        assert_eq!(
+            theme.corners_by_key("c"),
+            Some(Corners {
+                top_left: Px(1.0),
+                top_right: Px(2.0),
+                bottom_right: Px(3.0),
+                bottom_left: Px(4.0),
+            })
+        );
         assert_eq!(theme.number_by_key("n"), Some(1.25));
         assert_eq!(theme.duration_ms_by_key("d"), Some(120));
         assert_eq!(
@@ -1678,6 +1759,7 @@ mod tests {
         );
         assert!(theme.text_style_by_key("t").is_some());
 
+        assert!(theme.corners_key_configured("c"));
         assert!(theme.number_key_configured("n"));
         assert!(theme.duration_ms_key_configured("d"));
         assert!(theme.easing_key_configured("e"));
@@ -1693,22 +1775,47 @@ mod tests {
         theme.apply_config(&ThemeConfig {
             name: "Base".to_string(),
             metrics: HashMap::from([("metric.radius.sm".to_string(), 11.0)]),
+            corners: HashMap::from([(
+                "base.corners".to_string(),
+                Corners {
+                    top_left: Px(1.0),
+                    top_right: Px(1.0),
+                    bottom_right: Px(1.0),
+                    bottom_left: Px(1.0),
+                },
+            )]),
             ..ThemeConfig::default()
         });
         assert!(theme.metric_key_configured("metric.radius.sm"));
+        assert!(theme.corners_key_configured("base.corners"));
 
         let before = theme.revision();
         theme.extend_tokens_from_config(&ThemeConfig {
             name: "Extras".to_string(),
             metrics: HashMap::from([("md.sys.shape.corner.full".to_string(), 9999.0)]),
+            corners: HashMap::from([(
+                "md.sys.shape.corner.extra-small.top".to_string(),
+                Corners {
+                    top_left: Px(4.0),
+                    top_right: Px(4.0),
+                    bottom_right: Px(0.0),
+                    bottom_left: Px(0.0),
+                },
+            )]),
             numbers: HashMap::from([("md.sys.state.hover.state-layer-opacity".to_string(), 0.08)]),
             ..ThemeConfig::default()
         });
 
         assert!(theme.metric_key_configured("metric.radius.sm"));
+        assert!(theme.corners_key_configured("base.corners"));
         assert_eq!(
             theme.metric_by_key("md.sys.shape.corner.full"),
             Some(Px(9999.0))
+        );
+        assert!(
+            theme
+                .corners_by_key("md.sys.shape.corner.extra-small.top")
+                .is_some()
         );
         assert_eq!(
             theme.number_by_key("md.sys.state.hover.state-layer-opacity"),

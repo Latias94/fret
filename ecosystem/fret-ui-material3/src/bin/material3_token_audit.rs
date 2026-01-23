@@ -306,6 +306,11 @@ fn injected_md_keys_from_v30_theme_config() -> BTreeSet<String> {
             out.insert(k.clone());
         }
     }
+    for k in cfg.corners.keys() {
+        if k.starts_with("md.") {
+            out.insert(k.clone());
+        }
+    }
 
     out
 }
