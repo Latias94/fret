@@ -1394,14 +1394,14 @@ fn preview_material3_radio(
                     .orientation(material3::RadioGroupOrientation::Horizontal)
                     .gap(Px(8.0))
                     .items(vec![
-                        material3::RadioGroupItem::new("A")
-                            .a11y_label("Radio A")
+                        material3::RadioGroupItem::new("Alpha")
+                            .a11y_label("Radio Alpha")
                             .test_id("ui-gallery-material3-radio-a"),
-                        material3::RadioGroupItem::new("B")
-                            .a11y_label("Radio B")
+                        material3::RadioGroupItem::new("Beta")
+                            .a11y_label("Radio Beta")
                             .test_id("ui-gallery-material3-radio-b"),
-                        material3::RadioGroupItem::new("C")
-                            .a11y_label("Radio C (disabled)")
+                        material3::RadioGroupItem::new("Charlie")
+                            .a11y_label("Radio Charlie (disabled)")
                             .disabled(true)
                             .test_id("ui-gallery-material3-radio-c-disabled"),
                     ])
@@ -1412,7 +1412,9 @@ fn preview_material3_radio(
     );
 
     vec![
-        cx.text("Material 3 Radio: group-value binding + state layer + bounded ripple."),
+        cx.text(
+            "Material 3 Radio: group-value binding + roving focus + typeahead + state layer + bounded ripple.",
+        ),
         row,
     ]
 }
