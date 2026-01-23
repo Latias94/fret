@@ -343,6 +343,10 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       reducing “window jump -> layout updates -> next frame rerender” one-frame lag.
       - Evidence: `crates/fret-ui/src/elements/cx.rs` (preview offset windowing),
         `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_window_jump_rerender_uses_latest_handle_offset`).
+    - Window mismatch gating now checks “visible range is outside the previously rendered overscan window” (containment),
+      not “layout-derived window != rendered window”, avoiding unnecessary cache-root rerenders while still inside overscan.
+      - Anchors: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`,
+        `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window`).
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
   - Harness (window boundary scroll):
     - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (multiple small wheel deltas; should cross the overscan window boundary without a massive jump).
