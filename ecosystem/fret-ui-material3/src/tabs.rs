@@ -659,15 +659,10 @@ fn primary_tab_state_layer_opacity(
 }
 
 fn primary_tab_focus_ring(theme: &Theme, corner_radii: Corners) -> fret_ui::element::RingStyle {
-    let mut c = theme
+    let c = theme
         .color_by_key("md.comp.primary-navigation-tab.focus.indicator.color")
         .or_else(|| theme.color_by_key("md.sys.color.primary"))
         .unwrap_or_else(|| theme.color_required("md.sys.color.primary"));
-
-    let opacity = theme
-        .number_by_key("md.sys.state.focus-indicator.opacity")
-        .unwrap_or(1.0);
-    c.a *= opacity;
 
     let width = theme
         .metric_by_key("md.comp.primary-navigation-tab.focus.indicator.thickness")

@@ -1542,6 +1542,22 @@ fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
 
     copy_color(
         cfg,
+        "md.comp.outlined-text-field.error.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.focus.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.hover.input-text.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
         "md.comp.outlined-text-field.input-text.color",
         "md.sys.color.on-surface",
     );
@@ -1639,6 +1655,11 @@ fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.outlined-text-field.error.focus.outline.color",
         "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.hover.outline.color",
+        "md.sys.color.on-error-container",
     );
     copy_color(
         cfg,
