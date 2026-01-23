@@ -555,7 +555,7 @@ impl NavigationMenu {
             .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
         let root_gap = MetricRef::space(Space::N3).resolve(&theme);
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
-        let viewport_shadow = decl_style::shadow_sm(&theme, viewport_radius);
+        let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
         let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
         let content_pad_left = MetricRef::space(Space::N2).resolve(&theme);
         let content_pad_right = MetricRef::space(Space::N2p5).resolve(&theme);

@@ -1420,6 +1420,113 @@ fn assert_navigation_menu_content_surface_colors_match(
     }
 }
 
+fn assert_navigation_menu_content_shadow_insets_match(
+    web_name: &str,
+    web_slot: &str,
+    web_state: &str,
+    open_value: &str,
+    trigger_label: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &Model<Option<Arc<str>>>,
+        &Rc<Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_content = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
+        .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
+    let expected = web_drop_shadow_insets(web_content);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &model, &root_id_out)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &model, &root_id_out)],
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let content_id = with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-shadow-insets",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_content_id(
+                cx, root_id, open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("missing fret navigation-menu content id for {open_value}"));
+
+    let target = bounds_for_element(&mut app, window, content_id).unwrap_or_else(|| {
+        panic!("missing fret bounds for navigation-menu content id {content_id:?}")
+    });
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let quad =
+        find_best_chrome_quad(&scene, target).expect("painted quad for navigation-menu content");
+
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+    assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
+}
+
 fn find_best_chrome_quad_by_size(
     scene: &Scene,
     expected_w: f32,
@@ -8390,6 +8497,62 @@ fn web_vs_fret_navigation_menu_demo_surface_colors_match_web_dark() {
     use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
 
     assert_navigation_menu_content_surface_colors_match(
+        "navigation-menu-demo",
+        "navigation-menu-content",
+        "open",
+        "home",
+        "Home",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(false)
+                .indicator(false)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_shadow_matches_web() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_content_shadow_insets_match(
+        "navigation-menu-demo",
+        "navigation-menu-content",
+        "open",
+        "home",
+        "Home",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(false)
+                .indicator(false)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_shadow_matches_web_dark() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_content_shadow_insets_match(
         "navigation-menu-demo",
         "navigation-menu-content",
         "open",
