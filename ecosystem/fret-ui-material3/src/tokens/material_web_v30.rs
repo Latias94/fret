@@ -610,3 +610,63 @@ pub(crate) fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) 
         500.0,
     );
 }
+
+pub(crate) fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.menu.`
+
+    cfg.metrics.insert(
+        "md.comp.menu.cascading-menu-indicator.icon.size".to_string(),
+        24.0,
+    );
+    cfg.metrics
+        .insert("md.comp.menu.container.elevation".to_string(), 3.0);
+    cfg.metrics
+        .insert("md.comp.menu.container.shape".to_string(), 4.0);
+    cfg.metrics
+        .insert("md.comp.menu.divider.height".to_string(), 1.0);
+    cfg.metrics.insert(
+        "md.comp.menu.focus.indicator.outline.offset".to_string(),
+        -3.0,
+    );
+    cfg.metrics
+        .insert("md.comp.menu.focus.indicator.thickness".to_string(), 3.0);
+    cfg.metrics
+        .insert("md.comp.menu.list-item.container.height".to_string(), 48.0);
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.with-leading-icon.disabled.leading-icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.menu.list-item.with-leading-icon.leading-icon.size".to_string(),
+        24.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.with-trailing-icon.disabled.trailing-icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.menu.list-item.with-trailing-icon.trailing-icon.size".to_string(),
+        24.0,
+    );
+}

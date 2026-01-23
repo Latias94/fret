@@ -42,6 +42,7 @@ impl Args {
             // MVP component prefixes we actively align today.
             "md.comp.switch.".to_string(),
             "md.comp.primary-navigation-tab.".to_string(),
+            "md.comp.menu.".to_string(),
         ];
         let mut debug = false;
 
@@ -391,6 +392,14 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.primary-navigation-tab.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.primary-navigation-tab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_menu_scalars",
+        "md.comp.menu.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.menu."))
             .collect::<Vec<_>>(),
     );
 

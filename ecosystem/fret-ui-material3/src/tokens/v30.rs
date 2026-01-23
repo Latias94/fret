@@ -1385,32 +1385,7 @@ fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
 }
 
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-menu.scss
-
-    cfg.metrics
-        .insert("md.comp.menu.container.shape".to_string(), 4.0);
-    cfg.metrics
-        .insert("md.comp.menu.divider.height".to_string(), 1.0);
-    cfg.metrics
-        .insert("md.comp.menu.list-item.container.height".to_string(), 48.0);
-
-    cfg.numbers.insert(
-        "md.comp.menu.list-item.disabled.label-text.opacity".to_string(),
-        0.38,
-    );
-
-    cfg.numbers.insert(
-        "md.comp.menu.list-item.hover.state-layer.opacity".to_string(),
-        0.08,
-    );
-    cfg.numbers.insert(
-        "md.comp.menu.list-item.focus.state-layer.opacity".to_string(),
-        0.1,
-    );
-    cfg.numbers.insert(
-        "md.comp.menu.list-item.pressed.state-layer.opacity".to_string(),
-        0.1,
-    );
+    material_web_v30::inject_comp_menu_scalars(cfg);
 }
 
 fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
