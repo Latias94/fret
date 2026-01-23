@@ -347,12 +347,21 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       not “layout-derived window != rendered window”, avoiding unnecessary cache-root rerenders while still inside overscan.
       - Anchors: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`,
         `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window`).
+    - Rerender frames now prefer `VirtualListState.render_window_range` (if valid) as the baseline window, falling back to layout-derived
+      `VirtualListState.window_range`. This preserves subtree stability when unrelated rerenders happen during transform-only scrolling
+      inside overscan.
+      - Anchor: `crates/fret-ui/src/elements/cx.rs` (range baseline selection).
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
   - Harness (window boundary scroll):
     - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (multiple small wheel deltas; should cross the overscan window boundary without a massive jump).
     - Evidence bundle (cache+shell, release): `target/fret-diag-perf-vlist-window-boundary-cache-shell2/1769171174767-script-step-0027-wheel/bundle.json`
+    - Evidence bundle (cache+shell, release, post-range-baseline change): `target/fret-diag-perf-vlist-window-boundary-recenter/1769177486396-script-step-0027-wheel/bundle.json`
     - Notes: the current worst tick is layout-dominated when the wheel crosses the window boundary; this is the baseline we want to improve by moving window derivation toward prepaint (ADR 0190).
     - Tip: for a more stable baseline (avoid measure noise), run the harness with `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1` so the page uses `VirtualListOptions::known(...)`.
+    - Rejected (v1): “sticky window shift by minimal delta” increases window-churn under wheel scroll because v1 still requires cache-root rerender to rebuild `visible_items`.
+      Keep this idea for v2 prepaint-driven window updates (ADR 0190).
+      - Evidence bundles (cache+shell, release): `target/fret-diag-perf-vlist-window-boundary-sticky/1769176834622-script-step-0027-wheel/bundle.json`,
+        `target/fret-diag-perf-vlist-window-boundary-sticky2/1769177002575-script-step-0027-wheel/bundle.json`.
     - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell/1769174146628-script-step-0027-wheel/bundle.json`
       - Takeaway: the boundary tick remains layout-dominated even without measurement, so the dominant cost is rebuilding/layouting the row subtree, not measuring it.
 
