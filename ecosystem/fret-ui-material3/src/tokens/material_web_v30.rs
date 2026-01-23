@@ -542,6 +542,474 @@ pub(crate) fn inject_sys_typescale(
     }
 }
 
+pub(crate) fn inject_comp_button_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.button.`
+
+    cfg.metrics
+        .insert("md.comp.button.container.elevation".to_string(), 0.0);
+    cfg.metrics
+        .insert("md.comp.button.container.height".to_string(), 40.0);
+    cfg.metrics
+        .insert("md.comp.button.container.shape.round".to_string(), 9999.0);
+    cfg.metrics
+        .insert("md.comp.button.container.shape.square".to_string(), 12.0);
+    cfg.metrics.insert(
+        "md.comp.button.disabled.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers
+        .insert("md.comp.button.disabled.container.opacity".to_string(), 0.1);
+    cfg.numbers
+        .insert("md.comp.button.disabled.icon.opacity".to_string(), 0.38);
+    cfg.numbers.insert(
+        "md.comp.button.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.elevated.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.elevated.disabled.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.elevated.disabled.container.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.elevated.disabled.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.elevated.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.elevated.focused.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.elevated.focused.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.elevated.hovered.container.elevation".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.elevated.hovered.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.elevated.pressed.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.elevated.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.button.filled.container.elevation".to_string(), 0.0);
+    cfg.metrics.insert(
+        "md.comp.button.filled.disabled.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.filled.disabled.container.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.filled.disabled.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.filled.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.filled.focused.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.filled.focused.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.filled.hovered.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.filled.hovered.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.filled.pressed.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.filled.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.focus.indicator.outline.offset".to_string(),
+        2.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.focus.indicator.thickness".to_string(), 3.0);
+    cfg.metrics.insert(
+        "md.comp.button.focused.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.focused.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.hovered.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.hovered.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.button.icon-label-space".to_string(), 8.0);
+    cfg.metrics
+        .insert("md.comp.button.icon.size".to_string(), 20.0);
+    cfg.metrics
+        .insert("md.comp.button.large.container.height".to_string(), 96.0);
+    cfg.metrics.insert(
+        "md.comp.button.large.container.shape.round".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.large.container.shape.square".to_string(),
+        28.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.large.icon-label-space".to_string(), 12.0);
+    cfg.metrics
+        .insert("md.comp.button.large.icon.size".to_string(), 32.0);
+    cfg.metrics
+        .insert("md.comp.button.large.leading-space".to_string(), 48.0);
+    cfg.metrics.insert(
+        "md.comp.button.large.outlined.outline.width".to_string(),
+        2.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.large.pressed.container.corner-size.motion.spring.damping".to_string(),
+        0.9,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.large.pressed.container.corner-size.motion.spring.stiffness".to_string(),
+        1400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.large.pressed.container.shape".to_string(),
+        16.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.large.selected.container.shape.round".to_string(),
+        28.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.large.selected.container.shape.square".to_string(),
+        9999.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.large.trailing-space".to_string(), 48.0);
+    cfg.metrics
+        .insert("md.comp.button.leading-space".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.button.medium.container.height".to_string(), 56.0);
+    cfg.metrics.insert(
+        "md.comp.button.medium.container.shape.round".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.medium.container.shape.square".to_string(),
+        16.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.medium.icon-label-space".to_string(), 8.0);
+    cfg.metrics
+        .insert("md.comp.button.medium.icon.size".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.button.medium.leading-space".to_string(), 24.0);
+    cfg.metrics.insert(
+        "md.comp.button.medium.outlined.outline.width".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.medium.pressed.container.corner-size.motion.spring.damping".to_string(),
+        0.9,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.medium.pressed.container.corner-size.motion.spring.stiffness".to_string(),
+        1400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.medium.pressed.container.shape".to_string(),
+        12.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.medium.selected.container.shape.round".to_string(),
+        16.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.medium.selected.container.shape.square".to_string(),
+        9999.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.medium.trailing-space".to_string(), 24.0);
+    cfg.numbers.insert(
+        "md.comp.button.outlined.disabled.container.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.outlined.disabled.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.outlined.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.outlined.focused.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.outlined.hovered.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.outlined.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.pressed.container.corner-size.motion.spring.damping".to_string(),
+        0.9,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.pressed.container.corner-size.motion.spring.stiffness".to_string(),
+        1400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.pressed.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.pressed.container.shape".to_string(), 8.0);
+    cfg.numbers.insert(
+        "md.comp.button.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.selected.container.shape.round".to_string(),
+        12.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.selected.container.shape.square".to_string(),
+        9999.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.small.container.height".to_string(), 40.0);
+    cfg.metrics.insert(
+        "md.comp.button.small.container.shape.round".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.small.container.shape.square".to_string(),
+        12.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.small.icon-label-space".to_string(), 8.0);
+    cfg.metrics
+        .insert("md.comp.button.small.icon.size".to_string(), 20.0);
+    cfg.metrics
+        .insert("md.comp.button.small.leading-space".to_string(), 16.0);
+    cfg.metrics.insert(
+        "md.comp.button.small.outlined.outline.width".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.small.pressed.container.corner-size.motion.spring.damping".to_string(),
+        0.9,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.small.pressed.container.corner-size.motion.spring.stiffness".to_string(),
+        1400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.small.pressed.container.shape".to_string(),
+        8.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.small.selected.container.shape.round".to_string(),
+        12.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.small.selected.container.shape.square".to_string(),
+        9999.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.small.trailing-space".to_string(), 16.0);
+    cfg.numbers.insert(
+        "md.comp.button.text.disabled.container.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.text.disabled.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.text.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.text.focused.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.text.hovered.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.text.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.button.tonal.container.elevation".to_string(), 0.0);
+    cfg.metrics.insert(
+        "md.comp.button.tonal.disabled.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.tonal.disabled.container.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.tonal.disabled.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.tonal.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.tonal.focused.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.tonal.focused.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.tonal.hovered.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.tonal.hovered.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.tonal.pressed.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.tonal.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.button.trailing-space".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.button.xlarge.container.height".to_string(), 136.0);
+    cfg.metrics.insert(
+        "md.comp.button.xlarge.container.shape.round".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xlarge.container.shape.square".to_string(),
+        28.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.xlarge.icon-label-space".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.button.xlarge.icon.size".to_string(), 40.0);
+    cfg.metrics
+        .insert("md.comp.button.xlarge.leading-space".to_string(), 64.0);
+    cfg.metrics.insert(
+        "md.comp.button.xlarge.outlined.outline.width".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.xlarge.pressed.container.corner-size.motion.spring.damping".to_string(),
+        0.9,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.xlarge.pressed.container.corner-size.motion.spring.stiffness".to_string(),
+        1400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xlarge.pressed.container.shape".to_string(),
+        16.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xlarge.selected.container.shape.round".to_string(),
+        28.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xlarge.selected.container.shape.square".to_string(),
+        9999.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.xlarge.trailing-space".to_string(), 64.0);
+    cfg.metrics
+        .insert("md.comp.button.xsmall.container.height".to_string(), 32.0);
+    cfg.metrics.insert(
+        "md.comp.button.xsmall.container.shape.round".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xsmall.container.shape.square".to_string(),
+        12.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.xsmall.icon-label-space".to_string(), 8.0);
+    cfg.metrics
+        .insert("md.comp.button.xsmall.icon.size".to_string(), 20.0);
+    cfg.metrics
+        .insert("md.comp.button.xsmall.leading-space".to_string(), 12.0);
+    cfg.metrics.insert(
+        "md.comp.button.xsmall.outlined.outline.width".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.xsmall.pressed.container.corner-size.motion.spring.damping".to_string(),
+        0.9,
+    );
+    cfg.numbers.insert(
+        "md.comp.button.xsmall.pressed.container.corner-size.motion.spring.stiffness".to_string(),
+        1400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xsmall.pressed.container.shape".to_string(),
+        8.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xsmall.selected.container.shape.round".to_string(),
+        12.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.button.xsmall.selected.container.shape.square".to_string(),
+        9999.0,
+    );
+    cfg.metrics
+        .insert("md.comp.button.xsmall.trailing-space".to_string(), 12.0);
+}
+
 pub(crate) fn inject_comp_switch_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.switch.`

@@ -41,6 +41,7 @@ impl Args {
             "md.sys.typescale.".to_string(),
             "md.sys.shape.".to_string(),
             // MVP component prefixes we actively align today.
+            "md.comp.button.".to_string(),
             "md.comp.switch.".to_string(),
             "md.comp.icon-button.".to_string(),
             "md.comp.primary-navigation-tab.".to_string(),
@@ -402,6 +403,14 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
             .collect::<Vec<_>>(),
     );
 
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_button_scalars",
+        "md.comp.button.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.button."))
+            .collect::<Vec<_>>(),
+    );
     emit_inject_comp_scalars(
         &mut out,
         "inject_comp_switch_scalars",

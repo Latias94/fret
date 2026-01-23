@@ -120,6 +120,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_typescale`),
       `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`TypographyOptions`).
   - [ ] Import the subset of `md.comp.*` tokens used by MVP components (drive by `material3_token_audit`).
+    - [x] Import `md.comp.button.*` scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_button_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_button_scalars`).
     - [x] Import `md.comp.switch.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_switch_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_scalars`).
