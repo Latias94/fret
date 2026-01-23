@@ -10,13 +10,13 @@
     { "type": "wait_frames", "n": 20 },
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-open" }
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-open" }
       },
       "timeout_frames": 60
     },
@@ -30,22 +30,19 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-open" }
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-open" }
       },
       "timeout_frames": 60
     },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-cancel" }
-    },
+    { "type": "press_key", "key": "escape" },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-trigger" }
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
       },
       "timeout_frames": 60
     },
-    { "type": "capture_bundle", "label": "ui-gallery-alert-dialog-underlay-block" }
+    { "type": "capture_bundle", "label": "ui-gallery-modal-barrier-underlay-block" }
   ]
 }

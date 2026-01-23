@@ -42,6 +42,9 @@ Keep this list short and evidence-backed:
 - ViewCache (v1) mechanics and correctness scaffolding exist:
   - Evidence: `crates/fret-ui/src/tree/tests/view_cache.rs`, `crates/fret-ui/src/declarative/tests/view_cache.rs`,
     `crates/fret-ui/src/tree/paint.rs`, `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/elements/cx.rs`.
+  - Notes: declarative conformance now also asserts cache-hit behavioral equivalence for painted scene ops and semantics/hit targets
+    (see `crates/fret-ui/src/declarative/tests/view_cache.rs`).
+  - Notes: conformance includes modal overlay barrier gating under view-cache reuse.
 - Diagnostics + scripted interaction runner exists (foundation for regression harnesses):
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`.
 - Cache-root and paint-cache counters are exposed in the UI gallery driver:
@@ -55,6 +58,8 @@ Keep this list short and evidence-backed:
   - Touches: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/paint.rs`
 - [x] GPUI-MVP0-diag-003 Overlay torture scripted scenario exists.
   - Touches: `tools/diag-scripts/ui-gallery-overlay-torture.json`, `apps/fretboard/src/diag.rs`
+- [x] GPUI-MVP0-diag-012 Modal barrier underlay-block scripted scenario exists (overlay regression scaffold).
+  - Touches: `tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json`, `apps/fretboard/src/diag.rs`
 - [x] GPUI-MVP0-diag-004 Virtual list torture scripted scenario exists.
   - Touches: `tools/diag-scripts/ui-gallery-virtual-list-torture.json`, `apps/fretboard/src/diag.rs`
 - [x] GPUI-MVP0-diag-005 Export prepaint timing + add warmup filtering for perf runs.
