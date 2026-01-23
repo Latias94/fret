@@ -219,6 +219,9 @@ pub(crate) fn content_view(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+    material3_text_field_error: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -349,6 +352,9 @@ pub(crate) fn content_view(
         material3_checkbox,
         material3_switch,
         material3_radio_value,
+        material3_text_field_value,
+        material3_text_field_disabled,
+        material3_text_field_error,
         text_input,
         text_area,
         dropdown_open,
@@ -454,6 +460,9 @@ fn page_preview(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+    material3_text_field_error: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -534,6 +543,12 @@ fn page_preview(
         PAGE_MATERIAL3_CHECKBOX => preview_material3_checkbox(cx, material3_checkbox),
         PAGE_MATERIAL3_SWITCH => preview_material3_switch(cx, material3_switch),
         PAGE_MATERIAL3_RADIO => preview_material3_radio(cx, material3_radio_value),
+        PAGE_MATERIAL3_TEXT_FIELD => preview_material3_text_field(
+            cx,
+            material3_text_field_value,
+            material3_text_field_disabled,
+            material3_text_field_error,
+        ),
         _ => preview_intro(cx, theme),
     };
 
@@ -1416,6 +1431,74 @@ fn preview_material3_radio(
             "Material 3 Radio: group-value binding + roving focus + typeahead + state layer + bounded ripple.",
         ),
         row,
+    ]
+}
+
+fn preview_material3_text_field(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<String>,
+    disabled: Model<bool>,
+    error: Model<bool>,
+) -> Vec<AnyElement> {
+    let disabled_now = cx
+        .get_model_copied(&disabled, Invalidation::Layout)
+        .unwrap_or(false);
+    let error_now = cx
+        .get_model_copied(&error, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let toggles = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                cx.text("disabled"),
+                material3::Switch::new(disabled.clone())
+                    .a11y_label("Disable text field")
+                    .test_id("ui-gallery-material3-text-field-disabled")
+                    .into_element(cx),
+                cx.text("error"),
+                material3::Switch::new(error.clone())
+                    .a11y_label("Toggle error state")
+                    .test_id("ui-gallery-material3-text-field-error")
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let supporting = if error_now {
+        "Error: required"
+    } else {
+        "Supporting text"
+    };
+
+    let field = material3::TextField::new(value)
+        .label("Name")
+        .placeholder("Type here")
+        .supporting_text(supporting)
+        .disabled(disabled_now)
+        .error(error_now)
+        .test_id("ui-gallery-material3-text-field")
+        .into_element(cx);
+
+    let card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Outlined").into_element(cx),
+            shadcn::CardDescription::new("No notch yet; outcome alignment in progress.")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![field]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    vec![
+        cx.text(
+            "Material 3 Text Field: token-driven outlined chrome + label/placeholder outcomes.",
+        ),
+        toggles,
+        card,
     ]
 }
 
