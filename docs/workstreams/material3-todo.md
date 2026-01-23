@@ -114,7 +114,10 @@ Material 3 Expressive) in Fret.
 - [x] Radio group (MVP: `RadioGroup` semantics + roving focus + APG arrow/Home/End navigation + prefix typeahead)
   - Evidence: `ecosystem/fret-ui-material3/src/radio.rs` (`RadioGroup`, `RadioGroupItem`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_radio`).
-- [ ] Text field
+- [x] Text field (MVP: outlined chrome + label/placeholder outcomes + hover/focus/error/disabled styling)
+  - Evidence: `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_outlined_text_field_*`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_text_field`).
 - [ ] Tabs
 - [ ] List / Menu
 - [ ] Dialog / Snackbar / Tooltip (pick order based on demos)
@@ -134,6 +137,9 @@ Material 3 Expressive) in Fret.
 - [x] Add a Material 3 Radio gallery page for manual interaction verification.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_RADIO`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_radio`).
+- [x] Add a Material 3 Text field gallery page for manual interaction verification.
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TEXT_FIELD`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_text_field`).
 - [ ] Add a small, scripted interaction test harness for Material states (hover/press/ripple).
 - [ ] Add golden-style visual snapshots per component state (light/dark, density variants).
 
