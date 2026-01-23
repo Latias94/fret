@@ -217,6 +217,7 @@ pub(crate) fn content_view(
     checkbox: Model<bool>,
     switch: Model<bool>,
     material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -345,6 +346,7 @@ pub(crate) fn content_view(
         checkbox,
         switch,
         material3_checkbox,
+        material3_switch,
         text_input,
         text_area,
         dropdown_open,
@@ -448,6 +450,7 @@ fn page_preview(
     checkbox: Model<bool>,
     switch: Model<bool>,
     material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -526,6 +529,7 @@ fn page_preview(
         PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
         PAGE_MATERIAL3_ICON_BUTTON => preview_material3_icon_button(cx),
         PAGE_MATERIAL3_CHECKBOX => preview_material3_checkbox(cx, material3_checkbox),
+        PAGE_MATERIAL3_SWITCH => preview_material3_switch(cx, material3_switch),
         _ => preview_intro(cx, theme),
     };
 
@@ -1330,6 +1334,39 @@ fn preview_material3_checkbox(
 
     vec![
         cx.text("Material 3 Checkbox: token-driven sizing/colors + state layer + bounded ripple."),
+        row,
+    ]
+}
+
+fn preview_material3_switch(
+    cx: &mut ElementContext<'_, App>,
+    selected: Model<bool>,
+) -> Vec<AnyElement> {
+    let value = cx
+        .get_model_copied(&selected, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                material3::Switch::new(selected.clone())
+                    .a11y_label("Material 3 Switch")
+                    .test_id("ui-gallery-material3-switch")
+                    .into_element(cx),
+                cx.text(format!("selected={}", value as u8)),
+                material3::Switch::new(selected.clone())
+                    .a11y_label("Disabled Material 3 Switch")
+                    .disabled(true)
+                    .test_id("ui-gallery-material3-switch-disabled")
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Switch: token-driven sizing/colors + state layer + bounded ripple."),
         row,
     ]
 }

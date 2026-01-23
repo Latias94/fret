@@ -193,6 +193,27 @@ let cb = m3::Checkbox::new(checked)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_SWITCH: &str = r#"
+## Material 3 Switch (MVP)
+
+This page validates a Material 3 switch surface:
+
+- token-driven sizing + colors
+- state layer (hover / pressed / focus) centered on the thumb
+- bounded ripple (pointer-origin)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SWITCH: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+let selected = app.models_mut().insert(false);
+let sw = m3::Switch::new(selected)
+    .a11y_label("Enable feature")
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 
