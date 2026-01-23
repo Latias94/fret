@@ -172,6 +172,15 @@ Notes on API mapping:
 - Web submenu surface colors gate (kbd, tiny viewport): `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_surface_colors_match_web`,
   `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_surface_colors_match_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x240.open.json`).
+- Web submenu panel shadow gate (kbd, constrained viewport, `shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x320.open.json`).
+- Web submenu surface colors gate (kbd, constrained viewport): `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x320.open.json`).
+- Web submenu panel shadow gate (kbd, tiny viewport, `shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x240.open.json`).
 - Web first visible item gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_first_visible_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
 - Web first visible item gate (submenu, constrained viewport): `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_first_visible_matches`
