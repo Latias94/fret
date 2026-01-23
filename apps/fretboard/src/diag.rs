@@ -54,6 +54,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_view_cache_reuse_min: Option<u64> = None;
+    let mut compare_eps_px: f32 = 0.5;
+    let mut compare_ignore_bounds: bool = false;
+    let mut compare_ignore_scene_fingerprint: bool = false;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
 
@@ -273,6 +277,35 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u32>()
                         .map_err(|_| "invalid value for --check-hover-layout-max".to_string())?,
                 );
+                i += 1;
+            }
+            "--check-view-cache-reuse-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-view-cache-reuse-min".to_string());
+                };
+                check_view_cache_reuse_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-view-cache-reuse-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--compare-eps-px" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --compare-eps-px".to_string());
+                };
+                compare_eps_px = v
+                    .parse::<f32>()
+                    .map_err(|_| "invalid value for --compare-eps-px".to_string())?;
+                i += 1;
+            }
+            "--compare-ignore-bounds" => {
+                compare_ignore_bounds = true;
+                i += 1;
+            }
+            "--compare-ignore-scene-fingerprint" => {
+                compare_ignore_scene_fingerprint = true;
                 i += 1;
             }
             "--json" => {
@@ -1013,6 +1046,54 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             Ok(())
         }
+        "compare" => {
+            let Some(a_src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle A path (try: fretboard diag compare ./a/bundle.json ./b/bundle.json)".to_string(),
+                );
+            };
+            let Some(b_src) = rest.get(1).cloned() else {
+                return Err(
+                    "missing bundle B path (try: fretboard diag compare ./a/bundle.json ./b/bundle.json)".to_string(),
+                );
+            };
+            if rest.len() != 2 {
+                return Err(format!("unexpected arguments: {}", rest[2..].join(" ")));
+            }
+
+            let a_src = resolve_path(&workspace_root, PathBuf::from(a_src));
+            let b_src = resolve_path(&workspace_root, PathBuf::from(b_src));
+            let a_bundle_path = resolve_bundle_json_path(&a_src);
+            let b_bundle_path = resolve_bundle_json_path(&b_src);
+
+            let report = compare_bundles(
+                &a_bundle_path,
+                &b_bundle_path,
+                CompareOptions {
+                    warmup_frames,
+                    eps_px: compare_eps_px,
+                    ignore_bounds: compare_ignore_bounds,
+                    ignore_scene_fingerprint: compare_ignore_scene_fingerprint,
+                },
+            )?;
+
+            if stats_json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report.to_json())
+                        .unwrap_or_else(|_| "{}".to_string())
+                );
+                if !report.ok {
+                    std::process::exit(1);
+                }
+                Ok(())
+            } else if report.ok {
+                report.print_human();
+                Ok(())
+            } else {
+                Err(report.to_human_error())
+            }
+        }
         "inspect" => {
             let Some(action) = rest.first().cloned() else {
                 return Err(
@@ -1207,11 +1288,23 @@ fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
 }
 
 fn resolve_bundle_json_path(path: &Path) -> PathBuf {
-    if path.is_dir() {
-        path.join("bundle.json")
-    } else {
-        path.to_path_buf()
+    if !path.is_dir() {
+        return path.to_path_buf();
     }
+
+    let direct = path.join("bundle.json");
+    if direct.is_file() {
+        return direct;
+    }
+
+    if let Some(dir) = read_latest_pointer(path).or_else(|| find_latest_export_dir(path)) {
+        let nested = dir.join("bundle.json");
+        if nested.is_file() {
+            return nested;
+        }
+    }
+
+    direct
 }
 
 fn wait_for_bundle_json_from_script_result(
@@ -1265,6 +1358,522 @@ fn apply_post_run_checks(
         check_report_for_hover_layout_invalidations(&report, max_allowed)?;
     }
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CompareOptions {
+    warmup_frames: u64,
+    eps_px: f32,
+    ignore_bounds: bool,
+    ignore_scene_fingerprint: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CompareReport {
+    ok: bool,
+    a_path: PathBuf,
+    b_path: PathBuf,
+    a_frame_id: Option<u64>,
+    b_frame_id: Option<u64>,
+    a_scene_fingerprint: Option<u64>,
+    b_scene_fingerprint: Option<u64>,
+    opts: CompareOptions,
+    diffs: Vec<CompareDiff>,
+}
+
+#[derive(Debug, Clone)]
+struct CompareDiff {
+    kind: &'static str,
+    key: Option<String>,
+    field: Option<&'static str>,
+    a: Option<serde_json::Value>,
+    b: Option<serde_json::Value>,
+}
+
+impl CompareReport {
+    fn print_human(&self) {
+        println!("bundle_a: {}", self.a_path.display());
+        println!("bundle_b: {}", self.b_path.display());
+        if let (Some(a), Some(b)) = (self.a_frame_id, self.b_frame_id) {
+            println!("frame_id: a={a} b={b}");
+        }
+        if let (Some(a), Some(b)) = (self.a_scene_fingerprint, self.b_scene_fingerprint) {
+            println!("scene_fingerprint: a=0x{a:016x} b=0x{b:016x}");
+        }
+        if self.ok {
+            println!(
+                "compare: ok (diffs=0, warmup_frames={}, eps_px={}, ignore_bounds={}, ignore_scene_fingerprint={})",
+                self.opts.warmup_frames,
+                self.opts.eps_px,
+                self.opts.ignore_bounds,
+                self.opts.ignore_scene_fingerprint
+            );
+            return;
+        }
+        println!(
+            "compare: failed (diffs={}, warmup_frames={}, eps_px={}, ignore_bounds={}, ignore_scene_fingerprint={})",
+            self.diffs.len(),
+            self.opts.warmup_frames,
+            self.opts.eps_px,
+            self.opts.ignore_bounds,
+            self.opts.ignore_scene_fingerprint
+        );
+        for d in self.diffs.iter().take(20) {
+            let key = d.key.as_deref().unwrap_or("<none>");
+            let field = d.field.unwrap_or("<none>");
+            println!("  - {} key={} field={}", d.kind, key, field);
+        }
+        if self.diffs.len() > 20 {
+            println!("  ... ({} more)", self.diffs.len() - 20);
+        }
+    }
+
+    fn to_human_error(&self) -> String {
+        let mut msg = String::new();
+        msg.push_str("bundle compare failed\n");
+        msg.push_str(&format!("bundle_a: {}\n", self.a_path.display()));
+        msg.push_str(&format!("bundle_b: {}\n", self.b_path.display()));
+        if let (Some(a), Some(b)) = (self.a_frame_id, self.b_frame_id) {
+            msg.push_str(&format!("frame_id: a={a} b={b}\n"));
+        }
+        if let (Some(a), Some(b)) = (self.a_scene_fingerprint, self.b_scene_fingerprint) {
+            msg.push_str(&format!("scene_fingerprint: a=0x{a:016x} b=0x{b:016x}\n"));
+        }
+        msg.push_str(&format!(
+            "diffs: {} (warmup_frames={}, eps_px={}, ignore_bounds={}, ignore_scene_fingerprint={})\n",
+            self.diffs.len(),
+            self.opts.warmup_frames,
+            self.opts.eps_px,
+            self.opts.ignore_bounds,
+            self.opts.ignore_scene_fingerprint
+        ));
+        for d in self.diffs.iter().take(20) {
+            let key = d.key.as_deref().unwrap_or("<none>");
+            let field = d.field.unwrap_or("<none>");
+            msg.push_str(&format!("  - {} key={} field={}\n", d.kind, key, field));
+        }
+        if self.diffs.len() > 20 {
+            msg.push_str(&format!("  ... ({} more)\n", self.diffs.len() - 20));
+        }
+        msg
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        let diffs = self
+            .diffs
+            .iter()
+            .map(|d| {
+                serde_json::json!({
+                    "kind": d.kind,
+                    "key": d.key,
+                    "field": d.field,
+                    "a": d.a,
+                    "b": d.b,
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::json!({
+            "schema_version": 1,
+            "ok": self.ok,
+            "bundle_a": self.a_path.display().to_string(),
+            "bundle_b": self.b_path.display().to_string(),
+            "a_frame_id": self.a_frame_id,
+            "b_frame_id": self.b_frame_id,
+            "a_scene_fingerprint": self.a_scene_fingerprint,
+            "b_scene_fingerprint": self.b_scene_fingerprint,
+            "options": {
+                "warmup_frames": self.opts.warmup_frames,
+                "eps_px": self.opts.eps_px,
+                "ignore_bounds": self.opts.ignore_bounds,
+                "ignore_scene_fingerprint": self.opts.ignore_scene_fingerprint,
+            },
+            "diffs": diffs,
+        })
+    }
+}
+
+fn compare_bundles(
+    a_bundle_path: &Path,
+    b_bundle_path: &Path,
+    opts: CompareOptions,
+) -> Result<CompareReport, String> {
+    let a_bytes = std::fs::read(a_bundle_path).map_err(|e| e.to_string())?;
+    let b_bytes = std::fs::read(b_bundle_path).map_err(|e| e.to_string())?;
+    let a_bundle: serde_json::Value =
+        serde_json::from_slice(&a_bytes).map_err(|e| e.to_string())?;
+    let b_bundle: serde_json::Value =
+        serde_json::from_slice(&b_bytes).map_err(|e| e.to_string())?;
+    compare_bundles_json(&a_bundle, a_bundle_path, &b_bundle, b_bundle_path, opts)
+}
+
+fn compare_bundles_json(
+    a_bundle: &serde_json::Value,
+    a_bundle_path: &Path,
+    b_bundle: &serde_json::Value,
+    b_bundle_path: &Path,
+    opts: CompareOptions,
+) -> Result<CompareReport, String> {
+    let a_window = first_window_from_bundle(a_bundle)?;
+    let b_window = first_window_from_bundle(b_bundle)?;
+
+    let (a_snapshot, a_selected) = select_snapshot_for_compare(a_window, opts.warmup_frames);
+    let (b_snapshot, b_selected) = select_snapshot_for_compare(b_window, opts.warmup_frames);
+
+    let mut diffs: Vec<CompareDiff> = Vec::new();
+
+    let a_fp = a_snapshot
+        .and_then(|s| s.get("scene_fingerprint"))
+        .and_then(|v| v.as_u64());
+    let b_fp = b_snapshot
+        .and_then(|s| s.get("scene_fingerprint"))
+        .and_then(|v| v.as_u64());
+    if !opts.ignore_scene_fingerprint {
+        if let (Some(a_fp), Some(b_fp)) = (a_fp, b_fp) {
+            if a_fp != b_fp {
+                diffs.push(CompareDiff {
+                    kind: "scene_fingerprint_mismatch",
+                    key: None,
+                    field: Some("scene_fingerprint"),
+                    a: Some(serde_json::Value::from(a_fp)),
+                    b: Some(serde_json::Value::from(b_fp)),
+                });
+            }
+        }
+    }
+
+    if let (Some(a_snapshot), Some(b_snapshot)) = (a_snapshot, b_snapshot) {
+        compare_semantics_by_test_id(&mut diffs, a_snapshot, b_snapshot, opts)?;
+    }
+
+    Ok(CompareReport {
+        ok: diffs.is_empty(),
+        a_path: a_bundle_path.to_path_buf(),
+        b_path: b_bundle_path.to_path_buf(),
+        a_frame_id: a_selected.frame_id,
+        b_frame_id: b_selected.frame_id,
+        a_scene_fingerprint: a_fp,
+        b_scene_fingerprint: b_fp,
+        opts,
+        diffs,
+    })
+}
+
+fn first_window_from_bundle(bundle: &serde_json::Value) -> Result<&serde_json::Value, String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    windows
+        .first()
+        .ok_or_else(|| "bundle.json contains no windows".to_string())
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct SelectedSnapshotInfo {
+    frame_id: Option<u64>,
+}
+
+fn select_snapshot_for_compare<'a>(
+    window: &'a serde_json::Value,
+    warmup_frames: u64,
+) -> (Option<&'a serde_json::Value>, SelectedSnapshotInfo) {
+    let snaps = window
+        .get("snapshots")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    if snaps.is_empty() {
+        return (None, SelectedSnapshotInfo::default());
+    }
+
+    let mut selected: Option<&serde_json::Value> = None;
+    for s in snaps {
+        let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        if frame_id >= warmup_frames {
+            selected = Some(s);
+        }
+    }
+    let selected = selected.or_else(|| snaps.last());
+    let info = SelectedSnapshotInfo {
+        frame_id: selected.and_then(|s| s.get("frame_id").and_then(|v| v.as_u64())),
+    };
+    (selected, info)
+}
+
+#[derive(Debug, Clone)]
+struct SemanticsNodeSummary {
+    role: String,
+    flags: serde_json::Value,
+    actions: serde_json::Value,
+    bounds: Option<(f64, f64, f64, f64)>,
+}
+
+fn compare_semantics_by_test_id(
+    diffs: &mut Vec<CompareDiff>,
+    a_snapshot: &serde_json::Value,
+    b_snapshot: &serde_json::Value,
+    opts: CompareOptions,
+) -> Result<(), String> {
+    let a_sem = a_snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .ok_or_else(|| {
+            "bundle snapshot missing debug.semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
+        })?;
+    let b_sem = b_snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .ok_or_else(|| {
+            "bundle snapshot missing debug.semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
+        })?;
+
+    let (a_by_test_id, a_id_to_test_id) = semantics_nodes_by_test_id(a_sem);
+    let (b_by_test_id, b_id_to_test_id) = semantics_nodes_by_test_id(b_sem);
+
+    for test_id in a_by_test_id.keys() {
+        if !b_by_test_id.contains_key(test_id) {
+            diffs.push(CompareDiff {
+                kind: "missing_test_id",
+                key: Some(test_id.clone()),
+                field: None,
+                a: Some(serde_json::Value::from("present")),
+                b: Some(serde_json::Value::Null),
+            });
+        }
+    }
+    for test_id in b_by_test_id.keys() {
+        if !a_by_test_id.contains_key(test_id) {
+            diffs.push(CompareDiff {
+                kind: "extra_test_id",
+                key: Some(test_id.clone()),
+                field: None,
+                a: Some(serde_json::Value::Null),
+                b: Some(serde_json::Value::from("present")),
+            });
+        }
+    }
+
+    for (test_id, a_node) in a_by_test_id.iter() {
+        let Some(b_node) = b_by_test_id.get(test_id) else {
+            continue;
+        };
+        if a_node.role != b_node.role {
+            diffs.push(CompareDiff {
+                kind: "node_field_mismatch",
+                key: Some(test_id.clone()),
+                field: Some("role"),
+                a: Some(serde_json::Value::from(a_node.role.clone())),
+                b: Some(serde_json::Value::from(b_node.role.clone())),
+            });
+        }
+        if a_node.flags != b_node.flags {
+            diffs.push(CompareDiff {
+                kind: "node_field_mismatch",
+                key: Some(test_id.clone()),
+                field: Some("flags"),
+                a: Some(a_node.flags.clone()),
+                b: Some(b_node.flags.clone()),
+            });
+        }
+        if a_node.actions != b_node.actions {
+            diffs.push(CompareDiff {
+                kind: "node_field_mismatch",
+                key: Some(test_id.clone()),
+                field: Some("actions"),
+                a: Some(a_node.actions.clone()),
+                b: Some(b_node.actions.clone()),
+            });
+        }
+        if !opts.ignore_bounds {
+            if let (Some(a), Some(b)) = (a_node.bounds, b_node.bounds) {
+                if !rect_eq_eps(a, b, opts.eps_px) {
+                    diffs.push(CompareDiff {
+                        kind: "node_field_mismatch",
+                        key: Some(test_id.clone()),
+                        field: Some("bounds"),
+                        a: Some(serde_json::json!({ "x": a.0, "y": a.1, "w": a.2, "h": a.3 })),
+                        b: Some(serde_json::json!({ "x": b.0, "y": b.1, "w": b.2, "h": b.3 })),
+                    });
+                }
+            }
+        }
+    }
+
+    compare_semantics_root_distribution(diffs, a_sem, b_sem);
+    compare_focus_and_capture_by_test_id(diffs, a_sem, b_sem, &a_id_to_test_id, &b_id_to_test_id);
+
+    Ok(())
+}
+
+fn semantics_nodes_by_test_id(
+    semantics: &serde_json::Value,
+) -> (
+    std::collections::BTreeMap<String, SemanticsNodeSummary>,
+    std::collections::HashMap<u64, String>,
+) {
+    let mut by_test_id: std::collections::BTreeMap<String, SemanticsNodeSummary> =
+        std::collections::BTreeMap::new();
+    let mut id_to_test_id: std::collections::HashMap<u64, String> =
+        std::collections::HashMap::new();
+
+    let nodes = semantics
+        .get("nodes")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    for node in nodes {
+        let Some(test_id) = node.get("test_id").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let test_id = test_id.to_string();
+        let role = node
+            .get("role")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let flags = node
+            .get("flags")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        let actions = node
+            .get("actions")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        let bounds = node.get("bounds").and_then(rect_xywh_from_json);
+        by_test_id.insert(
+            test_id.clone(),
+            SemanticsNodeSummary {
+                role,
+                flags,
+                actions,
+                bounds,
+            },
+        );
+        if let Some(id) = node.get("id").and_then(|v| v.as_u64()) {
+            id_to_test_id.insert(id, test_id);
+        }
+    }
+
+    (by_test_id, id_to_test_id)
+}
+
+fn rect_xywh_from_json(bounds: &serde_json::Value) -> Option<(f64, f64, f64, f64)> {
+    let x = bounds.get("x").and_then(|v| v.as_f64())?;
+    let y = bounds.get("y").and_then(|v| v.as_f64())?;
+    let w = bounds.get("w").and_then(|v| v.as_f64())?;
+    let h = bounds.get("h").and_then(|v| v.as_f64())?;
+    Some((x, y, w, h))
+}
+
+fn rect_eq_eps(a: (f64, f64, f64, f64), b: (f64, f64, f64, f64), eps_px: f32) -> bool {
+    let eps = eps_px as f64;
+    (a.0 - b.0).abs() <= eps
+        && (a.1 - b.1).abs() <= eps
+        && (a.2 - b.2).abs() <= eps
+        && (a.3 - b.3).abs() <= eps
+}
+
+fn compare_semantics_root_distribution(
+    diffs: &mut Vec<CompareDiff>,
+    a_sem: &serde_json::Value,
+    b_sem: &serde_json::Value,
+) {
+    let a = semantics_root_distribution(a_sem);
+    let b = semantics_root_distribution(b_sem);
+    if a != b {
+        diffs.push(CompareDiff {
+            kind: "semantics_roots_mismatch",
+            key: None,
+            field: Some("roots"),
+            a: Some(semantics_root_distribution_to_json(&a)),
+            b: Some(semantics_root_distribution_to_json(&b)),
+        });
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct SemanticsRootSummary {
+    visible: bool,
+    blocks_underlay_input: bool,
+    hit_testable: bool,
+    z_index: u32,
+}
+
+fn semantics_root_distribution(sem: &serde_json::Value) -> Vec<SemanticsRootSummary> {
+    let roots = sem
+        .get("roots")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    let mut out: Vec<SemanticsRootSummary> = roots
+        .iter()
+        .map(|r| SemanticsRootSummary {
+            visible: r.get("visible").and_then(|v| v.as_bool()).unwrap_or(false),
+            blocks_underlay_input: r
+                .get("blocks_underlay_input")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            hit_testable: r
+                .get("hit_testable")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            z_index: r.get("z_index").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+fn semantics_root_distribution_to_json(dist: &[SemanticsRootSummary]) -> serde_json::Value {
+    serde_json::Value::Array(
+        dist.iter()
+            .map(|r| {
+                serde_json::json!({
+                    "visible": r.visible,
+                    "blocks_underlay_input": r.blocks_underlay_input,
+                    "hit_testable": r.hit_testable,
+                    "z_index": r.z_index,
+                })
+            })
+            .collect(),
+    )
+}
+
+fn compare_focus_and_capture_by_test_id(
+    diffs: &mut Vec<CompareDiff>,
+    a_sem: &serde_json::Value,
+    b_sem: &serde_json::Value,
+    a_id_to_test_id: &std::collections::HashMap<u64, String>,
+    b_id_to_test_id: &std::collections::HashMap<u64, String>,
+) {
+    let a_focus = a_sem.get("focus").and_then(|v| v.as_u64());
+    let b_focus = b_sem.get("focus").and_then(|v| v.as_u64());
+    let a_focus_tid = a_focus.and_then(|id| a_id_to_test_id.get(&id).cloned());
+    let b_focus_tid = b_focus.and_then(|id| b_id_to_test_id.get(&id).cloned());
+    if a_focus_tid.is_some() || b_focus_tid.is_some() {
+        if a_focus_tid != b_focus_tid {
+            diffs.push(CompareDiff {
+                kind: "focus_mismatch",
+                key: None,
+                field: Some("focus.test_id"),
+                a: a_focus_tid.map(serde_json::Value::from),
+                b: b_focus_tid.map(serde_json::Value::from),
+            });
+        }
+    }
+
+    let a_captured = a_sem.get("captured").and_then(|v| v.as_u64());
+    let b_captured = b_sem.get("captured").and_then(|v| v.as_u64());
+    let a_captured_tid = a_captured.and_then(|id| a_id_to_test_id.get(&id).cloned());
+    let b_captured_tid = b_captured.and_then(|id| b_id_to_test_id.get(&id).cloned());
+    if a_captured_tid.is_some() || b_captured_tid.is_some() {
+        if a_captured_tid != b_captured_tid {
+            diffs.push(CompareDiff {
+                kind: "captured_mismatch",
+                key: None,
+                field: Some("captured.test_id"),
+                a: a_captured_tid.map(serde_json::Value::from),
+                b: b_captured_tid.map(serde_json::Value::from),
+            });
+        }
+    }
 }
 
 fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
@@ -4686,5 +5295,170 @@ mod tests {
         )
         .unwrap();
         assert_eq!(v["steps"][0]["predicate"]["target"]["id"], "open");
+    }
+
+    #[test]
+    fn check_bundle_for_view_cache_reuse_min_counts_reused_cache_roots() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 1, "reused": true },
+                                    { "root": 2, "reused": false }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 3, "reused": true }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_view_cache_reuse_min_json(&bundle, Path::new("bundle.json"), 2, 0)
+            .expect("expected reuse>=2");
+    }
+
+    #[test]
+    fn check_bundle_for_view_cache_reuse_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 1, "reused": true }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 2, "reused": true }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_view_cache_reuse_min_json(&bundle, Path::new("bundle.json"), 2, 1)
+                .expect_err("expected reuse<2 due to warmup");
+        assert!(err.contains("expected at least 2 view-cache reuse events"));
+        assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn compare_bundles_passes_when_test_id_semantics_match() {
+        let a = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "scene_fingerprint": 42,
+                    "debug": {
+                        "semantics": {
+                            "roots": [{ "root": 1, "visible": true, "blocks_underlay_input": false, "hit_testable": true, "z_index": 0 }],
+                            "nodes": [{
+                                "id": 1,
+                                "role": "button",
+                                "bounds": { "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0 },
+                                "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                "actions": { "focus": true, "invoke": true, "set_value": false, "set_text_selection": false },
+                                "test_id": "ok"
+                            }]
+                        }
+                    }
+                }]
+            }]
+        });
+        let b = a.clone();
+        let report = compare_bundles_json(
+            &a,
+            Path::new("a/bundle.json"),
+            &b,
+            Path::new("b/bundle.json"),
+            CompareOptions {
+                warmup_frames: 0,
+                eps_px: 0.5,
+                ignore_bounds: false,
+                ignore_scene_fingerprint: false,
+            },
+        )
+        .unwrap();
+        assert!(report.ok);
+        assert!(report.diffs.is_empty());
+    }
+
+    #[test]
+    fn compare_bundles_reports_role_mismatch_for_test_id() {
+        let a = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "scene_fingerprint": 42,
+                    "debug": {
+                        "semantics": {
+                            "roots": [{ "root": 1, "visible": true, "blocks_underlay_input": false, "hit_testable": true, "z_index": 0 }],
+                            "nodes": [{
+                                "id": 1,
+                                "role": "button",
+                                "bounds": { "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0 },
+                                "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                "actions": { "focus": true, "invoke": true, "set_value": false, "set_text_selection": false },
+                                "test_id": "t"
+                            }]
+                        }
+                    }
+                }]
+            }]
+        });
+        let mut b = a.clone();
+        b["windows"][0]["snapshots"][0]["debug"]["semantics"]["nodes"][0]["role"] =
+            serde_json::Value::from("menuitem");
+
+        let report = compare_bundles_json(
+            &a,
+            Path::new("a/bundle.json"),
+            &b,
+            Path::new("b/bundle.json"),
+            CompareOptions {
+                warmup_frames: 0,
+                eps_px: 0.5,
+                ignore_bounds: false,
+                ignore_scene_fingerprint: false,
+            },
+        )
+        .unwrap();
+        assert!(!report.ok);
+        assert!(report.diffs.iter().any(|d| d.kind == "node_field_mismatch"
+            && d.key.as_deref() == Some("t")
+            && d.field == Some("role")));
     }
 }

@@ -63,6 +63,7 @@ Usage:
   fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard diag stats <bundle_dir|bundle.json> [--top <n>] [--sort <invalidation|time>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>]
+  fretboard diag compare <bundle_a|dir> <bundle_b|dir> [--warmup-frames <n>] [--compare-eps-px <px>] [--compare-ignore-bounds] [--compare-ignore-scene-fingerprint] [--json]
   fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard list native-demos
   fretboard list web-demos
