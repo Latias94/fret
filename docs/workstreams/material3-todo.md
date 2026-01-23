@@ -99,6 +99,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [ ] Decide canonical token key namespace for Material (proposal: `md.sys.*`, `md.comp.*`).
 - [x] Provide a baseline, hand-authored v30 token preset injection (state/motion/shape/typescale subset).
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`, `theme_config`).
+- [x] Align Switch handle tokens with Material Web v30 (`*.handle.width/height`, not `*.handle.size`).
+  - Evidence: `ecosystem/fret-ui-material3/src/switch.rs` (`switch_size_tokens`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_scalars`),
+    `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-switch.scss`.
 - [x] Inject `md.sys.color.*` via dynamic color scheme generation (including Expressive variant).
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_sys_colors`,
     `ColorSchemeOptions`, `DynamicVariant`, `theme_config_with_colors`).

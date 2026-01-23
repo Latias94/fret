@@ -287,9 +287,12 @@ struct SwitchSizeTokens {
     track_width: Px,
     track_height: Px,
     track_outline_width: Px,
-    selected_handle: Px,
-    unselected_handle: Px,
-    pressed_handle: Px,
+    selected_handle_width: Px,
+    selected_handle_height: Px,
+    unselected_handle_width: Px,
+    unselected_handle_height: Px,
+    pressed_handle_width: Px,
+    pressed_handle_height: Px,
     track_y_offset: Px,
     focus_indicator_thickness: Px,
     focus_indicator_offset: Px,
@@ -308,14 +311,24 @@ fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
     let track_outline_width = theme
         .metric_by_key("md.comp.switch.track.outline.width")
         .unwrap_or(Px(2.0));
-    let selected_handle = theme
-        .metric_by_key("md.comp.switch.selected.handle.size")
+
+    let selected_handle_width = theme
+        .metric_by_key("md.comp.switch.selected.handle.width")
         .unwrap_or(Px(24.0));
-    let unselected_handle = theme
-        .metric_by_key("md.comp.switch.unselected.handle.size")
+    let selected_handle_height = theme
+        .metric_by_key("md.comp.switch.selected.handle.height")
+        .unwrap_or(Px(24.0));
+    let unselected_handle_width = theme
+        .metric_by_key("md.comp.switch.unselected.handle.width")
         .unwrap_or(Px(16.0));
-    let pressed_handle = theme
-        .metric_by_key("md.comp.switch.pressed.handle.size")
+    let unselected_handle_height = theme
+        .metric_by_key("md.comp.switch.unselected.handle.height")
+        .unwrap_or(Px(16.0));
+    let pressed_handle_width = theme
+        .metric_by_key("md.comp.switch.pressed.handle.width")
+        .unwrap_or(Px(28.0));
+    let pressed_handle_height = theme
+        .metric_by_key("md.comp.switch.pressed.handle.height")
         .unwrap_or(Px(28.0));
 
     let track_y_offset = Px(((state_layer.0 - track_height.0) * 0.5).max(0.0));
@@ -334,9 +347,12 @@ fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
         track_width,
         track_height,
         track_outline_width,
-        selected_handle,
-        unselected_handle,
-        pressed_handle,
+        selected_handle_width,
+        selected_handle_height,
+        unselected_handle_width,
+        unselected_handle_height,
+        pressed_handle_width,
+        pressed_handle_height,
         track_y_offset,
         focus_indicator_thickness,
         focus_indicator_offset,
@@ -403,28 +419,37 @@ fn switch_state_layer_color(theme: &Theme, selected: bool, interaction: Interact
 struct SwitchGeometry {
     handle_x: Px,
     handle_y: Px,
-    handle_size: Px,
+    handle_width: Px,
+    handle_height: Px,
     ink_bounds: Rect,
 }
 
 fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: bool) -> SwitchGeometry {
     let thumb_t = thumb_t.clamp(0.0, 1.0);
-    let handle_size =
-        if pressed {
-            size.pressed_handle
-        } else {
-            Px(size.unselected_handle.0
-                + (size.selected_handle.0 - size.unselected_handle.0) * thumb_t)
-        };
 
-    let padding = Px(((size.track_height.0 - handle_size.0) * 0.5).max(0.0));
-    let on_x = Px(size.track_width.0 - handle_size.0 - padding.0);
-    let off_x = padding;
+    let (handle_width, handle_height) = if pressed {
+        (size.pressed_handle_width, size.pressed_handle_height)
+    } else {
+        (
+            Px(size.unselected_handle_width.0
+                + (size.selected_handle_width.0 - size.unselected_handle_width.0) * thumb_t),
+            Px(size.unselected_handle_height.0
+                + (size.selected_handle_height.0 - size.unselected_handle_height.0) * thumb_t),
+        )
+    };
+
+    // Material Web switch uses a circular handle; keep symmetric padding behavior and derive it
+    // from the handle height (the primary axis for vertical centering).
+    let padding_y = Px(((size.track_height.0 - handle_height.0) * 0.5).max(0.0));
+    let padding_x = padding_y;
+
+    let on_x = Px(size.track_width.0 - handle_width.0 - padding_x.0);
+    let off_x = padding_x;
     let handle_x = Px(off_x.0 + (on_x.0 - off_x.0) * thumb_t);
-    let handle_y = padding;
+    let handle_y = padding_y;
 
-    let thumb_cx = Px(handle_x.0 + handle_size.0 * 0.5);
-    let thumb_cy = Px(size.track_y_offset.0 + handle_y.0 + handle_size.0 * 0.5);
+    let thumb_cx = Px(handle_x.0 + handle_width.0 * 0.5);
+    let thumb_cy = Px(size.track_y_offset.0 + handle_y.0 + handle_height.0 * 0.5);
 
     let ink_origin = fret_core::Point::new(
         Px(thumb_cx.0 - size.state_layer.0 * 0.5),
@@ -435,7 +460,8 @@ fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: bool) -> Switc
     SwitchGeometry {
         handle_x,
         handle_y,
-        handle_size,
+        handle_width,
+        handle_height,
         ink_bounds,
     }
 }
@@ -467,8 +493,8 @@ fn switch_track<H: UiHost>(
         handle.layout.position = fret_ui::element::PositionStyle::Absolute;
         handle.layout.inset.left = Some(geom.handle_x);
         handle.layout.inset.top = Some(geom.handle_y);
-        handle.layout.size.width = Length::Px(geom.handle_size);
-        handle.layout.size.height = Length::Px(geom.handle_size);
+        handle.layout.size.width = Length::Px(geom.handle_width);
+        handle.layout.size.height = Length::Px(geom.handle_height);
         handle.corner_radii = Corners::all(Px(9999.0));
         handle.background = Some(colors.handle_color);
 

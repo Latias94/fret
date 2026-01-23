@@ -980,11 +980,32 @@ fn inject_comp_switch_scalars(cfg: &mut ThemeConfig) {
         .insert("md.comp.switch.track.outline.width".to_string(), 2.0);
 
     cfg.metrics
-        .insert("md.comp.switch.selected.handle.size".to_string(), 24.0);
+        .insert("md.comp.switch.handle.width".to_string(), 20.0);
     cfg.metrics
-        .insert("md.comp.switch.unselected.handle.size".to_string(), 16.0);
+        .insert("md.comp.switch.handle.height".to_string(), 20.0);
+
     cfg.metrics
-        .insert("md.comp.switch.pressed.handle.size".to_string(), 28.0);
+        .insert("md.comp.switch.selected.handle.width".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.switch.selected.handle.height".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.switch.unselected.handle.width".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.switch.unselected.handle.height".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.switch.pressed.handle.width".to_string(), 28.0);
+    cfg.metrics
+        .insert("md.comp.switch.pressed.handle.height".to_string(), 28.0);
+
+    cfg.metrics
+        .insert("md.comp.switch.with-icon.handle.width".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.switch.with-icon.handle.height".to_string(), 24.0);
+
+    cfg.metrics
+        .insert("md.comp.switch.selected.icon.size".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.switch.unselected.icon.size".to_string(), 16.0);
 
     cfg.metrics
         .insert("md.comp.switch.focus.indicator.offset".to_string(), 2.0);

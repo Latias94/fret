@@ -23,6 +23,21 @@ In contrast, Compose Material3 achieves consistency by centralizing:
 - ripple/state-layer in an `Indication`-like substrate,
 - content color + typography via composition locals and controlled scope.
 
+## Observed Divergences (so far)
+
+These are outcome-level issues that typically indicate missing shared policy or missing core
+mechanisms (measurement/rounding), not “a single wrong token”:
+
+- **Radio indicator geometry**: selected dot size/position can drift at some scales if the geometry
+  math is duplicated across components or lacks consistent pixel snapping.
+- **Tabs press/click flicker**: commonly caused by conditional indicator insertion/removal or by
+  indicator sizing that depends on last-frame bounds (needs a stable structure + stable
+  measurement source).
+- **Text/icon color mismatches**: often caused by missing scoped defaults (Compose-style
+  `LocalContentColor`) and implicit fallbacks into non-Material token namespaces.
+- **Ink bounds inconsistencies**: ripple/state-layer bounds should follow Material “touch target /
+  state layer” rules and stay stable across states (pressed/hover/focus).
+
 References in this repo:
 
 - Compose Material3 `RadioButton`: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/RadioButton.kt`
@@ -82,6 +97,8 @@ These are *candidates*, not guaranteed core work:
   mechanism would reduce boilerplate and mismatch risk.
 - **Subcompose-like measurement**: for tabs (indicator “match content size”) and other
   measurement-driven visuals, relying only on last-frame bounds can cause visible jitter.
+- **Pixel snapping / rounding policy**: some controls require consistent rounding rules across
+  layout + paint to avoid “drift” at non-1.0 scale factors.
 - **Stable structure guarantees**: better guidance or helpers to keep indicator/ink layers present
   without conditional insertion/removal.
 
