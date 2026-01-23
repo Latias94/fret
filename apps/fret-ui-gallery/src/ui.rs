@@ -941,6 +941,15 @@ fn preview_virtual_list_torture(
 ) -> Vec<AnyElement> {
     let len: usize = 10_000;
 
+    let known_heights =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let header_editing_row = cx
         .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
         .flatten();
@@ -1047,6 +1056,11 @@ fn preview_virtual_list_torture(
         |cx| {
             vec![
                 cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
+                cx.text(if known_heights {
+                    "Mode: known row heights (no measure pass; better for perf baselines)."
+                } else {
+                    "Mode: measured row heights (baseline)."
+                }),
                 controls,
                 editing_indicator,
             ]
@@ -1063,7 +1077,13 @@ fn preview_virtual_list_torture(
         ..Default::default()
     };
 
-    let options = fret_ui::element::VirtualListOptions::new(Px(28.0), 10);
+    let options = if known_heights {
+        fret_ui::element::VirtualListOptions::known(Px(28.0), 10, |index| {
+            if index % 15 == 0 { Px(44.0) } else { Px(28.0) }
+        })
+    } else {
+        fret_ui::element::VirtualListOptions::new(Px(28.0), 10)
+    };
 
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
         let editing_row = cx
