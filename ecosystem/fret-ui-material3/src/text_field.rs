@@ -9,15 +9,24 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, FlexProps, HoverRegionProps, Length, MainAlign, Overflow, TextInputProps, TextProps,
+    AnyElement, ContainerProps, FlexProps, HoverRegionProps, Length, MainAlign, Overflow,
+    PointerRegionProps, TextInputProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
-use fret_ui::{Invalidation, TextInputStyle, Theme, UiHost};
+use fret_ui::{GlobalElementId, Invalidation, TextInputStyle, Theme, UiHost};
+
+use crate::interaction::state_layer::StateLayerAnimator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TextFieldVariant {
     #[default]
     Outlined,
+}
+
+#[derive(Debug, Default)]
+struct TextFieldRuntime {
+    float_target: bool,
+    float: StateLayerAnimator,
 }
 
 #[derive(Clone)]
@@ -133,6 +142,11 @@ impl TextField {
                 let theme = Theme::global(&*cx.app).clone();
 
                 let mut focused = false;
+                let mut input_id = GlobalElementId(0);
+                let mut input_bg = theme
+                    .color_by_key("md.sys.color.surface")
+                    .unwrap_or_else(|| theme.color_required("card"));
+                let mut input_outline_width = Px(1.0);
                 vec![cx.flex(
                     FlexProps {
                         layout: {
@@ -153,6 +167,7 @@ impl TextField {
 
                         let input = cx.named("text_input", |cx| {
                             let id = cx.root_id();
+                            input_id = id;
                             focused = cx.is_focused_element(id);
 
                             let populated = cx
@@ -178,9 +193,12 @@ impl TextField {
                                 None
                             };
 
-                            props.chrome = outlined_text_input_style(
+                            let chrome = outlined_text_input_style(
                                 &theme, focused, hovered, disabled, error,
                             );
+                            input_bg = chrome.background;
+                            input_outline_width = chrome.border.top;
+                            props.chrome = chrome;
                             props.text_style = theme
                                 .text_style_by_key("md.sys.typescale.body-large")
                                 .unwrap_or(TextStyle::default());
@@ -192,19 +210,54 @@ impl TextField {
                             .get_model_cloned(&model, Invalidation::Layout)
                             .map(|v| !v.is_empty())
                             .unwrap_or(false);
+                        let should_float = focused || populated;
+
+                        let now_frame = cx.frame_id.0;
+                        let duration_ms = theme
+                            .duration_ms_by_key("md.sys.motion.duration.short4")
+                            .unwrap_or(200);
+                        let easing = theme
+                            .easing_by_key("md.sys.motion.easing.standard")
+                            .unwrap_or(fret_ui::theme::CubicBezier {
+                                x1: 0.0,
+                                y1: 0.0,
+                                x2: 1.0,
+                                y2: 1.0,
+                            });
+
+                        let (progress, want_frames) =
+                            cx.with_state(TextFieldRuntime::default, |rt| {
+                                if rt.float_target != should_float {
+                                    rt.float_target = should_float;
+                                    rt.float.set_target(
+                                        now_frame,
+                                        if should_float { 1.0 } else { 0.0 },
+                                        duration_ms,
+                                        easing,
+                                    );
+                                }
+                                rt.float.advance(now_frame);
+                                (rt.float.value(), rt.float.is_active())
+                            });
+
+                        if want_frames {
+                            cx.request_animation_frame();
+                        }
 
                         children.push(input);
 
                         if let Some(label) = label.as_ref() {
-                            let floated = focused || populated;
                             children.push(text_field_label(
                                 cx,
                                 &theme,
                                 label.clone(),
-                                floated,
+                                progress,
                                 disabled,
                                 error,
                                 focused,
+                                input_id,
+                                input_bg,
+                                input_outline_width,
                             ));
                         }
 
@@ -240,6 +293,48 @@ fn outlined_container_corner(theme: &Theme) -> Corners {
         .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or(Px(4.0));
     Corners::all(r)
+}
+
+fn lerp_px(a: Px, b: Px, t: f32) -> Px {
+    let t = t.clamp(0.0, 1.0);
+    Px(a.0 + (b.0 - a.0) * t)
+}
+
+fn lerp_f32(a: f32, b: f32, t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    a + (b - a) * t
+}
+
+fn interpolated_label_text_style(theme: &Theme, progress: f32) -> Option<TextStyle> {
+    let large = theme.text_style_by_key("md.sys.typescale.body-large")?;
+    let small = theme.text_style_by_key("md.sys.typescale.body-small")?;
+
+    if large.font != small.font || large.weight != small.weight || large.slant != small.slant {
+        return Some(if progress >= 0.5 { small } else { large });
+    }
+
+    let size = lerp_px(large.size, small.size, progress);
+    let line_height = match (large.line_height, small.line_height) {
+        (Some(a), Some(b)) => Some(lerp_px(a, b, progress)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    let letter_spacing_em = match (large.letter_spacing_em, small.letter_spacing_em) {
+        (Some(a), Some(b)) => Some(lerp_f32(a, b, progress)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+
+    Some(TextStyle {
+        font: large.font,
+        size,
+        weight: large.weight,
+        slant: large.slant,
+        line_height,
+        letter_spacing_em,
+    })
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -481,19 +576,18 @@ fn text_field_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     text: Arc<str>,
-    floated: bool,
+    progress: f32,
     disabled: bool,
     error: bool,
     focused: bool,
+    input_id: GlobalElementId,
+    input_bg: Color,
+    outline_width: Px,
 ) -> AnyElement {
-    let style_key = if floated {
-        "md.sys.typescale.body-small"
-    } else {
-        "md.sys.typescale.body-large"
-    };
-    let style = theme.text_style_by_key(style_key);
+    let style = interpolated_label_text_style(theme, progress)
+        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
 
-    let y = if floated { Px(6.0) } else { Px(18.0) };
+    let y = lerp_px(Px(18.0), Px(6.0), progress);
     let x = Px(16.0);
 
     let mut layout = fret_ui::element::LayoutStyle::default();
@@ -503,14 +597,47 @@ fn text_field_label<H: UiHost>(
     layout.inset.right = Some(Px(16.0));
     layout.overflow = Overflow::Visible;
 
-    cx.text_props(TextProps {
-        layout,
-        text,
-        style,
-        color: Some(outlined_label_color(theme, disabled, error, focused)),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-    })
+    let floated = progress >= 0.5;
+    let patch_padding_x = Px(4.0);
+    let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
+
+    let mut patch = ContainerProps::default();
+    patch.padding = if floated {
+        Edges {
+            top: patch_padding_y,
+            right: patch_padding_x,
+            bottom: patch_padding_y,
+            left: patch_padding_x,
+        }
+    } else {
+        Edges::all(Px(0.0))
+    };
+    patch.background = floated.then_some(input_bg);
+
+    cx.pointer_region(
+        PointerRegionProps {
+            layout,
+            enabled: !disabled,
+        },
+        move |cx| {
+            let input_for_focus = input_id;
+            cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {
+                host.request_focus(input_for_focus);
+                true
+            }));
+
+            vec![cx.container(patch, move |cx| {
+                vec![cx.text_props(TextProps {
+                    layout: fret_ui::element::LayoutStyle::default(),
+                    text: text.clone(),
+                    style,
+                    color: Some(outlined_label_color(theme, disabled, error, focused)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })]
+            })]
+        },
+    )
 }
 
 fn text_field_supporting_text<H: UiHost>(
