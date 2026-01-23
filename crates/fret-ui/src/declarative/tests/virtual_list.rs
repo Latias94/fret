@@ -318,7 +318,7 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
         let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
         options.axis = fret_core::Axis::Horizontal;
 
-        let list_a = cx.virtual_list(100, options, scroll_handle, |cx, items| {
+        let list_a = cx.virtual_list(100, options.clone(), scroll_handle, |cx, items| {
             items
                 .iter()
                 .copied()

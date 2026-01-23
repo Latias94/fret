@@ -235,6 +235,13 @@ impl ElementHostWidget {
                     measured_updates.push((child, idx, estimated_extent));
                 }
             }
+            crate::element::VirtualListMeasureMode::Known => {
+                for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
+                    let idx = item.index;
+                    let known_extent = metrics.height_at(idx);
+                    measured_updates.push((child, idx, known_extent));
+                }
+            }
         }
 
         let content_extent = metrics.total_height();

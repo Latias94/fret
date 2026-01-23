@@ -1346,6 +1346,14 @@ pub enum VirtualListMeasureMode {
     /// Skips the measurement pass and assumes all items have the estimated size.
     /// Intended for fixed-height lists/tables.
     Fixed,
+    /// Skips the measurement pass and uses caller-provided per-index row heights.
+    ///
+    /// This mode is intended for “known-height” virtualization (e.g. fixed-height rows with
+    /// occasional deterministic height changes like group headers), where measuring each visible
+    /// row would be wasted work.
+    ///
+    /// Correctness requires that the provided height function matches the rendered row layout.
+    Known,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -1362,7 +1370,7 @@ pub enum VirtualListKeyCacheMode {
     VisibleOnly,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct VirtualListOptions {
     pub axis: fret_core::Axis,
     pub items_revision: u64,
@@ -1372,6 +1380,7 @@ pub struct VirtualListOptions {
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
+    pub known_row_height_at: Option<Arc<dyn Fn(usize) -> Px + Send + Sync>>,
 }
 
 impl VirtualListOptions {
@@ -1385,6 +1394,7 @@ impl VirtualListOptions {
             overscan,
             scroll_margin: Px(0.0),
             gap: Px(0.0),
+            known_row_height_at: None,
         }
     }
 
@@ -1393,6 +1403,33 @@ impl VirtualListOptions {
             measure_mode: VirtualListMeasureMode::Fixed,
             ..Self::new(estimate_row_height, overscan)
         }
+    }
+
+    pub fn known(
+        estimate_row_height: Px,
+        overscan: usize,
+        height_at: impl Fn(usize) -> Px + Send + Sync + 'static,
+    ) -> Self {
+        let mut options = Self::new(estimate_row_height, overscan);
+        options.measure_mode = VirtualListMeasureMode::Known;
+        options.known_row_height_at = Some(Arc::new(height_at));
+        options
+    }
+}
+
+impl std::fmt::Debug for VirtualListOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VirtualListOptions")
+            .field("axis", &self.axis)
+            .field("items_revision", &self.items_revision)
+            .field("estimate_row_height", &self.estimate_row_height)
+            .field("measure_mode", &self.measure_mode)
+            .field("key_cache", &self.key_cache)
+            .field("overscan", &self.overscan)
+            .field("scroll_margin", &self.scroll_margin)
+            .field("gap", &self.gap)
+            .field("known_row_height_at", &self.known_row_height_at.is_some())
+            .finish()
     }
 }
 

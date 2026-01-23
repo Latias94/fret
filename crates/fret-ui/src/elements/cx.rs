@@ -2167,6 +2167,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     crate::element::VirtualListKeyCacheMode::AllKeys
                 }
                 crate::element::VirtualListMeasureMode::Fixed => options.key_cache,
+                crate::element::VirtualListMeasureMode::Known => options.key_cache,
             };
 
             let range = cx.with_state(VirtualListState::default, |state| {
@@ -2246,6 +2247,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     }
 
                     state.metrics.sync_keys(&state.keys, options.items_revision);
+
+                    if options.measure_mode == crate::element::VirtualListMeasureMode::Known {
+                        if let Some(height_at) = options.known_row_height_at.as_ref() {
+                            let heights = (0..len).map(|i| height_at(i)).collect::<Vec<_>>();
+                            state.metrics.rebuild_from_known_heights(
+                                heights,
+                                options.estimate_row_height,
+                                options.gap,
+                                options.scroll_margin,
+                            );
+                        }
+                    }
 
                     if key_cache == crate::element::VirtualListKeyCacheMode::AllKeys {
                         let has_deferred_scroll = scroll_handle.deferred_scroll_to_item().is_some();

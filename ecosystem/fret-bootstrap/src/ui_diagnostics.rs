@@ -2554,6 +2554,7 @@ impl UiAxisV1 {
 pub enum UiVirtualListMeasureModeV1 {
     Fixed,
     Measured,
+    Known,
 }
 
 impl UiVirtualListMeasureModeV1 {
@@ -2561,6 +2562,7 @@ impl UiVirtualListMeasureModeV1 {
         match mode {
             fret_ui::element::VirtualListMeasureMode::Fixed => Self::Fixed,
             fret_ui::element::VirtualListMeasureMode::Measured => Self::Measured,
+            fret_ui::element::VirtualListMeasureMode::Known => Self::Known,
         }
     }
 }
