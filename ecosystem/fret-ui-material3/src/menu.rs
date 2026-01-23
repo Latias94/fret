@@ -10,20 +10,20 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, DrawOrder, Edges, KeyCode, Px, Rect, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{Theme, UiHost};
 
-use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
-use crate::interaction::state_layer::StateLayerAnimator;
+use crate::foundation::indication::{
+    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+};
 
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
@@ -172,7 +172,7 @@ impl Menu {
             let container_bg = theme
                 .color_by_key("md.comp.menu.container.color")
                 .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-                .unwrap_or_else(|| theme.color_required("card"));
+                .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"));
             let r = theme
                 .metric_by_key("md.comp.menu.container.shape")
                 .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
@@ -305,7 +305,7 @@ fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Theme) -> A
     let c = theme
         .color_by_key("md.comp.menu.divider.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-variant"))
-        .unwrap_or_else(|| theme.color_required("border"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-variant"));
 
     let mut props = ContainerProps::default();
     props.background = Some(c);
@@ -397,14 +397,6 @@ fn material_menu_item<H: UiHost>(
                     .duration_ms_by_key("md.sys.motion.duration.short2")
                     .unwrap_or(100);
 
-                #[derive(Default)]
-                struct ItemRuntime {
-                    prev_pressed: bool,
-                    state_target: f32,
-                    state_layer: StateLayerAnimator,
-                    ripple: RippleAnimator,
-                }
-
                 let bounds = cx
                     .last_bounds_for_element(cx.root_id())
                     .unwrap_or(cx.bounds);
@@ -413,49 +405,34 @@ fn material_menu_item<H: UiHost>(
                         st.last_down
                     });
 
-                let (state_layer_opacity, ripple_frame, want_frames) =
-                    cx.with_state_for(pressable_id, ItemRuntime::default, |rt| {
-                        if (state_layer_target - rt.state_target).abs() > 1e-6 {
-                            rt.state_target = state_layer_target;
-                            rt.state_layer.set_target(
-                                now_frame,
-                                state_layer_target,
-                                state_duration_ms,
-                                easing,
-                            );
-                        }
-                        rt.state_layer.advance(now_frame);
+                let ripple_base_opacity = theme
+                    .number_by_key("md.comp.menu.list-item.pressed.state-layer.opacity")
+                    .unwrap_or(0.1);
+                let config = IndicationConfig {
+                    state_duration_ms,
+                    ripple_expand_ms,
+                    ripple_fade_ms,
+                    easing,
+                };
+                let indication = advance_indication_for_pressable(
+                    cx,
+                    pressable_id,
+                    now_frame,
+                    bounds,
+                    last_down,
+                    is_pressed,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
+                );
 
-                        let pressed_rising = is_pressed && !rt.prev_pressed;
-                        rt.prev_pressed = is_pressed;
-                        if pressed_rising {
-                            let origin = down_origin_local(bounds, last_down);
-                            let max_radius = ripple_max_radius(bounds, origin);
-                            rt.ripple.start(
-                                now_frame,
-                                origin,
-                                max_radius,
-                                ripple_expand_ms,
-                                ripple_fade_ms,
-                                easing,
-                            );
-                        }
-
-                        let ripple_base_opacity = theme
-                            .number_by_key("md.comp.menu.list-item.pressed.state-layer.opacity")
-                            .unwrap_or(0.1);
-                        let ripple_frame = rt.ripple.advance(now_frame, ripple_base_opacity);
-                        let want_frames = rt.state_layer.is_active() || rt.ripple.is_active();
-                        (rt.state_layer.value(), ripple_frame, want_frames)
-                    });
-
-                let overlay = menu_item_ink_layer(
+                let overlay = material_ink_layer(
                     cx,
                     Corners::all(Px(0.0)),
                     state_layer_color,
-                    state_layer_opacity,
-                    ripple_frame,
-                    want_frames,
+                    indication.state_layer_opacity,
+                    indication.ripple_frame,
+                    indication.want_frames,
                 );
 
                 let label_el = menu_item_label(cx, theme, &item.label, label_color);
@@ -500,54 +477,6 @@ fn menu_item_label<H: UiHost>(
     cx.text_props(props)
 }
 
-fn menu_item_ink_layer<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    corner_radii: Corners,
-    color: Color,
-    state_layer_opacity: f32,
-    ripple_frame: Option<RipplePaintFrame>,
-    want_frames: bool,
-) -> AnyElement {
-    let mut props = CanvasProps::default();
-    props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
-
-    cx.canvas(props, move |p| {
-        let bounds = p.bounds();
-
-        if state_layer_opacity > 0.0 {
-            fret_ui::paint::paint_state_layer(
-                p.scene(),
-                DrawOrder(0),
-                bounds,
-                color,
-                state_layer_opacity,
-                corner_radii,
-            );
-        }
-
-        if let Some(r) = ripple_frame {
-            fret_ui::paint::paint_ripple(
-                p.scene(),
-                DrawOrder(1),
-                bounds,
-                r.origin,
-                r.radius,
-                color,
-                r.opacity,
-                Some(corner_radii),
-            );
-        }
-
-        if want_frames {
-            p.request_animation_frame();
-        }
-    })
-}
-
 fn menu_item_outcomes(
     theme: &Theme,
     enabled: bool,
@@ -584,11 +513,11 @@ fn menu_item_outcomes(
     let mut label = theme
         .color_by_key(label_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
     let state_layer = theme
         .color_by_key(state_layer_key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
     let mut opacity = theme.number_by_key(opacity_key).unwrap_or(0.0);
 
     if !enabled {
@@ -600,37 +529,6 @@ fn menu_item_outcomes(
     }
 
     (label, state_layer, opacity)
-}
-
-fn down_origin_local(
-    bounds: Rect,
-    down: Option<fret_ui::action::PointerDownCx>,
-) -> fret_core::Point {
-    let pos = down.map(|d| d.position).unwrap_or_else(|| {
-        fret_core::Point::new(
-            Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
-            Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
-        )
-    });
-    fret_core::Point::new(
-        Px(pos.x.0 - bounds.origin.x.0),
-        Px(pos.y.0 - bounds.origin.y.0),
-    )
-}
-
-fn ripple_max_radius(bounds: Rect, origin_local: fret_core::Point) -> Px {
-    let w = bounds.size.width.0.max(0.0);
-    let h = bounds.size.height.0.max(0.0);
-    let ox = origin_local.x.0.clamp(0.0, w);
-    let oy = origin_local.y.0.clamp(0.0, h);
-    let corners = [(0.0, 0.0), (w, 0.0), (0.0, h), (w, h)];
-    let mut max: f32 = 0.0;
-    for (cx, cy) in corners {
-        let dx = cx - ox;
-        let dy = cy - oy;
-        max = max.max((dx * dx + dy * dy).sqrt());
-    }
-    Px(max)
 }
 
 fn roving_typeahead_prefix_arc_str_always_wrap<H: UiHost>(
