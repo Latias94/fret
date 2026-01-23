@@ -28,17 +28,28 @@
     },
 
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 5 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
     { "type": "wait_frames", "n": 5 },
 
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 6000.0 },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": 120.0 },
-    { "type": "wait_frames", "n": 5 },
-
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -6000.0 },
-    { "type": "wait_frames", "n": 10 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
+    { "type": "wait_frames", "n": 2 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }, "delta_y": -120.0 },
     { "type": "wait_frames", "n": 5 },
 
@@ -48,4 +59,3 @@
     }
   ]
 }
-
