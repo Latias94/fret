@@ -553,6 +553,7 @@ fn page_preview(
             material3_text_field_error,
         ),
         PAGE_MATERIAL3_TABS => preview_material3_tabs(cx, material3_tabs_value),
+        PAGE_MATERIAL3_MENU => preview_material3_menu(cx, last_action.clone()),
         _ => preview_intro(cx, theme),
     };
 
@@ -1561,6 +1562,76 @@ fn preview_material3_tabs(
         cx.text("Material 3 Tabs: roving focus + state layer + bounded ripple."),
         tabs,
         cx.text(format!("value={}", current.as_ref())),
+    ]
+}
+
+fn preview_material3_menu(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+
+    fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&last_action, |v| {
+                *v = Arc::<str>::from(id);
+            });
+            host.request_redraw(action_cx.window);
+        })
+    }
+
+    let menu = material3::Menu::new()
+        .a11y_label("Material 3 Menu")
+        .test_id("ui-gallery-material3-menu")
+        .entries(vec![
+            material3::MenuEntry::Item(
+                material3::MenuItem::new("Cut")
+                    .test_id("ui-gallery-material3-menu-item-cut")
+                    .on_select(on_select("material3.menu.cut", last_action.clone())),
+            ),
+            material3::MenuEntry::Item(
+                material3::MenuItem::new("Copy")
+                    .test_id("ui-gallery-material3-menu-item-copy")
+                    .on_select(on_select("material3.menu.copy", last_action.clone())),
+            ),
+            material3::MenuEntry::Item(
+                material3::MenuItem::new("Paste")
+                    .test_id("ui-gallery-material3-menu-item-paste")
+                    .disabled(true),
+            ),
+            material3::MenuEntry::Separator,
+            material3::MenuEntry::Item(
+                material3::MenuItem::new("Settings")
+                    .test_id("ui-gallery-material3-menu-item-settings")
+                    .on_select(on_select("material3.menu.settings", last_action.clone())),
+            ),
+        ])
+        .into_element(cx);
+
+    let last = cx
+        .app
+        .models()
+        .get_cloned(&last_action)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Menu").into_element(cx),
+            shadcn::CardDescription::new(
+                "In-place list MVP (roving focus + typeahead + state layer + bounded ripple).",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![menu]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    vec![
+        cx.text("Tip: Arrow keys / Home / End navigate; type to jump by prefix."),
+        card,
+        cx.text(format!("last action: {last}")),
     ]
 }
 

@@ -106,6 +106,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_outlined_text_field_scalars(cfg);
     inject_comp_filled_text_field_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
+    inject_comp_menu_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -249,6 +250,7 @@ pub fn theme_config_with_colors(
     inject_comp_outlined_text_field_colors_from_sys(&mut cfg);
     inject_comp_filled_text_field_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
+    inject_comp_menu_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -1497,6 +1499,35 @@ fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-menu.scss
+
+    cfg.metrics
+        .insert("md.comp.menu.container.shape".to_string(), 4.0);
+    cfg.metrics
+        .insert("md.comp.menu.divider.height".to_string(), 1.0);
+    cfg.metrics
+        .insert("md.comp.menu.list-item.container.height".to_string(), 48.0);
+
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.menu.list-item.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+}
+
 fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
@@ -1900,6 +1931,63 @@ fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.primary-navigation-tab.with-label-text.inactive.pressed.label-text.color",
+        "md.sys.color.on-surface",
+    );
+}
+
+fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-menu.scss
+
+    copy_color(
+        cfg,
+        "md.comp.menu.container.color",
+        "md.sys.color.surface-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.menu.divider.color",
+        "md.sys.color.surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.hover.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.focus.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.pressed.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.disabled.label-text.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.menu.list-item.pressed.state-layer.color",
         "md.sys.color.on-surface",
     );
 }

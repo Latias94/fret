@@ -288,6 +288,32 @@ let tabs = m3::Tabs::new(value)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_MENU: &str = r#"
+## Material 3 Menu (MVP)
+
+This page validates a Material 3 menu surface:
+
+- token-driven menu container + list item sizing
+- roving focus (Up/Down/Home/End) + prefix typeahead
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
+
+Notes:
+- This is the in-place list MVP. Overlay / dismissal / focus-trap outcomes are tracked separately.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_MENU: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+let menu = m3::Menu::new().entries(vec![
+    m3::MenuEntry::Item(m3::MenuItem::new("Cut")),
+    m3::MenuEntry::Separator,
+    m3::MenuEntry::Item(m3::MenuItem::new("Paste").disabled(true)),
+]);
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 

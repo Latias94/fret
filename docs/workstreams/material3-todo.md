@@ -122,7 +122,12 @@ Material 3 Expressive) in Fret.
   - Evidence: `ecosystem/fret-ui-material3/src/tabs.rs` (`Tabs`, `TabItem`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_primary_navigation_tab_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_tabs`).
-- [ ] List / Menu
+- [x] Menu (MVP: in-place list, roving focus + prefix typeahead, state layer + bounded ripple)
+  - Evidence: `ecosystem/fret-ui-material3/src/menu.rs` (`Menu`, `MenuItem`, `roving_typeahead_prefix_arc_str_always_wrap`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_menu_*`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_menu`),
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_MENU`).
+- [ ] List (standalone primitive; icons/selection density; shared with menu)
 - [ ] Dialog / Snackbar / Tooltip (pick order based on demos)
 
 ### Conformance / Regression

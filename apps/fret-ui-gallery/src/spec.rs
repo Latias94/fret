@@ -128,6 +128,7 @@ pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
 pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
 pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
 pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
+pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
@@ -166,6 +167,7 @@ pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.materia
 pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
 pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
 pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
+pub(crate) const CMD_NAV_MATERIAL3_MENU: &str = "ui_gallery.nav.select.material3_menu";
 
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
@@ -626,6 +628,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["material3", "tabs", "state-layer", "ripple", "roving-focus"],
                 docs::DOC_MATERIAL3_TABS,
                 docs::USAGE_MATERIAL3_TABS,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_MENU,
+                "Menu",
+                "Material 3 Menu (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_MENU,
+                &[
+                    "material3",
+                    "menu",
+                    "list",
+                    "state-layer",
+                    "ripple",
+                    "roving-focus",
+                    "typeahead",
+                ],
+                docs::DOC_MATERIAL3_MENU,
+                docs::USAGE_MATERIAL3_MENU,
             ),
         ],
     },
