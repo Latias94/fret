@@ -54,7 +54,9 @@ Key upstream behaviors/surfaces:
 ### Keyboard navigation & typeahead
 
 - Pass: Uses `RovingFlex` + APG navigation + prefix typeahead.
-- Pass: Restores focus back to the trigger on close (Radix-style menu default).
+- Pass: Close does not restore focus to the trigger (matches Radix `ContextMenu`'s
+  `onCloseAutoFocus(e) { e.preventDefault() }` outcome). In web goldens focus returns to `<body/>`;
+  in Fret this is modeled as `UiTree` focus `None`.
 
 ### Visual parity (shadcn)
 

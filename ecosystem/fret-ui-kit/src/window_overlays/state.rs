@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
-use fret_runtime::FrameId;
+use fret_runtime::{FrameId, Model};
+use fret_ui::action::DismissReason;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{UiHost, UiTree};
 
@@ -35,6 +36,7 @@ pub(super) struct ActivePopover {
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) last_focus: Option<NodeId>,
+    pub(super) last_dismiss_reason: Model<Option<DismissReason>>,
 }
 
 pub(super) struct ActiveModal {

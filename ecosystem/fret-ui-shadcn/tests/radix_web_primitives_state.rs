@@ -344,7 +344,10 @@ fn right_click_center(
 }
 
 fn click_outside(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServices, bounds: Rect) {
-    let click = Point::new(Px(bounds.origin.x.0 + 5.0), Px(bounds.origin.y.0 + 5.0));
+    let click = Point::new(
+        Px(bounds.origin.x.0 + bounds.size.width.0 - 5.0),
+        Px(bounds.origin.y.0 + bounds.size.height.0 - 5.0),
+    );
     click_center(ui, app, services, click);
 }
 
@@ -1353,6 +1356,11 @@ fn radix_web_menubar_outside_click_close_matches_fret() {
             .expanded,
         "expected File menu to be closed after outside click"
     );
+    assert!(
+        snap.nodes.iter().all(|n| !n.flags.focused),
+        "expected focus to be cleared after closing the menubar via outside click"
+    );
+    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
 }
 
 #[test]
@@ -1513,6 +1521,11 @@ fn radix_web_menubar_submenu_outside_click_close_matches_fret() {
             .all(|n| n.label.as_deref().is_none_or(|l| l != "Email link")),
         "submenu content should be closed after outside click"
     );
+    assert!(
+        snap.nodes.iter().all(|n| !n.flags.focused),
+        "expected focus to be cleared after closing the menubar via outside click"
+    );
+    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
 }
 
 #[test]

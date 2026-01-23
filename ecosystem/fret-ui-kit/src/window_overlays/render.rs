@@ -375,6 +375,17 @@ pub fn render<H: UiHost>(
         let on_dismiss_request_for_root = on_dismiss_request.clone();
         let children = req.children;
 
+        let key = (window, popover_id);
+        let last_dismiss_reason =
+            app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
+                overlays
+                    .popovers
+                    .get(&key)
+                    .map(|p| p.last_dismiss_reason.clone())
+                    .unwrap_or_else(|| app.models_mut().insert(None))
+            });
+        let last_dismiss_reason_for_root = last_dismiss_reason.clone();
+
         let pointer_barrier_root = disable_outside_pointer_events.then(|| {
             let root_name = format!("{}::pointer_barrier", root_name);
             fret_ui::declarative::render_root(
@@ -400,16 +411,24 @@ pub fn render<H: UiHost>(
                     cx.dismissible_on_pointer_move(on_pointer_move);
                 }
                 let on_dismiss_request = on_dismiss_request_for_root.clone();
-                cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
-                    Arc::new(move |host, _cx, _reason: DismissReason| {
-                        let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
-                    })
-                }));
+                let last_dismiss_reason = last_dismiss_reason_for_root.clone();
+                cx.dismissible_on_dismiss_request(Arc::new(
+                    move |host, cx, reason: DismissReason| {
+                        let _ = host
+                            .models_mut()
+                            .update(&last_dismiss_reason, |v| *v = Some(reason));
+                        match on_dismiss_request.as_ref() {
+                            Some(handler) => handler(host, cx, reason),
+                            None => {
+                                let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                            }
+                        }
+                    },
+                ));
                 children
             },
         );
 
-        let key = (window, popover_id);
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
@@ -434,6 +453,7 @@ pub fn render<H: UiHost>(
                     open: false,
                     restore_focus: None,
                     last_focus: focus_now,
+                    last_dismiss_reason: last_dismiss_reason.clone(),
                 }
             });
             entry.root_name = root_name.clone();
@@ -462,6 +482,9 @@ pub fn render<H: UiHost>(
                     &dismissable_branch_nodes,
                 )
             {
+                let _ = app.models_mut().update(&entry.last_dismiss_reason, |v| {
+                    *v = Some(DismissReason::FocusOutside)
+                });
                 if let Some(on_dismiss_request) = on_dismiss_request.as_ref() {
                     let mut host = UiActionHostAdapter { app };
                     on_dismiss_request(
@@ -506,8 +529,16 @@ pub fn render<H: UiHost>(
             // This mirrors the existing "restore on unmount" policy below, but triggers on the
             // open -> closed edge so recipes can animate out without deferring focus restoration.
             let closing = entry.open && !open_now;
+            let last_dismiss_reason = app
+                .models()
+                .get_copied(&entry.last_dismiss_reason)
+                .flatten();
+            let dismissed_by_outside_press =
+                last_dismiss_reason == Some(DismissReason::OutsidePress);
+            let allow_restore_focus = entry.restore_focus_on_close
+                && !(dismissed_by_outside_press && !consume_outside_pointer_events);
             if closing
-                && entry.restore_focus_on_close
+                && allow_restore_focus
                 && (consume_outside_pointer_events
                     || focus_scope_prim::should_restore_focus_for_non_modal_overlay(
                         ui,
@@ -528,10 +559,17 @@ pub fn render<H: UiHost>(
                         ui.set_focus(Some(node));
                     }
                 }
-            } else if closing && !entry.restore_focus_on_close {
+            } else if closing && !allow_restore_focus {
                 let focus_in_layer =
                     focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
-                if focus_in_layer {
+                if dismissed_by_outside_press && !consume_outside_pointer_events {
+                    let focus_on_trigger =
+                        fret_ui::elements::node_for_element(app, window, trigger)
+                            .is_some_and(|trigger_node| focus_now == Some(trigger_node));
+                    if focus_in_layer || focus_on_trigger {
+                        ui.set_focus(None);
+                    }
+                } else if focus_in_layer {
                     ui.set_focus(None);
                 }
             }
@@ -541,6 +579,9 @@ pub fn render<H: UiHost>(
                 should_focus_initial = true;
                 entry.restore_focus = restore_focus
                     .or_else(|| fret_ui::elements::node_for_element(app, window, trigger));
+                let _ = app
+                    .models_mut()
+                    .update(&entry.last_dismiss_reason, |v| *v = None);
             }
             entry.open = open_now;
             entry.last_focus = focus_now;
@@ -561,6 +602,7 @@ pub fn render<H: UiHost>(
         bool,
         bool,
         Option<NodeId>,
+        fret_runtime::Model<Option<DismissReason>>,
     )> = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let mut out: Vec<(
             UiLayerId,
@@ -569,6 +611,7 @@ pub fn render<H: UiHost>(
             bool,
             bool,
             Option<NodeId>,
+            fret_runtime::Model<Option<DismissReason>>,
         )> = Vec::new();
         for ((w, id), active) in overlays.popovers.iter() {
             if *w != window || seen_popovers.contains(id) {
@@ -581,6 +624,7 @@ pub fn render<H: UiHost>(
                 active.consume_outside_pointer_events,
                 active.restore_focus_on_close,
                 active.restore_focus,
+                active.last_dismiss_reason.clone(),
             ));
         }
         out
@@ -607,11 +651,16 @@ pub fn render<H: UiHost>(
         consume_outside_pointer_events,
         restore_focus_on_close,
         restore_focus,
+        last_dismiss_reason,
     ) in to_hide_popovers
     {
         let focus_now = ui.focus();
         let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
         let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
+        let last_dismiss_reason = app.models().get_copied(&last_dismiss_reason).flatten();
+        let dismissed_by_outside_press = last_dismiss_reason == Some(DismissReason::OutsidePress);
+        let allow_restore_focus = restore_focus_on_close
+            && !(dismissed_by_outside_press && !consume_outside_pointer_events);
 
         // Radix-aligned outcome for menu-like overlays (ADR 0069):
         // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
@@ -631,7 +680,7 @@ pub fn render<H: UiHost>(
                 ui.set_layer_wants_pointer_move_events(layer, false);
                 ui.set_layer_wants_timer_events(layer, false);
             }
-            if restore_focus_on_close {
+            if allow_restore_focus {
                 if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                     ui,
                     app,
@@ -640,6 +689,12 @@ pub fn render<H: UiHost>(
                     restore_focus,
                 ) {
                     ui.set_focus(Some(node));
+                }
+            } else if dismissed_by_outside_press && !consume_outside_pointer_events {
+                let focus_on_trigger = fret_ui::elements::node_for_element(app, window, trigger)
+                    .is_some_and(|trigger_node| focus_now == Some(trigger_node));
+                if focus_in_layer || focus_on_trigger {
+                    ui.set_focus(None);
                 }
             } else if focus_in_layer {
                 ui.set_focus(None);
