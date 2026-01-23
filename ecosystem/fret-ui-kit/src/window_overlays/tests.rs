@@ -475,6 +475,146 @@ fn cached_tooltip_request_is_synthesized_for_short_ttl_when_open_without_rerende
     );
 }
 
+#[test]
+fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let base_open = app.models_mut().insert(false);
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
+
+    // Install a tooltip layer that is still `present` but `open=false` (closing animation).
+    begin_frame(&mut app, window);
+    let tooltip_id = GlobalElementId(0x44);
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: tooltip_id,
+            root_name: tooltip_root_name(tooltip_id),
+            trigger: None,
+            open,
+            present: true,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .tooltips
+                .get(&(window, tooltip_id))
+                .map(|p| p.layer)
+        })
+        .expect("tooltip layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("tooltip debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert!(
+        !info.wants_pointer_down_outside_events,
+        "expected tooltip to stop requesting outside-press observers during close transitions"
+    );
+    assert!(
+        !info.wants_pointer_move_events,
+        "expected tooltip to stop requesting pointer-move observers during close transitions"
+    );
+}
+
+#[test]
+fn hover_overlay_is_pointer_transparent_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let base_open = app.models_mut().insert(false);
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    let trigger =
+        render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
+
+    // Install a hover overlay layer that is still `present` but `open=false` (closing animation).
+    begin_frame(&mut app, window);
+    let hover_id = GlobalElementId(0x55);
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: hover_id,
+            root_name: hover_overlay_root_name(hover_id),
+            trigger,
+            open,
+            present: true,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .hover_overlays
+                .get(&(window, hover_id))
+                .map(|p| p.layer)
+        })
+        .expect("hover overlay layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("hover debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(
+        !info.hit_testable,
+        "expected hover overlays to become pointer-transparent during close transitions"
+    );
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
+}
+
 fn render_base_with_trigger_and_underlay(
     ui: &mut UiTree<App>,
     app: &mut App,

@@ -16,7 +16,7 @@ use crate::primitives::focus_scope as focus_scope_prim;
 use super::state::{
     ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip,
     NonModalDismissibleLayerPolicy, OVERLAY_CACHE_TTL_FRAMES, OverlayLayer, WindowOverlays,
-    apply_modal_layer, apply_non_modal_dismissible_layer,
+    apply_hover_layer, apply_modal_layer, apply_non_modal_dismissible_layer, apply_tooltip_layer,
 };
 use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{
@@ -762,7 +762,7 @@ pub fn render<H: UiHost>(
             if from_producer {
                 entry.last_seen_frame = frame_id;
             }
-            OverlayLayer::hover(true, open_now).apply(ui, entry.layer);
+            apply_hover_layer(ui, entry.layer, true, open_now);
         });
     }
 
@@ -785,10 +785,10 @@ pub fn render<H: UiHost>(
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
             && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
         {
-            OverlayLayer::hide_hover().apply(ui, layer);
+            apply_hover_layer(ui, layer, false, false);
             ui.set_focus(Some(trigger_node));
         } else {
-            OverlayLayer::hide_hover().apply(ui, layer);
+            apply_hover_layer(ui, layer, false, false);
         }
     }
 
@@ -837,7 +837,7 @@ pub fn render<H: UiHost>(
             if from_producer {
                 entry.last_seen_frame = frame_id;
             }
-            OverlayLayer::tooltip(true, open_now).apply(ui, entry.layer);
+            apply_tooltip_layer(ui, entry.layer, true, open_now);
 
             ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
         });
@@ -858,7 +858,7 @@ pub fn render<H: UiHost>(
         });
 
     for layer in to_hide_tooltips {
-        OverlayLayer::hide_tooltip().apply(ui, layer);
+        apply_tooltip_layer(ui, layer, false, false);
     }
 
     for req in toast_requests {

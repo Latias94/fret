@@ -272,6 +272,34 @@ pub(super) fn apply_modal_layer<H: UiHost>(ui: &mut UiTree<H>, layer: UiLayerId,
     );
 }
 
+pub(super) fn apply_hover_layer<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+) {
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::Hover,
+        OverlayLayerState::hover(present, interactive),
+    );
+}
+
+pub(super) fn apply_tooltip_layer<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+) {
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::Tooltip,
+        OverlayLayerState::tooltip(present, interactive),
+    );
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(super) struct OverlayLayer {
     kind: OverlayLayerKind,
@@ -287,30 +315,8 @@ impl OverlayLayer {
         Self::new(kind, OverlayLayerState::hidden())
     }
 
-    pub(super) fn hide_hover() -> Self {
-        Self::hidden(OverlayLayerKind::Hover)
-    }
-
-    pub(super) fn hide_tooltip() -> Self {
-        Self::hidden(OverlayLayerKind::Tooltip)
-    }
-
     pub(super) fn hide_toast() -> Self {
         Self::hidden(OverlayLayerKind::Toast)
-    }
-
-    pub(super) fn tooltip(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::Tooltip,
-            OverlayLayerState::tooltip(present, interactive),
-        )
-    }
-
-    pub(super) fn hover(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::Hover,
-            OverlayLayerState::hover(present, interactive),
-        )
     }
 
     pub(super) fn toast(present: bool, wants_timer_events: bool) -> Self {
