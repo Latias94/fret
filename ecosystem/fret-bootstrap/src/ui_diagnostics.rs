@@ -852,6 +852,73 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-move_pointer"));
                 }
             }
+            UiActionStepV1::DragPointer {
+                target,
+                button,
+                delta_x,
+                delta_y,
+                steps,
+            } => {
+                let Some(snapshot) = semantics_snapshot else {
+                    output.request_redraw = true;
+                    let label = format!("script-step-{step_index:04}-drag_pointer-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
+                    return output;
+                };
+                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
+                else {
+                    output.request_redraw = true;
+                    let label =
+                        format!("script-step-{step_index:04}-drag_pointer-no-semantics-match");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("drag_pointer_no_semantics_match".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
+                    return output;
+                };
+
+                let start = center_of_rect(node.bounds);
+                let end = Point::new(
+                    fret_core::Px(start.x.0 + delta_x),
+                    fret_core::Px(start.y.0 + delta_y),
+                );
+                let steps = steps.max(1);
+                output.events.extend(drag_events(start, end, button, steps));
+
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if self.cfg.script_auto_dump {
+                    force_dump_label = Some(format!("script-step-{step_index:04}-drag_pointer"));
+                }
+            }
             UiActionStepV1::Wheel {
                 target,
                 delta_x,
@@ -2208,6 +2275,15 @@ pub enum UiActionStepV1 {
     MovePointer {
         target: UiSelectorV1,
     },
+    DragPointer {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+    },
     Wheel {
         target: UiSelectorV1,
         #[serde(default)]
@@ -2238,6 +2314,10 @@ pub enum UiActionStepV1 {
     CaptureBundle {
         label: Option<String>,
     },
+}
+
+fn default_drag_steps() -> u32 {
+    8
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -4430,6 +4510,66 @@ fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
     });
 
     [move_event, down, up]
+}
+
+fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) -> Vec<Event> {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    let button = match button {
+        UiMouseButtonV1::Left => MouseButton::Left,
+        UiMouseButtonV1::Right => MouseButton::Right,
+        UiMouseButtonV1::Middle => MouseButton::Middle,
+    };
+
+    let mut pressed_buttons = MouseButtons::default();
+    match button {
+        MouseButton::Left => pressed_buttons.left = true,
+        MouseButton::Right => pressed_buttons.right = true,
+        MouseButton::Middle => pressed_buttons.middle = true,
+        _ => {}
+    }
+
+    let mut out = Vec::with_capacity(3 + steps as usize);
+    out.push(Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position: start,
+        buttons: MouseButtons::default(),
+        modifiers,
+        pointer_type,
+    }));
+    out.push(Event::Pointer(PointerEvent::Down {
+        pointer_id,
+        position: start,
+        button,
+        modifiers,
+        click_count: 1,
+        pointer_type,
+    }));
+
+    for i in 1..=steps {
+        let t = i as f32 / steps as f32;
+        let x = start.x.0 + (end.x.0 - start.x.0) * t;
+        let y = start.y.0 + (end.y.0 - start.y.0) * t;
+        out.push(Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position: Point::new(fret_core::Px(x), fret_core::Px(y)),
+            buttons: pressed_buttons,
+            modifiers,
+            pointer_type,
+        }));
+    }
+
+    out.push(Event::Pointer(PointerEvent::Up {
+        pointer_id,
+        position: end,
+        button,
+        modifiers,
+        click_count: 1,
+        pointer_type,
+    }));
+    out
 }
 
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
