@@ -28,6 +28,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub services: &'a mut dyn UiServices,
     pub node: NodeId,
+    pub layer_root: Option<NodeId>,
     pub window: Option<AppWindowId>,
     pub pointer_id: Option<fret_core::PointerId>,
     pub input_ctx: InputContext,

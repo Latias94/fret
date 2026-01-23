@@ -4065,6 +4065,7 @@ mod tests {
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -4404,6 +4405,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -4498,13 +4500,11 @@ mod tests {
             "expected click position to fall inside underlay bounds; pos={position:?} bounds={underlay_bounds:?}"
         );
 
-        let hit = ui.debug_hit_test(position).hit;
-        let hit_path = hit.map(|hit| ui.debug_node_path(hit));
-        assert!(
-            hit_path
-                .as_ref()
-                .is_none_or(|path| !path.contains(&underlay_node)),
-            "expected modal dropdown-menu to block underlay hit-testing; hit={hit:?} hit_path={hit_path:?} underlay={underlay_node:?}"
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+            "expected modal dropdown-menu to install pointer occlusion"
         );
         ui.dispatch_event(
             &mut app,
@@ -4526,6 +4526,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

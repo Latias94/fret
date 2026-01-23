@@ -16,6 +16,8 @@ pub(super) struct WindowOverlayFrame {
     pub(super) last_bounds: Option<Rect>,
     pub(super) last_focused: Option<bool>,
     pub(super) last_scale_factor: Option<f32>,
+    pub(super) dock_drag_active_last: bool,
+    pub(super) dock_drag_restore_focus: Option<NodeId>,
     pub(super) popovers: Vec<DismissiblePopoverRequest>,
     pub(super) modals: Vec<ModalRequest>,
     pub(super) hover_overlays: Vec<HoverOverlayRequest>,
@@ -25,7 +27,6 @@ pub(super) struct WindowOverlayFrame {
 
 pub(super) struct ActivePopover {
     pub(super) layer: UiLayerId,
-    pub(super) pointer_barrier_layer: Option<UiLayerId>,
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
     pub(super) initial_focus: Option<GlobalElementId>,

@@ -275,6 +275,40 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+            app.with_global_mut(
+                fret_runtime::WindowInputArbitrationService::default,
+                |svc, _app| {
+                    let snapshot = self.input_arbitration_snapshot();
+                    svc.set_snapshot(
+                        window,
+                        fret_runtime::WindowInputArbitrationSnapshot {
+                            modal_barrier_root: snapshot.modal_barrier_root,
+                            pointer_occlusion: match snapshot.pointer_occlusion {
+                                PointerOcclusion::None => {
+                                    fret_runtime::WindowPointerOcclusion::None
+                                }
+                                PointerOcclusion::BlockMouse => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouse
+                                }
+                                PointerOcclusion::BlockMouseExceptScroll => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouseExceptScroll
+                                }
+                            },
+                            pointer_occlusion_root: snapshot
+                                .pointer_occlusion_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_active: snapshot.pointer_capture_active,
+                            pointer_capture_root: snapshot
+                                .pointer_capture_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_multiple_roots: snapshot
+                                .pointer_capture_multiple_layers
+                                || (snapshot.pointer_capture_active
+                                    && snapshot.pointer_capture_layer.is_none()),
+                        },
+                    );
+                },
+            );
         }
         let is_focus_traversal_command =
             matches!(command.as_str(), "focus.next" | "focus.previous");
@@ -405,6 +439,40 @@ impl<H: UiHost> UiTree<H> {
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
+                },
+            );
+            app.with_global_mut(
+                fret_runtime::WindowInputArbitrationService::default,
+                |svc, _app| {
+                    let snapshot = self.input_arbitration_snapshot();
+                    svc.set_snapshot(
+                        window,
+                        fret_runtime::WindowInputArbitrationSnapshot {
+                            modal_barrier_root: snapshot.modal_barrier_root,
+                            pointer_occlusion: match snapshot.pointer_occlusion {
+                                PointerOcclusion::None => {
+                                    fret_runtime::WindowPointerOcclusion::None
+                                }
+                                PointerOcclusion::BlockMouse => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouse
+                                }
+                                PointerOcclusion::BlockMouseExceptScroll => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouseExceptScroll
+                                }
+                            },
+                            pointer_occlusion_root: snapshot
+                                .pointer_occlusion_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_active: snapshot.pointer_capture_active,
+                            pointer_capture_root: snapshot
+                                .pointer_capture_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_multiple_roots: snapshot
+                                .pointer_capture_multiple_layers
+                                || (snapshot.pointer_capture_active
+                                    && snapshot.pointer_capture_layer.is_none()),
+                        },
+                    );
                 },
             );
         }

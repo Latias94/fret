@@ -21,6 +21,7 @@ pub mod window_command_action_availability;
 pub mod window_command_availability;
 pub mod window_command_enabled;
 pub mod window_command_gating;
+pub mod window_input_arbitration;
 pub mod window_input_context;
 pub mod window_metrics;
 
@@ -73,6 +74,9 @@ pub use window_command_enabled::WindowCommandEnabledService;
 pub use window_command_gating::{
     WindowCommandGatingService, WindowCommandGatingSnapshot, snapshot_for_window,
     snapshot_for_window_with_input_ctx_fallback,
+};
+pub use window_input_arbitration::{
+    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
 };
 pub use window_input_context::WindowInputContextService;
 pub use window_metrics::apply_window_metrics_event;

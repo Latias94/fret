@@ -35,11 +35,6 @@ use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::shortcut_display::command_shortcut_label;
 
-#[derive(Default)]
-struct ContextMenuAnchorStore {
-    by_open_model: Option<Model<HashMap<ModelId, Point>>>,
-}
-
 #[derive(Debug, Clone)]
 pub enum ContextMenuEntry {
     Item(ContextMenuItem),
@@ -2108,17 +2103,8 @@ impl ContextMenu {
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
             let open_model_id = open.id();
-            let anchor_store_model: Model<HashMap<ModelId, Point>> = cx.app.with_global_mut_untracked(
-                ContextMenuAnchorStore::default,
-                |st, app| {
-                    if let Some(model) = st.by_open_model.clone() {
-                        return model;
-                    }
-                    let model = app.models_mut().insert(HashMap::<ModelId, Point>::new());
-                    st.by_open_model = Some(model.clone());
-                    model
-                },
-            );
+            let anchor_store_model: Model<HashMap<ModelId, Point>> =
+                menu::context_menu_anchor_store_model(cx.app);
 
             let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
             let pointer_policy = Arc::new({
@@ -3493,6 +3479,7 @@ mod tests {
                 position,
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

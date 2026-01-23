@@ -95,6 +95,26 @@ pub fn resolve_branch_nodes_for_trigger_and_elements<H: UiHost>(
     out
 }
 
+/// Resolve `DismissableLayerBranch` roots (Radix outcome) into `NodeId`s for the outside-press
+/// observer pass (ADR 0069), without implicitly treating a trigger as a branch.
+///
+/// This is useful for non-click-through overlays that also disable outside pointer interactions
+/// (menu-like `modal=true` outcomes): the trigger should be treated as "outside" so a press on the
+/// trigger can close the overlay without activating the underlay.
+pub fn resolve_branch_nodes_for_elements<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    branches: &[GlobalElementId],
+) -> Vec<NodeId> {
+    let mut out: Vec<NodeId> = branches
+        .iter()
+        .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch))
+        .collect();
+    let mut seen: HashSet<NodeId> = HashSet::with_capacity(out.len());
+    out.retain(|id| seen.insert(*id));
+    out
+}
+
 /// Returns true if `focus` is inside the dismissable layer subtree, or inside any branch subtree.
 pub fn focus_is_inside_layer_or_branches<H: UiHost>(
     ui: &UiTree<H>,

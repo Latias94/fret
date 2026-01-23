@@ -230,9 +230,16 @@ impl Toggle {
             .model();
         let label = self.label;
         let children = self.children;
-        let disabled = self.disabled;
+        let disabled_explicit = self.disabled;
         let a11y_label = self.a11y_label.clone();
         let on_click = self.on_click;
+        let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+        let disabled = disabled_explicit
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &gating,
+                on_click.as_ref(),
+            );
         let variant = self.variant;
         let size_token = self.size;
         let chrome = self.chrome;
@@ -417,8 +424,12 @@ mod tests {
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
-    use fret_runtime::{FrameId, TickId};
+    use fret_runtime::{
+        CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
+        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
+    };
     use fret_ui::UiTree;
+    use std::collections::HashMap;
 
     #[derive(Default)]
     struct FakeServices;
@@ -545,5 +556,190 @@ mod tests {
         // The internal model should not be reset by repeatedly passing the same default value.
         let _ = render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
         assert!(!is_selected(&ui, "Toggle"));
+    }
+
+    #[test]
+    fn command_gating_toggle_is_disabled_by_window_command_enabled_service() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.disabled-command");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Disabled Command").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "toggle",
+            |cx| {
+                vec![
+                    Toggle::uncontrolled(false)
+                        .a11y_label("Disabled Toggle")
+                        .label("Hello")
+                        .on_click(cmd.clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("Disabled Toggle"))
+            .expect("toggle semantics node");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_toggle_is_disabled_when_widget_action_is_unavailable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "toggle",
+            |cx| {
+                vec![
+                    Toggle::uncontrolled(false)
+                        .a11y_label("Disabled Toggle")
+                        .label("Hello")
+                        .on_click(cmd.clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("Disabled Toggle"))
+            .expect("toggle semantics node");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_toggle_prefers_window_command_gating_snapshot_when_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        app.set_global(WindowCommandGatingService::default());
+        app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
+            let input_ctx = crate::command_gating::default_input_context(app);
+            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut availability: HashMap<CommandId, bool> = HashMap::new();
+            availability.insert(cmd.clone(), false);
+            svc.set_snapshot(
+                window,
+                WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                    .with_action_availability(Some(Arc::new(availability))),
+            );
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "toggle",
+            |cx| {
+                vec![
+                    Toggle::uncontrolled(false)
+                        .a11y_label("Disabled Toggle")
+                        .label("Hello")
+                        .on_click(cmd.clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("Disabled Toggle"))
+            .expect("toggle semantics node");
+        assert!(node.flags.disabled);
     }
 }

@@ -116,7 +116,8 @@ Key runtime knobs (today):
 The policy layer (`fret-ui-kit/window_overlays`) maps Radix outcomes onto the runtime substrate:
 
 - Presence (mount vs interactive) is represented via `OverlayPresence { present, interactive }`.
-- Menu-like overlays implement `disableOutsidePointerEvents` by installing a non-visual barrier layer.
+- Menu-like overlays implement `disableOutsidePointerEvents` by enabling pointer occlusion
+  (`PointerOcclusion::BlockMouseExceptScroll`) on the overlay layer.
 
 This is directionally correct, but the barrier behavior is currently achieved by composing multiple
 runtime flags. We want a simpler *mechanism vocabulary* that makes those compositions obvious and
@@ -197,9 +198,7 @@ Expected code touchpoints:
 - Extend `UiLayer` and expose `UiTree::set_layer_pointer_occlusion(...)` (or equivalent).
 - Update dispatch/hit-test to apply occlusion for non-modal layers without turning them into modal barriers.
 
-**Compatibility note:** v2 should preserve the existing v1 behavior as an internal implementation
-detail while migrating call sites, i.e. keep the “hit-test-inert barrier root” approach working
-until `fret-ui-kit` is fully migrated to the explicit occlusion mechanism.
+Status: implemented in `crates/fret-ui` and adopted by `ecosystem/fret-ui-kit` (see ADR 0069).
 
 ### 2) Runtime: Make “Present vs Interactive” Routing Rules Hard (P0)
 

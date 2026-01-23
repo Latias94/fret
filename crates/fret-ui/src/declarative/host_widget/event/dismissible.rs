@@ -55,7 +55,15 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
         }
     }
 
-    let Event::Pointer(fret_core::PointerEvent::Down { .. }) = event else {
+    let Event::Pointer(fret_core::PointerEvent::Down {
+        button,
+        modifiers,
+        click_count,
+        pointer_id,
+        pointer_type,
+        ..
+    }) = event
+    else {
         return;
     };
 
@@ -79,7 +87,15 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                 window,
                 target: this.element,
             },
-            DismissReason::OutsidePress,
+            DismissReason::OutsidePress {
+                pointer: Some(action::OutsidePressCx {
+                    pointer_id: *pointer_id,
+                    pointer_type: *pointer_type,
+                    button: *button,
+                    modifiers: *modifiers,
+                    click_count: *click_count,
+                }),
+            },
         );
         cx.invalidate_self(Invalidation::Paint);
         cx.request_redraw();
