@@ -22,6 +22,7 @@ use crate::foundation::focus_ring::material_focus_ring;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::token_resolver::MaterialTokenResolver;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonVariant {
@@ -503,33 +504,31 @@ fn state_layer_target_opacity(
     hovered: bool,
     focused: bool,
 ) -> f32 {
+    let tokens = MaterialTokenResolver::new(theme);
     if !enabled {
         return 0.0;
     }
     let variant_key = variant_key(variant);
     if pressed {
-        return theme
-            .number_by_key(&format!(
-                "md.comp.button.{variant_key}.pressed.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1);
+        return tokens.number_comp_or_sys(
+            &format!("md.comp.button.{variant_key}.pressed.state-layer.opacity"),
+            "md.sys.state.pressed.state-layer-opacity",
+            0.1,
+        );
     }
     if focused {
-        return theme
-            .number_by_key(&format!(
-                "md.comp.button.{variant_key}.focused.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1);
+        return tokens.number_comp_or_sys(
+            &format!("md.comp.button.{variant_key}.focused.state-layer.opacity"),
+            "md.sys.state.focus.state-layer-opacity",
+            0.1,
+        );
     }
     if hovered {
-        return theme
-            .number_by_key(&format!(
-                "md.comp.button.{variant_key}.hovered.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08);
+        return tokens.number_comp_or_sys(
+            &format!("md.comp.button.{variant_key}.hovered.state-layer.opacity"),
+            "md.sys.state.hover.state-layer-opacity",
+            0.08,
+        );
     }
     0.0
 }

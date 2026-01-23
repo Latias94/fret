@@ -21,6 +21,7 @@ use fret_ui::elements::ElementContext;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{Theme, UiHost};
 
+use crate::foundation::content::MaterialContentDefaults;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
@@ -510,20 +511,19 @@ fn menu_item_outcomes(
         )
     };
 
+    let defaults = MaterialContentDefaults::on_surface(theme);
     let mut label = theme
         .color_by_key(label_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or(defaults.content_color);
     let state_layer = theme
         .color_by_key(state_layer_key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+        .unwrap_or(defaults.content_color);
     let mut opacity = theme.number_by_key(opacity_key).unwrap_or(0.0);
 
     if !enabled {
         let label_opacity = theme
             .number_by_key("md.comp.menu.list-item.disabled.label-text.opacity")
-            .unwrap_or(0.38);
+            .unwrap_or(defaults.disabled_opacity);
         label.a = (label.a * label_opacity).clamp(0.0, 1.0);
         opacity = 0.0;
     }

@@ -22,6 +22,7 @@ use fret_ui::{Invalidation, Theme, UiHost};
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::token_resolver::MaterialTokenResolver;
 
 #[derive(Debug, Clone)]
 pub struct TabItem {
@@ -148,10 +149,11 @@ impl Tabs {
             let container_height = theme
                 .metric_by_key("md.comp.primary-navigation-tab.container.height")
                 .unwrap_or(Px(48.0));
-            let container_bg = theme
-                .color_by_key("md.comp.primary-navigation-tab.container.color")
-                .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-                .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"));
+            let tokens = MaterialTokenResolver::new(&theme);
+            let container_bg = tokens.color_comp_or_sys(
+                "md.comp.primary-navigation-tab.container.color",
+                "md.sys.color.surface-container",
+            );
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
@@ -478,10 +480,10 @@ fn primary_tab_indicator<H: UiHost>(
         Px(0.0)
     };
     let color = if active {
-        theme
-            .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")
-            .or_else(|| theme.color_by_key("md.sys.color.primary"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
+        MaterialTokenResolver::new(theme).color_comp_or_sys(
+            "md.comp.primary-navigation-tab.active-indicator.color",
+            "md.sys.color.primary",
+        )
     } else {
         Color::TRANSPARENT
     };

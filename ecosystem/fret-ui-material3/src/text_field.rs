@@ -15,6 +15,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, TextInputStyle, Theme, UiHost};
 
+use crate::foundation::content::MaterialContentDefaults;
 use crate::interaction::state_layer::StateLayerAnimator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -755,8 +756,7 @@ fn filled_active_indicator_color(
 
     let mut c = theme
         .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or(MaterialContentDefaults::on_surface_variant(theme).content_color);
 
     if disabled {
         let opacity = theme
@@ -783,8 +783,7 @@ fn outlined_label_color(theme: &Theme, disabled: bool, error: bool, focused: boo
 
     let mut c = theme
         .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or(MaterialContentDefaults::on_surface_variant(theme).content_color);
 
     if disabled {
         let opacity = theme
@@ -821,8 +820,7 @@ fn filled_label_color(
 
     let mut c = theme
         .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or(MaterialContentDefaults::on_surface_variant(theme).content_color);
 
     if disabled {
         let opacity = theme
@@ -854,8 +852,7 @@ fn outlined_supporting_text_color(
 
     let mut c = theme
         .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or(MaterialContentDefaults::on_surface_variant(theme).content_color);
 
     if disabled {
         let opacity = theme
@@ -892,8 +889,7 @@ fn filled_supporting_text_color(
 
     let mut c = theme
         .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+        .unwrap_or(MaterialContentDefaults::on_surface_variant(theme).content_color);
 
     if disabled {
         let opacity = theme
