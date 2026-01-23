@@ -79,7 +79,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   composition (upstream exports `NavigationMenuIndicator` but does not mount it in `NavigationMenu`).
 - Pass: Indicator placement is track-based (trigger width + gutter thickness) and uses the same
   `shadow-md` token as upstream for the diamond.
-- Pass: Indicator geometry is gated against shadcn-web (track thickness + diamond placement).
+- Pass: Indicator geometry is gated against shadcn-web (track thickness + diamond placement + viewport panel size).
 - Note: Exact positioning still differs in the details (Radix uses a DOM-measured indicator track);
   Fret anchors from trigger element ids + popper geometry.
   - Placement logic: `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`

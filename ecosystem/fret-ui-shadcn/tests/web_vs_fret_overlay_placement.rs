@@ -11710,6 +11710,21 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
     );
 }
 
+fn shadcn_nav_menu_demo_indicator_panel<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(260.0)); // `w-[260px]`
+                layout.size.height = Length::Px(Px(36.0)); // `p-2` + `text-sm` (20px line height) + `p-2`
+                layout
+            },
+            ..Default::default()
+        },
+        move |cx| vec![cx.text("Home content")],
+    )
+}
+
 #[test]
 fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
     let web = read_web_golden_open("navigation-menu-demo");
@@ -12266,15 +12281,11 @@ fn web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web() {
             FrameId(frame as u64),
             request_semantics,
             |cx| {
-                let items = vec![
-                    fret_ui_shadcn::NavigationMenuItem::new(
-                        "home",
-                        "Home",
-                        vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
-                    ),
-                    fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
-                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
-                ];
+                let items = vec![fret_ui_shadcn::NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![shadcn_nav_menu_demo_indicator_panel(cx)],
+                )];
 
                 let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
                     .viewport(true)
@@ -12384,6 +12395,18 @@ fn web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web() {
         fret_gap_to_viewport,
         web_gap_to_viewport,
         1.0,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator viewport_w",
+        viewport_bounds.size.width.0,
+        web_viewport.rect.w,
+        2.0,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator viewport_h",
+        viewport_bounds.size.height.0,
+        web_viewport.rect.h,
+        2.0,
     );
 
     let actual_diamond_left =
