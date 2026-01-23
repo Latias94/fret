@@ -380,8 +380,18 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Baseline perf (one run, release, view-cache + shell enabled):
       - `ui-gallery-data-table-torture-scroll-refresh`: worst tick ~14.3ms (layout-dominated).
       - Example bundle: `target/fret-diag-perf-data-table-torture/1769145770765-script-step-0009-wheel/bundle.json`
+    - Tree harness (v1):
+      - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_TREE_TORTURE`)
+      - Harness implementation: `apps/fret-ui-gallery/src/ui.rs` (`preview_tree_torture`, `ui-gallery-tree-torture-root`)
+      - Scripted scroll capture: `tools/diag-scripts/ui-gallery-tree-torture-scroll-refresh.json`
+      - Baseline perf (one run, release, view-cache + shell enabled):
+        - `ui-gallery-tree-torture-scroll-refresh`: worst tick ~8.6ms (layout-dominated).
+        - Example bundle: `target/fret-diag-perf-tree-torture/1769146889956-script-step-0009-wheel/bundle.json`
 - [~] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
-  - Candidates: `ecosystem/fret-code-view/src/*`, text editor widgets, markdown/code blocks, diagnostics inspectors.
+  - Candidates:
+    - `ecosystem/fret-code-view/src/*` (CodeBlock windowed lines; already has a harness).
+    - `ecosystem/fret-markdown/src/*` (long scrolling documents; markdown/code blocks).
+    - Diagnostics/inspectors in `ecosystem/fret-bootstrap/src/*` (large list-like surfaces).
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
   - Progress (v1):
     - UI Gallery now has a dedicated harness page: `code_view_torture` (large code block with vertical scroll).
@@ -405,14 +415,22 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
         - `diag stats` time sum (us): total=4976556 layout=4533404 paint=438751
       - Both pass stale-paint verification: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`
 - [ ] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
-  - Candidates: `ecosystem/fret-node/src/*`, canvas/gizmo/viewport overlays, large scene editors.
+  - Candidates:
+    - `ecosystem/fret-node/src/*` (node graph viewport culling, edges/handles).
+    - `ecosystem/fret-canvas/src/*` (large canvas surfaces).
+    - `ecosystem/fret-viewport-tooling/src/*` (viewport overlays, gizmos).
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
 - [ ] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
-  - Candidates: `ecosystem/*plot*`, `ecosystem/*chart*`, large timeseries views.
+  - Candidates:
+    - `ecosystem/fret-chart/src/*` (timeseries/table-driven plots).
+    - `ecosystem/fret-plot3d/src/*` (3D sampling + culling surfaces).
+    - `ecosystem/delinea/src/*` (headless chart engine; windowed sampling).
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
 - [ ] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
   - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
   - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.
+  - Anchors:
+    - `ecosystem/fret-code-view/tests/hover_is_paint_only.rs` (existing regression that hover does not force rerender).
 - [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
