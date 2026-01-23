@@ -297,9 +297,10 @@ This page validates a Material 3 menu surface:
 - roving focus (Up/Down/Home/End) + prefix typeahead
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- dismissible overlay outcomes (Escape / outside press, anchored to trigger)
 
 Notes:
-- This is the in-place list MVP. Overlay / dismissal / focus-trap outcomes are tracked separately.
+- This is a dropdown overlay MVP built on top of the in-place `Menu` list surface.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_MENU: &str = r#"

@@ -85,8 +85,10 @@ Material 3 Expressive) in Fret.
 - [ ] Ripple (unbounded, keyboard click synthesis, spec fade rules).
 - [ ] Focus ring style and focus-visible heuristics aligned with Material expectations.
 - [ ] Overlay outcomes (menu, dialog, tooltip):
-  - [ ] Escape dismissal
-  - [ ] outside press dismissal
+  - [x] Escape dismissal (menu dropdown)
+    - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu)
+  - [x] outside press dismissal (menu dropdown)
+    - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu)
   - [ ] focus trap/restore (modal)
   - [ ] click-through semantics (non-modal)
 
@@ -122,8 +124,9 @@ Material 3 Expressive) in Fret.
   - Evidence: `ecosystem/fret-ui-material3/src/tabs.rs` (`Tabs`, `TabItem`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_primary_navigation_tab_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_tabs`).
-- [x] Menu (MVP: in-place list, roving focus + prefix typeahead, state layer + bounded ripple)
+- [x] Menu (MVP: in-place list + dropdown overlay, roving focus + prefix typeahead, state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/menu.rs` (`Menu`, `MenuItem`, `roving_typeahead_prefix_arc_str_always_wrap`),
+    `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (`DropdownMenu`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_menu_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_menu`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_MENU`).

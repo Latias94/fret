@@ -17,5 +17,6 @@ fret-core = { path = "../../crates/fret-core" }
 fret-icons = { path = "../fret-icons" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../fret-ui-kit" }
 material-colors.workspace = true
 serde.workspace = true

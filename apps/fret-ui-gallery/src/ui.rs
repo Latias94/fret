@@ -223,6 +223,7 @@ pub(crate) fn content_view(
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -357,6 +358,7 @@ pub(crate) fn content_view(
         material3_text_field_value,
         material3_text_field_disabled,
         material3_text_field_error,
+        material3_menu_open,
         text_input,
         text_area,
         dropdown_open,
@@ -466,6 +468,7 @@ fn page_preview(
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -553,7 +556,7 @@ fn page_preview(
             material3_text_field_error,
         ),
         PAGE_MATERIAL3_TABS => preview_material3_tabs(cx, material3_tabs_value),
-        PAGE_MATERIAL3_MENU => preview_material3_menu(cx, last_action.clone()),
+        PAGE_MATERIAL3_MENU => preview_material3_menu(cx, material3_menu_open, last_action.clone()),
         _ => preview_intro(cx, theme),
     };
 
@@ -1567,6 +1570,7 @@ fn preview_material3_tabs(
 
 fn preview_material3_menu(
     cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnActivate;
@@ -1580,33 +1584,62 @@ fn preview_material3_menu(
         })
     }
 
-    let menu = material3::Menu::new()
+    let toggle_open: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = !*v);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let last_action_for_entries = last_action.clone();
+    let dropdown = material3::DropdownMenu::new(open.clone())
         .a11y_label("Material 3 Menu")
         .test_id("ui-gallery-material3-menu")
-        .entries(vec![
-            material3::MenuEntry::Item(
-                material3::MenuItem::new("Cut")
-                    .test_id("ui-gallery-material3-menu-item-cut")
-                    .on_select(on_select("material3.menu.cut", last_action.clone())),
-            ),
-            material3::MenuEntry::Item(
-                material3::MenuItem::new("Copy")
-                    .test_id("ui-gallery-material3-menu-item-copy")
-                    .on_select(on_select("material3.menu.copy", last_action.clone())),
-            ),
-            material3::MenuEntry::Item(
-                material3::MenuItem::new("Paste")
-                    .test_id("ui-gallery-material3-menu-item-paste")
-                    .disabled(true),
-            ),
-            material3::MenuEntry::Separator,
-            material3::MenuEntry::Item(
-                material3::MenuItem::new("Settings")
-                    .test_id("ui-gallery-material3-menu-item-settings")
-                    .on_select(on_select("material3.menu.settings", last_action.clone())),
-            ),
-        ])
-        .into_element(cx);
+        .into_element(
+            cx,
+            move |cx| {
+                material3::Button::new("Open menu")
+                    .variant(material3::ButtonVariant::Outlined)
+                    .on_activate(toggle_open.clone())
+                    .test_id("ui-gallery-material3-menu-trigger")
+                    .into_element(cx)
+            },
+            move |_cx| {
+                vec![
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Cut")
+                            .test_id("ui-gallery-material3-menu-item-cut")
+                            .on_select(on_select(
+                                "material3.menu.cut",
+                                last_action_for_entries.clone(),
+                            )),
+                    ),
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Copy")
+                            .test_id("ui-gallery-material3-menu-item-copy")
+                            .on_select(on_select(
+                                "material3.menu.copy",
+                                last_action_for_entries.clone(),
+                            )),
+                    ),
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Paste")
+                            .test_id("ui-gallery-material3-menu-item-paste")
+                            .disabled(true),
+                    ),
+                    material3::MenuEntry::Separator,
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Settings")
+                            .test_id("ui-gallery-material3-menu-item-settings")
+                            .on_select(on_select(
+                                "material3.menu.settings",
+                                last_action_for_entries.clone(),
+                            )),
+                    ),
+                ]
+            },
+        );
 
     let last = cx
         .app
@@ -1618,18 +1651,18 @@ fn preview_material3_menu(
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Menu").into_element(cx),
             shadcn::CardDescription::new(
-                "In-place list MVP (roving focus + typeahead + state layer + bounded ripple).",
+                "Overlay MVP (dismissible, anchored) using the Menu list surface.",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![menu]).into_element(cx),
+        shadcn::CardContent::new(vec![dropdown]).into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
     vec![
-        cx.text("Tip: Arrow keys / Home / End navigate; type to jump by prefix."),
+        cx.text("Tip: Arrow keys / Home / End navigate; type to jump by prefix; Esc/outside press closes."),
         card,
         cx.text(format!("last action: {last}")),
     ]

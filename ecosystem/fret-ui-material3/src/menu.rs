@@ -19,6 +19,7 @@ use fret_ui::element::{
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{Theme, UiHost};
 
 use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
@@ -33,8 +34,8 @@ pub enum MenuEntry {
 #[derive(Clone)]
 pub struct MenuItem {
     label: Arc<str>,
-    disabled: bool,
-    on_select: Option<OnActivate>,
+    pub(crate) disabled: bool,
+    pub(crate) on_select: Option<OnActivate>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
 }
@@ -116,6 +117,14 @@ impl Menu {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_element_with_initial_focus_id(cx, Rc::new(std::cell::Cell::new(None)))
+    }
+
+    pub(crate) fn into_element_with_initial_focus_id<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -274,6 +283,7 @@ impl Menu {
                                             tab_stop,
                                             item_idx,
                                             count,
+                                            initial_focus_id_out.clone(),
                                         ));
                                         item_idx += 1;
                                     }
@@ -314,9 +324,14 @@ fn material_menu_item<H: UiHost>(
     tab_stop: bool,
     idx: usize,
     set_size: usize,
+    initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;
+
+        if enabled && tab_stop && initial_focus_id_out.get().is_none() {
+            initial_focus_id_out.set(Some(pressable_id));
+        }
 
         let a11y = PressableA11y {
             role: Some(SemanticsRole::MenuItem),

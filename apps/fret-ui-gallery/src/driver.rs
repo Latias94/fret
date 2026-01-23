@@ -134,6 +134,7 @@ struct UiGalleryWindowState {
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -408,6 +409,7 @@ impl UiGalleryDriver {
         let material3_text_field_value = app.models_mut().insert(String::new());
         let material3_text_field_disabled = app.models_mut().insert(false);
         let material3_text_field_error = app.models_mut().insert(false);
+        let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
@@ -518,6 +520,7 @@ impl UiGalleryDriver {
             material3_text_field_value,
             material3_text_field_disabled,
             material3_text_field_error,
+            material3_menu_open,
             text_input,
             text_area,
             dropdown_open,
@@ -963,6 +966,7 @@ impl UiGalleryDriver {
         let material3_text_field_value = state.material3_text_field_value.clone();
         let material3_text_field_disabled = state.material3_text_field_disabled.clone();
         let material3_text_field_error = state.material3_text_field_error.clone();
+        let material3_menu_open = state.material3_menu_open.clone();
         let text_input = state.text_input.clone();
         let text_area = state.text_area.clone();
         let dropdown_open = state.dropdown_open.clone();
@@ -1331,6 +1335,7 @@ impl UiGalleryDriver {
                                             material3_text_field_value.clone(),
                                             material3_text_field_disabled.clone(),
                                             material3_text_field_error.clone(),
+                                            material3_menu_open.clone(),
                                             text_input.clone(),
                                             text_area.clone(),
                                             dropdown_open.clone(),
@@ -1410,6 +1415,7 @@ impl UiGalleryDriver {
                                         material3_text_field_value.clone(),
                                         material3_text_field_disabled.clone(),
                                         material3_text_field_error.clone(),
+                                        material3_menu_open.clone(),
                                         text_input.clone(),
                                         text_area.clone(),
                                         dropdown_open.clone(),

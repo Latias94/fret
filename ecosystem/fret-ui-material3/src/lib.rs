@@ -7,6 +7,7 @@
 
 pub mod button;
 pub mod checkbox;
+pub mod dropdown_menu;
 pub mod icon_button;
 pub mod interaction;
 pub mod menu;
@@ -20,6 +21,7 @@ pub mod tokens;
 
 pub use button::{Button, ButtonVariant};
 pub use checkbox::Checkbox;
+pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
 pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
 pub use menu::{Menu, MenuEntry, MenuItem};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation};
