@@ -493,61 +493,7 @@ fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
 }
 
 fn inject_comp_icon_button_scalars(cfg: &mut ThemeConfig) {
-    // Sources:
-    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-icon-button-small.scss
-    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-icon-button-*.scss
-
-    cfg.metrics.insert(
-        "md.comp.icon-button.small.container.height".to_string(),
-        40.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.icon-button.small.default.leading-space".to_string(),
-        8.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.icon-button.small.default.trailing-space".to_string(),
-        8.0,
-    );
-    cfg.metrics
-        .insert("md.comp.icon-button.small.icon.size".to_string(), 24.0);
-    cfg.metrics.insert(
-        "md.comp.icon-button.small.outlined.outline.width".to_string(),
-        1.0,
-    );
-
-    for variant in ["standard", "filled", "tonal", "outlined"] {
-        cfg.numbers.insert(
-            format!("md.comp.icon-button.{variant}.disabled.icon.opacity"),
-            0.38,
-        );
-
-        cfg.numbers.insert(
-            format!("md.comp.icon-button.{variant}.hovered.state-layer.opacity"),
-            0.08,
-        );
-        cfg.numbers.insert(
-            format!("md.comp.icon-button.{variant}.focused.state-layer.opacity"),
-            0.1,
-        );
-        cfg.numbers.insert(
-            format!("md.comp.icon-button.{variant}.pressed.state-layer.opacity"),
-            0.1,
-        );
-    }
-
-    // Filled/tonal also have a disabled container opacity.
-    for variant in ["filled", "tonal"] {
-        cfg.numbers.insert(
-            format!("md.comp.icon-button.{variant}.disabled.container.opacity"),
-            0.1,
-        );
-    }
-    // Outlined selected state carries a disabled container opacity.
-    cfg.numbers.insert(
-        "md.comp.icon-button.outlined.selected.disabled.container.opacity".to_string(),
-        0.1,
-    );
+    material_web_v30::inject_comp_icon_button_scalars(cfg);
 }
 
 fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
