@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-demo-tab-drag-anchor-left" },
+      "delta_x": 520.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "capture_bundle", "label": "docking-demo-drag-indicators" }
+  ]
+}
