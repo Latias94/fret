@@ -113,6 +113,11 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
     - Note: `web_vs_fret_navigation_menu_demo_overlay_placement_matches` also asserts the open
       content panel `w/h` for the `viewport=false` demo (`navigation-menu-demo`), so regressions in
       menu sizing (padding/border + wrapped content height) are caught.
+    - Mobile viewport geometry is separately gated for the `Components` trigger:
+      `web_vs_fret_navigation_menu_demo_components_mobile_viewport_height_matches` and
+      `web_vs_fret_navigation_menu_demo_components_mobile_small_viewport_height_matches`.
+      These gates assume shadcn/ui behavior where the viewport panel is placed relative to the
+      root (not the active trigger) when `viewport=true`.
 
 ## Follow-ups (recommended)
 
