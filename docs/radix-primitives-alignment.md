@@ -142,4 +142,9 @@ maps naturally to a new ecosystem crate built on top of `fret-ui-shadcn`:
   - (Done) `Combobox` (shadcn recipe) listbox height is gated against `shadcn-web` open snapshots. Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (combobox-demo open variants).
   - (Done) `Select` listbox width parity is gated against shadcn-web: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
     (`web_vs_fret_select_scrollable_listbox_width_matches`).
+  - (Done) `NavigationMenu` opt-in indicator `shadow-md` token is gated against shadcn-web. Evidence:
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web*`)
+    + `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo-indicator.open.json`.
+  - (Done) `shadcn-web` golden extraction supports offline `next/font/google` builds via
+    `goldens/shadcn-web/scripts/next-font-google-mock.cjs` (see `docs/shadcn-web-goldens.md`).
   - (Next) extend `shadcn-web` open snapshots for additional multi-step states (e.g. navigation-menu hover + content open, and other chained interactions).
