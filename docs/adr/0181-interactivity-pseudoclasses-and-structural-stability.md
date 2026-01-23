@@ -66,6 +66,17 @@ A pseudoclass transition (hover/focus/pressed) defaults to **paint-only** invali
 Escalation to layout invalidation is allowed only when the component explicitly opts in and documents why (e.g. a
 discrete density mode toggle that changes intrinsic sizes).
 
+#### Implementation hook (v1)
+
+To make “paint-only by default” practical under view-cache reuse, pointer hooks need a way to request node-level
+invalidations without forcing a rerender:
+
+- `UiPointerActionHost::invalidate(Invalidation::Paint)` records a paint invalidation for the current pointer region /
+  pressable node.
+- Hooks should pair this with a redraw request (e.g. `host.request_redraw(action_cx.window)`) so the invalidation is
+  observed on the next frame.
+- `notify()` remains the escape hatch for structural/state changes that must rerender.
+
 ### 4) Cache boundary compatibility rule
 
 When a subtree is behind a cache boundary (ADR 1152):
@@ -122,4 +133,3 @@ This ADR instead defines a runtime contract + tooling enforcement, while leaving
   - ADR 1152: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`
 - Fret runtime contract surface and layering:
   - ADR 0066: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
-
