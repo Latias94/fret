@@ -1386,21 +1386,25 @@ fn preview_material3_radio(
 
     let row = stack::hstack(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
+        stack::HStackProps::default().gap(Space::N4).items_center(),
         move |cx| {
             vec![
-                material3::Radio::new_value("A", group_value.clone())
-                    .a11y_label("Radio A")
-                    .test_id("ui-gallery-material3-radio-a")
-                    .into_element(cx),
-                material3::Radio::new_value("B", group_value.clone())
-                    .a11y_label("Radio B")
-                    .test_id("ui-gallery-material3-radio-b")
-                    .into_element(cx),
-                material3::Radio::new_value("C", group_value.clone())
-                    .a11y_label("Radio C (disabled)")
-                    .disabled(true)
-                    .test_id("ui-gallery-material3-radio-c-disabled")
+                material3::RadioGroup::new(group_value.clone())
+                    .a11y_label("Material 3 RadioGroup")
+                    .orientation(material3::RadioGroupOrientation::Horizontal)
+                    .gap(Px(8.0))
+                    .items(vec![
+                        material3::RadioGroupItem::new("A")
+                            .a11y_label("Radio A")
+                            .test_id("ui-gallery-material3-radio-a"),
+                        material3::RadioGroupItem::new("B")
+                            .a11y_label("Radio B")
+                            .test_id("ui-gallery-material3-radio-b"),
+                        material3::RadioGroupItem::new("C")
+                            .a11y_label("Radio C (disabled)")
+                            .disabled(true)
+                            .test_id("ui-gallery-material3-radio-c-disabled"),
+                    ])
                     .into_element(cx),
                 cx.text(format!("value={}", current.as_ref())),
             ]
