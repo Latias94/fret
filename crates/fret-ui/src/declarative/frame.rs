@@ -251,12 +251,11 @@ pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
         let mut changed: Vec<ScrollHandleChange> = Vec::new();
         for (&handle_key, handle) in window_registry.handles.iter() {
             let revision = handle.revision();
+            let offset = handle.offset();
+            let viewport = handle.viewport_size();
+            let content = handle.content_size();
             let prev = window_registry.last_revision.get(&handle_key).copied();
             if prev != Some(revision) {
-                let offset = handle.offset();
-                let viewport = handle.viewport_size();
-                let content = handle.content_size();
-
                 let prev_offset = window_registry.last_offset.get(&handle_key).copied();
                 let prev_viewport = window_registry.last_viewport.get(&handle_key).copied();
                 let prev_content = window_registry.last_content.get(&handle_key).copied();
@@ -267,20 +266,34 @@ pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
 
                 // If the revision changed but none of the observable values changed, treat it as
                 // layout-affecting (e.g. deferred scroll-to-item requests that are consumed during
-                // layout).
-                let kind = if viewport_changed || content_changed || (!offset_changed) {
+                // layout). Otherwise, treat it as "transform-only": recompute hit-testing and
+                // repaint without forcing a layout pass.
+                let kind = if !offset_changed && !viewport_changed && !content_changed {
                     ScrollHandleChangeKind::Layout
                 } else {
                     ScrollHandleChangeKind::HitTestOnly
                 };
 
-                changed.push(ScrollHandleChange { handle_key, kind });
-
-                window_registry.last_offset.insert(handle_key, offset);
-                window_registry.last_viewport.insert(handle_key, viewport);
-                window_registry.last_content.insert(handle_key, content);
+                changed.push(ScrollHandleChange {
+                    handle_key,
+                    kind,
+                    revision,
+                    prev_revision: prev,
+                    offset,
+                    prev_offset,
+                    viewport,
+                    prev_viewport,
+                    content,
+                    prev_content,
+                    offset_changed,
+                    viewport_changed,
+                    content_changed,
+                });
             }
             window_registry.last_revision.insert(handle_key, revision);
+            window_registry.last_offset.insert(handle_key, offset);
+            window_registry.last_viewport.insert(handle_key, viewport);
+            window_registry.last_content.insert(handle_key, content);
         }
         changed
     })
@@ -292,10 +305,21 @@ pub(crate) enum ScrollHandleChangeKind {
     HitTestOnly,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ScrollHandleChange {
     pub handle_key: usize,
     pub kind: ScrollHandleChangeKind,
+    pub revision: u64,
+    pub prev_revision: Option<u64>,
+    pub offset: Point,
+    pub prev_offset: Option<Point>,
+    pub viewport: Size,
+    pub prev_viewport: Option<Size>,
+    pub content: Size,
+    pub prev_content: Option<Size>,
+    pub offset_changed: bool,
+    pub viewport_changed: bool,
+    pub content_changed: bool,
 }
 
 pub(crate) fn element_id_map_for_window<H: UiHost>(

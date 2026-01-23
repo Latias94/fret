@@ -410,6 +410,32 @@ pub struct UiDebugVirtualListWindow {
     pub window_mismatch: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugScrollHandleChangeKind {
+    Layout,
+    HitTestOnly,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugScrollHandleChange {
+    pub handle_key: usize,
+    pub kind: UiDebugScrollHandleChangeKind,
+    pub revision: u64,
+    pub prev_revision: Option<u64>,
+    pub offset: fret_core::Point,
+    pub prev_offset: Option<fret_core::Point>,
+    pub viewport: fret_core::Size,
+    pub prev_viewport: Option<fret_core::Size>,
+    pub content: fret_core::Size,
+    pub prev_content: Option<fret_core::Size>,
+    pub offset_changed: bool,
+    pub viewport_changed: bool,
+    pub content_changed: bool,
+    pub bound_elements: u32,
+    pub bound_nodes_sample: Vec<NodeId>,
+    pub upgraded_to_layout_bindings: u32,
+}
+
 #[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugSetChildrenWrite {
@@ -801,6 +827,7 @@ pub struct UiTree<H: UiHost> {
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
     debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
+    debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
     #[cfg(feature = "diagnostics")]
@@ -869,6 +896,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
             debug_virtual_list_windows: Vec::new(),
+            debug_scroll_handle_changes: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
@@ -1022,6 +1050,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
         self.debug_virtual_list_windows.clear();
+        self.debug_scroll_handle_changes.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_set_children_writes.clear();
         #[cfg(feature = "diagnostics")]
@@ -1467,6 +1496,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_virtual_list_windows.as_slice()
+    }
+
+    pub fn debug_scroll_handle_changes(&self) -> &[UiDebugScrollHandleChange] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scroll_handle_changes.as_slice()
     }
 
     pub fn debug_model_change_hotspots(&self) -> &[UiDebugModelChangeHotspot] {

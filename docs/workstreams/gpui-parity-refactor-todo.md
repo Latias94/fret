@@ -284,12 +284,11 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
         `debug.dirty_views` entry with `detail=scroll_handle_layout`, and `render_window_range` should match `window_range`.
       - Perf capture: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --top 10 --sort time --warmup-frames 5 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
         produced worst bundle `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` (top.us(total/layout/prepaint/paint)=503161/476991/241/25929).
-      - Bundle note (v1, to be refined): in `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` at `tick_id=7` / `frame_id=6`,
-        `debug.dirty_views` shows `detail=scroll_handle_layout` for two cache roots even though `debug.virtual_list_windows.window_mismatch=false`
-        and `offset/viewport` are unchanged. This suggests either:
-        - the scroll-handle change was classified as `Layout` due to a non-offset dimension (e.g. content-size change), or
-        - some binding is still upgrading to layout too eagerly (bug / missing guard).
-        Track this under `GPUI-MVP5-perf-003`.
+      - Bundle note (v1): `debug.dirty_views` reports the cache roots that were already marked dirty at the **start** of that frame
+        (pre-mount). If a frame shows `window_mismatch=false` but still lists `scroll_handle_layout` dirtiness, inspect the *previous*
+        snapshot: the typical pattern is `tick=N` has `window_mismatch=true` (VirtualList consumed a deferred scroll and changed its window),
+        then `tick=N+1` starts dirty to force a rerender and rebuild the visible rows.
+        Track ongoing explainability work under `GPUI-MVP5-perf-003`.
 
 ## MVP5 — Prepaint-driven Ephemeral Windows (Beyond VirtualList)
 
@@ -379,6 +378,23 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Add a focused regression harness derived from `tools/diag-scripts/ui-gallery-virtual-list-torture.json` that targets the tick in
       `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` and asserts that `scroll_handle_layout` implies a window mismatch,
       a content-size/viewport delta, or a deferred command consumption (observable in the bundle).
+  - Progress (v1):
+    - Diagnostics bundles can now export per-frame `debug.scroll_handle_changes` (bounded) with the exact deltas that drove scroll-handle invalidation.
+      - Anchors: `crates/fret-ui/src/declarative/frame.rs` (`take_changed_scroll_handle_keys`), `crates/fret-ui/src/tree/layout.rs` (debug record),
+        `crates/fret-ui/src/tree/mod.rs` (`UiDebugScrollHandleChange`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiScrollHandleChangeV1`).
+    - Scroll-handle revisions caused solely by viewport/content-size updates are now treated as `HitTestOnly` (repaint + hit-test), not `Layout`.
+      This avoids view-cache rerenders/contained relayouts for scrollbars and other transform-only consumers.
+  - Evidence (local bundles):
+    - In `target/fret-diag-scroll-handle-repro/1769098640774-ui-gallery-virtual-list-edit-9000/bundle.json` at `tick_id=7`, the scroll handle bound to the
+      VirtualList reports `content_changed=true` (280032 -> 280064) and was previously classified as `kind=layout`.
+    - After the classification tightening, in `target/fret-diag-scroll-handle-repro2/1769099048813-ui-gallery-virtual-list-edit-9000/bundle.json` at `tick_id=7`,
+      the same pattern reports `kind=hit_test_only` while still capturing the content/offset deltas in `debug.scroll_handle_changes`.
+    - After fixing scroll-handle registry bookkeeping (so `prev_offset` matches internal layout updates), in
+      `target/fret-diag-scroll-handle-after-fix/1769131324359-ui-gallery-virtual-list-edit-9000/bundle.json` at `tick_id=7`,
+      the VirtualList scroll handle reports `prev_offset_y=252032` and `offset_changed=false` (content-only delta), avoiding spurious “jump” classification.
+    - Perf improvement evidence (same script, cache+shell):
+      - Before: `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` top.us(total/layout/prepaint/paint)=503161/476991/241/25929
+      - After: `target/fret-diag-perf-scroll-handle-after-fix/1769131393110-script-step-0011-click/bundle.json` top.us(total/layout/prepaint/paint)=244120/226780/165/17175
 
 ## Open Questions (Keep Short)
 

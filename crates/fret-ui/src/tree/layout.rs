@@ -97,6 +97,66 @@ impl<H: UiHost> UiTree<H> {
             if bound.is_empty() {
                 continue;
             }
+
+            if self.debug_enabled && self.debug_scroll_handle_changes.len() < 256 {
+                let mut upgraded_to_layout_bindings = 0u32;
+                let mut bound_nodes_sample = Vec::new();
+                for element in &bound {
+                    if let Some(node) = crate::declarative::node_for_element_in_window_frame(
+                        &mut *app, window, *element,
+                    ) {
+                        if bound_nodes_sample.len() < 8 {
+                            bound_nodes_sample.push(node);
+                        }
+
+                        if change.kind
+                            == crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly
+                            && let Some(record) = crate::declarative::frame::element_record_for_node(
+                                &mut *app, window, node,
+                            )
+                            && let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                                &record.instance
+                            && Self::virtual_list_scroll_handle_requires_layout(
+                                &mut *app,
+                                window,
+                                record.element,
+                                props,
+                            )
+                        {
+                            upgraded_to_layout_bindings =
+                                upgraded_to_layout_bindings.saturating_add(1);
+                        }
+                    }
+                }
+
+                self.debug_scroll_handle_changes
+                    .push(crate::tree::UiDebugScrollHandleChange {
+                        handle_key,
+                        kind: match change.kind {
+                            crate::declarative::frame::ScrollHandleChangeKind::Layout => {
+                                crate::tree::UiDebugScrollHandleChangeKind::Layout
+                            }
+                            crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                                crate::tree::UiDebugScrollHandleChangeKind::HitTestOnly
+                            }
+                        },
+                        revision: change.revision,
+                        prev_revision: change.prev_revision,
+                        offset: change.offset,
+                        prev_offset: change.prev_offset,
+                        viewport: change.viewport,
+                        prev_viewport: change.prev_viewport,
+                        content: change.content,
+                        prev_content: change.prev_content,
+                        offset_changed: change.offset_changed,
+                        viewport_changed: change.viewport_changed,
+                        content_changed: change.content_changed,
+                        bound_elements: bound.len() as u32,
+                        bound_nodes_sample,
+                        upgraded_to_layout_bindings,
+                    });
+            }
+
             for element in bound {
                 let Some(node) = crate::declarative::node_for_element_in_window_frame(
                     &mut *app, window, element,

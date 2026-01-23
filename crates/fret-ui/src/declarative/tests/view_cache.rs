@@ -310,6 +310,64 @@ fn view_cache_rerenders_on_virtual_list_scroll_to_item() {
         "scroll_to_item should disable view-cache reuse for the affected root"
     );
     assert_eq!(before, renders_before_scroll);
+
+    app.advance_frame();
+
+    // Ensure subsequent out-of-band scroll-to-item requests remain layout-affecting even when the
+    // offset was previously updated internally during layout (the registry must not misclassify
+    // it as hit-test-only due to stale last_offset bookkeeping).
+    let mut stable_after_first_scroll: Option<usize> = None;
+    for _ in 0..8 {
+        let before = renders.load(Ordering::SeqCst);
+        let root_n = render_frame(&mut ui, &mut app, &mut services);
+        root.get_or_insert(root_n);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        scene.clear();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let after = renders.load(Ordering::SeqCst);
+
+        let cache_hit = after == before;
+        let mismatch = ui
+            .debug_virtual_list_windows()
+            .last()
+            .is_some_and(|w| w.window_mismatch);
+
+        app.advance_frame();
+
+        if cache_hit && !mismatch {
+            stable_after_first_scroll = Some(after);
+            break;
+        }
+    }
+
+    let renders_before_second_scroll = stable_after_first_scroll.unwrap_or_else(|| {
+        panic!("expected a stable cache-hit frame after the first scroll_to_item")
+    });
+
+    let offset_before_second_scroll = scroll_handle.offset().y;
+    scroll_handle.scroll_to_item(120, crate::scroll::ScrollStrategy::Start);
+    assert!(scroll_handle.deferred_scroll_to_item().is_some());
+
+    let before = renders.load(Ordering::SeqCst);
+    let root2 = render_frame(&mut ui, &mut app, &mut services);
+    root.get_or_insert(root2);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    scene.clear();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "expected final layout to consume deferred scroll request"
+    );
+    assert!(
+        scroll_handle.offset().y.0 > offset_before_second_scroll.0 + 0.01,
+        "expected a subsequent scroll_to_item request to update the scroll offset"
+    );
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        before + 1,
+        "subsequent scroll_to_item should still disable view-cache reuse for the affected root"
+    );
+    assert_eq!(before, renders_before_second_scroll);
 }
 
 #[test]
