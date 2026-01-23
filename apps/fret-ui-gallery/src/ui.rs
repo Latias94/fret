@@ -216,6 +216,7 @@ pub(crate) fn content_view(
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
+    material3_checkbox: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -343,6 +344,7 @@ pub(crate) fn content_view(
         progress,
         checkbox,
         switch,
+        material3_checkbox,
         text_input,
         text_area,
         dropdown_open,
@@ -445,6 +447,7 @@ fn page_preview(
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
+    material3_checkbox: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -522,6 +525,7 @@ fn page_preview(
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
         PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
         PAGE_MATERIAL3_ICON_BUTTON => preview_material3_icon_button(cx),
+        PAGE_MATERIAL3_CHECKBOX => preview_material3_checkbox(cx, material3_checkbox),
         _ => preview_intro(cx, theme),
     };
 
@@ -1294,6 +1298,39 @@ fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         row(cx, material3::IconButtonVariant::Tonal, "Tonal"),
         row(cx, material3::IconButtonVariant::Outlined, "Outlined"),
         toggles,
+    ]
+}
+
+fn preview_material3_checkbox(
+    cx: &mut ElementContext<'_, App>,
+    checked: Model<bool>,
+) -> Vec<AnyElement> {
+    let value = cx
+        .get_model_copied(&checked, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                material3::Checkbox::new(checked.clone())
+                    .a11y_label("Material 3 Checkbox")
+                    .test_id("ui-gallery-material3-checkbox")
+                    .into_element(cx),
+                cx.text(format!("checked={}", value as u8)),
+                material3::Checkbox::new(checked.clone())
+                    .a11y_label("Disabled Material 3 Checkbox")
+                    .disabled(true)
+                    .test_id("ui-gallery-material3-checkbox-disabled")
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Checkbox: token-driven sizing/colors + state layer + bounded ripple."),
+        row,
     ]
 }
 

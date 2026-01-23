@@ -123,6 +123,7 @@ pub(crate) const PAGE_COMMAND: &str = "command";
 pub(crate) const PAGE_TOAST: &str = "toast";
 pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
 pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
+pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
@@ -156,6 +157,7 @@ pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
 pub(crate) const CMD_NAV_MATERIAL3_BUTTON: &str = "ui_gallery.nav.select.material3_button";
 pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
     "ui_gallery.nav.select.material3_icon_button";
+pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
@@ -566,6 +568,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_MATERIAL3_ICON_BUTTON,
                 docs::USAGE_MATERIAL3_ICON_BUTTON,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_CHECKBOX,
+                "Checkbox",
+                "Material 3 Checkbox (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_CHECKBOX,
+                &["material3", "checkbox", "state-layer", "ripple", "forms"],
+                docs::DOC_MATERIAL3_CHECKBOX,
+                docs::USAGE_MATERIAL3_CHECKBOX,
             ),
         ],
     },

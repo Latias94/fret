@@ -169,6 +169,30 @@ let close = m3::IconButton::new(ids::ui::CLOSE)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_CHECKBOX: &str = r#"
+## Material 3 Checkbox (MVP)
+
+This page validates a third Material 3 component:
+
+- token-driven sizing + colors
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
+
+Notes:
+- This is the control-only MVP (40px target, 18px box). Label-click behavior is a follow-up recipe.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_CHECKBOX: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+let checked = app.models_mut().insert(false);
+let cb = m3::Checkbox::new(checked)
+    .a11y_label("Accept terms")
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 
