@@ -172,6 +172,11 @@ Recommended patterns:
 This keeps `crates/fret-ui` mechanism-only (ADR 0066) while enabling multiple ecosystem crates to benefit from the same
 closed-loop caching and invalidation semantics.
 
+Concrete ecosystem entry points (current state):
+
+- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`: a Scroll + Canvas pattern that paints only the
+  visible row window while keeping the element tree structurally stable (good for huge simple lists/inspectors).
+
 ### 1.6.1 Retained vs. “Rebuilt Each Frame” (GPUI-style hybrid)
 
 It is easy to talk about “retain vs rebuild” as a binary. GPUI (and our target) is a **hybrid**:

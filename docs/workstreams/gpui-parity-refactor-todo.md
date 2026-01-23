@@ -341,6 +341,11 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       - Evidence: `crates/fret-ui/src/elements/cx.rs` (preview offset windowing),
         `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_window_jump_rerender_uses_latest_handle_offset`).
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
+
+- [ ] GPUI-MVP5-eco-007 Provide a “windowed rows surface” building block for simple lists/inspectors.
+  - Goal: allow huge row surfaces to update the visible window via paint/prepaint without requiring per-row declarative subtrees.
+  - Notes: this is the “single-node surface” escape hatch; composable rows still use `VirtualList` for semantics/focus correctness.
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`windowed_rows_surface`).
 - [ ] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
   - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.

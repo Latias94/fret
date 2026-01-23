@@ -32,6 +32,7 @@ pub mod transition;
 pub mod tree;
 pub mod viewport_surface;
 pub mod visually_hidden;
+pub mod windowed_rows_surface;
 
 pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 pub use model_watch::ModelWatchExt;
