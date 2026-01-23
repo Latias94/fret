@@ -200,6 +200,15 @@ It is easy to talk about “retain vs rebuild” as a binary. GPUI (and our targ
 The goal is not “rebuild everything always”. The goal is: **rebuild only when a view is dirty**, and for “windowed
 surfaces”, let small scroll/camera deltas update via **prepaint-driven windows** instead of forcing cache-root rerender.
 
+Current vs target (VirtualList example):
+
+- **Current** (Fret v1): `VirtualList` computes `visible_items` during the declarative render pass
+  (`crates/fret-ui/src/elements/cx.rs`), so when the visible window leaves the last rendered overscan window we must
+  mark the nearest cache root dirty on the next tick to rebuild the item subtree
+  (`crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`).
+- **Target** (GPUI-aligned): derive the visible window during `prepaint` (ADR 0190) so that scroll-driven window
+  changes can be applied as “ephemeral items” without requiring a full cache-root rerender/relayout for small deltas.
+
 Concrete alignment targets (beyond VirtualList):
 
 - **Windowed 1D surfaces (rows/lines)**:
