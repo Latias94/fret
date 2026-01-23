@@ -1507,7 +1507,9 @@ fn preview_material3_text_field(
     let filled_card = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Filled").into_element(cx),
-            shadcn::CardDescription::new("Active indicator bottom border + filled container.")
+            shadcn::CardDescription::new(
+                "Active indicator bottom border + filled container + hover state layer (best-effort).",
+            )
                 .into_element(cx),
         ])
         .into_element(cx),

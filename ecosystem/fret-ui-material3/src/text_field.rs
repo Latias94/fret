@@ -374,6 +374,21 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn blend_over(base: Color, overlay: Color, opacity: f32) -> Color {
+    let a = (overlay.a * opacity).clamp(0.0, 1.0);
+    if a <= 0.0 {
+        return base;
+    }
+
+    let inv = 1.0 - a;
+    Color {
+        r: overlay.r * a + base.r * inv,
+        g: overlay.g * a + base.g * inv,
+        b: overlay.b * a + base.b * inv,
+        a: a + base.a * inv,
+    }
+}
+
 fn outlined_text_input_style(
     theme: &Theme,
     focused: bool,
@@ -492,22 +507,42 @@ fn filled_text_input_style(
         left: Px(16.0),
     };
 
-    style.background = theme
+    let mut background = theme
         .color_by_key("md.comp.filled-text-field.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
         .or_else(|| theme.color_by_key("md.sys.color.surface"))
         .unwrap_or_else(|| theme.color_required("card"));
 
     if disabled {
-        let base = theme
+        let overlay = theme
             .color_by_key("md.comp.filled-text-field.disabled.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
             .unwrap_or_else(|| theme.color_required("foreground"));
         let opacity = theme
             .number_by_key("md.comp.filled-text-field.disabled.container.opacity")
             .unwrap_or(0.04);
-        style.background = alpha_mul(base, opacity);
+        background = blend_over(background, overlay, opacity);
+    } else if hovered {
+        let (color_key, opacity_key) = if error {
+            (
+                "md.comp.filled-text-field.error.hover.state-layer.color",
+                "md.comp.filled-text-field.error.hover.state-layer.opacity",
+            )
+        } else {
+            (
+                "md.comp.filled-text-field.hover.state-layer.color",
+                "md.comp.filled-text-field.hover.state-layer.opacity",
+            )
+        };
+
+        let overlay = theme
+            .color_by_key(color_key)
+            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
+            .unwrap_or_else(|| theme.color_required("foreground"));
+        let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
+        background = blend_over(background, overlay, opacity);
     }
+    style.background = background;
 
     let indicator_color = filled_active_indicator_color(theme, hovered, disabled, error, focused);
     let focused_indicator_color =

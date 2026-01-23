@@ -1571,6 +1571,11 @@ fn inject_comp_filled_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
     );
     copy_color(
         cfg,
+        "md.comp.filled-text-field.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
         "md.comp.filled-text-field.focus.active-indicator.color",
         "md.sys.color.primary",
     );
@@ -1684,6 +1689,11 @@ fn inject_comp_filled_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.filled-text-field.error.hover.active-indicator.color",
         "md.sys.color.on-error-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.hover.state-layer.color",
+        "md.sys.color.on-surface",
     );
 
     copy_color(

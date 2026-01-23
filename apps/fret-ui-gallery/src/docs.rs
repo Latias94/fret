@@ -242,7 +242,7 @@ pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 This page validates Material 3 text field variants:
 
 - outlined: token-driven outline colors + widths (hover/focus/error/disabled)
-- filled: token-driven filled container + active indicator
+- filled: token-driven filled container + active indicator + hover state layer
 - label + placeholder outcomes (best-effort)
 - outlined: animated label float + an outline "notch" patch (best-effort)
 
