@@ -318,6 +318,11 @@ Initial candidates (to be evidence-backed via `diag perf` bundles):
 
 Non-candidates (usually): small forms/menus/popovers where the “ephemeral window” complexity would outweigh the wins.
 
+- **Paint-only chrome (should not rerender by default; ADR 0181)**
+  - Caret/selection blink and selection geometry updates (text/code views).
+  - Hover/pressed/focus ring decoration layers (shadcn-style interaction chrome).
+  - Drag previews / drop indicators (docking, lists/trees).
+
 - [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
@@ -364,12 +369,15 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
 - [ ] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates: `ecosystem/*plot*`, `ecosystem/*chart*`, large timeseries views.
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
+- [ ] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
+  - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
+  - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.
 - [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
   - Baseline note: current worst-tick bundles remain layout-dominated and frequently attribute dirty views to
     `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:417`.
-- [ ] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
+- [x] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
   - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
   - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).
   - Proposed work:

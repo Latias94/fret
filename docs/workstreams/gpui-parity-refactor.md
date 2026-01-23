@@ -172,6 +172,44 @@ Recommended patterns:
 This keeps `crates/fret-ui` mechanism-only (ADR 0066) while enabling multiple ecosystem crates to benefit from the same
 closed-loop caching and invalidation semantics.
 
+### 1.6.1 Retained vs. “Rebuilt Each Frame” (GPUI-style hybrid)
+
+It is easy to talk about “retain vs rebuild” as a binary. GPUI (and our target) is a **hybrid**:
+
+- **Retained** (cross-frame, must be reused):
+  - stateful view/controller entities and models,
+  - text buffers, syntax state, selection/cursor state,
+  - layout caches (text shaping, line-breaking, row measurement),
+  - GPU resources (atlases, pipelines, bind groups),
+  - stable identity paths / element state (ADR 0028 / ADR 1151).
+- **Per-frame rebuilt** (ephemeral, derived from retained state + viewport):
+  - the declarative element tree for dirty views (ADR 0028),
+  - “visible window” item sets for large virtual surfaces (ADR 0190),
+  - interaction chrome that should normally be paint-only (ADR 0181): hover/pressed/focus rings, selection highlights,
+    caret blink, drag previews, scrollbars.
+
+The goal is not “rebuild everything always”. The goal is: **rebuild only when a view is dirty**, and for “windowed
+surfaces”, let small scroll/camera deltas update via **prepaint-driven windows** instead of forcing cache-root rerender.
+
+Concrete alignment targets (beyond VirtualList):
+
+- **Windowed 1D surfaces (rows/lines)**:
+  - tables/trees/lists, large inspectors/logs, command palette/search results,
+  - code/text/markdown lines (especially syntax-highlighted code blocks).
+- **Windowed 2D surfaces (viewport culling)**:
+  - node graphs/canvas scenes, large gizmo/viewport overlays.
+- **Sampling surfaces**:
+  - plots/charts where pan/zoom should adjust a data window or sampling window without rebuilding full series.
+
+Fearless refactor tactic:
+
+1) Keep the *retained* state stable (data revisions, selection, scroll/camera state).
+2) Move “what’s visible” derivation into `prepaint` (ADR 0190), and make it explainable via diagnostics bundles.
+3) Ensure out-of-band commands (e.g. `scroll_to_item`, `ensure_line_visible`, `zoom_to_fit`) deterministically schedule
+   a redraw and invalidate the right cache boundary (ADR 0180 / ADR 0190).
+4) Migrate surfaces one-by-one via ecosystem helpers (`fret-ui-kit`), so multiple crates get the same perf/correctness
+   loop without duplicating invalidation logic.
+
 ### 1.4 Contract gates (ADRs)
 
 This workstream is “fearless” in implementation scope, but not in contract hygiene. Any meaningful shifts to
