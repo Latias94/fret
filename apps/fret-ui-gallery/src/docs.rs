@@ -242,7 +242,8 @@ pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 This page validates a Material 3 outlined text field surface:
 
 - token-driven outline colors + widths (hover/focus/error/disabled)
-- label + placeholder outcomes (best-effort; no notch yet)
+- label + placeholder outcomes (best-effort)
+- animated label float + an outline "notch" patch (best-effort)
 
 This is built on top of `fret-ui`'s `TextInput` mechanism widget (caret/selection/IME).
 "#;

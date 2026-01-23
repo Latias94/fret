@@ -1484,7 +1484,7 @@ fn preview_material3_text_field(
     let card = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Outlined").into_element(cx),
-            shadcn::CardDescription::new("No notch yet; outcome alignment in progress.")
+            shadcn::CardDescription::new("Animated label + outline \"notch\" patch (best-effort).")
                 .into_element(cx),
         ])
         .into_element(cx),
