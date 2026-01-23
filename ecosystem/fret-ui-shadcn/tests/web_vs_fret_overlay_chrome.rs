@@ -3542,6 +3542,554 @@ fn web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry,
+        DropdownMenuLabel,
+    };
+
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-checkboxes",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                checked_status_bar: Option<Model<bool>>,
+                checked_activity_bar: Option<Model<bool>>,
+                checked_panel: Option<Model<bool>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| {
+                match (
+                    st.checked_status_bar.as_ref(),
+                    st.checked_activity_bar.as_ref(),
+                    st.checked_panel.as_ref(),
+                ) {
+                    (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+                    _ => None,
+                }
+            });
+
+            let (checked_status_bar, checked_activity_bar, checked_panel) =
+                if let Some(existing) = existing {
+                    existing
+                } else {
+                    let checked_status_bar = cx.app.models_mut().insert(true);
+                    let checked_activity_bar = cx.app.models_mut().insert(false);
+                    let checked_panel = cx.app.models_mut().insert(false);
+
+                    cx.with_state(Models::default, |st| {
+                        st.checked_status_bar = Some(checked_status_bar.clone());
+                        st.checked_activity_bar = Some(checked_activity_bar.clone());
+                        st.checked_panel = Some(checked_panel.clone());
+                    });
+
+                    (checked_status_bar, checked_activity_bar, checked_panel)
+                };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Appearance")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_status_bar,
+                                "Status Bar",
+                            )),
+                            DropdownMenuEntry::CheckboxItem(
+                                DropdownMenuCheckboxItem::new(checked_activity_bar, "Activity Bar")
+                                    .disabled(true),
+                            ),
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_panel,
+                                "Panel",
+                            )),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry,
+        DropdownMenuLabel,
+    };
+
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-checkboxes",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                checked_status_bar: Option<Model<bool>>,
+                checked_activity_bar: Option<Model<bool>>,
+                checked_panel: Option<Model<bool>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| {
+                match (
+                    st.checked_status_bar.as_ref(),
+                    st.checked_activity_bar.as_ref(),
+                    st.checked_panel.as_ref(),
+                ) {
+                    (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+                    _ => None,
+                }
+            });
+
+            let (checked_status_bar, checked_activity_bar, checked_panel) =
+                if let Some(existing) = existing {
+                    existing
+                } else {
+                    let checked_status_bar = cx.app.models_mut().insert(true);
+                    let checked_activity_bar = cx.app.models_mut().insert(false);
+                    let checked_panel = cx.app.models_mut().insert(false);
+
+                    cx.with_state(Models::default, |st| {
+                        st.checked_status_bar = Some(checked_status_bar.clone());
+                        st.checked_activity_bar = Some(checked_activity_bar.clone());
+                        st.checked_panel = Some(checked_panel.clone());
+                    });
+
+                    (checked_status_bar, checked_activity_bar, checked_panel)
+                };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Appearance")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_status_bar,
+                                "Status Bar",
+                            )),
+                            DropdownMenuEntry::CheckboxItem(
+                                DropdownMenuCheckboxItem::new(checked_activity_bar, "Activity Bar")
+                                    .disabled(true),
+                            ),
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_panel,
+                                "Panel",
+                            )),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_checkboxes_shadow_matches_web() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry,
+        DropdownMenuLabel,
+    };
+
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-checkboxes",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                checked_status_bar: Option<Model<bool>>,
+                checked_activity_bar: Option<Model<bool>>,
+                checked_panel: Option<Model<bool>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| {
+                match (
+                    st.checked_status_bar.as_ref(),
+                    st.checked_activity_bar.as_ref(),
+                    st.checked_panel.as_ref(),
+                ) {
+                    (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+                    _ => None,
+                }
+            });
+
+            let (checked_status_bar, checked_activity_bar, checked_panel) =
+                if let Some(existing) = existing {
+                    existing
+                } else {
+                    let checked_status_bar = cx.app.models_mut().insert(true);
+                    let checked_activity_bar = cx.app.models_mut().insert(false);
+                    let checked_panel = cx.app.models_mut().insert(false);
+
+                    cx.with_state(Models::default, |st| {
+                        st.checked_status_bar = Some(checked_status_bar.clone());
+                        st.checked_activity_bar = Some(checked_activity_bar.clone());
+                        st.checked_panel = Some(checked_panel.clone());
+                    });
+
+                    (checked_status_bar, checked_activity_bar, checked_panel)
+                };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Appearance")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_status_bar,
+                                "Status Bar",
+                            )),
+                            DropdownMenuEntry::CheckboxItem(
+                                DropdownMenuCheckboxItem::new(checked_activity_bar, "Activity Bar")
+                                    .disabled(true),
+                            ),
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_panel,
+                                "Panel",
+                            )),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_checkboxes_shadow_matches_web_dark() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry,
+        DropdownMenuLabel,
+    };
+
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-checkboxes",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                checked_status_bar: Option<Model<bool>>,
+                checked_activity_bar: Option<Model<bool>>,
+                checked_panel: Option<Model<bool>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| {
+                match (
+                    st.checked_status_bar.as_ref(),
+                    st.checked_activity_bar.as_ref(),
+                    st.checked_panel.as_ref(),
+                ) {
+                    (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+                    _ => None,
+                }
+            });
+
+            let (checked_status_bar, checked_activity_bar, checked_panel) =
+                if let Some(existing) = existing {
+                    existing
+                } else {
+                    let checked_status_bar = cx.app.models_mut().insert(true);
+                    let checked_activity_bar = cx.app.models_mut().insert(false);
+                    let checked_panel = cx.app.models_mut().insert(false);
+
+                    cx.with_state(Models::default, |st| {
+                        st.checked_status_bar = Some(checked_status_bar.clone());
+                        st.checked_activity_bar = Some(checked_activity_bar.clone());
+                        st.checked_panel = Some(checked_panel.clone());
+                    });
+
+                    (checked_status_bar, checked_activity_bar, checked_panel)
+                };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Appearance")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_status_bar,
+                                "Status Bar",
+                            )),
+                            DropdownMenuEntry::CheckboxItem(
+                                DropdownMenuCheckboxItem::new(checked_activity_bar, "Activity Bar")
+                                    .disabled(true),
+                            ),
+                            DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                                checked_panel,
+                                "Panel",
+                            )),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_surface_colors_match_web() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuLabel,
+        DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
+
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-radio-group",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                position: Option<Model<Option<Arc<str>>>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.position.as_ref().cloned());
+            let position = if let Some(existing) = existing {
+                existing
+            } else {
+                let position = cx.app.models_mut().insert(Some(Arc::from("bottom")));
+                cx.with_state(Models::default, |st| st.position = Some(position.clone()));
+                position
+            };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Panel Position")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::RadioGroup(
+                                DropdownMenuRadioGroup::new(position)
+                                    .item(DropdownMenuRadioItemSpec::new("top", "Top"))
+                                    .item(DropdownMenuRadioItemSpec::new("bottom", "Bottom"))
+                                    .item(DropdownMenuRadioItemSpec::new("right", "Right")),
+                            ),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuLabel,
+        DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
+
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-radio-group",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                position: Option<Model<Option<Arc<str>>>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.position.as_ref().cloned());
+            let position = if let Some(existing) = existing {
+                existing
+            } else {
+                let position = cx.app.models_mut().insert(Some(Arc::from("bottom")));
+                cx.with_state(Models::default, |st| st.position = Some(position.clone()));
+                position
+            };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Panel Position")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::RadioGroup(
+                                DropdownMenuRadioGroup::new(position)
+                                    .item(DropdownMenuRadioItemSpec::new("top", "Top"))
+                                    .item(DropdownMenuRadioItemSpec::new("bottom", "Bottom"))
+                                    .item(DropdownMenuRadioItemSpec::new("right", "Right")),
+                            ),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_shadow_matches_web() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuLabel,
+        DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
+
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-radio-group",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                position: Option<Model<Option<Arc<str>>>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.position.as_ref().cloned());
+            let position = if let Some(existing) = existing {
+                existing
+            } else {
+                let position = cx.app.models_mut().insert(Some(Arc::from("bottom")));
+                cx.with_state(Models::default, |st| st.position = Some(position.clone()));
+                position
+            };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Panel Position")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::RadioGroup(
+                                DropdownMenuRadioGroup::new(position)
+                                    .item(DropdownMenuRadioItemSpec::new("top", "Top"))
+                                    .item(DropdownMenuRadioItemSpec::new("bottom", "Bottom"))
+                                    .item(DropdownMenuRadioItemSpec::new("right", "Right")),
+                            ),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_shadow_matches_web_dark() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuLabel,
+        DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
+
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-radio-group",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                position: Option<Model<Option<Arc<str>>>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.position.as_ref().cloned());
+            let position = if let Some(existing) = existing {
+                existing
+            } else {
+                let position = cx.app.models_mut().insert(Some(Arc::from("bottom")));
+                cx.with_state(Models::default, |st| st.position = Some(position.clone()));
+                position
+            };
+
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("Panel Position")),
+                            DropdownMenuEntry::Separator,
+                            DropdownMenuEntry::RadioGroup(
+                                DropdownMenuRadioGroup::new(position)
+                                    .item(DropdownMenuRadioItemSpec::new("top", "Top"))
+                                    .item(DropdownMenuRadioItemSpec::new("bottom", "Bottom"))
+                                    .item(DropdownMenuRadioItemSpec::new("right", "Right")),
+                            ),
+                        ]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_submenu_surface_colors_match_web() {
     use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
 

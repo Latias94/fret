@@ -121,6 +121,18 @@ Notes on API mapping:
 - Web panel shadow gate (root, `shadow-md`): `web_vs_fret_dropdown_menu_demo_shadow_matches_web`,
   `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
+- Web surface colors gate (checkboxes): `web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web panel shadow gate (checkboxes, `shadow-md`): `web_vs_fret_dropdown_menu_checkboxes_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_checkboxes_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web surface colors gate (radio group): `web_vs_fret_dropdown_menu_radio_group_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_radio_group_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
+- Web panel shadow gate (radio group, `shadow-md`): `web_vs_fret_dropdown_menu_radio_group_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_radio_group_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
 - Web placement gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
 - Web scroll state gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_scroll_state_matches`
