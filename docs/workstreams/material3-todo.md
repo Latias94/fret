@@ -51,6 +51,17 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `crates/fret-ui/src/paint.rs` (`paint_state_layer`),
     tests in `crates/fret-ui/src/paint.rs` (`paint_state_layer_emits_single_quad_with_expected_alpha`).
 
+### Refactor Execution (Material foundation)
+
+- [x] Introduce Material foundation modules for shared ink + geometry.
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/mod.rs`,
+    `ecosystem/fret-ui-material3/src/foundation/indication.rs`,
+    `ecosystem/fret-ui-material3/src/foundation/geometry.rs`.
+- [x] Migrate `Button` and `Tabs` to the foundation indication path and remove non-Material fallbacks.
+  - Evidence: `ecosystem/fret-ui-material3/src/button.rs`,
+    `ecosystem/fret-ui-material3/src/tabs.rs`.
+- [ ] Migrate the remaining components and delete duplicated per-component helpers.
+
 ## Audit Anchors (Fret)
 
 - Theme system (v1): `crates/fret-ui/src/theme.rs`, `crates/fret-ui/src/theme_registry.rs`

@@ -1,0 +1,12 @@
+//! Material3 foundation utilities.
+//!
+//! This module exists to reduce per-component divergence by centralizing:
+//! - token resolution conventions (Material-only fallbacks),
+//! - interaction-driven ink (state layer + ripple),
+//! - shared geometry helpers (ripple origin / max radius),
+//! - shared focus-ring style defaults.
+
+pub mod focus_ring;
+pub mod geometry;
+pub mod indication;
+pub mod tokens;

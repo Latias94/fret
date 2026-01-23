@@ -8,20 +8,20 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, DrawOrder, Edges, KeyCode, Px, Rect, SemanticsRole, TextOverflow,
-    TextStyle, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
-    AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 
-use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
-use crate::interaction::state_layer::StateLayerAnimator;
+use crate::foundation::indication::{
+    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+};
 
 #[derive(Debug, Clone)]
 pub struct TabItem {
@@ -150,8 +150,8 @@ impl Tabs {
                 .unwrap_or(Px(48.0));
             let container_bg = theme
                 .color_by_key("md.comp.primary-navigation-tab.container.color")
-                .or_else(|| theme.color_by_key("md.sys.color.surface"))
-                .unwrap_or_else(|| theme.color_required("card"));
+                .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
+                .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"));
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
@@ -363,8 +363,9 @@ fn material_primary_tab<H: UiHost>(
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
                 let label_color = primary_tab_label_color(theme, selected, interaction);
                 let state_layer_color = primary_tab_state_layer_color(theme, selected, interaction);
-                let state_layer_target =
-                    primary_tab_state_layer_opacity(theme, selected, is_pressed, is_hovered, is_focused);
+                let state_layer_target = primary_tab_state_layer_opacity(
+                    theme, selected, is_pressed, is_hovered, is_focused,
+                );
 
                 let state_duration_ms = theme
                     .duration_ms_by_key("md.sys.motion.duration.short2")
@@ -385,66 +386,46 @@ fn material_primary_tab<H: UiHost>(
                     .duration_ms_by_key("md.sys.motion.duration.short2")
                     .unwrap_or(100);
 
-                #[derive(Default)]
-                struct TabRuntime {
-                    prev_pressed: bool,
-                    state_target: f32,
-                    state_layer: StateLayerAnimator,
-                    ripple: RippleAnimator,
-                }
-
                 let bounds = cx
                     .last_bounds_for_element(cx.root_id())
                     .unwrap_or(cx.bounds);
                 let last_down = cx
-                    .with_state(fret_ui::element::PointerRegionState::default, |st| st.last_down);
+                    .with_state(fret_ui::element::PointerRegionState::default, |st| {
+                        st.last_down
+                    });
 
-                let (state_layer_opacity, ripple_frame, want_frames) = cx.with_state_for(
+                let ripple_base_opacity = theme
+                    .number_by_key(if selected {
+                        "md.comp.primary-navigation-tab.active.pressed.state-layer.opacity"
+                    } else {
+                        "md.comp.primary-navigation-tab.inactive.pressed.state-layer.opacity"
+                    })
+                    .unwrap_or(0.1);
+                let config = IndicationConfig {
+                    state_duration_ms,
+                    ripple_expand_ms,
+                    ripple_fade_ms,
+                    easing,
+                };
+                let indication = advance_indication_for_pressable(
+                    cx,
                     pressable_id,
-                    TabRuntime::default,
-                    |rt| {
-                        if (state_layer_target - rt.state_target).abs() > 1e-6 {
-                            rt.state_target = state_layer_target;
-                            rt.state_layer
-                                .set_target(now_frame, state_layer_target, state_duration_ms, easing);
-                        }
-                        rt.state_layer.advance(now_frame);
-
-                        let pressed_rising = is_pressed && !rt.prev_pressed;
-                        rt.prev_pressed = is_pressed;
-                        if pressed_rising {
-                            let origin = down_origin_local(bounds, last_down);
-                            let max_radius = ripple_max_radius(bounds, origin);
-                            rt.ripple.start(
-                                now_frame,
-                                origin,
-                                max_radius,
-                                ripple_expand_ms,
-                                ripple_fade_ms,
-                                easing,
-                            );
-                        }
-
-                        let ripple_base_opacity = theme
-                            .number_by_key(if selected {
-                                "md.comp.primary-navigation-tab.active.pressed.state-layer.opacity"
-                            } else {
-                                "md.comp.primary-navigation-tab.inactive.pressed.state-layer.opacity"
-                            })
-                            .unwrap_or(0.1);
-                        let ripple_frame = rt.ripple.advance(now_frame, ripple_base_opacity);
-                        let want_frames = rt.state_layer.is_active() || rt.ripple.is_active();
-                        (rt.state_layer.value(), ripple_frame, want_frames)
-                    },
+                    now_frame,
+                    bounds,
+                    last_down,
+                    is_pressed,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
                 );
 
-                let ink = primary_tab_ink_layer(
+                let ink = material_ink_layer(
                     cx,
                     corner_radii,
                     state_layer_color,
-                    state_layer_opacity,
-                    ripple_frame,
-                    want_frames,
+                    indication.state_layer_opacity,
+                    indication.ripple_frame,
+                    indication.want_frames,
                 );
                 let label_el = primary_tab_label(cx, theme, &label, label_color);
                 let indicator = primary_tab_indicator(cx, theme, selected);
@@ -500,7 +481,7 @@ fn primary_tab_indicator<H: UiHost>(
         theme
             .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
-            .unwrap_or_else(|| theme.color_required("foreground"))
+            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
     } else {
         Color::TRANSPARENT
     };
@@ -522,54 +503,6 @@ fn primary_tab_indicator<H: UiHost>(
         bottom_left: Px(0.0),
     };
     cx.container(props, |_cx| vec![])
-}
-
-fn primary_tab_ink_layer<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    corner_radii: Corners,
-    color: Color,
-    state_layer_opacity: f32,
-    ripple_frame: Option<RipplePaintFrame>,
-    want_frames: bool,
-) -> AnyElement {
-    let mut props = CanvasProps::default();
-    props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
-
-    cx.canvas(props, move |p| {
-        let bounds = p.bounds();
-
-        if state_layer_opacity > 0.0 {
-            fret_ui::paint::paint_state_layer(
-                p.scene(),
-                DrawOrder(0),
-                bounds,
-                color,
-                state_layer_opacity,
-                corner_radii,
-            );
-        }
-
-        if let Some(r) = ripple_frame {
-            fret_ui::paint::paint_ripple(
-                p.scene(),
-                DrawOrder(1),
-                bounds,
-                r.origin,
-                r.radius,
-                color,
-                r.opacity,
-                Some(corner_radii),
-            );
-        }
-
-        if want_frames {
-            p.request_animation_frame();
-        }
-    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -634,7 +567,13 @@ fn primary_tab_label_color(theme: &Theme, active: bool, interaction: Interaction
                 theme.color_by_key("md.sys.color.on-surface-variant")
             }
         })
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| {
+            if active {
+                theme.color_required("md.sys.color.primary")
+            } else {
+                theme.color_required("md.sys.color.on-surface-variant")
+            }
+        })
 }
 
 fn primary_tab_state_layer_color(
@@ -677,7 +616,7 @@ fn primary_tab_state_layer_color(
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("foreground"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
 }
 
 fn primary_tab_state_layer_opacity(
@@ -720,8 +659,8 @@ fn primary_tab_state_layer_opacity(
 fn primary_tab_focus_ring(theme: &Theme, corner_radii: Corners) -> fret_ui::element::RingStyle {
     let mut c = theme
         .color_by_key("md.comp.primary-navigation-tab.focus.indicator.color")
-        .or_else(|| theme.color_by_key("md.sys.color.secondary"))
-        .unwrap_or_else(|| theme.color_required("color.accent"));
+        .or_else(|| theme.color_by_key("md.sys.color.primary"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"));
 
     let opacity = theme
         .number_by_key("md.sys.state.focus-indicator.opacity")
@@ -746,35 +685,4 @@ fn primary_tab_focus_ring(theme: &Theme, corner_radii: Corners) -> fret_ui::elem
         offset_color: None,
         corner_radii,
     }
-}
-
-fn down_origin_local(
-    bounds: Rect,
-    down: Option<fret_ui::action::PointerDownCx>,
-) -> fret_core::Point {
-    let pos = down.map(|d| d.position).unwrap_or_else(|| {
-        fret_core::Point::new(
-            Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
-            Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
-        )
-    });
-    fret_core::Point::new(
-        Px(pos.x.0 - bounds.origin.x.0),
-        Px(pos.y.0 - bounds.origin.y.0),
-    )
-}
-
-fn ripple_max_radius(bounds: Rect, origin_local: fret_core::Point) -> Px {
-    let w = bounds.size.width.0.max(0.0);
-    let h = bounds.size.height.0.max(0.0);
-    let ox = origin_local.x.0.clamp(0.0, w);
-    let oy = origin_local.y.0.clamp(0.0, h);
-    let corners = [(0.0, 0.0), (w, 0.0), (0.0, h), (w, h)];
-    let mut max: f32 = 0.0;
-    for (cx, cy) in corners {
-        let dx = cx - ox;
-        let dy = cy - oy;
-        max = max.max((dx * dx + dy * dy).sqrt());
-    }
-    Px(max)
 }

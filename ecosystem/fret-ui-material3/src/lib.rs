@@ -8,6 +8,7 @@
 pub mod button;
 pub mod checkbox;
 pub mod dropdown_menu;
+mod foundation;
 pub mod icon_button;
 pub mod interaction;
 pub mod menu;
