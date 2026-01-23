@@ -5,6 +5,13 @@ Status: Draft / work-in-progress
 This workstream tracks **visual + interaction outcome alignment** for Material Design 3 (and
 Material 3 Expressive) in Fret.
 
+## Refactor Plan (read first)
+
+We are doing a “fearless refactor” to reduce divergence across components by introducing a shared
+Material foundation layer (interaction/indication/token resolution) inspired by Compose.
+
+- Plan: `docs/workstreams/material3-refactor-plan.md`
+
 ## Goals
 
 - Provide a single crate surface: `ecosystem/fret-ui-material3`.
@@ -23,6 +30,8 @@ Material 3 Expressive) in Fret.
 - Material Web Components: `repo-ref/material-web`
   - Tokens (including Expressive in `versions/v30_0`): `repo-ref/material-web/tokens`
 - Bevy MD3 replication (outcomes-first, non-DOM): `repo-ref/bevy_material_ui`
+- Compose Multiplatform Material3 (interaction + indication + token patterns):
+  `repo-ref/compose-multiplatform-core/compose/material3`
 - Fret overlay policy boundary: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - Fret theme tokens: `docs/adr/0032-style-tokens-and-theme-resolution.md`,
   `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
