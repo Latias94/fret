@@ -111,7 +111,7 @@ Material 3 Expressive) in Fret.
 - [x] Radio (MVP: bool/group-value binding, state layer + bounded ripple, dot grow animation)
   - Evidence: `ecosystem/fret-ui-material3/src/radio.rs` (`Radio`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_radio_button_*`).
-- [x] Radio group (MVP: `RadioGroup` semantics + roving focus + APG arrow/Home/End navigation)
+- [x] Radio group (MVP: `RadioGroup` semantics + roving focus + APG arrow/Home/End navigation + prefix typeahead)
   - Evidence: `ecosystem/fret-ui-material3/src/radio.rs` (`RadioGroup`, `RadioGroupItem`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_radio`).
 - [ ] Text field
