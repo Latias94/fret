@@ -547,10 +547,17 @@ topics (if/when we implement them):
       - `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs`
       - `crates/fret-ui/src/declarative/host_widget/event/pressable.rs`
 
-- [ ] GPUI-MVP5-eco-008 Docking: make drag/drop indicators paint-only under view-cache reuse.
+- [~] GPUI-MVP5-eco-008 Docking: make drag/drop indicators paint-only under view-cache reuse.
   - Touches: `ecosystem/fret-docking/src/*`, `ecosystem/fret-ui-kit/src/*` (if shared chrome helpers are needed).
   - Done when: a UI Gallery harness can simulate “drag over docking targets” and confirm no cache-root rerender is needed
     for the indicator ticks (paint-only invalidation only), while still passing stale-paint checks.
+  - Progress (v0):
+    - Allow prepaint to kick paint-cache invalidations for cache roots:
+      - `crates/fret-ui/src/widget.rs` (`PrepaintCx::{invalidate_self,invalidate}`)
+      - `crates/fret-ui/src/retained_bridge.rs` (re-export `PrepaintCx` for retained widgets)
+    - DockSpace kicks paint-cache replay on “start/stop frame-driven chrome” transitions:
+      - `ecosystem/fret-docking/src/dock/space.rs` (`Widget::prepaint`, `PaintCx::request_animation_frame`)
+    - Regression (unit): `ecosystem/fret-docking/src/dock/tests.rs` (`dock_space_kicks_paint_cache_on_drag_transition_for_cache_root`)
 
 - [ ] GPUI-MVP5-eco-009 Workspace/inspectors: identify list/outline/file-tree surfaces that should be windowed.
   - Touches: `ecosystem/fret-workspace/src/*`, `apps/fret-editor/src/*`.
