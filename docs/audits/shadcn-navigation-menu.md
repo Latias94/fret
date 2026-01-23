@@ -79,6 +79,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   composition (upstream exports `NavigationMenuIndicator` but does not mount it in `NavigationMenu`).
 - Pass: Indicator placement is track-based (trigger width + gutter thickness) and uses the same
   `shadow-md` token as upstream for the diamond.
+- Pass: Indicator geometry is gated against shadcn-web (track thickness + diamond placement).
 - Note: Exact positioning still differs in the details (Radix uses a DOM-measured indicator track);
   Fret anchors from trigger element ids + popper geometry.
   - Placement logic: `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
@@ -106,11 +107,11 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
     - `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo*.open.json`
     - `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo-indicator.open.json`).
   - Placement: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
-    (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.open.json`).
+    (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`,
+    `web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web`;
+    consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo*.open.json`).
 
 ## Follow-ups (recommended)
 
 - Consider exposing an opt-in custom indicator renderer if parity-sensitive recipes need it (today
   the indicator visuals are not user-supplied, only toggled on/off).
-- Add layout-focused gates for the indicator track (height = `h-1.5`) and diamond offset
-  (`top-[60%]`) to catch regressions in the “clipped arrow” look.

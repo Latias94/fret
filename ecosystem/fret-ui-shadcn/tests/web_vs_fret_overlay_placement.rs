@@ -1031,6 +1031,19 @@ fn rect_right(r: WebRect) -> f32 {
     r.x + r.w
 }
 
+fn web_unrotated_rect_for_rotated_square(node: &WebNode) -> WebRect {
+    let size_w = web_css_px(node, "width").unwrap_or(node.rect.w);
+    let size_h = web_css_px(node, "height").unwrap_or(node.rect.h);
+    let dx = (node.rect.w - size_w) * 0.5;
+    let dy = (node.rect.h - size_h) * 0.5;
+    WebRect {
+        x: node.rect.x + dx,
+        y: node.rect.y + dy,
+        w: size_w,
+        h: size_h,
+    }
+}
+
 fn fret_rect_contains(outer: Rect, inner: Rect) -> bool {
     let eps = 0.01;
     inner.origin.x.0 + eps >= outer.origin.x.0
@@ -12185,6 +12198,225 @@ fn web_vs_fret_navigation_menu_demo_with_icon_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web() {
+    let web = read_web_golden_open("navigation-menu-demo-indicator");
+    let theme = web_theme(&web);
+
+    let web_trigger =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-trigger", "open")
+            .expect("web trigger slot=navigation-menu-trigger state=open");
+    let web_indicator =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-indicator", "visible")
+            .expect("web indicator slot=navigation-menu-indicator state=visible");
+    let web_viewport =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-viewport", "open")
+            .expect("web viewport slot=navigation-menu-viewport state=open");
+
+    let web_diamond = web_indicator
+        .children
+        .iter()
+        .find(|n| web_css_px(n, "width").is_some_and(|v| (v - 8.0).abs() <= 0.01))
+        .unwrap_or_else(|| panic!("missing web navigation-menu indicator diamond node"));
+    let web_diamond_unrotated = web_unrotated_rect_for_rotated_square(web_diamond);
+
+    let expected_track = web_indicator.rect;
+
+    let expected_diamond = WebRect {
+        x: web_diamond_unrotated.x,
+        y: web_diamond_unrotated.y,
+        w: web_diamond_unrotated.w,
+        h: web_diamond_unrotated.h,
+    };
+
+    assert_close(
+        "navigation-menu-demo-indicator web trigger_x == indicator_x",
+        web_trigger.rect.x,
+        expected_track.x,
+        0.5,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator web trigger_w ~= indicator_w",
+        web_trigger.rect.w,
+        expected_track.w,
+        1.0,
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("home")));
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 1..=(1 + settle_frames) {
+        let request_semantics = frame == 1 + settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame as u64),
+            request_semantics,
+            |cx| {
+                let items = vec![
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "home",
+                        "Home",
+                        vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
+                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                ];
+
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(true)
+                    .indicator(true)
+                    .items(items)
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let viewport_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-indicator-viewport-id",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(cx, root_id)
+        },
+    )
+    .expect("fret nav menu viewport panel id");
+    let viewport_bounds =
+        bounds_for_element(&mut app, window, viewport_id).expect("fret nav menu viewport bounds");
+
+    let indicator_track_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-indicator-track-id",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_indicator_track_id(
+                cx, root_id,
+            )
+        },
+    )
+    .expect("fret nav menu indicator track id");
+    let indicator_track_bounds = bounds_for_element(&mut app, window, indicator_track_id)
+        .expect("fret nav menu indicator track bounds");
+
+    let indicator_diamond_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-indicator-diamond-id",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_indicator_diamond_id(
+                cx, root_id,
+            )
+        },
+    )
+    .expect("fret nav menu indicator diamond id");
+    let indicator_diamond_bounds = bounds_for_element(&mut app, window, indicator_diamond_id)
+        .expect("fret nav menu indicator diamond bounds");
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Home"))
+        .expect("fret trigger semantics (Home)");
+
+    assert_close(
+        "navigation-menu-demo-indicator track_x",
+        indicator_track_bounds.origin.x.0,
+        expected_track.x,
+        1.0,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator track_y",
+        indicator_track_bounds.origin.y.0,
+        expected_track.y,
+        1.0,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator track_w",
+        indicator_track_bounds.size.width.0,
+        expected_track.w,
+        1.5,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator track_h",
+        indicator_track_bounds.size.height.0,
+        expected_track.h,
+        0.5,
+    );
+
+    assert_close(
+        "navigation-menu-demo-indicator trigger_x == track_x",
+        trigger.bounds.origin.x.0,
+        indicator_track_bounds.origin.x.0,
+        1.0,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator trigger_w == track_w",
+        trigger.bounds.size.width.0,
+        indicator_track_bounds.size.width.0,
+        1.5,
+    );
+
+    let web_gap_to_viewport = web_viewport.rect.y - (expected_track.y + expected_track.h);
+    let fret_gap_to_viewport = viewport_bounds.origin.y.0
+        - (indicator_track_bounds.origin.y.0 + indicator_track_bounds.size.height.0);
+    assert_close(
+        "navigation-menu-demo-indicator gap_to_viewport",
+        fret_gap_to_viewport,
+        web_gap_to_viewport,
+        1.0,
+    );
+
+    let actual_diamond_left =
+        indicator_diamond_bounds.origin.x.0 - indicator_track_bounds.origin.x.0;
+    let actual_diamond_top =
+        indicator_diamond_bounds.origin.y.0 - indicator_track_bounds.origin.y.0;
+    assert_close(
+        "navigation-menu-demo-indicator diamond_left",
+        actual_diamond_left,
+        expected_diamond.x - expected_track.x,
+        1.5,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator diamond_top",
+        actual_diamond_top,
+        expected_diamond.y - expected_track.y,
+        1.5,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator diamond_w",
+        indicator_diamond_bounds.size.width.0,
+        expected_diamond.w,
+        0.5,
+    );
+    assert_close(
+        "navigation-menu-demo-indicator diamond_h",
+        indicator_diamond_bounds.size.height.0,
+        expected_diamond.h,
+        0.5,
+    );
+}
+
+#[test]
 fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
     let web = read_web_golden_open("navigation-menu-demo.home-mobile");
     let theme = web_theme(&web);
@@ -12946,6 +13178,7 @@ fn assert_menubar_demo_checkbox_indicator_slot_inset_matches_web_impl(web_name: 
             position: click_point,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -13096,6 +13329,7 @@ fn assert_menubar_demo_radio_indicator_slot_inset_matches_web_impl(web_name: &st
             position: click_point,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -13500,6 +13734,7 @@ fn assert_menubar_demo_constrained_menu_item_height_matches(web_name: &str) {
             position: click_point,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),

@@ -1728,10 +1728,23 @@ fn assert_navigation_menu_indicator_shadow_insets_match(
     }
 
     let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
-    let near = Point::new(
-        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
-        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 + 7.0),
-    );
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let diamond_id = with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-indicator-diamond-id",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_indicator_diamond_id(
+                cx, root_id,
+            )
+        },
+    )
+    .expect("missing fret navigation-menu indicator diamond id");
+    let diamond_bounds = bounds_for_element(&mut app, window, diamond_id).unwrap_or_else(|| {
+        panic!("missing fret bounds for navigation-menu indicator diamond id {diamond_id:?}")
+    });
+    let near = bounds_center(diamond_bounds);
     let panel_rect = find_best_solid_quad_near_point(&scene, near)
         .expect("painted quad for navigation-menu indicator diamond");
 
