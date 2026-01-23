@@ -224,6 +224,19 @@ Concrete alignment targets (beyond VirtualList):
   - caret blink + selection highlights in text/code views,
   - scrollbars and drag/drop indicators.
   - Harness: UI Gallery `PAGE_CHROME_TORTURE` + `tools/diag-scripts/ui-gallery-chrome-torture.json`.
+  - Pattern: prefer pointer-hook `invalidate(Paint)` + `request_redraw` when only visuals change, and reserve `notify()` for structural/state changes that must rerender.
+
+What should be “per-frame rebuilt” (and where):
+
+- **Declarative render (structural)**: should be as stable as possible; this is where we pay the “rerender/relayout” cost.
+  - Allowed: changing subtree shape due to real state/data changes.
+  - Avoid: hover/pressed toggles, caret blink, transient chrome.
+- **Prepaint (ephemeral windows; ADR 0190)**: compute the visible window from viewport/scroll/camera and emit ephemeral items.
+  - Examples: list row windows, code/text visible line windows, markdown long-doc windows, node graph viewport culling windows, plot sampling windows.
+  - Goal: small scroll/pan deltas should not force a cache-root rerender when the view is otherwise clean.
+- **Paint-only (chrome; ADR 0181)**: pointer-driven visuals that refine style without structural changes.
+  - Examples: hover highlight, focus ring, pressed state, selection rectangles, scrollbar fade/hover, drag/drop indicators.
+  - Goal: update via paint invalidation + redraw under view-cache reuse (no rerender unless the component explicitly opts in).
 
 Fearless refactor tactic:
 

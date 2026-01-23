@@ -363,6 +363,11 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Core helper: `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`windowed_rows_surface`).
     - UI Gallery harness page: `apps/fret-ui-gallery/src/ui.rs` (`preview_windowed_rows_surface_torture`, `ui-gallery-windowed-rows-root`).
     - Scripted scroll capture: `tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json`.
+    - Interactive variant (v1): paint-only hover/selection chrome under view-cache reuse using pointer-hook `invalidate(Paint)`:
+      - Helper: `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`windowed_rows_surface_with_pointer_region`)
+      - UI Gallery page: `apps/fret-ui-gallery/src/ui.rs` (`preview_windowed_rows_surface_interactive_torture`, `ui-gallery-windowed-rows-interactive-canvas`)
+      - Script: `tools/diag-scripts/ui-gallery-windowed-rows-interactive.json`
+      - Evidence bundle (cache+shell, release): `target/fret-diag-windowed-rows-interactive/1769167932581-ui-gallery-windowed-rows-interactive-scroll-hover/bundle.json`
     - Bundle-based stale-paint check:
       - Generate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json --release`
       - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-windowed-rows-root`.
@@ -470,6 +475,10 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Script: `tools/diag-scripts/ui-gallery-chrome-torture.json` (pointer sweeps + focus traversal).
     - Evidence bundle (cache+shell, release): `target/fret-diag-chrome-torture/1769164619875-ui-gallery-chrome-torture/bundle.json`
     - Note: overlay open/close remains covered by `tools/diag-scripts/ui-gallery-overlay-torture.json` until the chrome harness grows stable overlay toggles.
+    - Runtime support (v1): pointer hooks can request paint-only invalidation without rerender:
+      - `crates/fret-ui/src/action.rs` (`UiPointerActionHost::invalidate`)
+      - `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs`
+      - `crates/fret-ui/src/declarative/host_widget/event/pressable.rs`
 - [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
