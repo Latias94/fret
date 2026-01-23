@@ -148,7 +148,7 @@ impl TextField {
                 let mut input_id = GlobalElementId(0);
                 let mut input_bg = theme
                     .color_by_key("md.sys.color.surface")
-                    .unwrap_or_else(|| theme.color_required("card"));
+                    .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
                 let mut outline_width_for_notch = Px(0.0);
                 vec![cx.flex(
                     FlexProps {
@@ -424,7 +424,7 @@ fn outlined_text_input_style(
 
     let default_bg = theme
         .color_by_key("md.sys.color.surface")
-        .unwrap_or_else(|| theme.color_required("card"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
     style.background = default_bg;
 
     let outline_color = outlined_outline_color(theme, hovered, disabled, error, focused);
@@ -511,13 +511,13 @@ fn filled_text_input_style(
         .color_by_key("md.comp.filled-text-field.container.color")
         .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
         .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        .unwrap_or_else(|| theme.color_required("card"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
 
     if disabled {
         let overlay = theme
             .color_by_key("md.comp.filled-text-field.disabled.container.color")
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
         let opacity = theme
             .number_by_key("md.comp.filled-text-field.disabled.container.opacity")
             .unwrap_or(0.04);
@@ -538,7 +538,7 @@ fn filled_text_input_style(
         let overlay = theme
             .color_by_key(color_key)
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
         let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
         background = blend_over(background, overlay, opacity);
     }
@@ -601,7 +601,7 @@ fn outlined_caret_color(theme: &Theme, disabled: bool, error: bool, focused: boo
             .color_by_key("md.comp.outlined-text-field.caret.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
     }
-    .unwrap_or_else(|| theme.color_required("foreground"));
+    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
 
     if disabled {
         alpha_mul(base, 0.38)
@@ -620,7 +620,7 @@ fn filled_caret_color(theme: &Theme, disabled: bool, error: bool, focused: bool)
             .color_by_key("md.comp.filled-text-field.caret.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
     }
-    .unwrap_or_else(|| theme.color_required("foreground"));
+    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
 
     if disabled {
         alpha_mul(base, 0.38)
@@ -653,7 +653,7 @@ fn outlined_input_text_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
 
     if disabled {
         let opacity = theme
@@ -689,7 +689,7 @@ fn filled_input_text_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
 
     if disabled {
         let opacity = theme
@@ -727,7 +727,7 @@ fn outlined_outline_color(
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.outline"))
-        .unwrap_or_else(|| theme.color_required("border"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.outline"))
 }
 
 fn filled_active_indicator_color(
@@ -756,7 +756,7 @@ fn filled_active_indicator_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("border"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
 
     if disabled {
         let opacity = theme
@@ -784,7 +784,7 @@ fn outlined_label_color(theme: &Theme, disabled: bool, error: bool, focused: boo
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
 
     if disabled {
         let opacity = theme
@@ -822,7 +822,7 @@ fn filled_label_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
 
     if disabled {
         let opacity = theme
@@ -855,7 +855,7 @@ fn outlined_supporting_text_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
 
     if disabled {
         let opacity = theme
@@ -893,7 +893,7 @@ fn filled_supporting_text_color(
     let mut c = theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
 
     if disabled {
         let opacity = theme

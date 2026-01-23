@@ -70,6 +70,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/menu.rs`.
 - [x] Migrate `Radio` to the foundation indication path and remove non-Material fallbacks.
   - Evidence: `ecosystem/fret-ui-material3/src/radio.rs`.
+- [x] Remove non-Material fallbacks from `TextField` (foundation migration TBD).
+  - Evidence: `ecosystem/fret-ui-material3/src/text_field.rs`.
 - [ ] Migrate the remaining components and delete duplicated per-component helpers.
 
 ## Audit Anchors (Fret)
