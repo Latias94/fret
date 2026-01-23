@@ -27,21 +27,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source_dir = crate_dir.join("src");
     let v30_path = crate_dir.join("src").join("tokens").join("v30.rs");
 
-    eprintln!("audit: scanning source keys...");
-    let _ = std::io::stderr().flush();
+    if args.debug {
+        eprintln!("audit: scanning source keys...");
+        let _ = std::io::stderr().flush();
+    }
     let used = extract_used_keys_from_rs_tree(&source_dir)?;
-    eprintln!(
-        "audit: source scan done (exact={}, templates={})",
-        used.exact.len(),
-        used.templates.len()
-    );
-    let _ = std::io::stderr().flush();
-
-    eprintln!("audit: building injected key set from v30 ThemeConfig...");
-    let _ = std::io::stderr().flush();
+    if args.debug {
+        eprintln!(
+            "audit: source scan done (exact={}, templates={})",
+            used.exact.len(),
+            used.templates.len()
+        );
+        let _ = std::io::stderr().flush();
+        eprintln!("audit: building injected key set from v30 ThemeConfig...");
+        let _ = std::io::stderr().flush();
+    }
     let injected = injected_md_keys_from_v30_theme_config();
-    eprintln!("audit: injected key set ready (keys={})", injected.len());
-    let _ = std::io::stderr().flush();
+    if args.debug {
+        eprintln!("audit: injected key set ready (keys={})", injected.len());
+        let _ = std::io::stderr().flush();
+    }
 
     println!("Material3 token audit");
     println!("- crate: {}", crate_dir.display());
@@ -172,6 +177,7 @@ struct Args {
     limit: usize,
     show_unused: bool,
     show_material_missing: bool,
+    debug: bool,
 }
 
 impl Args {
@@ -181,6 +187,7 @@ impl Args {
             limit: 50,
             show_unused: false,
             show_material_missing: true,
+            debug: false,
         };
 
         let mut it = args.into_iter();
@@ -203,6 +210,7 @@ impl Args {
                 }
                 "--show-unused" => out.show_unused = true,
                 "--no-material-missing" => out.show_material_missing = false,
+                "--debug" => out.debug = true,
                 "--help" | "-h" => {
                     print_help();
                     std::process::exit(0);
@@ -227,6 +235,7 @@ fn print_help() {
            --limit <n>                 Max items per section (default: 50)\n\
            --show-unused               Print injected-but-unused keys\n\
            --no-material-missing       Skip material-web missing-by-prefix report\n\
+           --debug                     Print progress to stderr\n\
            --help                      Show this help\n"
     );
 }
