@@ -106,7 +106,11 @@ Notes on API mapping:
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web checkbox indicator slot inset gate (root): `web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_web`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web menu content inset gate (checkboxes): `web_vs_fret_dropdown_menu_checkboxes_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
 - Web radio indicator slot inset gate (root): `web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
+- Web menu content inset gate (radio group): `web_vs_fret_dropdown_menu_radio_group_menu_content_insets_match`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
 - Web menu content inset gate (root): `web_vs_fret_dropdown_menu_demo_menu_content_insets_match`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).

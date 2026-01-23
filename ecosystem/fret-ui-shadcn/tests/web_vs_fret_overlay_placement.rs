@@ -5702,6 +5702,87 @@ fn assert_dropdown_menu_checkboxes_indicator_slot_inset_matches_web_impl(web_nam
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_checkboxes_menu_content_insets_match() {
+    let web_name = "dropdown-menu-checkboxes";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_status_bar: Model<bool> = app.models_mut().insert(true);
+    let checked_activity_bar: Model<bool> = app.models_mut().insert(false);
+    let checked_panel: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_checkboxes_demo(
+                cx,
+                &open,
+                checked_status_bar.clone(),
+                checked_activity_bar.clone(),
+                checked_panel.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = build_dropdown_menu_checkboxes_demo(
+                    cx,
+                    &open,
+                    checked_status_bar.clone(),
+                    checked_activity_bar.clone(),
+                    checked_panel.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web() {
     assert_dropdown_menu_radio_group_indicator_slot_inset_matches_web_impl(
         "dropdown-menu-radio-group",
@@ -5801,6 +5882,74 @@ fn assert_dropdown_menu_radio_group_indicator_slot_inset_matches_web_impl(web_na
     );
 
     assert!(fret_rect_contains(menu.bounds, item.bounds));
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_menu_content_insets_match() {
+    let web_name = "dropdown-menu-radio-group";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let position: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("bottom")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        let request_semantics = frame == 2 + settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
 }
 
 #[test]
