@@ -276,6 +276,9 @@ Supported selectors (v1 MVP):
 ## Supported scripted steps (v1 MVP)
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`)
+- `move_pointer`
+- `drag_pointer` (optional `button`, `steps`)
+- `wheel`
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
@@ -283,6 +286,10 @@ Supported selectors (v1 MVP):
 - `wait_until`
 - `assert`
 - `capture_bundle`
+
+Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
+useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
+diagnostics runs, and is ignored unless a matching cross-window drag session is active.
 
 Example: right click a context menu trigger
 

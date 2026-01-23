@@ -4552,12 +4552,26 @@ fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) ->
         let t = i as f32 / steps as f32;
         let x = start.x.0 + (end.x.0 - start.x.0) * t;
         let y = start.y.0 + (end.y.0 - start.y.0) * t;
+        let position = Point::new(fret_core::Px(x), fret_core::Px(y));
         out.push(Event::Pointer(PointerEvent::Move {
             pointer_id,
-            position: Point::new(fret_core::Px(x), fret_core::Px(y)),
+            position,
             buttons: pressed_buttons,
             modifiers,
             pointer_type,
+        }));
+
+        // For scripted diagnostics, also emit `InternalDrag` events during pointer drags. The
+        // runtime routes these to the active internal-drag anchor when a cross-window drag session
+        // is active (e.g. docking tear-off / drop indicators).
+        //
+        // This is intentionally safe for generic scripts: `UiTree` ignores `InternalDrag` events
+        // unless `app.drag(pointer_id)` exists and is marked `cross_window_hover`.
+        out.push(Event::InternalDrag(fret_core::InternalDragEvent {
+            pointer_id,
+            position,
+            kind: fret_core::InternalDragKind::Over,
+            modifiers,
         }));
     }
 
@@ -4568,6 +4582,14 @@ fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) ->
         modifiers,
         click_count: 1,
         pointer_type,
+    }));
+
+    // Mirror the runner's "mouse-up routes a drop then clears hover" behavior for internal drags.
+    out.push(Event::InternalDrag(fret_core::InternalDragEvent {
+        pointer_id,
+        position: end,
+        kind: fret_core::InternalDragKind::Drop,
+        modifiers,
     }));
     out
 }
