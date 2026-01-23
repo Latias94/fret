@@ -2270,10 +2270,17 @@ fn assert_context_menu_shadow_insets_match(
     ui.set_window(window);
     let mut services = FakeServices;
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(640.0), Px(480.0)),
-    );
+    let bounds = web
+        .themes
+        .get(web_theme_name)
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(640.0), Px(480.0)),
+            )
+        });
 
     let open: Model<bool> = app.models_mut().insert(false);
 
@@ -4444,6 +4451,102 @@ fn web_vs_fret_context_menu_demo_surface_colors_match_web_dark() {
 }
 
 #[test]
+fn web_vs_fret_context_menu_demo_small_viewport_surface_colors_match_web() {
+    use fret_ui_shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+
+    assert_overlay_surface_colors_match(
+        "context-menu-demo.vp1440x320",
+        "context-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            ContextMenu::new(open.clone())
+                .min_width(Px(208.0))
+                .submenu_min_width(Px(176.0))
+                .into_element(
+                    cx,
+                    |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Copy"))],
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_small_viewport_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+
+    assert_overlay_surface_colors_match(
+        "context-menu-demo.vp1440x320",
+        "context-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            ContextMenu::new(open.clone())
+                .min_width(Px(208.0))
+                .submenu_min_width(Px(176.0))
+                .into_element(
+                    cx,
+                    |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Copy"))],
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_surface_colors_match_web() {
+    use fret_ui_shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+
+    assert_overlay_surface_colors_match(
+        "context-menu-demo.vp1440x240",
+        "context-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            ContextMenu::new(open.clone())
+                .min_width(Px(208.0))
+                .submenu_min_width(Px(176.0))
+                .into_element(
+                    cx,
+                    |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Copy"))],
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+
+    assert_overlay_surface_colors_match(
+        "context-menu-demo.vp1440x240",
+        "context-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, open| {
+            ContextMenu::new(open.clone())
+                .min_width(Px(208.0))
+                .submenu_min_width(Px(176.0))
+                .into_element(
+                    cx,
+                    |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Copy"))],
+                )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_context_menu_demo_submenu_surface_colors_match_web() {
     use fret_ui_shadcn::{Button, ContextMenu, ContextMenuEntry, ContextMenuItem};
 
@@ -5245,6 +5348,98 @@ fn web_vs_fret_context_menu_demo_shadow_matches_web() {
 fn web_vs_fret_context_menu_demo_shadow_matches_web_dark() {
     assert_context_menu_shadow_insets_match(
         "context-menu-demo",
+        "context-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        "Right click here",
+        |cx, open| {
+            fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+                cx,
+                |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                |_cx| {
+                    vec![fret_ui_shadcn::ContextMenuEntry::Item(
+                        fret_ui_shadcn::ContextMenuItem::new("Copy"),
+                    )]
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_small_viewport_shadow_matches_web() {
+    assert_context_menu_shadow_insets_match(
+        "context-menu-demo.vp1440x320",
+        "context-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        "Right click here",
+        |cx, open| {
+            fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+                cx,
+                |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                |_cx| {
+                    vec![fret_ui_shadcn::ContextMenuEntry::Item(
+                        fret_ui_shadcn::ContextMenuItem::new("Copy"),
+                    )]
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_small_viewport_shadow_matches_web_dark() {
+    assert_context_menu_shadow_insets_match(
+        "context-menu-demo.vp1440x320",
+        "context-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        "Right click here",
+        |cx, open| {
+            fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+                cx,
+                |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                |_cx| {
+                    vec![fret_ui_shadcn::ContextMenuEntry::Item(
+                        fret_ui_shadcn::ContextMenuItem::new("Copy"),
+                    )]
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_shadow_matches_web() {
+    assert_context_menu_shadow_insets_match(
+        "context-menu-demo.vp1440x240",
+        "context-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        "Right click here",
+        |cx, open| {
+            fret_ui_shadcn::ContextMenu::new(open.clone()).into_element(
+                cx,
+                |cx| fret_ui_shadcn::Button::new("Right click here").into_element(cx),
+                |_cx| {
+                    vec![fret_ui_shadcn::ContextMenuEntry::Item(
+                        fret_ui_shadcn::ContextMenuItem::new("Copy"),
+                    )]
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_tiny_viewport_shadow_matches_web_dark() {
+    assert_context_menu_shadow_insets_match(
+        "context-menu-demo.vp1440x240",
         "context-menu-content",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,

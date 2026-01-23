@@ -99,6 +99,21 @@ _None tracked at this time._
 - Web panel shadow gate (root, `shadow-md`): `web_vs_fret_context_menu_demo_shadow_matches_web`,
   `web_vs_fret_context_menu_demo_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
+- Web surface colors gate (root): `web_vs_fret_context_menu_demo_surface_colors_match_web`,
+  `web_vs_fret_context_menu_demo_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
+- Web panel shadow gate (root, constrained viewport, `shadow-md`): `web_vs_fret_context_menu_demo_small_viewport_shadow_matches_web`,
+  `web_vs_fret_context_menu_demo_small_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x320.open.json`).
+- Web surface colors gate (root, constrained viewport): `web_vs_fret_context_menu_demo_small_viewport_surface_colors_match_web`,
+  `web_vs_fret_context_menu_demo_small_viewport_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x320.open.json`).
+- Web panel shadow gate (root, tiny viewport, `shadow-md`): `web_vs_fret_context_menu_demo_tiny_viewport_shadow_matches_web`,
+  `web_vs_fret_context_menu_demo_tiny_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x240.open.json`).
+- Web surface colors gate (root, tiny viewport): `web_vs_fret_context_menu_demo_tiny_viewport_surface_colors_match_web`,
+  `web_vs_fret_context_menu_demo_tiny_viewport_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.vp1440x240.open.json`).
 - Web placement gate (submenu): `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd.open.json`).
 - Web submenu panel shadow gate (`shadow-lg`): `web_vs_fret_context_menu_demo_submenu_shadow_matches_web`,
