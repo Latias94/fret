@@ -395,6 +395,11 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Perf improvement evidence (same script, cache+shell):
       - Before: `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` top.us(total/layout/prepaint/paint)=503161/476991/241/25929
       - After: `target/fret-diag-perf-scroll-handle-after-fix/1769131393110-script-step-0011-click/bundle.json` top.us(total/layout/prepaint/paint)=244120/226780/165/17175
+    - Mount invalidation overhead: reduce redundant invalidation propagation for newly mounted nodes.
+      - Change: `declarative_instance_change_mask(None, _) -> 0` and a mount-only `UiTree::set_children_in_mount` path to avoid emitting
+        per-node invalidation walks for freshly created nodes whose invalidation flags are already set.
+      - Evidence (release perf; avoids Windows debug PDB limits): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --warmup-frames 5 --top 5 --sort time --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
+        produced `target/fret-diag-perf-mount-invalidation/1769133988059-script-step-0011-click/bundle.json` with warmup-ranked top.us(total/layout/prepaint/paint)=30365/29262/67/1036 and `debug.stats.invalidation_walk_calls=45`.
 
 ## Open Questions (Keep Short)
 

@@ -1974,6 +1974,72 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[track_caller]
+    pub(crate) fn set_children_in_mount(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        let Some(_old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
+            return;
+        };
+
+        let same_children = self
+            .nodes
+            .get(parent)
+            .is_some_and(|n| n.children.as_slice() == children.as_slice());
+        if same_children {
+            for &child in &children {
+                if let Some(n) = self.nodes.get_mut(child) {
+                    n.parent = Some(parent);
+                }
+            }
+            return;
+        }
+
+        #[cfg(feature = "diagnostics")]
+        if self.debug_enabled {
+            let location = std::panic::Location::caller();
+            self.debug_set_children_writes.insert(
+                parent,
+                UiDebugSetChildrenWrite {
+                    parent,
+                    frame_id: self.debug_stats.frame_id,
+                    old_len: _old_len.min(u32::MAX as usize) as u32,
+                    new_len: children.len().min(u32::MAX as usize) as u32,
+                    file: location.file(),
+                    line: location.line(),
+                    column: location.column(),
+                },
+            );
+        }
+
+        let Some(old_children) = self
+            .nodes
+            .get_mut(parent)
+            .map(|n| std::mem::take(&mut n.children))
+        else {
+            return;
+        };
+
+        for old in old_children {
+            if let Some(n) = self.nodes.get_mut(old)
+                && n.parent == Some(parent)
+            {
+                n.parent = None;
+            }
+        }
+
+        for &child in &children {
+            if let Some(n) = self.nodes.get_mut(child) {
+                n.parent = Some(parent);
+            }
+        }
+
+        if let Some(n) = self.nodes.get_mut(parent) {
+            n.children = children;
+            n.invalidation.hit_test = true;
+            n.invalidation.layout = true;
+            n.invalidation.paint = true;
+        }
+    }
+
+    #[track_caller]
     pub fn remove_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) -> Vec<NodeId> {
         #[cfg(feature = "diagnostics")]
         let remove_record = if self.debug_enabled {

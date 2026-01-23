@@ -922,7 +922,11 @@ fn mount_element<H: UiHost>(
                 pending_invalidations,
             ));
         }
-        ui.set_children(node, child_nodes.clone());
+        if had_existing_node {
+            ui.set_children(node, child_nodes.clone());
+        } else {
+            ui.set_children_in_mount(node, child_nodes.clone());
+        }
         window_frame.children.insert(node, child_nodes);
 
         // Keep a complete retained-subtree element list for this cache root so cache-hit frames
@@ -946,7 +950,11 @@ fn mount_element<H: UiHost>(
                 pending_invalidations,
             ));
         }
-        ui.set_children(node, child_nodes.clone());
+        if had_existing_node {
+            ui.set_children(node, child_nodes.clone());
+        } else {
+            ui.set_children_in_mount(node, child_nodes.clone());
+        }
         window_frame.children.insert(node, child_nodes);
     }
 
@@ -962,7 +970,10 @@ fn declarative_instance_change_mask(
     next: &ElementInstance,
 ) -> u8 {
     let Some(previous) = previous else {
-        return INVALIDATION_HIT_TEST | INVALIDATION_LAYOUT | INVALIDATION_PAINT;
+        // Newly mounted nodes already start invalidated (layout/paint/hit-test) and structural
+        // changes are handled via parent `set_children` updates. Avoid redundant invalidation
+        // propagation in large rerender frames (e.g. VirtualList window jumps).
+        return 0;
     };
 
     if std::mem::discriminant(previous) != std::mem::discriminant(next) {
