@@ -433,7 +433,7 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Add stale-paint checks for pan/zoom (bounds/camera changed but scene fingerprint did not).
   - Likely first target:
     - `ecosystem/fret-node` (node graph) because it combines 2D culling + heavy paint ops and will stress both interaction routing and paint caching.
-- [ ] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
+- [~] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-chart/src/*` (timeseries/table-driven plots).
     - `ecosystem/fret-plot3d/src/*` (3D sampling + culling surfaces).
@@ -447,6 +447,11 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Scripted capture should validate that small pans do not force cache-root rerenders, and that zoom changes are explainable in bundles.
   - Likely first target:
     - `ecosystem/delinea` (headless) + `ecosystem/fret-chart` (UI wrapper) because it cleanly separates “sampling math” from rendering.
+  - Progress (v1):
+    - UI Gallery harness: `PAGE_CHART_TORTURE` with root test id `ui-gallery-chart-torture-root` (large timeseries via `delinea` + `fret-chart`).
+    - Script: `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json` (drag + wheel).
+    - Evidence bundle (cache+shell, release): `target/fret-diag-chart-torture/1769159171953-ui-gallery-chart-torture-pan-zoom/bundle.json`
+    - Infrastructure: add `drag_pointer` to UI diagnostics steps (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`).
 - [ ] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
   - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
   - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.
