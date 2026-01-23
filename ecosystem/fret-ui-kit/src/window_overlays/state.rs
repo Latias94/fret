@@ -122,10 +122,10 @@ impl OverlayLayerState {
         }
     }
 
-    fn modal(present: bool, interactive: bool) -> Self {
+    fn modal(present: bool) -> Self {
         Self {
             present,
-            interactive,
+            interactive: false,
             wants_timer_events: false,
         }
     }
@@ -255,6 +255,17 @@ pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(
     ui.set_layer_wants_pointer_move_events(layer, interactive && policy.wants_pointer_move_events);
 }
 
+pub(super) fn apply_modal_layer<H: UiHost>(ui: &mut UiTree<H>, layer: UiLayerId, present: bool) {
+    // For modal overlays, `present` is the authority for barrier semantics. This intentionally
+    // ignores the per-overlay open model so close transitions can keep the underlay inert.
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::Modal,
+        OverlayLayerState::modal(present),
+    );
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(super) struct OverlayLayer {
     kind: OverlayLayerKind,
@@ -270,10 +281,6 @@ impl OverlayLayer {
         Self::new(kind, OverlayLayerState::hidden())
     }
 
-    pub(super) fn hide_modal() -> Self {
-        Self::hidden(OverlayLayerKind::Modal)
-    }
-
     pub(super) fn hide_hover() -> Self {
         Self::hidden(OverlayLayerKind::Hover)
     }
@@ -284,13 +291,6 @@ impl OverlayLayer {
 
     pub(super) fn hide_toast() -> Self {
         Self::hidden(OverlayLayerKind::Toast)
-    }
-
-    pub(super) fn modal(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::Modal,
-            OverlayLayerState::modal(present, interactive),
-        )
     }
 
     pub(super) fn tooltip(present: bool) -> Self {

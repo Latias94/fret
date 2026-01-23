@@ -15,7 +15,7 @@ use crate::primitives::focus_scope as focus_scope_prim;
 
 use super::state::{
     ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip,
-    NonModalDismissibleLayerPolicy, OverlayLayer, WindowOverlays,
+    NonModalDismissibleLayerPolicy, OverlayLayer, WindowOverlays, apply_modal_layer,
     apply_non_modal_dismissible_layer,
 };
 use super::toast::{ToastEntry, ToastTimerOutcome};
@@ -277,8 +277,7 @@ pub fn render<H: UiHost>(
             entry.initial_focus = initial_focus;
             layer = Some(entry.layer);
 
-            // For modal overlays, `present` is the authority for whether the barrier is active.
-            OverlayLayer::modal(true, open_now).apply(ui, entry.layer);
+            apply_modal_layer(ui, entry.layer, true);
 
             // Radix-style focus restore for close transitions:
             // when a modal overlay closes but remains mounted (`present=true`) for an exit
@@ -684,7 +683,7 @@ pub fn render<H: UiHost>(
         // Modals should restore focus deterministically on close (Radix-style): underlay focus
         // changes cannot happen while the barrier is installed, so it's safe to always restore on
         // unmount.
-        OverlayLayer::hide_modal().apply(ui, layer);
+        apply_modal_layer(ui, layer, false);
 
         if let Some(node) =
             focus_scope_prim::resolve_restore_focus_node(ui, app, window, trigger, restore_focus)

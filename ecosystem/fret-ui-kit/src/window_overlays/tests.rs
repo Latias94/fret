@@ -2205,6 +2205,28 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
     render(&mut ui, &mut app, &mut services, window, bounds);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays.modals.get(&(window, modal_id)).map(|p| p.layer)
+        })
+        .expect("modal layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("modal debug layer info");
+
+    assert!(info.visible);
+    assert!(info.blocks_underlay_input);
+    assert!(info.hit_testable);
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
+
     ui.dispatch_event(
         &mut app,
         &mut services,
