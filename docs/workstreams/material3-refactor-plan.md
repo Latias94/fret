@@ -145,6 +145,9 @@ Goal: prove the foundation approach reduces divergence and removes flicker/misma
     - keys referenced by `fret-ui-material3` sources but missing from `tokens::v30` injection,
     - keys that do not exist in Material Web v30 sassvars (typos / wrong namespaces),
     - (optional) Material Web keys missing in our injection by component prefix.
+- Add a token import generator to keep sys/comp tokens in sync with Material Web:
+  - `cargo run -p fret-ui-material3 --bin material3_token_import -- --material-web-dir <path>`
+  - This regenerates `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`.
 
 ## Definition of Done (per component)
 

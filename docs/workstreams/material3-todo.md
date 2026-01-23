@@ -107,6 +107,12 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_sys_colors`,
     `ColorSchemeOptions`, `DynamicVariant`, `theme_config_with_colors`).
 - [ ] Implement import pipeline from `repo-ref/material-web/tokens/versions/v30_0` into Fret theme configs.
+  - [x] Generate sys motion + state (+ focus-indicator) injectors from Material Web sassvars.
+    - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`,
+      `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`,
+      `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`).
+  - [ ] Import typescale tokens (`md.sys.typescale.*`) into `ThemeConfig.text_styles`.
+  - [ ] Import the subset of `md.comp.*` tokens used by MVP components (drive by `material3_token_audit`).
 - [x] Add support for non-color/non-px token kinds needed by Material:
   - [x] scalar numbers (e.g. state-layer opacity)
   - [x] durations (ms)

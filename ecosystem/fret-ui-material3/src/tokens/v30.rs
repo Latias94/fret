@@ -5,10 +5,12 @@
 //! `@material/web` API or DOM/Lit implementation details.
 
 use fret_core::{FontId, FontWeight, Px, TextSlant, TextStyle};
-use fret_ui::theme::{CubicBezier, ThemeConfig};
+use fret_ui::theme::ThemeConfig;
 use material_colors::color::Argb;
 use material_colors::dynamic_color::Variant as MaterialVariant;
 use material_colors::theme::ThemeBuilder;
+
+use super::material_web_v30;
 
 /// Material token version string (from Material Web generation metadata).
 pub const MATERIAL_WEB_VERSION: &str = "30.0.14";
@@ -93,9 +95,9 @@ impl DynamicVariant {
 /// Notes:
 /// - This does not set `cfg.name`/`cfg.author`/`cfg.url`.
 pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
-    inject_sys_state(cfg);
-    inject_sys_state_focus_indicator(cfg);
-    inject_sys_motion(cfg);
+    material_web_v30::inject_sys_state(cfg);
+    material_web_v30::inject_sys_state_focus_indicator(cfg);
+    material_web_v30::inject_sys_motion(cfg);
     inject_sys_shape(cfg);
     inject_sys_typescale(cfg, typography);
     inject_comp_button_scalars(cfg);
@@ -796,34 +798,6 @@ fn copy_color(cfg: &mut ThemeConfig, to_key: &str, from_key: &str) {
         return;
     };
     cfg.colors.insert(to_key.to_string(), c);
-}
-
-fn inject_sys_state(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-state.scss
-    cfg.numbers.insert(
-        "md.sys.state.disabled.state-layer-opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers
-        .insert("md.sys.state.dragged.state-layer-opacity".to_string(), 0.16);
-    cfg.numbers
-        .insert("md.sys.state.focus.state-layer-opacity".to_string(), 0.1);
-    cfg.numbers
-        .insert("md.sys.state.hover.state-layer-opacity".to_string(), 0.08);
-    cfg.numbers
-        .insert("md.sys.state.pressed.state-layer-opacity".to_string(), 0.1);
-}
-
-fn inject_sys_state_focus_indicator(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-state-focus-indicator.scss
-    cfg.metrics.insert(
-        "md.sys.state.focus-indicator.inner-offset".to_string(),
-        -3.0,
-    );
-    cfg.metrics
-        .insert("md.sys.state.focus-indicator.outer-offset".to_string(), 2.0);
-    cfg.metrics
-        .insert("md.sys.state.focus-indicator.thickness".to_string(), 3.0);
 }
 
 fn inject_comp_checkbox_scalars(cfg: &mut ThemeConfig) {
@@ -2039,138 +2013,6 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.menu.list-item.pressed.state-layer.color",
         "md.sys.color.on-surface",
-    );
-}
-
-fn inject_sys_motion(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.short1".to_string(), 50);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.short2".to_string(), 100);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.short3".to_string(), 150);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.short4".to_string(), 200);
-
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.medium1".to_string(), 250);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.medium2".to_string(), 300);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.medium3".to_string(), 350);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.medium4".to_string(), 400);
-
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.long1".to_string(), 450);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.long2".to_string(), 500);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.long3".to_string(), 550);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.long4".to_string(), 600);
-
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.extra-long1".to_string(), 700);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.extra-long2".to_string(), 800);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.extra-long3".to_string(), 900);
-    cfg.durations_ms
-        .insert("md.sys.motion.duration.extra-long4".to_string(), 1000);
-
-    cfg.easings.insert(
-        "md.sys.motion.easing.emphasized.accelerate".to_string(),
-        CubicBezier {
-            x1: 0.3,
-            y1: 0.0,
-            x2: 0.8,
-            y2: 0.15,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.emphasized.decelerate".to_string(),
-        CubicBezier {
-            x1: 0.05,
-            y1: 0.7,
-            x2: 0.1,
-            y2: 1.0,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.legacy".to_string(),
-        CubicBezier {
-            x1: 0.4,
-            y1: 0.0,
-            x2: 0.2,
-            y2: 1.0,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.legacy.accelerate".to_string(),
-        CubicBezier {
-            x1: 0.4,
-            y1: 0.0,
-            x2: 1.0,
-            y2: 1.0,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.legacy.decelerate".to_string(),
-        CubicBezier {
-            x1: 0.0,
-            y1: 0.0,
-            x2: 0.2,
-            y2: 1.0,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.linear".to_string(),
-        CubicBezier {
-            x1: 0.0,
-            y1: 0.0,
-            x2: 1.0,
-            y2: 1.0,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.standard".to_string(),
-        CubicBezier {
-            x1: 0.2,
-            y1: 0.0,
-            x2: 0.0,
-            y2: 1.0,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.standard.accelerate".to_string(),
-        CubicBezier {
-            x1: 0.3,
-            y1: 0.0,
-            x2: 1.0,
-            y2: 1.0,
-        },
-    );
-    cfg.easings.insert(
-        "md.sys.motion.easing.standard.decelerate".to_string(),
-        CubicBezier {
-            x1: 0.0,
-            y1: 0.0,
-            x2: 0.0,
-            y2: 1.0,
-        },
-    );
-
-    // In the v30_0 generated file, `emphasized` is defined as `$easing-standard`.
-    cfg.easings.insert(
-        "md.sys.motion.easing.emphasized".to_string(),
-        CubicBezier {
-            x1: 0.2,
-            y1: 0.0,
-            x2: 0.0,
-            y2: 1.0,
-        },
     );
 }
 

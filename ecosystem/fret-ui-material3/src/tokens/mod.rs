@@ -4,3 +4,5 @@
 //! Material policies and token sets that can be injected into `ThemeConfig`.
 
 pub mod v30;
+
+pub(crate) mod material_web_v30;
