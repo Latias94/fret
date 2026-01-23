@@ -6,6 +6,7 @@
 //! - Inner dot grow animation on selection (best-effort).
 
 use std::sync::Arc;
+use std::{cell::RefCell, rc::Rc};
 
 use fret_core::{Color, Corners, DrawOrder, Edges, KeyCode, Px, Rect, SemanticsRole};
 use fret_runtime::Model;
@@ -69,6 +70,7 @@ pub struct RadioGroup {
     disabled: bool,
     orientation: RadioGroupOrientation,
     gap: Px,
+    typeahead_timeout_ticks: u64,
     loop_navigation: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -82,6 +84,7 @@ impl RadioGroup {
             disabled: false,
             orientation: RadioGroupOrientation::default(),
             gap: Px(0.0),
+            typeahead_timeout_ticks: 60,
             loop_navigation: true,
             a11y_label: None,
             test_id: None,
@@ -118,6 +121,12 @@ impl RadioGroup {
         self
     }
 
+    /// Configure the prefix-buffer typeahead timeout in `TickId` units (default: `60`).
+    pub fn typeahead_timeout_ticks(mut self, ticks: u64) -> Self {
+        self.typeahead_timeout_ticks = ticks.max(1);
+        self
+    }
+
     /// When `true` (default), roving navigation loops at the ends (Radix `loop` behavior).
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
@@ -131,6 +140,7 @@ impl RadioGroup {
             let disabled_group = self.disabled;
             let label = self.a11y_label.clone();
             let test_id = self.test_id.clone();
+            let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
 
             let values: Arc<[Arc<str>]> =
                 Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
@@ -138,6 +148,13 @@ impl RadioGroup {
                 items
                     .iter()
                     .map(|it| disabled_group || it.disabled)
+                    .collect::<Vec<_>>(),
+            );
+
+            let typeahead_labels: Arc<[Arc<str>]> = Arc::from(
+                items
+                    .iter()
+                    .map(|it| it.a11y_label.clone().unwrap_or_else(|| it.value.clone()))
                     .collect::<Vec<_>>(),
             );
 
@@ -242,6 +259,12 @@ impl RadioGroup {
                         host.request_redraw(action_cx.window);
                     }));
 
+                    roving_typeahead_prefix_arc_str_always_wrap(
+                        cx,
+                        typeahead_labels.clone(),
+                        typeahead_timeout_ticks,
+                    );
+
                     items
                         .iter()
                         .enumerate()
@@ -264,6 +287,173 @@ impl RadioGroup {
             })
         })
     }
+}
+
+fn roving_typeahead_prefix_arc_str_always_wrap<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    labels: Arc<[Arc<str>]>,
+    timeout_ticks: u64,
+) {
+    use fret_ui::action::{ActionCx, OnRovingTypeahead, RovingTypeaheadCx, UiActionHost};
+
+    #[derive(Debug, Default)]
+    struct TypeaheadBuffer {
+        timeout_ticks: u64,
+        last_tick: Option<u64>,
+        query: String,
+    }
+
+    impl TypeaheadBuffer {
+        fn new(timeout_ticks: u64) -> Self {
+            Self {
+                timeout_ticks,
+                last_tick: None,
+                query: String::new(),
+            }
+        }
+
+        fn push_char(&mut self, ch: char, tick: u64) {
+            if ch.is_whitespace() {
+                return;
+            }
+            let expired = self
+                .last_tick
+                .is_some_and(|last| tick.saturating_sub(last) > self.timeout_ticks);
+            if expired {
+                self.query.clear();
+            }
+            self.last_tick = Some(tick);
+            self.query.extend(ch.to_lowercase());
+        }
+
+        fn active_query(&mut self, tick: u64) -> Option<&str> {
+            let expired = self
+                .last_tick
+                .is_some_and(|last| tick.saturating_sub(last) > self.timeout_ticks);
+            if expired {
+                self.query.clear();
+                self.last_tick = None;
+                return None;
+            }
+            if self.query.is_empty() {
+                None
+            } else {
+                Some(self.query.as_str())
+            }
+        }
+    }
+
+    fn match_prefix_arc_str(
+        labels: &[Arc<str>],
+        disabled: &[bool],
+        query: &str,
+        current: Option<usize>,
+    ) -> Option<usize> {
+        if labels.is_empty() {
+            return None;
+        }
+
+        let query = query.trim();
+        if query.is_empty() {
+            return None;
+        }
+
+        fn normalize_repeated_search(query: &str) -> String {
+            let mut it = query.chars();
+            let Some(first) = it.next() else {
+                return query.to_string();
+            };
+            let mut count = 1usize;
+            for c in it {
+                count += 1;
+                if c != first {
+                    return query.to_string();
+                }
+            }
+            if count <= 1 {
+                query.to_string()
+            } else {
+                first.to_string()
+            }
+        }
+
+        let query = normalize_repeated_search(query);
+        let exclude_current_match = query.chars().count() == 1 && current.is_some();
+
+        let is_disabled = |idx: usize| disabled.get(idx).copied().unwrap_or(false);
+        let matches = |idx: usize| -> bool {
+            if is_disabled(idx) {
+                return false;
+            }
+            let Some(label) = labels.get(idx) else {
+                return false;
+            };
+            label.trim_start().to_ascii_lowercase().starts_with(&query)
+        };
+
+        let len = labels.len();
+        let start = current.unwrap_or(0);
+        let start = if exclude_current_match {
+            start.saturating_add(1)
+        } else {
+            start
+        };
+        for offset in 0..len {
+            let idx = (start + offset) % len;
+            if matches(idx) {
+                return Some(idx);
+            }
+        }
+        None
+    }
+
+    struct TypeaheadState {
+        timeout_ticks: u64,
+        labels: Rc<RefCell<Arc<[Arc<str>]>>>,
+        handler: OnRovingTypeahead,
+    }
+
+    fn make_state(labels: Arc<[Arc<str>]>, timeout_ticks: u64) -> TypeaheadState {
+        let labels_cell: Rc<RefCell<Arc<[Arc<str>]>>> = Rc::new(RefCell::new(labels));
+        let buffer: Rc<RefCell<TypeaheadBuffer>> =
+            Rc::new(RefCell::new(TypeaheadBuffer::new(timeout_ticks)));
+
+        let labels_read = labels_cell.clone();
+        let buffer_read = buffer.clone();
+
+        #[allow(clippy::arc_with_non_send_sync)]
+        let handler: OnRovingTypeahead = Arc::new(
+            move |_host: &mut dyn UiActionHost, _cx: ActionCx, it: RovingTypeaheadCx| {
+                let mut buf = buffer_read.borrow_mut();
+                buf.push_char(it.input, it.tick);
+                let Some(query) = buf.active_query(it.tick) else {
+                    return None;
+                };
+
+                let labels = labels_read.borrow();
+                match_prefix_arc_str(labels.as_ref(), it.disabled.as_ref(), query, it.current)
+            },
+        );
+
+        TypeaheadState {
+            timeout_ticks,
+            labels: labels_cell,
+            handler,
+        }
+    }
+
+    let handler = cx.with_state(
+        || make_state(labels.clone(), timeout_ticks),
+        |state| {
+            if state.timeout_ticks != timeout_ticks {
+                *state = make_state(labels.clone(), timeout_ticks);
+            }
+            *state.labels.borrow_mut() = labels.clone();
+            state.handler.clone()
+        },
+    );
+
+    cx.roving_add_on_typeahead(handler);
 }
 
 #[derive(Debug, Clone)]
