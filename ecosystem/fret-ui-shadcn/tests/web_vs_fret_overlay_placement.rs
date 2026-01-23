@@ -247,7 +247,11 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
 
         let body = cx.container(
             ContainerProps {
-                layout: LayoutStyle::default(),
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
                 padding: Edges::all(Px(8.0)), // NavigationMenuLink: p-2
                 ..Default::default()
             },
@@ -255,7 +259,11 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
                 let desc_style = desc_style.clone();
                 vec![cx.column(
                     ColumnProps {
-                        layout: LayoutStyle::default(),
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
                         gap: Px(4.0), // NavigationMenuLink: gap-1
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
@@ -267,15 +275,20 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
                             ContainerProps {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
-                                    layout.size.height =
-                                        Length::Px(Px(desc_style.line_height.unwrap().0 * 2.0));
+                                    layout.size.height = Length::Px(Px(desc_style
+                                        .line_height
+                                        .unwrap_or(Px(19.25))
+                                        .0
+                                        * 2.0));
                                     layout.overflow = fret_ui::element::Overflow::Clip;
                                     layout
                                 },
                                 padding: Edges::all(Px(0.0)),
                                 ..Default::default()
                             },
-                            move |cx| vec![shadcn_text(cx, description.clone(), desc_style)],
+                            move |cx| {
+                                vec![shadcn_text(cx, description.clone(), desc_style.clone())]
+                            },
                         );
 
                         vec![shadcn_text(cx, title.clone(), title_style), desc_box]
@@ -330,6 +343,174 @@ fn shadcn_nav_menu_demo_home_panel<H: UiHost>(
             align: CrossAlign::Stretch,
         },
         move |_cx| vec![tile, intro, install, typography],
+    )
+}
+
+fn shadcn_nav_menu_demo_home_desktop_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    _model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    let gap = Px(8.0); // Tailwind `gap-2` (0.5rem).
+
+    let link_title_style = shadcn_text_style(Px(14.0), Px(14.0), FontWeight::MEDIUM); // text-sm leading-none font-medium
+    let link_desc_style = shadcn_text_style(Px(14.0), Px(19.25), FontWeight::NORMAL); // text-sm leading-snug
+
+    let tile_title_style = shadcn_text_style(Px(18.0), Px(28.0), FontWeight::MEDIUM); // text-lg font-medium
+    let tile_desc_style = shadcn_text_style(Px(14.0), Px(17.5), FontWeight::NORMAL); // text-sm leading-tight
+
+    // `lg:grid-cols-[.75fr_1fr]` at `lg:w-[500px]`.
+    let available = 500.0 - gap.0;
+    let left_w = Px(available * 0.75 / 1.75);
+    let right_w = Px(available * 1.0 / 1.75);
+
+    let tile = cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(left_w);
+                layout
+            },
+            padding: Edges::all(Px(24.0)), // md:p-6
+            ..Default::default()
+        },
+        move |cx| {
+            vec![cx.column(
+                ColumnProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    // NavigationMenuLink: `gap-1` + title: `mb-2` => 12px total.
+                    gap: Px(4.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::End, // `justify-end`
+                    align: CrossAlign::Stretch,
+                },
+                move |cx| {
+                    vec![
+                        shadcn_text_with_layout(cx, "shadcn/ui", tile_title_style, {
+                            let mut layout = LayoutStyle::default();
+                            layout.margin.bottom = MarginEdge::Px(Px(8.0)); // mb-2
+                            layout
+                        }),
+                        shadcn_text(
+                            cx,
+                            "Beautifully designed components built with Tailwind CSS.",
+                            tile_desc_style,
+                        ),
+                    ]
+                },
+            )]
+        },
+    );
+
+    fn list_item<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        title: &'static str,
+        description: &'static str,
+        title_style: &TextStyle,
+        desc_style: &TextStyle,
+        desc_single_line: bool,
+    ) -> AnyElement {
+        let title = Arc::<str>::from(title);
+        let description = Arc::<str>::from(description);
+        let title_style = title_style.clone();
+        let desc_style = desc_style.clone();
+        let desc_single_line = desc_single_line;
+
+        let body = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                padding: Edges::all(Px(8.0)), // NavigationMenuLink: p-2
+                ..Default::default()
+            },
+            move |cx| {
+                let desc_style = desc_style.clone();
+                vec![cx.column(
+                    ColumnProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        gap: Px(4.0), // NavigationMenuLink: gap-1
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                    },
+                    move |cx| {
+                        let desc = if desc_single_line {
+                            shadcn_text_line(cx, description.clone(), desc_style.clone())
+                        } else {
+                            shadcn_text(cx, description.clone(), desc_style.clone())
+                        };
+                        vec![shadcn_text(cx, title.clone(), title_style), desc]
+                    },
+                )]
+            },
+        );
+
+        body
+    }
+
+    let intro = list_item(
+        cx,
+        "Introduction",
+        "Re-usable components built using Radix UI and Tailwind CSS.",
+        &link_title_style,
+        &link_desc_style,
+        false,
+    );
+    let install = list_item(
+        cx,
+        "Installation",
+        "How to install dependencies and structure your app.",
+        &link_title_style,
+        &link_desc_style,
+        false,
+    );
+    let typography = list_item(
+        cx,
+        "Typography",
+        "Styles for headings, paragraphs, lists...etc",
+        &link_title_style,
+        &link_desc_style,
+        true,
+    );
+
+    let right = cx.column(
+        ColumnProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(right_w);
+                layout
+            },
+            gap,
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        },
+        move |_cx| vec![intro, install, typography],
+    );
+
+    cx.row(
+        RowProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(500.0)); // lg:w-[500px]
+                layout
+            },
+            gap,
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        },
+        move |_cx| vec![tile, right],
     )
 }
 
@@ -11777,7 +11958,7 @@ fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
                 .items(vec![fret_ui_shadcn::NavigationMenuItem::new(
                     "home",
                     "Home",
-                    vec![cx.text("Content")],
+                    vec![shadcn_nav_menu_demo_home_desktop_panel(cx, model.clone())],
                 )])
                 .into_element(cx);
             root_id_out.set(Some(el.id));
@@ -11850,7 +12031,7 @@ fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
                     .items(vec![fret_ui_shadcn::NavigationMenuItem::new(
                         "home",
                         "Home",
-                        vec![cx.text("Content")],
+                        vec![shadcn_nav_menu_demo_home_desktop_panel(cx, model.clone())],
                     )])
                     .into_element(cx);
                 root_id_out.set(Some(el.id));
@@ -11909,6 +12090,18 @@ fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
         actual_cross,
         expected_cross,
         1.5,
+    );
+    assert_close(
+        "navigation-menu-demo content_width",
+        fret_content.w,
+        web_content.rect.w,
+        2.0,
+    );
+    assert_close(
+        "navigation-menu-demo content_height",
+        fret_content.h,
+        web_content.rect.h,
+        2.0,
     );
 }
 

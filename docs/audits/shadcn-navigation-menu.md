@@ -110,6 +110,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
     (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`,
     `web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web`;
     consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo*.open.json`).
+    - Note: `web_vs_fret_navigation_menu_demo_overlay_placement_matches` also asserts the open
+      content panel `w/h` for the `viewport=false` demo (`navigation-menu-demo`), so regressions in
+      menu sizing (padding/border + wrapped content height) are caught.
 
 ## Follow-ups (recommended)
 
