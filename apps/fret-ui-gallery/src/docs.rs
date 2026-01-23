@@ -133,6 +133,27 @@ This page validates the first Material 3 outcome-aligned component surface:
 This is intentionally *not* a full `@material/web` parity port: it focuses on the interaction + visual outcomes within Fret's retained scene model.
 "#;
 
+pub(crate) const DOC_MATERIAL3_STATE_MATRIX: &str = r#"
+## Material 3 State Matrix
+
+This page is a **manual regression harness** for cross-component outcome consistency.
+
+Goals:
+- Validate state outcomes (hover / focus / pressed / disabled / selected) across multiple M3 components.
+- Catch structural instability (flicker) and token mismatch regressions early.
+
+Notes:
+- This page is not a "golden" visual diff tool; it is a fast, interactive smoke test.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_STATE_MATRIX: &str = r#"
+Use the controls below to exercise:
+
+- Hover / press / focus-visible behavior
+- Disabled and selected/checked states
+- Menu open/close (Esc and outside press)
+"#;
+
 pub(crate) const USAGE_MATERIAL3_BUTTON: &str = r#"
 ```rust
 use fret_ui_material3 as m3;

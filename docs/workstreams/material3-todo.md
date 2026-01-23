@@ -77,6 +77,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.
+- [x] Add a Material 3 "state matrix" gallery page for manual regression.
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_STATE_MATRIX`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_state_matrix`).
 - [ ] Migrate the remaining components and delete duplicated per-component helpers.
 
 ## Audit Anchors (Fret)
