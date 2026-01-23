@@ -101,8 +101,12 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
     `web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web_dark`,
     `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web_dark`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_viewport_shadow_matches_web`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_viewport_shadow_matches_web_dark`,
     `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web`,
-    `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web_dark`;
+    `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web_dark`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_shadow_matches_web`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_shadow_matches_web_dark`;
     consumes:
     - `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo*.open.json`
     - `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo-indicator.open.json`).

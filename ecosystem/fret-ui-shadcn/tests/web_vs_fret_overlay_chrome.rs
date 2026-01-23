@@ -8954,6 +8954,163 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matc
 }
 
 #[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_shadow_matches_web() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_shadow_insets_match(
+        "navigation-menu-demo.components-mobile",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_shadow_matches_web_dark() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_shadow_insets_match(
+        "navigation-menu-demo.components-mobile",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_shadow_matches_web() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_shadow_insets_match(
+        "navigation-menu-demo.components-mobile-vp375x320",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_shadow_matches_web_dark()
+{
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_shadow_insets_match(
+        "navigation-menu-demo.components-mobile-vp375x320",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web() {
     use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
 
