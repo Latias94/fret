@@ -239,11 +239,12 @@ let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
 pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 ## Material 3 Text Field (MVP)
 
-This page validates a Material 3 outlined text field surface:
+This page validates Material 3 text field variants:
 
-- token-driven outline colors + widths (hover/focus/error/disabled)
+- outlined: token-driven outline colors + widths (hover/focus/error/disabled)
+- filled: token-driven filled container + active indicator
 - label + placeholder outcomes (best-effort)
-- animated label float + an outline "notch" patch (best-effort)
+- outlined: animated label float + an outline "notch" patch (best-effort)
 
 This is built on top of `fret-ui`'s `TextInput` mechanism widget (caret/selection/IME).
 "#;
@@ -254,6 +255,7 @@ use fret_ui_material3 as m3;
 
 let model = app.models_mut().insert(String::new());
 let tf = m3::TextField::new(model)
+    .variant(m3::TextFieldVariant::Filled)
     .label("Name")
     .placeholder("Type here")
     .into_element(cx);

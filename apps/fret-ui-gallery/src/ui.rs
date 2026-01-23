@@ -1472,7 +1472,8 @@ fn preview_material3_text_field(
         "Supporting text"
     };
 
-    let field = material3::TextField::new(value)
+    let outlined_field = material3::TextField::new(value.clone())
+        .variant(material3::TextFieldVariant::Outlined)
         .label("Name")
         .placeholder("Type here")
         .supporting_text(supporting)
@@ -1481,24 +1482,47 @@ fn preview_material3_text_field(
         .test_id("ui-gallery-material3-text-field")
         .into_element(cx);
 
-    let card = shadcn::Card::new(vec![
+    let outlined_card = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Outlined").into_element(cx),
             shadcn::CardDescription::new("Animated label + outline \"notch\" patch (best-effort).")
                 .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![field]).into_element(cx),
+        shadcn::CardContent::new(vec![outlined_field]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let filled_field = material3::TextField::new(value)
+        .variant(material3::TextFieldVariant::Filled)
+        .label("Email")
+        .placeholder("name@example.com")
+        .supporting_text(supporting)
+        .disabled(disabled_now)
+        .error(error_now)
+        .test_id("ui-gallery-material3-text-field-filled")
+        .into_element(cx);
+
+    let filled_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Filled").into_element(cx),
+            shadcn::CardDescription::new("Active indicator bottom border + filled container.")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![filled_field]).into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
     vec![
         cx.text(
-            "Material 3 Text Field: token-driven outlined chrome + label/placeholder outcomes.",
+            "Material 3 Text Field: outlined + filled variants (token-driven chrome + label/placeholder outcomes).",
         ),
         toggles,
-        card,
+        outlined_card,
+        filled_card,
     ]
 }
 

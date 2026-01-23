@@ -104,6 +104,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_switch_scalars(cfg);
     inject_comp_radio_button_scalars(cfg);
     inject_comp_outlined_text_field_scalars(cfg);
+    inject_comp_filled_text_field_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -245,6 +246,7 @@ pub fn theme_config_with_colors(
     inject_comp_switch_colors_from_sys(&mut cfg);
     inject_comp_radio_button_colors_from_sys(&mut cfg);
     inject_comp_outlined_text_field_colors_from_sys(&mut cfg);
+    inject_comp_filled_text_field_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -1355,6 +1357,81 @@ fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-filled-text-field.scss
+
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.container.height".to_string(),
+        56.0,
+    );
+    cfg.metrics
+        .insert("md.comp.filled-text-field.container.shape".to_string(), 4.0);
+
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.active-indicator.height".to_string(),
+        1.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.hover.active-indicator.height".to_string(),
+        1.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.focus.active-indicator.height".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.disabled.active-indicator.height".to_string(),
+        1.0,
+    );
+
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.leading-icon.size".to_string(),
+        24.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.trailing-icon.size".to_string(),
+        24.0,
+    );
+
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.active-indicator.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.container.opacity".to_string(),
+        0.04,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.input-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.leading-icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.supporting-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.trailing-icon.opacity".to_string(),
+        0.38,
+    );
+
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.error.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+}
+
 fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
@@ -1475,6 +1552,185 @@ fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.outlined-text-field.error.focus.supporting-text.color",
+        "md.sys.color.error",
+    );
+}
+
+fn inject_comp_filled_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-filled-text-field.scss
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.active-indicator.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.hover.active-indicator.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.focus.active-indicator.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.disabled.active-indicator.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.disabled.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.disabled.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.disabled.supporting-text.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.caret.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.focus.caret.color",
+        "md.sys.color.error",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.container.color",
+        "md.sys.color.surface-container-highest",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.focus.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.hover.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.input-text.placeholder.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.hover.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.focus.label-text.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.hover.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.focus.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.active-indicator.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.focus.active-indicator.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.hover.active-indicator.color",
+        "md.sys.color.on-error-container",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.hover.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.focus.input-text.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.label-text.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.focus.label-text.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.hover.label-text.color",
+        "md.sys.color.on-error-container",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.supporting-text.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.hover.supporting-text.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.filled-text-field.error.focus.supporting-text.color",
         "md.sys.color.error",
     );
 }

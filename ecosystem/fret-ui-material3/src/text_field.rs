@@ -1,8 +1,8 @@
 //! Material 3 text field (MVP).
 //!
 //! Outcome-oriented implementation:
-//! - Token-driven outline + typography via `md.comp.outlined-text-field.*`.
-//! - Hover/focus/error/disabled outcomes via theme tokens (best-effort; no notch yet).
+//! - Token-driven chrome via `md.comp.(outlined|filled)-text-field.*`.
+//! - Hover/focus/error/disabled outcomes via theme tokens (best-effort).
 
 use std::sync::Arc;
 
@@ -21,6 +21,7 @@ use crate::interaction::state_layer::StateLayerAnimator;
 pub enum TextFieldVariant {
     #[default]
     Outlined,
+    Filled,
 }
 
 #[derive(Debug, Default)]
@@ -116,7 +117,8 @@ impl TextField {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
-            let height = outlined_container_height(&theme);
+            let variant = self.variant;
+            let height = container_height(&theme, variant);
 
             let mut hover_layout = fret_ui::element::LayoutStyle::default();
             hover_layout.size.width = Length::Fill;
@@ -126,6 +128,7 @@ impl TextField {
             };
 
             let model = self.model.clone();
+            let variant_for_children = variant;
             let label = self.label.clone();
             let placeholder = self.placeholder.clone();
             let supporting_text = self.supporting_text.clone();
@@ -146,7 +149,7 @@ impl TextField {
                 let mut input_bg = theme
                     .color_by_key("md.sys.color.surface")
                     .unwrap_or_else(|| theme.color_required("card"));
-                let mut input_outline_width = Px(1.0);
+                let mut outline_width_for_notch = Px(0.0);
                 vec![cx.flex(
                     FlexProps {
                         layout: {
@@ -193,11 +196,19 @@ impl TextField {
                                 None
                             };
 
-                            let chrome = outlined_text_input_style(
-                                &theme, focused, hovered, disabled, error,
-                            );
+                            let chrome = match variant_for_children {
+                                TextFieldVariant::Outlined => outlined_text_input_style(
+                                    &theme, focused, hovered, disabled, error,
+                                ),
+                                TextFieldVariant::Filled => filled_text_input_style(
+                                    &theme, focused, hovered, disabled, error,
+                                ),
+                            };
                             input_bg = chrome.background;
-                            input_outline_width = chrome.border.top;
+                            outline_width_for_notch = match variant_for_children {
+                                TextFieldVariant::Outlined => chrome.border.top,
+                                TextFieldVariant::Filled => Px(0.0),
+                            };
                             props.chrome = chrome;
                             props.text_style = theme
                                 .text_style_by_key("md.sys.typescale.body-large")
@@ -250,14 +261,16 @@ impl TextField {
                             children.push(text_field_label(
                                 cx,
                                 &theme,
+                                variant_for_children,
                                 label.clone(),
                                 progress,
+                                hovered,
                                 disabled,
                                 error,
                                 focused,
                                 input_id,
                                 input_bg,
-                                input_outline_width,
+                                outline_width_for_notch,
                             ));
                         }
 
@@ -265,7 +278,9 @@ impl TextField {
                             children.push(text_field_supporting_text(
                                 cx,
                                 &theme,
+                                variant_for_children,
                                 text.clone(),
+                                hovered,
                                 disabled,
                                 error,
                                 focused,
@@ -280,11 +295,15 @@ impl TextField {
     }
 }
 
-fn outlined_container_height(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.outlined-text-field.container.height")
-        .or_else(|| theme.metric_by_key("md.comp.filled-text-field.container.height"))
-        .unwrap_or(Px(56.0))
+fn container_height(theme: &Theme, variant: TextFieldVariant) -> Px {
+    match variant {
+        TextFieldVariant::Outlined => theme
+            .metric_by_key("md.comp.outlined-text-field.container.height")
+            .unwrap_or(Px(56.0)),
+        TextFieldVariant::Filled => theme
+            .metric_by_key("md.comp.filled-text-field.container.height")
+            .unwrap_or(Px(56.0)),
+    }
 }
 
 fn outlined_container_corner(theme: &Theme) -> Corners {
@@ -293,6 +312,19 @@ fn outlined_container_corner(theme: &Theme) -> Corners {
         .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
         .unwrap_or(Px(4.0));
     Corners::all(r)
+}
+
+fn filled_container_corner(theme: &Theme) -> Corners {
+    let r = theme
+        .metric_by_key("md.comp.filled-text-field.container.shape")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
+        .unwrap_or(Px(4.0));
+    Corners {
+        top_left: r,
+        top_right: r,
+        bottom_right: Px(0.0),
+        bottom_left: Px(0.0),
+    }
 }
 
 fn lerp_px(a: Px, b: Px, t: f32) -> Px {
@@ -427,6 +459,103 @@ fn outlined_text_input_style(
     style
 }
 
+fn filled_text_input_style(
+    theme: &Theme,
+    focused: bool,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+) -> TextInputStyle {
+    let corner = filled_container_corner(theme);
+
+    let active_height = theme
+        .metric_by_key("md.comp.filled-text-field.active-indicator.height")
+        .unwrap_or(Px(1.0));
+    let hover_height = theme
+        .metric_by_key("md.comp.filled-text-field.hover.active-indicator.height")
+        .unwrap_or(active_height);
+    let focus_height = theme
+        .metric_by_key("md.comp.filled-text-field.focus.active-indicator.height")
+        .unwrap_or(Px(2.0));
+    let disabled_height = theme
+        .metric_by_key("md.comp.filled-text-field.disabled.active-indicator.height")
+        .unwrap_or(active_height);
+
+    let mut style = TextInputStyle::default();
+    style.corner_radii = corner;
+    style.focus_ring = None;
+
+    style.padding = Edges {
+        top: Px(18.0),
+        right: Px(16.0),
+        bottom: Px(14.0),
+        left: Px(16.0),
+    };
+
+    style.background = theme
+        .color_by_key("md.comp.filled-text-field.container.color")
+        .or_else(|| theme.color_by_key("md.sys.color.surface-container-highest"))
+        .or_else(|| theme.color_by_key("md.sys.color.surface"))
+        .unwrap_or_else(|| theme.color_required("card"));
+
+    if disabled {
+        let base = theme
+            .color_by_key("md.comp.filled-text-field.disabled.container.color")
+            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
+            .unwrap_or_else(|| theme.color_required("foreground"));
+        let opacity = theme
+            .number_by_key("md.comp.filled-text-field.disabled.container.opacity")
+            .unwrap_or(0.04);
+        style.background = alpha_mul(base, opacity);
+    }
+
+    let indicator_color = filled_active_indicator_color(theme, hovered, disabled, error, focused);
+    let focused_indicator_color =
+        filled_active_indicator_color(theme, false, disabled, error, true);
+
+    let bottom = if disabled {
+        disabled_height
+    } else if focused {
+        focus_height
+    } else if hovered {
+        hover_height
+    } else {
+        active_height
+    };
+    style.border = Edges {
+        top: Px(0.0),
+        right: Px(0.0),
+        bottom,
+        left: Px(0.0),
+    };
+    style.border_color = indicator_color;
+    style.border_color_focused = focused_indicator_color;
+
+    style.text_color = filled_input_text_color(theme, hovered, disabled, error, focused);
+    style.placeholder_color = theme
+        .color_by_key("md.comp.filled-text-field.input-text.placeholder.color")
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or(style.placeholder_color);
+    style.selection_color = theme
+        .color_by_key("md.sys.color.primary")
+        .map(|c| alpha_mul(c, 0.35))
+        .unwrap_or(style.selection_color);
+    style.caret_color = filled_caret_color(theme, disabled, error, focused);
+    style.preedit_color = theme
+        .color_by_key("md.sys.color.primary")
+        .unwrap_or(style.preedit_color);
+
+    if disabled {
+        let opacity = theme
+            .number_by_key("md.comp.filled-text-field.disabled.input-text.opacity")
+            .unwrap_or(0.38);
+        style.text_color = alpha_mul(style.text_color, opacity);
+        style.placeholder_color = alpha_mul(style.placeholder_color, opacity);
+    }
+
+    style
+}
+
 fn outlined_caret_color(theme: &Theme, disabled: bool, error: bool, focused: bool) -> Color {
     let base = if error && focused {
         theme
@@ -435,6 +564,25 @@ fn outlined_caret_color(theme: &Theme, disabled: bool, error: bool, focused: boo
     } else {
         theme
             .color_by_key("md.comp.outlined-text-field.caret.color")
+            .or_else(|| theme.color_by_key("md.sys.color.primary"))
+    }
+    .unwrap_or_else(|| theme.color_required("foreground"));
+
+    if disabled {
+        alpha_mul(base, 0.38)
+    } else {
+        base
+    }
+}
+
+fn filled_caret_color(theme: &Theme, disabled: bool, error: bool, focused: bool) -> Color {
+    let base = if error && focused {
+        theme
+            .color_by_key("md.comp.filled-text-field.error.focus.caret.color")
+            .or_else(|| theme.color_by_key("md.sys.color.error"))
+    } else {
+        theme
+            .color_by_key("md.comp.filled-text-field.caret.color")
             .or_else(|| theme.color_by_key("md.sys.color.primary"))
     }
     .unwrap_or_else(|| theme.color_required("foreground"));
@@ -482,6 +630,42 @@ fn outlined_input_text_color(
     c
 }
 
+fn filled_input_text_color(
+    theme: &Theme,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    let key = if error && focused {
+        "md.comp.filled-text-field.error.focus.input-text.color"
+    } else if error && hovered {
+        "md.comp.filled-text-field.error.hover.input-text.color"
+    } else if error {
+        "md.comp.filled-text-field.error.input-text.color"
+    } else if focused {
+        "md.comp.filled-text-field.focus.input-text.color"
+    } else if hovered {
+        "md.comp.filled-text-field.hover.input-text.color"
+    } else {
+        "md.comp.filled-text-field.input-text.color"
+    };
+
+    let mut c = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
+        .unwrap_or_else(|| theme.color_required("foreground"));
+
+    if disabled {
+        let opacity = theme
+            .number_by_key("md.comp.filled-text-field.disabled.input-text.opacity")
+            .unwrap_or(0.38);
+        c = alpha_mul(c, opacity);
+    }
+
+    c
+}
+
 fn outlined_outline_color(
     theme: &Theme,
     hovered: bool,
@@ -511,6 +695,44 @@ fn outlined_outline_color(
         .unwrap_or_else(|| theme.color_required("border"))
 }
 
+fn filled_active_indicator_color(
+    theme: &Theme,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    let key = if error && focused {
+        "md.comp.filled-text-field.error.focus.active-indicator.color"
+    } else if error && hovered {
+        "md.comp.filled-text-field.error.hover.active-indicator.color"
+    } else if error {
+        "md.comp.filled-text-field.error.active-indicator.color"
+    } else if focused {
+        "md.comp.filled-text-field.focus.active-indicator.color"
+    } else if hovered {
+        "md.comp.filled-text-field.hover.active-indicator.color"
+    } else if disabled {
+        "md.comp.filled-text-field.disabled.active-indicator.color"
+    } else {
+        "md.comp.filled-text-field.active-indicator.color"
+    };
+
+    let mut c = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("border"));
+
+    if disabled {
+        let opacity = theme
+            .number_by_key("md.comp.filled-text-field.disabled.active-indicator.opacity")
+            .unwrap_or(0.38);
+        c = alpha_mul(c, opacity);
+    }
+
+    c
+}
+
 fn outlined_label_color(theme: &Theme, disabled: bool, error: bool, focused: bool) -> Color {
     let key = if error && focused {
         "md.comp.outlined-text-field.error.focus.label-text.color"
@@ -532,6 +754,44 @@ fn outlined_label_color(theme: &Theme, disabled: bool, error: bool, focused: boo
     if disabled {
         let opacity = theme
             .number_by_key("md.comp.outlined-text-field.disabled.label-text.opacity")
+            .unwrap_or(0.38);
+        c = alpha_mul(c, opacity);
+    }
+
+    c
+}
+
+fn filled_label_color(
+    theme: &Theme,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    let key = if error && focused {
+        "md.comp.filled-text-field.error.focus.label-text.color"
+    } else if error && hovered {
+        "md.comp.filled-text-field.error.hover.label-text.color"
+    } else if error {
+        "md.comp.filled-text-field.error.label-text.color"
+    } else if focused {
+        "md.comp.filled-text-field.focus.label-text.color"
+    } else if hovered {
+        "md.comp.filled-text-field.hover.label-text.color"
+    } else if disabled {
+        "md.comp.filled-text-field.disabled.label-text.color"
+    } else {
+        "md.comp.filled-text-field.label-text.color"
+    };
+
+    let mut c = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+
+    if disabled {
+        let opacity = theme
+            .number_by_key("md.comp.filled-text-field.disabled.label-text.opacity")
             .unwrap_or(0.38);
         c = alpha_mul(c, opacity);
     }
@@ -572,11 +832,83 @@ fn outlined_supporting_text_color(
     c
 }
 
+fn filled_supporting_text_color(
+    theme: &Theme,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    let key = if error && focused {
+        "md.comp.filled-text-field.error.focus.supporting-text.color"
+    } else if error && hovered {
+        "md.comp.filled-text-field.error.hover.supporting-text.color"
+    } else if error {
+        "md.comp.filled-text-field.error.supporting-text.color"
+    } else if focused {
+        "md.comp.filled-text-field.focus.supporting-text.color"
+    } else if hovered {
+        "md.comp.filled-text-field.hover.supporting-text.color"
+    } else if disabled {
+        "md.comp.filled-text-field.disabled.supporting-text.color"
+    } else {
+        "md.comp.filled-text-field.supporting-text.color"
+    };
+
+    let mut c = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+
+    if disabled {
+        let opacity = theme
+            .number_by_key("md.comp.filled-text-field.disabled.supporting-text.opacity")
+            .unwrap_or(0.38);
+        c = alpha_mul(c, opacity);
+    }
+
+    c
+}
+
+fn text_field_label_color(
+    theme: &Theme,
+    variant: TextFieldVariant,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    match variant {
+        TextFieldVariant::Outlined => outlined_label_color(theme, disabled, error, focused),
+        TextFieldVariant::Filled => filled_label_color(theme, hovered, disabled, error, focused),
+    }
+}
+
+fn text_field_supporting_text_color(
+    theme: &Theme,
+    variant: TextFieldVariant,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    match variant {
+        TextFieldVariant::Outlined => {
+            outlined_supporting_text_color(theme, disabled, error, focused)
+        }
+        TextFieldVariant::Filled => {
+            filled_supporting_text_color(theme, hovered, disabled, error, focused)
+        }
+    }
+}
+
 fn text_field_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    variant: TextFieldVariant,
     text: Arc<str>,
     progress: f32,
+    hovered: bool,
     disabled: bool,
     error: bool,
     focused: bool,
@@ -598,21 +930,23 @@ fn text_field_label<H: UiHost>(
     layout.overflow = Overflow::Visible;
 
     let floated = progress >= 0.5;
-    let patch_padding_x = Px(4.0);
-    let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
 
     let mut patch = ContainerProps::default();
-    patch.padding = if floated {
-        Edges {
-            top: patch_padding_y,
-            right: patch_padding_x,
-            bottom: patch_padding_y,
-            left: patch_padding_x,
-        }
-    } else {
-        Edges::all(Px(0.0))
-    };
-    patch.background = floated.then_some(input_bg);
+    if variant == TextFieldVariant::Outlined {
+        let patch_padding_x = Px(4.0);
+        let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
+        patch.padding = if floated {
+            Edges {
+                top: patch_padding_y,
+                right: patch_padding_x,
+                bottom: patch_padding_y,
+                left: patch_padding_x,
+            }
+        } else {
+            Edges::all(Px(0.0))
+        };
+        patch.background = floated.then_some(input_bg);
+    }
 
     cx.pointer_region(
         PointerRegionProps {
@@ -631,7 +965,9 @@ fn text_field_label<H: UiHost>(
                     layout: fret_ui::element::LayoutStyle::default(),
                     text: text.clone(),
                     style,
-                    color: Some(outlined_label_color(theme, disabled, error, focused)),
+                    color: Some(text_field_label_color(
+                        theme, variant, hovered, disabled, error, focused,
+                    )),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 })]
@@ -643,7 +979,9 @@ fn text_field_label<H: UiHost>(
 fn text_field_supporting_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    variant: TextFieldVariant,
     text: Arc<str>,
+    hovered: bool,
     disabled: bool,
     error: bool,
     focused: bool,
@@ -656,8 +994,8 @@ fn text_field_supporting_text<H: UiHost>(
         layout,
         text,
         style: theme.text_style_by_key("md.sys.typescale.body-small"),
-        color: Some(outlined_supporting_text_color(
-            theme, disabled, error, focused,
+        color: Some(text_field_supporting_text_color(
+            theme, variant, hovered, disabled, error, focused,
         )),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
