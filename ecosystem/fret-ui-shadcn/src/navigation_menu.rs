@@ -737,7 +737,7 @@ impl NavigationMenu {
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
+                gap: Px(4.0), // Tailwind `space-x-1`
                 padding: Edges::all(Px(0.0)),
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Center,
@@ -1031,6 +1031,7 @@ impl NavigationMenu {
                 let args = radix_navigation_menu::NavigationMenuViewportOverlayRequestArgs {
                     window_margin,
                     placement,
+                    placement_anchor_override: viewport_enabled.then_some(root_id),
                     content_size,
                     indicator_thickness,
                 };

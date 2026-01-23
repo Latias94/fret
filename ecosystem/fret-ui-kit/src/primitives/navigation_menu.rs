@@ -507,6 +507,10 @@ pub struct NavigationMenuViewportOverlayLayout {
 pub struct NavigationMenuViewportOverlayRequestArgs {
     pub window_margin: Px,
     pub placement: popper::PopperContentPlacement,
+    /// Optional override for the anchor element used to place the viewport panel.
+    ///
+    /// When `None`, placement uses the active trigger bounds.
+    pub placement_anchor_override: Option<GlobalElementId>,
     pub content_size: Size,
     pub indicator_thickness: Px,
 }
@@ -547,31 +551,40 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         let Some(value) = selected_value else {
             return Vec::new();
         };
-        let anchor_id = navigation_menu_trigger_id(cx, root_id, value);
-        let anchor = anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
-        let Some(anchor) = anchor else {
+
+        let trigger_anchor_id = navigation_menu_trigger_id(cx, root_id, value);
+        let trigger_anchor =
+            trigger_anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
+        let Some(trigger_anchor) = trigger_anchor else {
+            return Vec::new();
+        };
+
+        let placement_anchor_id = args.placement_anchor_override.or(trigger_anchor_id);
+        let placement_anchor =
+            placement_anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
+        let Some(placement_anchor) = placement_anchor else {
             return Vec::new();
         };
 
         let popper_layout = popper::popper_content_layout_unclamped(
             overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin),
-            anchor,
+            placement_anchor,
             args.content_size,
             args.placement,
         );
         let placed = popper_layout.rect;
 
         let transform_origin =
-            popper::popper_content_transform_origin(&popper_layout, anchor, None);
+            popper::popper_content_transform_origin(&popper_layout, placement_anchor, None);
         let indicator_rect = navigation_menu_indicator_rect(
-            anchor,
+            trigger_anchor,
             placed,
             popper_layout.side,
             args.indicator_thickness,
         );
 
         let layout = NavigationMenuViewportOverlayLayout {
-            anchor,
+            anchor: trigger_anchor,
             placed,
             side: popper_layout.side,
             transform_origin,
