@@ -746,9 +746,11 @@ fn shadcn_nav_menu_demo_list_panel<H: UiHost>(
     )
 }
 
-fn shadcn_nav_menu_demo_components_panel<H: UiHost>(
+fn shadcn_nav_menu_demo_components_panel_impl<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
+    grid_width: Option<Px>,
+    cols: u16,
 ) -> AnyElement {
     use fret_ui_shadcn::NavigationMenuLink;
 
@@ -817,10 +819,12 @@ fn shadcn_nav_menu_demo_components_panel<H: UiHost>(
         GridProps {
             layout: {
                 let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Px(Px(600.0)); // lg:w-[600px]
+                if let Some(width) = grid_width {
+                    layout.size.width = Length::Px(width);
+                }
                 layout
             },
-            cols: 2, // md:grid-cols-2
+            cols,
             rows: None,
             gap,
             padding: Edges::all(Px(0.0)),
@@ -880,6 +884,23 @@ fn shadcn_nav_menu_demo_components_panel<H: UiHost>(
             ]
         },
     )
+}
+
+fn shadcn_nav_menu_demo_components_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    // new-york-v4 `navigation-menu-demo`: `lg:w-[600px] md:grid-cols-2`.
+    shadcn_nav_menu_demo_components_panel_impl(cx, model, Some(Px(600.0)), 2)
+}
+
+fn shadcn_nav_menu_demo_components_mobile_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    // Match extracted shadcn web golden (mobile viewport content width).
+    // Web `navigation-menu-viewport` width is ~296px; the viewport panel adds padding + border.
+    shadcn_nav_menu_demo_components_panel_impl(cx, model, Some(Px(275.94)), 1)
 }
 
 fn build_context_menu_demo<H: UiHost>(
@@ -12108,7 +12129,6 @@ fn web_vs_fret_navigation_menu_demo_overlay_placement_matches() {
 fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
     web_name: &str,
     open_value: &str,
-    open_label: &str,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -12188,15 +12208,24 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         },
     );
 
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(open_label))
-        .unwrap_or_else(|| panic!("fret trigger semantics ({open_label})"));
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx, root_id, open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {open_value}"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
     let click_point = Point::new(
-        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
-        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
     );
     ui.dispatch_event(
         &mut app,
@@ -12298,18 +12327,26 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
     let content_bounds =
         bounds_for_element(&mut app, window, content_id).expect("fret nav menu content bounds");
 
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(open_label))
-        .unwrap_or_else(|| panic!("fret trigger semantics ({open_label})"));
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-after-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx, root_id, open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {open_value}"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
 
     let fret_trigger = WebRect {
-        x: trigger.bounds.origin.x.0,
-        y: trigger.bounds.origin.y.0,
-        w: trigger.bounds.size.width.0,
-        h: trigger.bounds.size.height.0,
+        x: trigger_bounds.origin.x.0,
+        y: trigger_bounds.origin.y.0,
+        w: trigger_bounds.size.width.0,
+        h: trigger_bounds.size.height.0,
     };
     let fret_content = WebRect {
         x: content_bounds.origin.x.0,
@@ -12338,7 +12375,6 @@ fn web_vs_fret_navigation_menu_demo_components_overlay_placement_matches() {
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.components",
         "components",
-        "Components",
     );
 }
 
@@ -12347,7 +12383,6 @@ fn web_vs_fret_navigation_menu_demo_components_small_viewport_overlay_placement_
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.components-vp1440x320",
         "components",
-        "Components",
     );
 }
 
@@ -12356,7 +12391,6 @@ fn web_vs_fret_navigation_menu_demo_list_overlay_placement_matches() {
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.list",
         "list",
-        "List",
     );
 }
 
@@ -12365,7 +12399,6 @@ fn web_vs_fret_navigation_menu_demo_list_small_viewport_overlay_placement_matche
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.list-vp1440x320",
         "list",
-        "List",
     );
 }
 
@@ -12374,7 +12407,6 @@ fn web_vs_fret_navigation_menu_demo_simple_small_viewport_overlay_placement_matc
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.simple-vp1440x320",
         "simple",
-        "Simple",
     );
 }
 
@@ -12383,7 +12415,6 @@ fn web_vs_fret_navigation_menu_demo_simple_overlay_placement_matches() {
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.simple",
         "simple",
-        "Simple",
     );
 }
 
@@ -12392,7 +12423,6 @@ fn web_vs_fret_navigation_menu_demo_with_icon_small_viewport_overlay_placement_m
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.with-icon-vp1440x320",
         "with-icon",
-        "With Icon",
     );
 }
 
@@ -12401,7 +12431,6 @@ fn web_vs_fret_navigation_menu_demo_with_icon_overlay_placement_matches() {
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.with-icon",
         "with-icon",
-        "With Icon",
     );
 }
 
@@ -12677,7 +12706,14 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
                     "Home",
                     vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                 ),
-                fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "components",
+                    "Components",
+                    vec![shadcn_nav_menu_demo_components_mobile_panel(
+                        cx,
+                        model.clone(),
+                    )],
+                ),
                 fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
             ];
 
@@ -12756,7 +12792,14 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
                         "Home",
                         vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
                     ),
-                    fret_ui_shadcn::NavigationMenuItem::new("components", "Components", Vec::new()),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "components",
+                        "Components",
+                        vec![shadcn_nav_menu_demo_components_mobile_panel(
+                            cx,
+                            model.clone(),
+                        )],
+                    ),
                     fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
                 ];
 
@@ -12848,6 +12891,231 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
         web_trigger.rect.h,
         1.0,
     );
+}
+
+fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
+    web_name: &str,
+    trigger_value: &str,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_trigger =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-trigger", "open")
+            .expect("web trigger slot=navigation-menu-trigger state=open");
+    let web_viewport =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-viewport", "open")
+            .expect("web viewport slot=navigation-menu-viewport state=open");
+
+    let web_side = infer_side(web_trigger.rect, web_viewport.rect);
+    let web_align = infer_align(web_side, web_trigger.rect, web_viewport.rect);
+    let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_viewport.rect);
+    let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_viewport.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let items = vec![
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
+                ),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "components",
+                    "Components",
+                    vec![shadcn_nav_menu_demo_components_mobile_panel(
+                        cx,
+                        model.clone(),
+                    )],
+                ),
+                fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+            ];
+
+            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(items)
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                trigger_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret nav menu trigger id (value={trigger_value})"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
+    let click_point = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let items = vec![
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "home",
+                        "Home",
+                        vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "components",
+                        "Components",
+                        vec![shadcn_nav_menu_demo_components_mobile_panel(
+                            cx,
+                            model.clone(),
+                        )],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                ];
+
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(true)
+                    .indicator(false)
+                    .items(items)
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let viewport_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-viewport-query",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(cx, root_id)
+        },
+    )
+    .expect("fret nav menu viewport panel id");
+    let viewport_bounds =
+        bounds_for_element(&mut app, window, viewport_id).expect("fret nav menu viewport bounds");
+
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-after-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                trigger_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret nav menu trigger id (value={trigger_value})"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
+
+    let fret_trigger = WebRect {
+        x: trigger_bounds.origin.x.0,
+        y: trigger_bounds.origin.y.0,
+        w: trigger_bounds.size.width.0,
+        h: trigger_bounds.size.height.0,
+    };
+    let fret_viewport = WebRect {
+        x: viewport_bounds.origin.x.0,
+        y: viewport_bounds.origin.y.0,
+        w: viewport_bounds.size.width.0,
+        h: viewport_bounds.size.height.0,
+    };
+
+    let actual_gap = rect_main_gap(web_side, fret_trigger, fret_viewport);
+    let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_viewport);
+
+    let label = format!("{web_name} main_gap");
+    assert_close(&label, actual_gap, expected_gap, 1.0);
+    let label = format!("{web_name} cross_delta");
+    assert_close(&label, actual_cross, expected_cross, 1.5);
+    let label = format!("{web_name} viewport_height");
+    assert_close(&label, fret_viewport.h, web_viewport.rect.h, 1.5);
+    let label = format!("{web_name} viewport_width");
+    assert_close(&label, fret_viewport.w, web_viewport.rect.w, 1.5);
+    let label = format!("{web_name} trigger_height");
+    assert_close(&label, fret_trigger.h, web_trigger.rect.h, 1.0);
 }
 
 #[test]
@@ -13055,6 +13323,22 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_height_matches() 
         fret_trigger.h,
         web_trigger.rect.h,
         1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_height_matches() {
+    assert_navigation_menu_demo_mobile_viewport_geometry_matches(
+        "navigation-menu-demo.components-mobile",
+        "components",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_small_viewport_height_matches() {
+    assert_navigation_menu_demo_mobile_viewport_geometry_matches(
+        "navigation-menu-demo.components-mobile-vp375x320",
+        "components",
     );
 }
 
