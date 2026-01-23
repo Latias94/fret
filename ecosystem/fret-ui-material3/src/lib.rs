@@ -12,6 +12,7 @@ pub mod interaction;
 pub mod motion;
 pub mod radio;
 pub mod switch;
+pub mod text_field;
 pub mod theme;
 pub mod tokens;
 
@@ -20,3 +21,4 @@ pub use checkbox::Checkbox;
 pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation};
 pub use switch::Switch;
+pub use text_field::{TextField, TextFieldVariant};

@@ -103,6 +103,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_checkbox_scalars(cfg);
     inject_comp_switch_scalars(cfg);
     inject_comp_radio_button_scalars(cfg);
+    inject_comp_outlined_text_field_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -243,6 +244,7 @@ pub fn theme_config_with_colors(
     inject_comp_checkbox_colors_from_sys(&mut cfg);
     inject_comp_switch_colors_from_sys(&mut cfg);
     inject_comp_radio_button_colors_from_sys(&mut cfg);
+    inject_comp_outlined_text_field_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -1296,6 +1298,184 @@ fn inject_comp_radio_button_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.radio-button.unselected.pressed.state-layer.color",
         "md.sys.color.primary",
+    );
+}
+
+fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-text-field.scss
+
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.container.height".to_string(),
+        56.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.container.shape".to_string(),
+        4.0,
+    );
+
+    cfg.metrics
+        .insert("md.comp.outlined-text-field.outline.width".to_string(), 1.0);
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.hover.outline.width".to_string(),
+        1.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.focus.outline.width".to_string(),
+        3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.disabled.outline.width".to_string(),
+        1.0,
+    );
+
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.leading-icon.size".to_string(),
+        24.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.trailing-icon.size".to_string(),
+        24.0,
+    );
+
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.input-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.supporting-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.outline.opacity".to_string(),
+        0.12,
+    );
+}
+
+fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.caret.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.focus.caret.color",
+        "md.sys.color.error",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.focus.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.hover.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.input-text.placeholder.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.focus.label-text.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.outline.color",
+        "md.sys.color.outline",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.hover.outline.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.focus.outline.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.disabled.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.disabled.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.disabled.supporting-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.disabled.outline.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.focus.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.label-text.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.focus.label-text.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.outline.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.focus.outline.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.supporting-text.color",
+        "md.sys.color.error",
+    );
+    copy_color(
+        cfg,
+        "md.comp.outlined-text-field.error.focus.supporting-text.color",
+        "md.sys.color.error",
     );
 }
 
