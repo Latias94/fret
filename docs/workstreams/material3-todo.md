@@ -108,7 +108,9 @@ Material 3 Expressive) in Fret.
 - [x] Switch (MVP: bool-only, thumb state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/switch.rs` (`Switch`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_*`).
-- [ ] Radio
+- [x] Radio (MVP: bool/group-value binding, state layer + bounded ripple, dot grow animation)
+  - Evidence: `ecosystem/fret-ui-material3/src/radio.rs` (`Radio`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_radio_button_*`).
 - [ ] Text field
 - [ ] Tabs
 - [ ] List / Menu
