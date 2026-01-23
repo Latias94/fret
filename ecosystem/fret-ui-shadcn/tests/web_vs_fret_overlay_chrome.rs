@@ -1637,6 +1637,176 @@ fn assert_navigation_menu_viewport_shadow_insets_match(
     assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
 }
 
+fn assert_navigation_menu_viewport_surface_colors_match(
+    web_name: &str,
+    web_slot: &str,
+    web_state: &str,
+    trigger_label: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &Model<Option<Arc<str>>>,
+        &Rc<Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_viewport = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
+        .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
+    let web_background = web_viewport
+        .computed_style
+        .get("backgroundColor")
+        .and_then(|v| parse_css_color(v));
+    let web_border = web_border_widths_px(web_viewport).expect("web border widths px");
+    let web_border_color = web_viewport
+        .computed_style
+        .get("borderTopColor")
+        .and_then(|v| parse_css_color(v));
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &model, &root_id_out)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &model, &root_id_out)],
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let panel_id = with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-viewport-surface-colors",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(cx, root_id)
+        },
+    )
+    .expect("missing fret navigation-menu viewport panel id");
+
+    let target = bounds_for_element(&mut app, window, panel_id).unwrap_or_else(|| {
+        panic!("missing fret bounds for navigation-menu viewport panel id {panel_id:?}")
+    });
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let quad = find_best_chrome_quad(&scene, target)
+        .expect("painted quad for navigation-menu viewport panel");
+
+    if let Some(web_background) = web_background
+        && web_background.a > 0.01
+    {
+        let fret_bg = color_to_rgba(quad.background);
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.r"),
+            fret_bg.r,
+            web_background.r,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.g"),
+            fret_bg.g,
+            web_background.g,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.b"),
+            fret_bg.b,
+            web_background.b,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.a"),
+            fret_bg.a,
+            web_background.a,
+            0.02,
+        );
+    }
+
+    if has_border(&web_border)
+        && let Some(web_border_color) = web_border_color
+        && web_border_color.a > 0.01
+    {
+        let fret_border = color_to_rgba(quad.border_color);
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.r"),
+            fret_border.r,
+            web_border_color.r,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.g"),
+            fret_border.g,
+            web_border_color.g,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.b"),
+            fret_border.b,
+            web_border_color.b,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.a"),
+            fret_border.a,
+            web_border_color.a,
+            0.03,
+        );
+    }
+}
+
 fn assert_navigation_menu_indicator_shadow_insets_match(
     web_name: &str,
     web_slot: &str,
@@ -9076,6 +9246,164 @@ fn web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_shado
     use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
 
     assert_navigation_menu_viewport_shadow_insets_match(
+        "navigation-menu-demo.components-mobile-vp375x320",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_surface_colors_match_web() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_surface_colors_match(
+        "navigation-menu-demo.components-mobile",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_surface_colors_match(
+        "navigation-menu-demo.components-mobile",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_surface_colors_match_web()
+ {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_surface_colors_match(
+        "navigation-menu-demo.components-mobile-vp375x320",
+        "navigation-menu-viewport",
+        "open",
+        "Components",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let content = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Px(Px(275.94));
+                        layout.size.height = fret_ui::element::Length::Px(Px(474.33));
+                        layout
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(vec![
+                    NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    NavigationMenuItem::new("components", "Components", vec![content]),
+                ])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_surface_colors_match_web_dark()
+ {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_surface_colors_match(
         "navigation-menu-demo.components-mobile-vp375x320",
         "navigation-menu-viewport",
         "open",

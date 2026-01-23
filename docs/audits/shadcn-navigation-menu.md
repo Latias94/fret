@@ -101,10 +101,14 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
     `web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web_dark`,
     `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web_dark`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_viewport_surface_colors_match_web`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_viewport_surface_colors_match_web_dark`,
     `web_vs_fret_navigation_menu_demo_components_mobile_viewport_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_components_mobile_viewport_shadow_matches_web_dark`,
     `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web_dark`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_surface_colors_match_web`,
+    `web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_surface_colors_match_web_dark`,
     `web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_components_mobile_constrained_viewport_shadow_matches_web_dark`;
     consumes:
