@@ -93,7 +93,7 @@ impl<H: UiHost> UiTree<H> {
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
-            self.prepaint_interaction_node(root, scale_factor, theme_revision);
+            self.prepaint_interaction_node(app, root, scale_factor, theme_revision);
         }
 
         self.interaction_cache.finish_frame();
@@ -109,7 +109,13 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn prepaint_interaction_node(&mut self, node: NodeId, scale_factor: f32, theme_revision: u64) {
+    fn prepaint_interaction_node(
+        &mut self,
+        app: &mut H,
+        node: NodeId,
+        scale_factor: f32,
+        theme_revision: u64,
+    ) {
         if self.debug_enabled {
             self.debug_stats.prepaint_nodes_visited =
                 self.debug_stats.prepaint_nodes_visited.saturating_add(1);
@@ -129,6 +135,22 @@ impl<H: UiHost> UiTree<H> {
             .node_children_render_transform(node)
             .unwrap_or(Transform2D::IDENTITY);
         let key = PaintCacheKey::new(bounds, scale_factor, theme_revision, child_transform);
+
+        if is_view_cache_root {
+            let window = self.window;
+            let sf = scale_factor;
+            self.with_widget_mut(node, |widget, tree| {
+                let mut cx = crate::widget::PrepaintCx {
+                    app,
+                    tree,
+                    node,
+                    window,
+                    bounds,
+                    scale_factor: sf,
+                };
+                widget.prepaint(&mut cx);
+            });
+        }
 
         let can_reuse =
             is_view_cache_root && self.should_reuse_view_cache_node(node) && !invalidation.hit_test;
@@ -205,7 +227,7 @@ impl<H: UiHost> UiTree<H> {
             children_buf.set(children);
         }
         for &child in children_buf.as_slice() {
-            self.prepaint_interaction_node(child, scale_factor, theme_revision);
+            self.prepaint_interaction_node(app, child, scale_factor, theme_revision);
         }
 
         let end = self.interaction_cache.records.len();

@@ -423,6 +423,54 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     }
 }
 
+/// Prepaint context invoked after layout, before paint.
+///
+/// This is intentionally narrow: it exists to support GPUI-aligned "ephemeral prepaint items"
+/// workflows (ADR 0182 / ADR 0190) without forcing a full rerender/relayout of a cache root.
+///
+/// Notes:
+/// - Prepaint runs after layout bounds are known.
+/// - Prepaint may request redraw/animation frames, but should avoid structural tree mutations.
+pub struct PrepaintCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub tree: &'a mut crate::tree::UiTree<H>,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub bounds: Rect,
+    pub scale_factor: f32,
+}
+
+impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    /// Request a window redraw (one-shot).
+    ///
+    /// Use this for one-shot updates after prepaint-driven state changes.
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
+
+    /// Request the next animation frame for this window.
+    ///
+    /// Prefer this over `request_redraw()` when you need frame-driven progression (animations,
+    /// progressive rendering). This also sets `Invalidation::Paint` for the current node so paint
+    /// caching cannot skip widget `paint()` on the next frame.
+    pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate_with_source_and_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationSource::Notify,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+}
+
 pub struct PaintCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub tree: &'a mut crate::tree::UiTree<H>,
@@ -806,6 +854,10 @@ pub trait Widget<H: UiHost> {
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::default()
     }
+    /// Prepaint hook invoked after layout, before paint.
+    ///
+    /// Default is no-op so existing widgets keep their current behavior.
+    fn prepaint(&mut self, _cx: &mut PrepaintCx<'_, H>) {}
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.paint_children();
     }
