@@ -68,6 +68,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         window: AppWindowId,
         element: crate::GlobalElementId,
         requested_focus: &'a mut Option<NodeId>,
+        notify_requested: &'a mut bool,
     }
 
     impl<H: UiHost> action::UiActionHost for RovingHookHost<'_, H> {
@@ -103,6 +104,10 @@ pub(super) fn handle_roving_flex<H: UiHost>(
 
         fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
+        }
+
+        fn notify(&mut self, _cx: action::ActionCx) {
+            *self.notify_requested = true;
         }
     }
 
@@ -144,6 +149,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             window,
             element: this.element,
             requested_focus: &mut cx.requested_focus,
+            notify_requested: &mut cx.notify_requested,
         };
         let handled = h(
             &mut host,
@@ -214,6 +220,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             window,
             element: this.element,
             requested_focus: &mut cx.requested_focus,
+            notify_requested: &mut cx.notify_requested,
         };
         let result = h(
             &mut host,
@@ -261,6 +268,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 window,
                 element: this.element,
                 requested_focus: &mut cx.requested_focus,
+                notify_requested: &mut cx.notify_requested,
             };
             target = h(
                 &mut host,
@@ -314,6 +322,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             window,
             element: this.element,
             requested_focus: &mut cx.requested_focus,
+            notify_requested: &mut cx.notify_requested,
         };
         h(
             &mut host,

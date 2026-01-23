@@ -148,6 +148,15 @@ pub trait UiActionHost {
     fn request_redraw(&mut self, window: AppWindowId);
     fn next_timer_token(&mut self) -> TimerToken;
 
+    /// Mark the nearest view-cache root for `cx.target` as dirty (GPUI-style `notify`).
+    ///
+    /// Notes:
+    /// - This is intentionally optional: hosts that are not running inside a UI tree event
+    ///   dispatch can leave this as a no-op.
+    /// - When view caching is enabled, this forces a rerender (skips reuse) for the nearest cache
+    ///   root so declarative UI that depends on non-model state can still update deterministically.
+    fn notify(&mut self, _cx: ActionCx) {}
+
     fn dispatch_command(&mut self, window: Option<AppWindowId>, command: CommandId) {
         self.push_effect(Effect::Command { window, command });
     }

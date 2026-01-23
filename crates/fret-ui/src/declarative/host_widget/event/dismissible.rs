@@ -23,6 +23,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
+        notify_requested: &'a mut bool,
     }
 
     impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
@@ -59,6 +60,10 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
         fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
         }
+
+        fn notify(&mut self, _cx: action::ActionCx) {
+            *self.notify_requested = true;
+        }
     }
 
     match event {
@@ -80,6 +85,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                     app: &mut *cx.app,
                     window,
                     element: this.element,
+                    notify_requested: &mut cx.notify_requested,
                 };
                 h(
                     &mut host,
@@ -111,6 +117,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                     app: &mut *cx.app,
                     window,
                     element: this.element,
+                    notify_requested: &mut cx.notify_requested,
                 };
                 h(
                     &mut host,
@@ -158,6 +165,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 app: &mut *cx.app,
                 window,
                 element: this.element,
+                notify_requested: &mut cx.notify_requested,
             };
             let handled = h(
                 &mut host,

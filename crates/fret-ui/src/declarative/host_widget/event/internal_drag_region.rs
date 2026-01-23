@@ -30,6 +30,7 @@ pub(super) fn handle_internal_drag_region<H: UiHost>(
 
     struct InternalDragHookHost<'a, H: UiHost> {
         app: &'a mut H,
+        notify_requested: &'a mut bool,
     }
 
     impl<H: UiHost> action::UiActionHost for InternalDragHookHost<'_, H> {
@@ -47,6 +48,10 @@ pub(super) fn handle_internal_drag_region<H: UiHost>(
 
         fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
+        }
+
+        fn notify(&mut self, _cx: action::ActionCx) {
+            *self.notify_requested = true;
         }
     }
 
@@ -109,7 +114,10 @@ pub(super) fn handle_internal_drag_region<H: UiHost>(
         modifiers: e.modifiers,
     };
 
-    let mut host = InternalDragHookHost { app: &mut *cx.app };
+    let mut host = InternalDragHookHost {
+        app: &mut *cx.app,
+        notify_requested: &mut cx.notify_requested,
+    };
     let handled = h(
         &mut host,
         action::ActionCx {
