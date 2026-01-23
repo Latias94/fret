@@ -283,6 +283,122 @@ fn virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window() {
 }
 
 #[test]
+fn virtual_list_window_jump_rerender_uses_latest_handle_offset() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeUiServices;
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let mut scene = Scene::default();
+    let render_frame = |ui: &mut UiTree<crate::test_host::TestHost>,
+                        app: &mut crate::test_host::TestHost,
+                        services: &mut FakeUiServices|
+     -> NodeId {
+        declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "virtual-list-jump",
+            |cx| {
+                let mut layout = crate::element::LayoutStyle::default();
+                layout.size.width = crate::element::Length::Fill;
+                layout.size.height = crate::element::Length::Fill;
+                layout.overflow = crate::element::Overflow::Clip;
+
+                vec![cx.virtual_list_keyed_with_layout(
+                    layout,
+                    10_000,
+                    crate::element::VirtualListOptions::fixed(Px(28.0), 10),
+                    &scroll_handle,
+                    |i| i as crate::ItemKey,
+                    |cx, _i| cx.text("row"),
+                )]
+            },
+        )
+    };
+
+    // Frame 0: establish viewport and initial window.
+    let root = render_frame(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    // Frame 1: rerender once to ensure `render_window_range` is populated.
+    app.advance_frame();
+    let root = render_frame(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    let list_node = ui.children(root)[0];
+    let list_element = ui.nodes[list_node]
+        .element
+        .expect("expected virtual list node to have an element id");
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let state = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element,
+        crate::element::VirtualListState::default,
+        |s| s.clone(),
+    );
+    assert!(
+        state.render_window_range.is_some(),
+        "expected render_window_range to be populated after frame-1 rerender"
+    );
+    assert!(
+        state.has_final_viewport && state.viewport_h.0 > 0.0,
+        "expected a final viewport before validating window jumps"
+    );
+
+    // Frame 2: jump far enough to leave the previous overscan window so the runtime upgrades to
+    // Layout and rerenders. The rerender should compute the visible window against the latest
+    // handle offset (not the stale state offset from last layout).
+    scroll_handle.set_offset(Point::new(Px(0.0), Px(28.0 * 25.0)));
+    app.advance_frame();
+    let root = render_frame(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+
+    let jumped_state = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element,
+        crate::element::VirtualListState::default,
+        |s| s.clone(),
+    );
+
+    let viewport = jumped_state.viewport_h;
+    let offset = jumped_state
+        .metrics
+        .clamp_offset(scroll_handle.offset().y, viewport);
+    let expected = jumped_state.metrics.visible_range(offset, viewport, 10);
+    assert_eq!(
+        jumped_state.render_window_range, expected,
+        "expected render_window_range to match the latest handle offset on a window jump rerender"
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let last = ui
+        .debug_virtual_list_windows()
+        .last()
+        .expect("expected a virtual list window debug record");
+    assert!(
+        !last.window_mismatch,
+        "expected a window jump rerender to avoid a follow-up window_mismatch frame"
+    );
+}
+
+#[test]
 fn scroll_offset_changes_do_not_replay_paint_cache() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();

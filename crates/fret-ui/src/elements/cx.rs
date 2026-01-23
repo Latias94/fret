@@ -2282,6 +2282,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     r.count == len && r.overscan == options.overscan && r.start_index <= r.end_index
                 });
 
+                // When a scroll handle offset changes out-of-band (wheel, inertial scroll, or a
+                // component-driven `set_offset`), the handle's current offset may lead the
+                // element-local `state.offset_*` which is only updated during layout.
+                //
+                // If we are rerendering this frame, compute the visible range against the latest
+                // scroll handle offset so "window jump" frames can rebuild the correct visible
+                // items without requiring a follow-up rerender.
+                let mut preview_offset = offset;
+                if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
+                    let handle_offset = scroll_handle.offset();
+                    let handle_axis = match axis {
+                        fret_core::Axis::Vertical => handle_offset.y,
+                        fret_core::Axis::Horizontal => handle_offset.x,
+                    };
+                    let handle_axis = state.metrics.clamp_offset(handle_axis, viewport);
+                    if (handle_axis.0 - offset.0).abs() > 0.01 {
+                        preview_offset = handle_axis;
+                    }
+                }
+
                 // Preview deferred scroll-to-item requests during render so we compute the correct
                 // visible range without consuming the request. The final layout pass will apply
                 // the scroll offset and clear the request.
@@ -2294,13 +2314,41 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                         .metrics
                         .scroll_offset_for_item(index, viewport, offset, strategy);
                     let desired = state.metrics.clamp_offset(desired, viewport);
+                    preview_offset = desired;
                     state.deferred_scroll_offset_hint = Some(desired);
                     range = state
                         .metrics
                         .visible_range(desired, viewport, options.overscan);
                 }
 
-                if range.is_none() {
+                if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
+                    let window_range = range.filter(|r| {
+                        r.count == len
+                            && r.overscan == options.overscan
+                            && r.start_index <= r.end_index
+                            && r.end_index < r.count
+                    });
+                    let visible = state.metrics.visible_range(preview_offset, viewport, 0);
+                    if let (Some(window_range), Some(visible)) = (window_range, visible) {
+                        let window_start = window_range
+                            .start_index
+                            .saturating_sub(window_range.overscan);
+                        let window_end = (window_range.end_index + window_range.overscan)
+                            .min(window_range.count.saturating_sub(1));
+                        if window_start > visible.start_index || window_end < visible.end_index {
+                            range = state.metrics.visible_range(
+                                preview_offset,
+                                viewport,
+                                options.overscan,
+                            );
+                        }
+                    } else if range.is_none() {
+                        range =
+                            state
+                                .metrics
+                                .visible_range(preview_offset, viewport, options.overscan);
+                    }
+                } else if range.is_none() {
                     range = state
                         .metrics
                         .visible_range(offset, viewport, options.overscan);

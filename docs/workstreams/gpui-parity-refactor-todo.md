@@ -331,10 +331,15 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Bundles can export VirtualList window telemetry via `UiTreeDebugSnapshotV1.virtual_list_windows` (debug-only, bounded) for postmortem analysis.
     - Bundles expose `debug.dirty_views[*].detail` to distinguish `scroll_handle_hit_test_only` vs `scroll_handle_layout`, making “why did this cache
       root rerender?” explainable for VirtualList scroll/scroll_to_item flows.
-- [ ] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
+- [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
+  - Progress (v1):
+    - VirtualList rerender frames now compute `render_window_range` against the latest scroll-handle offset (including out-of-band `set_offset`),
+      reducing “window jump -> layout updates -> next frame rerender” one-frame lag.
+      - Evidence: `crates/fret-ui/src/elements/cx.rs` (preview offset windowing),
+        `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_window_jump_rerender_uses_latest_handle_offset`).
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
 - [ ] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
