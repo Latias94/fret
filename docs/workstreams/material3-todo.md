@@ -105,7 +105,10 @@ Material 3 Expressive) in Fret.
 - [x] Checkbox (MVP: bool-only, state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/checkbox.rs` (`Checkbox`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_checkbox_*`).
-- [ ] Radio / Switch
+- [x] Switch (MVP: bool-only, thumb state layer + bounded ripple)
+  - Evidence: `ecosystem/fret-ui-material3/src/switch.rs` (`Switch`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_*`).
+- [ ] Radio
 - [ ] Text field
 - [ ] Tabs
 - [ ] List / Menu
