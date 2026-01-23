@@ -101,6 +101,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_button_scalars(cfg);
     inject_comp_icon_button_scalars(cfg);
     inject_comp_checkbox_scalars(cfg);
+    inject_comp_switch_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -239,6 +240,7 @@ pub fn theme_config_with_colors(
     inject_comp_button_colors_from_sys(&mut cfg);
     inject_comp_icon_button_colors_from_sys(&mut cfg);
     inject_comp_checkbox_colors_from_sys(&mut cfg);
+    inject_comp_switch_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -946,6 +948,233 @@ fn inject_comp_checkbox_colors_from_sys(cfg: &mut ThemeConfig) {
     );
 }
 
+fn inject_comp_switch_scalars(cfg: &mut ThemeConfig) {
+    // Sources:
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-switch.scss
+
+    cfg.metrics
+        .insert("md.comp.switch.state-layer.size".to_string(), 40.0);
+    cfg.metrics
+        .insert("md.comp.switch.track.width".to_string(), 52.0);
+    cfg.metrics
+        .insert("md.comp.switch.track.height".to_string(), 32.0);
+    cfg.metrics
+        .insert("md.comp.switch.track.outline.width".to_string(), 2.0);
+
+    cfg.metrics
+        .insert("md.comp.switch.selected.handle.size".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.switch.unselected.handle.size".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.switch.pressed.handle.size".to_string(), 28.0);
+
+    cfg.metrics
+        .insert("md.comp.switch.focus.indicator.offset".to_string(), 2.0);
+    cfg.metrics
+        .insert("md.comp.switch.focus.indicator.thickness".to_string(), 3.0);
+
+    cfg.numbers
+        .insert("md.comp.switch.disabled.track.opacity".to_string(), 0.12);
+    cfg.numbers.insert(
+        "md.comp.switch.disabled.selected.handle.opacity".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.switch.disabled.unselected.handle.opacity".to_string(),
+        0.38,
+    );
+
+    // State layer opacities are derived from sys state by default.
+    for group in ["selected", "unselected"] {
+        cfg.numbers.insert(
+            format!("md.comp.switch.{group}.hover.state-layer.opacity"),
+            0.08,
+        );
+        cfg.numbers.insert(
+            format!("md.comp.switch.{group}.focus.state-layer.opacity"),
+            0.1,
+        );
+        cfg.numbers.insert(
+            format!("md.comp.switch.{group}.pressed.state-layer.opacity"),
+            0.1,
+        );
+    }
+}
+
+fn inject_comp_switch_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Selected (on)
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.track.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.hover.track.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.pressed.track.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.focus.track.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.handle.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.hover.handle.color",
+        "md.sys.color.primary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.pressed.handle.color",
+        "md.sys.color.primary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.focus.handle.color",
+        "md.sys.color.primary-container",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.hover.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.focus.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.selected.pressed.state-layer.color",
+        "md.sys.color.primary",
+    );
+
+    // Unselected (off)
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.track.color",
+        "md.sys.color.surface-container-highest",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.hover.track.color",
+        "md.sys.color.surface-container-highest",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.pressed.track.color",
+        "md.sys.color.surface-container-highest",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.focus.track.color",
+        "md.sys.color.surface-container-highest",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.track.outline.color",
+        "md.sys.color.outline",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.hover.track.outline.color",
+        "md.sys.color.outline",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.pressed.track.outline.color",
+        "md.sys.color.outline",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.focus.track.outline.color",
+        "md.sys.color.outline",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.handle.color",
+        "md.sys.color.outline",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.hover.handle.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.pressed.handle.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.focus.handle.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.unselected.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+
+    // Disabled colors
+    copy_color(
+        cfg,
+        "md.comp.switch.disabled.selected.track.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.disabled.selected.handle.color",
+        "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.disabled.unselected.track.color",
+        "md.sys.color.surface-container-highest",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.disabled.unselected.track.outline.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.switch.disabled.unselected.handle.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.switch.focus.indicator.color",
+        "md.sys.color.secondary",
+    );
+}
+
 fn inject_sys_motion(cfg: &mut ThemeConfig) {
     // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss
     cfg.durations_ms
@@ -1334,6 +1563,14 @@ mod tests {
             Some(18.0)
         );
         assert_eq!(
+            cfg.metrics.get("md.comp.switch.track.width").copied(),
+            Some(52.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("md.comp.switch.track.height").copied(),
+            Some(32.0)
+        );
+        assert_eq!(
             cfg.numbers
                 .get("md.comp.button.filled.disabled.label-text.opacity")
                 .copied(),
@@ -1391,6 +1628,11 @@ mod tests {
             cfg.colors
                 .contains_key("md.comp.checkbox.selected.container.color"),
             "expected checkbox color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.switch.selected.track.color"),
+            "expected switch color tokens to be derived from sys roles"
         );
     }
 

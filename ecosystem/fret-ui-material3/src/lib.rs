@@ -10,9 +10,11 @@ pub mod checkbox;
 pub mod icon_button;
 pub mod interaction;
 pub mod motion;
+pub mod switch;
 pub mod theme;
 pub mod tokens;
 
 pub use button::{Button, ButtonVariant};
 pub use checkbox::Checkbox;
 pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
+pub use switch::Switch;
