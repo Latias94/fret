@@ -114,7 +114,7 @@ Material 3 Expressive) in Fret.
 - [x] Radio group (MVP: `RadioGroup` semantics + roving focus + APG arrow/Home/End navigation + prefix typeahead)
   - Evidence: `ecosystem/fret-ui-material3/src/radio.rs` (`RadioGroup`, `RadioGroupItem`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_radio`).
-- [x] Text field (MVP: outlined chrome + label/placeholder outcomes + hover/focus/error/disabled styling)
+- [x] Text field (MVP: outlined chrome + label motion/notch patch + hover/focus/error/disabled styling)
   - Evidence: `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_outlined_text_field_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_text_field`).
