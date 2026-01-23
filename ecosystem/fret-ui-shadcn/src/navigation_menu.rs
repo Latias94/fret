@@ -34,6 +34,7 @@ fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
         platform: Platform::current(),
         caps,
         ui_has_modal: false,
+        window_arbitration: None,
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,
@@ -1989,7 +1990,7 @@ mod tests {
 
         app.set_global(WindowCommandEnabledService::default());
         app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-            svc.set_enabled_for_command(window, cmd.clone(), false);
+            svc.set_enabled(window, cmd.clone(), false);
         });
 
         let bounds = Rect::new(

@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use fret_core::{AppWindowId, NodeId};
+use fret_core::NodeId;
 
 /// Window-level pointer occlusion mode published by the UI runtime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -29,24 +27,4 @@ pub struct WindowInputArbitrationSnapshot {
     pub pointer_capture_root: Option<NodeId>,
     /// `true` when capture spans multiple roots or cannot be mapped to a single root.
     pub pointer_capture_multiple_roots: bool,
-}
-
-/// Window-scoped input arbitration snapshots published by the UI runtime.
-#[derive(Debug, Default)]
-pub struct WindowInputArbitrationService {
-    by_window: HashMap<AppWindowId, WindowInputArbitrationSnapshot>,
-}
-
-impl WindowInputArbitrationService {
-    pub fn snapshot(&self, window: AppWindowId) -> Option<&WindowInputArbitrationSnapshot> {
-        self.by_window.get(&window)
-    }
-
-    pub fn set_snapshot(&mut self, window: AppWindowId, snapshot: WindowInputArbitrationSnapshot) {
-        self.by_window.insert(window, snapshot);
-    }
-
-    pub fn remove_window(&mut self, window: AppWindowId) {
-        self.by_window.remove(&window);
-    }
 }

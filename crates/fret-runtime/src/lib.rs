@@ -75,8 +75,6 @@ pub use window_command_gating::{
     WindowCommandGatingService, WindowCommandGatingSnapshot, snapshot_for_window,
     snapshot_for_window_with_input_ctx_fallback,
 };
-pub use window_input_arbitration::{
-    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
-};
+pub use window_input_arbitration::{WindowInputArbitrationSnapshot, WindowPointerOcclusion};
 pub use window_input_context::WindowInputContextService;
 pub use window_metrics::apply_window_metrics_event;

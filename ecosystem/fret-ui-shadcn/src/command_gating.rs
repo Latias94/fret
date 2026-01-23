@@ -14,6 +14,7 @@ pub(crate) fn default_input_context<H: UiHost>(app: &H) -> InputContext {
         platform: Platform::current(),
         caps,
         ui_has_modal: false,
+        window_arbitration: None,
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,

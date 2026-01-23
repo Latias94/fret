@@ -424,6 +424,7 @@ pub fn render<H: UiHost>(
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
+        let mut pending_initial_focus = false;
         app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut created = false;
             let entry = overlays.popovers.entry(key).or_insert_with(|| {
@@ -433,6 +434,7 @@ pub fn render<H: UiHost>(
                     root_name: root_name.clone(),
                     trigger,
                     initial_focus,
+                    pending_initial_focus: false,
                     consume_outside_pointer_events,
                     disable_outside_pointer_events,
                     open: false,
@@ -453,11 +455,17 @@ pub fn render<H: UiHost>(
             if open_now
                 && (disable_outside_pointer_events || consume_outside_pointer_events)
                 && arbitration.pointer_capture_active
-                && (arbitration.pointer_capture_multiple_layers
-                    || arbitration.pointer_capture_layer != Some(entry.layer))
             {
-                let _ = app.models_mut().update(&open, |v| *v = false);
-                open_now = false;
+                let trigger_layer = fret_ui::elements::node_for_element(app, window, trigger)
+                    .and_then(|node| ui.node_layer(node));
+                let capture_is_foreign = arbitration.pointer_capture_multiple_layers
+                    || arbitration.pointer_capture_layer.is_none()
+                    || (arbitration.pointer_capture_layer != Some(entry.layer)
+                        && arbitration.pointer_capture_layer != trigger_layer);
+                if capture_is_foreign {
+                    let _ = app.models_mut().update(&open, |v| *v = false);
+                    open_now = false;
+                }
             }
 
             if open_now
@@ -552,16 +560,40 @@ pub fn render<H: UiHost>(
                 should_focus_initial = true;
                 entry.restore_focus = restore_focus
                     .or_else(|| fret_ui::elements::node_for_element(app, window, trigger));
+                entry.pending_initial_focus = true;
             }
             entry.open = open_now;
             entry.last_focus = focus_now;
+            pending_initial_focus = entry.pending_initial_focus;
         });
 
-        if should_focus_initial {
+        if should_focus_initial || pending_initial_focus {
+            if should_focus_initial && open_now && consume_outside_pointer_events {
+                ui.set_focus(Some(root));
+            }
             let focus = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
                 overlays.popovers.get(&key).and_then(|p| p.initial_focus)
             });
-            focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
+            let focus_before = ui.focus();
+            let applied =
+                focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
+            if applied {
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    if let Some(entry) = overlays.popovers.get_mut(&key) {
+                        entry.pending_initial_focus = false;
+                    }
+                });
+            }
+
+            if open_now
+                && consume_outside_pointer_events
+                && (ui.focus() == focus_before || !applied)
+            {
+                // Menu-like overlays should move focus inside the overlay on pointer-open to
+                // match Radix `onEntryFocus` outcomes (focus stays within the menu, but the
+                // first item is not automatically focused).
+                ui.set_focus(Some(root));
+            }
         }
     }
 

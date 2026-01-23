@@ -909,6 +909,7 @@ mod tests {
             platform,
             caps: Default::default(),
             ui_has_modal: false,
+            window_arbitration: None,
             focus_is_text_input: false,
             edit_can_undo: true,
             edit_can_redo: true,

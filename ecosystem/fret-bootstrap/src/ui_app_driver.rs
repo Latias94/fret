@@ -1727,7 +1727,7 @@ fn ui_app_render<S>(
         let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
     }
-    let layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
+    let mut layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));

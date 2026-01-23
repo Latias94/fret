@@ -3060,7 +3060,7 @@ impl DropdownMenu {
                     overlay_presence,
                     overlay_children,
                     overlay_root_name,
-                    content_focus_id.get(),
+                    Some(content_id_for_trigger),
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,

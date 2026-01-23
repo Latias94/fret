@@ -27,6 +27,7 @@ pub(crate) fn command_shortcut_label<H: UiHost>(
         platform,
         caps: caps.clone(),
         ui_has_modal: false,
+        window_arbitration: None,
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,

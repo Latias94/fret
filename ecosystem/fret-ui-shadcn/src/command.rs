@@ -58,6 +58,7 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         caps,
         // Best-effort: the command palette itself is typically presented in a modal dialog.
         ui_has_modal: true,
+        window_arbitration: None,
         // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
         focus_is_text_input: false,
         edit_can_undo: true,
