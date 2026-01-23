@@ -68,13 +68,14 @@ pub(crate) fn render_copy_button<H: UiHost>(
             id,
             Arc::new({
                 let feedback = feedback.clone();
-                move |_host, _cx, token| {
+                move |host, action_cx, token| {
                     let mut feedback = feedback.lock();
                     if feedback.token != Some(token) {
                         return false;
                     }
                     feedback.token = None;
                     feedback.copied = false;
+                    host.notify(action_cx);
                     true
                 }
             }),
@@ -106,6 +107,7 @@ pub(crate) fn render_copy_button<H: UiHost>(
                     after: Duration::from_secs(2),
                     repeat: None,
                 });
+                host.notify(action_cx);
                 host.request_redraw(action_cx.window);
             })
         });
