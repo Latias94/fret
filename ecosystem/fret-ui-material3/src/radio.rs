@@ -20,6 +20,252 @@ use fret_ui::{Invalidation, Theme, UiHost};
 use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
 use crate::interaction::state_layer::StateLayerAnimator;
 
+/// Matches Material (and WAI-ARIA APG) `RadioGroup` orientation outcomes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RadioGroupOrientation {
+    #[default]
+    Vertical,
+    Horizontal,
+}
+
+#[derive(Debug, Clone)]
+pub struct RadioGroupItem {
+    value: Arc<str>,
+    disabled: bool,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl RadioGroupItem {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            disabled: false,
+            a11y_label: None,
+            test_id: None,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RadioGroup {
+    model: Model<Option<Arc<str>>>,
+    items: Arc<[RadioGroupItem]>,
+    disabled: bool,
+    orientation: RadioGroupOrientation,
+    gap: Px,
+    loop_navigation: bool,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl RadioGroup {
+    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+        Self {
+            model,
+            items: Arc::from([]),
+            disabled: false,
+            orientation: RadioGroupOrientation::default(),
+            gap: Px(0.0),
+            loop_navigation: true,
+            a11y_label: None,
+            test_id: None,
+        }
+    }
+
+    pub fn items(mut self, items: impl Into<Arc<[RadioGroupItem]>>) -> Self {
+        self.items = items.into();
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn orientation(mut self, orientation: RadioGroupOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn gap(mut self, gap: Px) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    /// When `true` (default), roving navigation loops at the ends (Radix `loop` behavior).
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.scope(|cx| {
+            let model = self.model.clone();
+            let items = self.items.clone();
+            let disabled_group = self.disabled;
+            let label = self.a11y_label.clone();
+            let test_id = self.test_id.clone();
+
+            let values: Arc<[Arc<str>]> =
+                Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
+            let disabled: Arc<[bool]> = Arc::from(
+                items
+                    .iter()
+                    .map(|it| disabled_group || it.disabled)
+                    .collect::<Vec<_>>(),
+            );
+
+            let selected = cx.get_model_cloned(&model, Invalidation::Layout).flatten();
+            let tab_stop = selected.as_ref().and_then(|selected| {
+                items.iter().position(|it| {
+                    !disabled_group && !it.disabled && it.value.as_ref() == selected.as_ref()
+                })
+            });
+            let tab_stop =
+                tab_stop.or_else(|| items.iter().position(|it| !disabled_group && !it.disabled));
+
+            let set_size = values.len();
+            let sem = fret_ui::element::SemanticsProps {
+                role: SemanticsRole::RadioGroup,
+                label,
+                test_id,
+                disabled: disabled_group,
+                ..Default::default()
+            };
+
+            let mut props = fret_ui::element::RovingFlexProps::default();
+            props.flex.direction = match self.orientation {
+                RadioGroupOrientation::Vertical => fret_core::Axis::Vertical,
+                RadioGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
+            };
+            props.flex.gap = self.gap;
+            props.flex.align = fret_ui::element::CrossAlign::Center;
+            props.roving = fret_ui::element::RovingFocusProps {
+                enabled: !disabled_group,
+                wrap: self.loop_navigation,
+                disabled: disabled.clone(),
+            };
+
+            cx.semantics(sem, move |cx| {
+                vec![cx.roving_flex(props, move |cx| {
+                    let values_for_roving = values.clone();
+                    let model_for_roving = model.clone();
+                    cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                        use fret_ui::action::RovingNavigateResult;
+
+                        let is_disabled =
+                            |idx: usize| -> bool { it.disabled.get(idx).copied().unwrap_or(false) };
+
+                        let forward = match (it.axis, it.key) {
+                            (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
+                            (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
+                            (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
+                            (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+                            _ => None,
+                        };
+
+                        if it.key == KeyCode::Home {
+                            let target = (0..it.len).find(|&i| !is_disabled(i));
+                            return RovingNavigateResult::Handled { target };
+                        }
+                        if it.key == KeyCode::End {
+                            let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                            return RovingNavigateResult::Handled { target };
+                        }
+
+                        let Some(forward) = forward else {
+                            return RovingNavigateResult::NotHandled;
+                        };
+
+                        let current = it
+                            .current
+                            .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                        let Some(current) = current else {
+                            return RovingNavigateResult::Handled { target: None };
+                        };
+
+                        let len = it.len;
+                        let mut target: Option<usize> = None;
+                        if it.wrap {
+                            for step in 1..=len {
+                                let idx = if forward {
+                                    (current + step) % len
+                                } else {
+                                    (current + len - (step % len)) % len
+                                };
+                                if !is_disabled(idx) {
+                                    target = Some(idx);
+                                    break;
+                                }
+                            }
+                        } else if forward {
+                            target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                        } else if current > 0 {
+                            target = (0..current).rev().find(|&i| !is_disabled(i));
+                        }
+
+                        RovingNavigateResult::Handled { target }
+                    }));
+
+                    cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {
+                        let Some(value) = values_for_roving.get(idx).cloned() else {
+                            return;
+                        };
+                        let next = Some(value);
+                        let _ = host.update_model(&model_for_roving, |v| *v = next);
+                        host.request_redraw(action_cx.window);
+                    }));
+
+                    items
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, it)| {
+                            let mut radio = Radio::new_value(it.value.clone(), model.clone())
+                                .disabled(disabled_group || it.disabled);
+                            if let Some(label) = it.a11y_label.as_ref() {
+                                radio = radio.a11y_label(label.clone());
+                            }
+                            if let Some(test_id) = it.test_id.as_ref() {
+                                radio = radio.test_id(test_id.clone());
+                            }
+                            radio = radio
+                                .roving_tab_stop(tab_stop.is_some_and(|t| t == idx))
+                                .collection_position(idx, set_size);
+                            radio.into_element(cx)
+                        })
+                        .collect::<Vec<_>>()
+                })]
+            })
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 enum RadioSelectionModel {
     Bool(Model<bool>),
@@ -35,7 +281,16 @@ pub struct Radio {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    focus_policy: RadioFocusPolicy,
+    a11y_pos_in_set: Option<u32>,
+    a11y_set_size: Option<u32>,
     on_activate: Option<OnActivate>,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum RadioFocusPolicy {
+    Default,
+    Roving { tab_stop: bool },
 }
 
 impl std::fmt::Debug for Radio {
@@ -59,6 +314,9 @@ impl Radio {
             disabled: false,
             a11y_label: None,
             test_id: None,
+            focus_policy: RadioFocusPolicy::Default,
+            a11y_pos_in_set: None,
+            a11y_set_size: None,
             on_activate: None,
         }
     }
@@ -73,6 +331,9 @@ impl Radio {
             disabled: false,
             a11y_label: None,
             test_id: None,
+            focus_policy: RadioFocusPolicy::Default,
+            a11y_pos_in_set: None,
+            a11y_set_size: None,
             on_activate: None,
         }
     }
@@ -89,6 +350,39 @@ impl Radio {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    /// Enable roving-focus-friendly tab stop behavior.
+    ///
+    /// When enabled, only the current tab stop (or the currently focused item) is included in the
+    /// default focus traversal order.
+    pub fn roving_tab_stop(mut self, tab_stop: bool) -> Self {
+        self.focus_policy = RadioFocusPolicy::Roving { tab_stop };
+        self
+    }
+
+    /// Populate collection metadata for accessibility (`pos_in_set`, `set_size`).
+    ///
+    /// `index` is 0-based; it is mapped to a 1-based `pos_in_set` value.
+    pub fn collection_position(mut self, index: usize, set_size: usize) -> Self {
+        if set_size == 0 || index >= set_size {
+            self.a11y_pos_in_set = None;
+            self.a11y_set_size = None;
+            return self;
+        }
+
+        let pos_in_set = index.saturating_add(1);
+        self.a11y_pos_in_set = u32::try_from(pos_in_set).ok();
+        self.a11y_set_size = u32::try_from(set_size).ok();
+
+        if let (Some(pos), Some(size)) = (self.a11y_pos_in_set, self.a11y_set_size)
+            && pos > size
+        {
+            self.a11y_pos_in_set = None;
+            self.a11y_set_size = None;
+        }
+
         self
     }
 
@@ -145,14 +439,20 @@ impl Radio {
                 };
 
                 let corner_radii = Corners::all(Px(9999.0));
+                let focusable = match self.focus_policy {
+                    RadioFocusPolicy::Default => enabled,
+                    RadioFocusPolicy::Roving { tab_stop } => enabled && (tab_stop || st.focused),
+                };
                 let pressable_props = PressableProps {
                     enabled,
-                    focusable: enabled,
+                    focusable,
                     a11y: PressableA11y {
                         role: Some(SemanticsRole::RadioButton),
                         label: self.a11y_label.clone(),
                         test_id: self.test_id.clone(),
                         checked: Some(checked),
+                        pos_in_set: self.a11y_pos_in_set,
+                        set_size: self.a11y_set_size,
                         ..Default::default()
                     },
                     layout: {
