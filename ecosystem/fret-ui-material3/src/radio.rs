@@ -20,7 +20,10 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 
-use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
+use crate::foundation::focus_ring::material_focus_ring;
+use crate::foundation::indication::{
+    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+};
 use crate::interaction::state_layer::StateLayerAnimator;
 
 /// Matches Material (and WAI-ARIA APG) `RadioGroup` orientation outcomes.
@@ -742,11 +745,7 @@ impl Radio {
                             .unwrap_or(easing);
 
                         #[derive(Default)]
-                        struct RadioRuntime {
-                            prev_pressed: bool,
-                            state_target: f32,
-                            state_layer: StateLayerAnimator,
-                            ripple: RippleAnimator,
+                        struct RadioDotRuntime {
                             dot_target: f32,
                             dot: StateLayerAnimator,
                         }
@@ -759,19 +758,8 @@ impl Radio {
                                 st.last_down
                             });
 
-                        let (state_layer_opacity, ripple_frame, dot_scale, want_frames) = cx
-                            .with_state_for(pressable_id, RadioRuntime::default, |rt| {
-                                if (state_layer_target - rt.state_target).abs() > 1e-6 {
-                                    rt.state_target = state_layer_target;
-                                    rt.state_layer.set_target(
-                                        now_frame,
-                                        state_layer_target,
-                                        state_duration_ms,
-                                        easing,
-                                    );
-                                }
-                                rt.state_layer.advance(now_frame);
-
+                        let (dot_scale, dot_active) =
+                            cx.with_state_for(pressable_id, RadioDotRuntime::default, |rt| {
                                 let desired_dot = if checked { 1.0 } else { 0.0 };
                                 if (desired_dot - rt.dot_target).abs() > 1e-6 {
                                     rt.dot_target = desired_dot;
@@ -783,46 +771,35 @@ impl Radio {
                                     );
                                 }
                                 rt.dot.advance(now_frame);
-
-                                let pressed_rising = is_pressed && !rt.prev_pressed;
-                                rt.prev_pressed = is_pressed;
-                                if pressed_rising {
-                                    let origin = down_origin_local(bounds, last_down);
-                                    let max_radius = ripple_max_radius(bounds, origin);
-                                    rt.ripple.start(
-                                        now_frame,
-                                        origin,
-                                        max_radius,
-                                        ripple_expand_ms,
-                                        ripple_fade_ms,
-                                        easing,
-                                    );
-                                }
-
-                                let ripple_base_opacity =
-                                    radio_ripple_base_opacity(&theme, checked);
-                                let ripple_frame =
-                                    rt.ripple.advance(now_frame, ripple_base_opacity);
-
-                                let want_frames = rt.state_layer.is_active()
-                                    || rt.ripple.is_active()
-                                    || rt.dot.is_active();
-
-                                (
-                                    rt.state_layer.value(),
-                                    ripple_frame,
-                                    rt.dot.value(),
-                                    want_frames,
-                                )
+                                (rt.dot.value(), rt.dot.is_active())
                             });
+
+                        let ripple_base_opacity = radio_ripple_base_opacity(&theme, checked);
+                        let config = IndicationConfig {
+                            state_duration_ms,
+                            ripple_expand_ms,
+                            ripple_fade_ms,
+                            easing,
+                        };
+                        let indication = advance_indication_for_pressable(
+                            cx,
+                            pressable_id,
+                            now_frame,
+                            bounds,
+                            last_down,
+                            is_pressed,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                        );
 
                         let overlay = material_ink_layer(
                             cx,
                             Corners::all(Px(9999.0)),
                             state_layer_color,
-                            state_layer_opacity,
-                            ripple_frame,
-                            want_frames,
+                            indication.state_layer_opacity,
+                            indication.ripple_frame,
+                            indication.want_frames || dot_active,
                         );
 
                         let icon_color = radio_icon_color(&theme, checked, enabled, interaction);
@@ -935,7 +912,7 @@ fn radio_state_layer_color(theme: &Theme, checked: bool, interaction: Interactio
     theme.color_by_key(&key).unwrap_or_else(|| {
         theme
             .color_by_key("md.sys.color.primary")
-            .unwrap_or_else(|| theme.color_required("color.accent"))
+            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
     })
 }
 
@@ -961,7 +938,7 @@ fn radio_icon_color(
         let base = theme
             .color_by_key(color_key)
             .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("foreground"));
+            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
         let opacity = theme.number_by_key(opacity_key).unwrap_or(0.38);
         return alpha_mul(base, opacity);
     }
@@ -977,7 +954,7 @@ fn radio_icon_color(
     theme.color_by_key(&key).unwrap_or_else(|| {
         theme
             .color_by_key("md.sys.color.primary")
-            .unwrap_or_else(|| theme.color_required("color.accent"))
+            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
     })
 }
 
@@ -1051,102 +1028,6 @@ fn radio_icon<H: UiHost>(
     })
 }
 
-fn material_ink_layer<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    corner_radii: Corners,
-    color: Color,
-    state_layer_opacity: f32,
-    ripple_frame: Option<RipplePaintFrame>,
-    want_frames: bool,
-) -> AnyElement {
-    let mut props = CanvasProps::default();
-    props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
-
-    cx.canvas(props, move |p| {
-        let bounds = p.bounds();
-
-        if state_layer_opacity > 0.0 {
-            fret_ui::paint::paint_state_layer(
-                p.scene(),
-                DrawOrder(0),
-                bounds,
-                color,
-                state_layer_opacity,
-                corner_radii,
-            );
-        }
-
-        if let Some(r) = ripple_frame {
-            fret_ui::paint::paint_ripple(
-                p.scene(),
-                DrawOrder(1),
-                bounds,
-                r.origin,
-                r.radius,
-                color,
-                r.opacity,
-                Some(corner_radii),
-            );
-        }
-
-        if want_frames {
-            p.request_animation_frame();
-        }
-    })
-}
-
-fn material_focus_ring(theme: &Theme, corner_radii: Corners) -> fret_ui::element::RingStyle {
-    let mut c = theme
-        .color_by_key("md.sys.color.primary")
-        .or_else(|| theme.color_by_key("color.accent"))
-        .unwrap_or_else(|| theme.color_required("color.accent"));
-    c.a = 1.0;
-
-    fret_ui::element::RingStyle {
-        placement: fret_ui::element::RingPlacement::Outset,
-        width: Px(2.0),
-        offset: Px(2.0),
-        color: c,
-        offset_color: None,
-        corner_radii,
-    }
-}
-
 fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
     Arc::new(|_host, _cx, down| matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter))
-}
-
-fn down_origin_local(
-    bounds: Rect,
-    down: Option<fret_ui::action::PointerDownCx>,
-) -> fret_core::Point {
-    let pos = down.map(|d| d.position).unwrap_or_else(|| {
-        fret_core::Point::new(
-            Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
-            Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
-        )
-    });
-    fret_core::Point::new(
-        Px(pos.x.0 - bounds.origin.x.0),
-        Px(pos.y.0 - bounds.origin.y.0),
-    )
-}
-
-fn ripple_max_radius(bounds: Rect, origin_local: fret_core::Point) -> Px {
-    let w = bounds.size.width.0.max(0.0);
-    let h = bounds.size.height.0.max(0.0);
-    let ox = origin_local.x.0.clamp(0.0, w);
-    let oy = origin_local.y.0.clamp(0.0, h);
-    let corners = [(0.0, 0.0), (w, 0.0), (0.0, h), (w, h)];
-    let mut max: f32 = 0.0;
-    for (cx, cy) in corners {
-        let dx = cx - ox;
-        let dy = cy - oy;
-        max = max.max((dx * dx + dy * dy).sqrt());
-    }
-    Px(max)
 }
