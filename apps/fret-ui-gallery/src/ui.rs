@@ -2136,7 +2136,7 @@ fn preview_data_table(
 fn preview_data_table_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
-    state: Model<fret_ui_headless::table::TableState>,
+    _state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
     use fret_ui_headless::table::{ColumnDef, RowKey};
 
@@ -2188,6 +2188,26 @@ fn preview_data_table_torture(
         |(data, columns)| (data.clone(), columns.clone()),
     );
 
+    #[derive(Default)]
+    struct DataTableTortureModels {
+        state: Option<Model<fret_ui_headless::table::TableState>>,
+    }
+
+    let state = cx.with_state(DataTableTortureModels::default, |st| st.state.clone());
+    let state = match state {
+        Some(state) => state,
+        None => {
+            let mut state_value = fret_ui_headless::table::TableState::default();
+            state_value.pagination.page_size = data.len();
+            state_value.pagination.page_index = 0;
+            let state = cx.app.models_mut().insert(state_value);
+            cx.with_state(DataTableTortureModels::default, |st| {
+                st.state = Some(state.clone());
+            });
+            state
+        }
+    };
+
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2201,41 +2221,44 @@ fn preview_data_table_torture(
         },
     );
 
-    let table = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-data-table-torture-root")),
-            ..Default::default()
-        },
-        |cx| {
-            vec![
-                shadcn::DataTable::new()
-                    .overscan(10)
-                    .row_height(Px(28.0))
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(Px(420.0))),
-                    )
-                    .into_element(
-                        cx,
-                        data.clone(),
-                        1,
-                        state,
-                        columns.clone(),
-                        |row, _index, _parent| RowKey(row.id),
-                        |col| Arc::<str>::from(col.id.as_ref()),
-                        |cx, col, row| match col.id.as_ref() {
-                            "name" => cx.text(row.name.as_ref()),
-                            "status" => cx.text(row.status.as_ref()),
-                            "cpu%" => cx.text(format!("{}%", row.cpu)),
-                            "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                            _ => cx.text("?"),
-                        },
-                    ),
-            ]
-        },
-    );
+    let table =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-data-table-torture-root")),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![
+                        shadcn::DataTable::new()
+                            .overscan(10)
+                            .row_height(Px(28.0))
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_full()
+                                    .h_px(MetricRef::Px(Px(420.0))),
+                            )
+                            .into_element(
+                                cx,
+                                data.clone(),
+                                1,
+                                state,
+                                columns.clone(),
+                                |row, _index, _parent| RowKey(row.id),
+                                |col| Arc::<str>::from(col.id.as_ref()),
+                                |cx, col, row| match col.id.as_ref() {
+                                    "name" => cx.text(row.name.as_ref()),
+                                    "status" => cx.text(row.status.as_ref()),
+                                    "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                    _ => cx.text("?"),
+                                },
+                            ),
+                    ]
+                },
+            )]
+        });
 
     let mut container_props = decl_style::container_props(
         theme,
@@ -2332,21 +2355,23 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         },
     );
 
-    let tree = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-tree-torture-root")),
-            ..Default::default()
-        },
-        |cx| {
-            vec![fret_ui_kit::declarative::tree::tree_view(
-                cx,
-                items,
-                state,
-                fret_ui_kit::Size::Medium,
-            )]
-        },
-    );
+    let tree = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Group,
+                test_id: Some(Arc::<str>::from("ui-gallery-tree-torture-root")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![fret_ui_kit::declarative::tree::tree_view(
+                    cx,
+                    items,
+                    state,
+                    fret_ui_kit::Size::Medium,
+                )]
+            },
+        )]
+    });
 
     let mut container_props = decl_style::container_props(
         theme,
