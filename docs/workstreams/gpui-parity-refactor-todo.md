@@ -342,10 +342,16 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
         `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_window_jump_rerender_uses_latest_handle_offset`).
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
 
-- [ ] GPUI-MVP5-eco-007 Provide a “windowed rows surface” building block for simple lists/inspectors.
+- [x] GPUI-MVP5-eco-007 Provide a “windowed rows surface” building block for simple lists/inspectors.
   - Goal: allow huge row surfaces to update the visible window via paint/prepaint without requiring per-row declarative subtrees.
   - Notes: this is the “single-node surface” escape hatch; composable rows still use `VirtualList` for semantics/focus correctness.
-  - Evidence: `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`windowed_rows_surface`).
+  - Evidence:
+    - Core helper: `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`windowed_rows_surface`).
+    - UI Gallery harness page: `apps/fret-ui-gallery/src/ui.rs` (`preview_windowed_rows_surface_torture`, `ui-gallery-windowed-rows-root`).
+    - Scripted scroll capture: `tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json`.
+    - Bundle-based stale-paint check:
+      - Generate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json --release`
+      - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-windowed-rows-root`.
 - [ ] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
   - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.
