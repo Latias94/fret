@@ -146,6 +146,27 @@ let el = chart_canvas_panel(cx, props);
 ```
 "#;
 
+pub(crate) const DOC_CANVAS_CULL_TORTURE: &str = r#"
+## Canvas Cull (torture harness)
+
+This page is a stress surface for **pan/zoom canvas scenes** with viewport-driven culling.
+
+It exists to support the GPUI parity workstream:
+
+- validate “no stale scene” behavior under view-cache reuse,
+- identify when large canvas/node-graph surfaces should become **prepaint-windowed** (ADR 0190),
+- provide a deterministic bundle capture target for perf investigations.
+"#;
+
+pub(crate) const USAGE_CANVAS_CULL_TORTURE: &str = r#"
+```rust
+use fret_canvas::ui::{PanZoomCanvasSurfacePanelProps, pan_zoom_canvas_surface_panel};
+
+let props = PanZoomCanvasSurfacePanelProps::default();
+let el = pan_zoom_canvas_surface_panel(cx, props, |_painter, _cx| {});
+```
+"#;
+
 pub(crate) const DOC_WINDOWED_ROWS_SURFACE_TORTURE: &str = r#"
 ## Windowed Rows Surface (torture harness)
 

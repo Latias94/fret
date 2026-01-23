@@ -1474,6 +1474,7 @@ dependencies = [
  "delinea",
  "fret-app",
  "fret-bootstrap",
+ "fret-canvas",
  "fret-chart",
  "fret-code-view",
  "fret-core",

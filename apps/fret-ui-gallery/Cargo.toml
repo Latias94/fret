@@ -30,6 +30,7 @@ fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload
 fret-undo = { path = "../../ecosystem/fret-undo" }
 delinea = { path = "../../ecosystem/delinea" }
 fret-chart = { path = "../../ecosystem/fret-chart" }
+fret-canvas = { path = "../../ecosystem/fret-canvas", features = ["ui"] }
 time.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

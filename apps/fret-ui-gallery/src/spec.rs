@@ -98,6 +98,7 @@ pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
+pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
 pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
@@ -133,6 +134,7 @@ pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
+pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
 pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_torture";
 pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
@@ -320,6 +322,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CHART_TORTURE,
                 docs::USAGE_CHART_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_CANVAS_CULL_TORTURE,
+                "Canvas Cull (Torture)",
+                "Canvas / Pan-Zoom Culling Harness",
+                "fret-canvas (viewport culling candidate)",
+                CMD_NAV_CANVAS_CULL_TORTURE,
+                &[
+                    "canvas",
+                    "node_graph",
+                    "culling",
+                    "pan_zoom",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_CANVAS_CULL_TORTURE,
+                docs::USAGE_CANVAS_CULL_TORTURE,
             ),
             PageSpec::new(
                 PAGE_WINDOWED_ROWS_SURFACE_TORTURE,
