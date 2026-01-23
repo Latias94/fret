@@ -54,3 +54,11 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   - `web_vs_fret_breadcrumb_dropdown_small_viewport_surface_colors_match_web_dark`
   - `web_vs_fret_breadcrumb_dropdown_small_viewport_shadow_matches_web`
   - `web_vs_fret_breadcrumb_dropdown_small_viewport_shadow_matches_web_dark`
+  - `web_vs_fret_breadcrumb_demo_surface_colors_match_web`
+  - `web_vs_fret_breadcrumb_demo_surface_colors_match_web_dark`
+  - `web_vs_fret_breadcrumb_demo_shadow_matches_web`
+  - `web_vs_fret_breadcrumb_demo_shadow_matches_web_dark`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_surface_colors_match_web`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_surface_colors_match_web_dark`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web_dark`

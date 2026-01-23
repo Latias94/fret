@@ -4147,6 +4147,165 @@ fn web_vs_fret_breadcrumb_dropdown_small_viewport_shadow_matches_web_dark() {
     );
 }
 
+fn build_shadcn_breadcrumb_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui::element::PressableProps;
+    use fret_ui_shadcn::breadcrumb::primitives as bc;
+    use fret_ui_shadcn::{DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem};
+
+    let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+    bc::Breadcrumb::new().into_element(cx, |cx| {
+        vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+            vec![
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                }),
+                bc::BreadcrumbSeparator::new().into_element(cx),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![dropdown.into_element(
+                        cx,
+                        |cx| {
+                            let mut props = PressableProps::default();
+                            props.a11y.role = Some(SemanticsRole::Button);
+                            props.a11y.label = Some(Arc::from("Toggle menu"));
+
+                            cx.pressable(props, move |cx, _st| {
+                                vec![
+                                    bc::BreadcrumbEllipsis::new()
+                                        .size(Px(16.0))
+                                        .into_element(cx),
+                                ]
+                            })
+                        },
+                        |_cx| {
+                            vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Documentation")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                            ]
+                        },
+                    )]
+                }),
+                bc::BreadcrumbSeparator::new().into_element(cx),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbLink::new("Components").into_element(cx)]
+                }),
+                bc::BreadcrumbSeparator::new().into_element(cx),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                }),
+            ]
+        })]
+    })
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-demo",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-demo",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-demo",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-demo",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_small_viewport_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-demo.vp1440x320",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_small_viewport_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "breadcrumb-demo.vp1440x320",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-demo.vp1440x320",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "breadcrumb-demo.vp1440x320",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_breadcrumb_demo,
+    );
+}
+
 #[test]
 fn web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web() {
     use fret_ui_shadcn::{
