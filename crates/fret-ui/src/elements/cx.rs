@@ -2291,9 +2291,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
                 state.deferred_scroll_offset_hint = None;
 
-                let mut range = state.window_range.filter(|r| {
+                let mut range = state.render_window_range.filter(|r| {
                     r.count == len && r.overscan == options.overscan && r.start_index <= r.end_index
                 });
+                if range.is_none() {
+                    range = state.window_range.filter(|r| {
+                        r.count == len
+                            && r.overscan == options.overscan
+                            && r.start_index <= r.end_index
+                    });
+                }
 
                 // When a scroll handle offset changes out-of-band (wheel, inertial scroll, or a
                 // component-driven `set_offset`), the handle's current offset may lead the
@@ -2335,20 +2342,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 }
 
                 if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
-                    let window_range = range.filter(|r| {
-                        r.count == len
-                            && r.overscan == options.overscan
-                            && r.start_index <= r.end_index
-                            && r.end_index < r.count
-                    });
                     let visible = state.metrics.visible_range(preview_offset, viewport, 0);
-                    if let (Some(window_range), Some(visible)) = (window_range, visible) {
-                        let window_start = window_range
-                            .start_index
-                            .saturating_sub(window_range.overscan);
-                        let window_end = (window_range.end_index + window_range.overscan)
-                            .min(window_range.count.saturating_sub(1));
-                        if window_start > visible.start_index || window_end < visible.end_index {
+                    if let (Some(prev), Some(visible)) = (range, visible) {
+                        let win_start = prev.start_index.saturating_sub(prev.overscan);
+                        let win_end =
+                            (prev.end_index + prev.overscan).min(prev.count.saturating_sub(1));
+                        let out_of_window =
+                            visible.start_index < win_start || visible.end_index > win_end;
+
+                        if out_of_window {
                             range = state.metrics.visible_range(
                                 preview_offset,
                                 viewport,
