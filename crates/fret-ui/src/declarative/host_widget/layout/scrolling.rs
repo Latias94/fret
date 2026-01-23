@@ -140,9 +140,8 @@ impl ElementHostWidget {
         };
         props.scroll_handle.set_content_size(content_size);
 
-        let anchor = metrics
-            .visible_range(offset, viewport, 0)
-            .map(|r| r.start_index);
+        let visible_range = metrics.visible_range(offset, viewport, 0);
+        let anchor = visible_range.map(|r| r.start_index);
         let anchor_offset_in_viewport = anchor.map(|anchor| {
             let start = metrics.offset_for_index(anchor);
             Px((offset.0 - start.0).max(0.0))
@@ -349,10 +348,31 @@ impl ElementHostWidget {
             },
         );
 
-        let window_mismatch = !is_probe_layout
-            && viewport.0 > 0.0
-            && window_range.is_some()
-            && render_window_range != window_range;
+        let window_mismatch = {
+            // `render_window_range` is the window that was used during declarative render to build
+            // `props.visible_items` (typically an overscanned window).
+            //
+            // `visible_range` is the true visible window (no overscan).
+            //
+            // We only need to force a cache-root rerender when the current visible window falls
+            // outside the previously rendered window. A mere mismatch between the “ideal” window
+            // for the current scroll offset and the rendered window is expected and should not
+            // trigger rerender while we're still within overscan.
+            if is_probe_layout || viewport.0 <= 0.0 {
+                false
+            } else if let (Some(rendered), Some(visible)) = (render_window_range, visible_range) {
+                if rendered.count == 0 {
+                    false
+                } else {
+                    let rendered_start = rendered.start_index.saturating_sub(rendered.overscan);
+                    let rendered_end = (rendered.end_index + rendered.overscan)
+                        .min(rendered.count.saturating_sub(1));
+                    visible.start_index < rendered_start || visible.end_index > rendered_end
+                }
+            } else {
+                false
+            }
+        };
 
         if cx.tree.debug_enabled() {
             let prev_offset_state = match axis {
@@ -390,8 +410,9 @@ impl ElementHostWidget {
 
         if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
             // Virtual list visible-item sets are computed during the declarative render pass. If
-            // the visible window changed, ensure the nearest view-cache root re-renders on the
-            // next frame so it can rebuild the visible items.
+            // the current visible window is outside the previously rendered overscan window,
+            // ensure the nearest view-cache root re-renders on the next frame so it can rebuild
+            // the visible items.
             cx.tree.invalidate_with_source_and_detail(
                 cx.node,
                 Invalidation::Layout,
