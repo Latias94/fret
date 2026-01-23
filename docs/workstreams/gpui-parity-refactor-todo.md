@@ -424,17 +424,38 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - `ecosystem/fret-canvas/src/*` (large canvas surfaces).
     - `ecosystem/fret-viewport-tooling/src/*` (viewport overlays, gizmos).
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
+  - Proposed harness plan (v1):
+    - Add a UI Gallery page that renders a “large canvas scene” (thousands of nodes/edges or sprites) and supports pan/zoom.
+    - Add a scripted capture that alternates between:
+      - small pan deltas (should be paint-only or prepaint-only),
+      - large pan jumps (should update the visible window deterministically),
+      - zoom in/out (should update sampling/culling, but avoid full cache-root rerenders for small deltas).
+    - Add stale-paint checks for pan/zoom (bounds/camera changed but scene fingerprint did not).
+  - Likely first target:
+    - `ecosystem/fret-node` (node graph) because it combines 2D culling + heavy paint ops and will stress both interaction routing and paint caching.
 - [ ] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-chart/src/*` (timeseries/table-driven plots).
     - `ecosystem/fret-plot3d/src/*` (3D sampling + culling surfaces).
     - `ecosystem/delinea/src/*` (headless chart engine; windowed sampling).
   - Done when: we have an evidence-backed list + a first migration target (one component) with a perf/correctness harness.
+  - Proposed harness plan (v1):
+    - Add a UI Gallery page that renders a large timeseries (e.g. 1M points) with pan/zoom.
+    - Define a deterministic sampling window contract:
+      - pan -> shift visible x-window,
+      - zoom -> adjust sampling density / visible x-window width.
+    - Scripted capture should validate that small pans do not force cache-root rerenders, and that zoom changes are explainable in bundles.
+  - Likely first target:
+    - `ecosystem/delinea` (headless) + `ecosystem/fret-chart` (UI wrapper) because it cleanly separates “sampling math” from rendering.
 - [ ] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
   - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
   - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.
   - Anchors:
     - `ecosystem/fret-code-view/tests/hover_is_paint_only.rs` (existing regression that hover does not force rerender).
+  - Proposed harness plan (v1):
+    - Add a UI Gallery “chrome torture” page that exercises hover/focus/pressed states across many widgets while view-cache + shell are enabled.
+    - Scripted capture should include pointer-move sweeps, focus traversal, and repeated open/close of overlays.
+    - Add a regression expectation: “hover-only” ticks should not list `notify_call` as a dirty-view source for the relevant cache roots.
 - [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
