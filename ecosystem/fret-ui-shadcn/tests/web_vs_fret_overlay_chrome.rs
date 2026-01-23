@@ -3396,13 +3396,38 @@ fn web_vs_fret_popover_demo_surface_colors_match_web_dark() {
     );
 }
 
-#[test]
-fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web() {
+fn build_shadcn_dropdown_menu_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
     use fret_ui_shadcn::{
         Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
         DropdownMenuLabel, DropdownMenuShortcut,
     };
 
+    DropdownMenu::new(open.clone())
+        .min_width(Px(224.0))
+        .into_element(
+            cx,
+            |cx| {
+                Button::new("Open")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |cx| {
+                vec![
+                    DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("Profile")
+                            .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
+                    ),
+                ]
+            },
+        )
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web() {
     assert_overlay_surface_colors_match(
         "dropdown-menu-demo",
         "dropdown-menu-content",
@@ -3410,37 +3435,12 @@ fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web() {
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         SemanticsRole::Menu,
         fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        |cx, open| {
-            DropdownMenu::new(open.clone())
-                .min_width(Px(224.0))
-                .into_element(
-                    cx,
-                    |cx| {
-                        Button::new("Open")
-                            .variant(ButtonVariant::Outline)
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        vec![
-                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
-                            DropdownMenuEntry::Item(
-                                DropdownMenuItem::new("Profile")
-                                    .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
-                            ),
-                        ]
-                    },
-                )
-        },
+        build_shadcn_dropdown_menu_demo,
     );
 }
 
 #[test]
 fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web_dark() {
-    use fret_ui_shadcn::{
-        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
-        DropdownMenuLabel, DropdownMenuShortcut,
-    };
-
     assert_overlay_surface_colors_match(
         "dropdown-menu-demo",
         "dropdown-menu-content",
@@ -3448,37 +3448,12 @@ fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web_dark() {
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         SemanticsRole::Menu,
         fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        |cx, open| {
-            DropdownMenu::new(open.clone())
-                .min_width(Px(224.0))
-                .into_element(
-                    cx,
-                    |cx| {
-                        Button::new("Open")
-                            .variant(ButtonVariant::Outline)
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        vec![
-                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
-                            DropdownMenuEntry::Item(
-                                DropdownMenuItem::new("Profile")
-                                    .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
-                            ),
-                        ]
-                    },
-                )
-        },
+        build_shadcn_dropdown_menu_demo,
     );
 }
 
 #[test]
 fn web_vs_fret_dropdown_menu_demo_shadow_matches_web() {
-    use fret_ui_shadcn::{
-        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
-        DropdownMenuLabel, DropdownMenuShortcut,
-    };
-
     assert_overlay_shadow_insets_match(
         "dropdown-menu-demo",
         "dropdown-menu-content",
@@ -3486,37 +3461,12 @@ fn web_vs_fret_dropdown_menu_demo_shadow_matches_web() {
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         SemanticsRole::Menu,
         fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        |cx, open| {
-            DropdownMenu::new(open.clone())
-                .min_width(Px(224.0))
-                .into_element(
-                    cx,
-                    |cx| {
-                        Button::new("Open")
-                            .variant(ButtonVariant::Outline)
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        vec![
-                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
-                            DropdownMenuEntry::Item(
-                                DropdownMenuItem::new("Profile")
-                                    .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
-                            ),
-                        ]
-                    },
-                )
-        },
+        build_shadcn_dropdown_menu_demo,
     );
 }
 
 #[test]
 fn web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark() {
-    use fret_ui_shadcn::{
-        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
-        DropdownMenuLabel, DropdownMenuShortcut,
-    };
-
     assert_overlay_shadow_insets_match(
         "dropdown-menu-demo",
         "dropdown-menu-content",
@@ -3524,27 +3474,111 @@ fn web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark() {
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         SemanticsRole::Menu,
         fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        |cx, open| {
-            DropdownMenu::new(open.clone())
-                .min_width(Px(224.0))
-                .into_element(
-                    cx,
-                    |cx| {
-                        Button::new("Open")
-                            .variant(ButtonVariant::Outline)
-                            .into_element(cx)
-                    },
-                    |cx| {
-                        vec![
-                            DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
-                            DropdownMenuEntry::Item(
-                                DropdownMenuItem::new("Profile")
-                                    .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
-                            ),
-                        ]
-                    },
-                )
-        },
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_small_viewport_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-demo.vp1440x320",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_small_viewport_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-demo.vp1440x320",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_tiny_viewport_surface_colors_match_web() {
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-demo.vp1440x240",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_tiny_viewport_surface_colors_match_web_dark() {
+    assert_overlay_surface_colors_match(
+        "dropdown-menu-demo.vp1440x240",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_small_viewport_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-demo.vp1440x320",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_small_viewport_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-demo.vp1440x320",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_tiny_viewport_shadow_matches_web() {
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-demo.vp1440x240",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_tiny_viewport_shadow_matches_web_dark() {
+    assert_overlay_shadow_insets_match(
+        "dropdown-menu-demo.vp1440x240",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
     );
 }
 
@@ -4268,6 +4302,108 @@ fn web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark() {
 
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
     assert_menu_subcontent_shadow_insets_match_by_portal_slot_theme_keyboard_submenu(
+        "dropdown-menu-demo.submenu-kbd",
+        "dropdown-menu-sub-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        bounds,
+        settle_frames,
+        settle_frames,
+        |_ui, app, _services, _bounds, open| {
+            let _ = app.models_mut().update(open, |v| *v = true);
+        },
+        "Invite users",
+        |cx, open| {
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| Button::new("Open").into_element(cx),
+                    |_cx| {
+                        vec![DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Invite users").submenu(vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ]),
+                        )]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_kbd_surface_colors_match_web() {
+    use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
+
+    let web = read_web_golden_open("dropdown-menu-demo.submenu-kbd");
+    let bounds = web
+        .themes
+        .get("light")
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(1440.0), Px(900.0)),
+            )
+        });
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    assert_menu_subcontent_surface_colors_match_by_portal_slot_theme_keyboard_submenu(
+        "dropdown-menu-demo.submenu-kbd",
+        "dropdown-menu-sub-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        bounds,
+        settle_frames,
+        settle_frames,
+        |_ui, app, _services, _bounds, open| {
+            let _ = app.models_mut().update(open, |v| *v = true);
+        },
+        "Invite users",
+        |cx, open| {
+            DropdownMenu::new(open.clone())
+                .min_width(Px(224.0))
+                .into_element(
+                    cx,
+                    |cx| Button::new("Open").into_element(cx),
+                    |_cx| {
+                        vec![DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Invite users").submenu(vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ]),
+                        )]
+                    },
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_kbd_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
+
+    let web = read_web_golden_open("dropdown-menu-demo.submenu-kbd");
+    let bounds = web
+        .themes
+        .get("dark")
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(1440.0), Px(900.0)),
+            )
+        });
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    assert_menu_subcontent_surface_colors_match_by_portal_slot_theme_keyboard_submenu(
         "dropdown-menu-demo.submenu-kbd",
         "dropdown-menu-sub-content",
         "dark",
