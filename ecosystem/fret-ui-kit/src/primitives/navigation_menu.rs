@@ -122,6 +122,11 @@ struct IndicatorDiamondIdRegistry {
     id: Option<GlobalElementId>,
 }
 
+#[derive(Default)]
+struct IndicatorTrackIdRegistry {
+    id: Option<GlobalElementId>,
+}
+
 /// Registers the (decorative) indicator diamond element id for the active menu.
 ///
 /// This is primarily used by web-vs-fret conformance tests that need stable bounds for shadow
@@ -142,6 +147,28 @@ pub fn navigation_menu_indicator_diamond_id<H: UiHost>(
     root_id: GlobalElementId,
 ) -> Option<GlobalElementId> {
     cx.with_state_for(root_id, IndicatorDiamondIdRegistry::default, |st| st.id)
+}
+
+/// Registers the indicator track element id for the root.
+///
+/// This is used by web-vs-fret conformance tests to validate indicator geometry (track thickness,
+/// diamond placement).
+pub fn navigation_menu_register_indicator_track_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    id: GlobalElementId,
+) {
+    cx.with_state_for(root_id, IndicatorTrackIdRegistry::default, |st| {
+        st.id = Some(id);
+    });
+}
+
+/// Returns the last registered indicator track element id.
+pub fn navigation_menu_indicator_track_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+) -> Option<GlobalElementId> {
+    cx.with_state_for(root_id, IndicatorTrackIdRegistry::default, |st| st.id)
 }
 
 /// Registers the viewport content element id for a given value.

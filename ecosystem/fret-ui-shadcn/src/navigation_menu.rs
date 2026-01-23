@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_core::Transform2D;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
+use fret_icons::ids;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, Model, Platform, PlatformCapabilities,
     WindowCommandGatingService, WindowCommandGatingSnapshot,
@@ -13,6 +14,7 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -73,7 +75,7 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
 fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_x")
-        .unwrap_or_else(|| MetricRef::space(Space::N3).resolve(theme))
+        .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
 fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
@@ -835,7 +837,79 @@ impl NavigationMenu {
                                                 vec![label.into_element(cx)]
                                             });
 
-                                        vec![cx.container(wrapper, move |_cx| content_children)]
+                                        let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                                        let chevron_size = Px(12.0); // Tailwind `size-3`
+                                        let chevron_center =
+                                            Point::new(Px(chevron_size.0 * 0.5), Px(chevron_size.0 * 0.5));
+                                        let chevron_transform = Transform2D::rotation_about_degrees(
+                                            chevron_rotation,
+                                            chevron_center,
+                                        );
+
+                                        let chevron = cx.visual_transform_props(
+                                            VisualTransformProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size = SizeStyle {
+                                                        width: Length::Px(chevron_size),
+                                                        height: Length::Px(chevron_size),
+                                                        ..Default::default()
+                                                    };
+                                                    layout.flex.shrink = 0.0;
+                                                    layout.position = fret_ui::element::PositionStyle::Relative;
+                                                    layout.inset.top = Some(Px(1.0)); // `top-[1px]`
+                                                    layout.margin.left =
+                                                        fret_ui::element::MarginEdge::Px(Px(4.0)); // `ml-1`
+                                                    layout
+                                                },
+                                                transform: chevron_transform,
+                                            },
+                                            move |cx| {
+                                                vec![decl_icon::icon_with(
+                                                    cx,
+                                                    ids::ui::CHEVRON_DOWN,
+                                                    Some(chevron_size),
+                                                    Some(ColorRef::Color(fg)),
+                                                )]
+                                            },
+                                        );
+
+                                        let mut row_children = content_children;
+                                        // Upstream adds a literal `" "` text node between the label
+                                        // and the chevron icon, in addition to `ml-1` on the icon.
+                                        // We model that as a deterministic, non-semantic spacer.
+                                        row_children.push(cx.container(
+                                            ContainerProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size = SizeStyle {
+                                                        width: Length::Px(Px(4.0)),
+                                                        height: Length::Px(Px(0.0)),
+                                                        ..Default::default()
+                                                    };
+                                                    layout.flex.shrink = 0.0;
+                                                    layout
+                                                },
+                                                ..Default::default()
+                                            },
+                                            |_cx| Vec::new(),
+                                        ));
+                                        row_children.push(chevron);
+                                        let row = cx.flex(
+                                            FlexProps {
+                                                layout: LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(0.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Center,
+                                                align: fret_ui::element::CrossAlign::Center,
+                                                wrap: false,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| row_children,
+                                        );
+
+                                        vec![cx.container(wrapper, move |_cx| vec![row])]
                                     },
                                 )
                         })
@@ -1183,7 +1257,10 @@ impl NavigationMenu {
 
                                     let diamond_size = indicator_diamond_size.0.max(0.0);
                                     let diamond_left = ((track_w - diamond_size) * 0.5).max(0.0);
-                                    let diamond_top = (track_h - diamond_size + diamond_size * 0.60).max(0.0);
+                                    // Tailwind `top-[60%]` uses percentage units. In CSS, relative
+                                    // positioning percentage offsets resolve against the containing
+                                    // block's size (the indicator track), not the element's own size.
+                                    let diamond_top = (track_h - diamond_size + track_h * 0.60).max(0.0);
 
                                     let mut diamond_layout = LayoutStyle::default();
                                     diamond_layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -1235,6 +1312,11 @@ impl NavigationMenu {
 
                                     vec![diamond]
                                 },
+                            );
+                            radix_navigation_menu::navigation_menu_register_indicator_track_id(
+                                cx,
+                                root_id,
+                                indicator.id,
                             );
                             children.push(indicator);
                         }
