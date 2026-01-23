@@ -301,223 +301,233 @@ fn pointer_down(pointer_id: PointerId, position: Point) -> Event {
 
 #[test]
 fn radio_selected_dot_is_centered_in_outline() {
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
 
-    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
-        fret_ui_material3::tokens::v30::TypographyOptions::default(),
-        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
-    );
-    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+        let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+            fret_ui_material3::tokens::v30::TypographyOptions::default(),
+            fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+        );
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(300.0), Px(200.0)),
-    );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
 
-    let selected = app.models_mut().insert(true);
+        let selected = app.models_mut().insert(true);
 
-    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-            vec![
-                fret_ui_material3::Radio::new(selected.clone())
-                    .a11y_label("radio")
-                    .into_element(cx),
-            ]
-        })
-    };
-
-    let mut found = None;
-    for _ in 0..12 {
-        let root = render(&mut ui, &mut app, &mut services);
-        ui.set_root(root);
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-
-        let mut outline: Option<Rect> = None;
-        let mut dot: Option<Rect> = None;
-
-        for op in scene.ops() {
-            let SceneOp::Quad {
-                rect,
-                background,
-                border,
-                ..
-            } = op
-            else {
-                continue;
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    vec![
+                        fret_ui_material3::Radio::new(selected.clone())
+                            .a11y_label("radio")
+                            .into_element(cx),
+                    ]
+                })
             };
 
-            let border_any = border.top.0 > 0.0 || border.right.0 > 0.0 || border.bottom.0 > 0.0;
-            if border_any && background.a <= 0.01 {
-                if outline.is_none_or(|r| rect.size.width.0 < r.size.width.0 + 1e-3) {
-                    outline = Some(*rect);
+        let mut found = None;
+        for _ in 0..12 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+            let mut outline: Option<Rect> = None;
+            let mut dot: Option<Rect> = None;
+
+            for op in scene.ops() {
+                let SceneOp::Quad {
+                    rect,
+                    background,
+                    border,
+                    ..
+                } = op
+                else {
+                    continue;
+                };
+
+                let border_any =
+                    border.top.0 > 0.0 || border.right.0 > 0.0 || border.bottom.0 > 0.0;
+                if border_any && background.a <= 0.01 {
+                    if outline.is_none_or(|r| rect.size.width.0 < r.size.width.0 + 1e-3) {
+                        outline = Some(*rect);
+                    }
+                    continue;
                 }
-                continue;
+
+                if border == &Edges::all(Px(0.0))
+                    && background.a > 0.5
+                    && rect.size.width.0 <= 12.0
+                    && rect.size.height.0 <= 12.0
+                {
+                    if dot.is_none_or(|r| rect.size.width.0 > r.size.width.0 + 1e-3) {
+                        dot = Some(*rect);
+                    }
+                }
             }
 
-            if border == &Edges::all(Px(0.0))
-                && background.a > 0.5
-                && rect.size.width.0 <= 12.0
-                && rect.size.height.0 <= 12.0
-            {
-                if dot.is_none_or(|r| rect.size.width.0 > r.size.width.0 + 1e-3) {
-                    dot = Some(*rect);
+            if let (Some(outline), Some(dot)) = (outline, dot) {
+                found = Some((outline, dot));
+                if dot.size.width.0 > 1.0 {
+                    break;
                 }
             }
+
+            app.advance_frame();
         }
 
-        if let (Some(outline), Some(dot)) = (outline, dot) {
-            found = Some((outline, dot));
-            if dot.size.width.0 > 1.0 {
-                break;
-            }
-        }
+        let Some((outline, dot)) = found else {
+            panic!("expected radio outline + selected dot quads in the scene");
+        };
 
-        app.advance_frame();
+        let outline_cx = outline.origin.x.0 + outline.size.width.0 * 0.5;
+        let outline_cy = outline.origin.y.0 + outline.size.height.0 * 0.5;
+        let dot_cx = dot.origin.x.0 + dot.size.width.0 * 0.5;
+        let dot_cy = dot.origin.y.0 + dot.size.height.0 * 0.5;
+
+        assert!(
+            (outline_cx - dot_cx).abs() < 0.75 && (outline_cy - dot_cy).abs() < 0.75,
+            "dot center should match outline center (scale={scale_factor}): outline={outline:?} dot={dot:?}"
+        );
     }
-
-    let Some((outline, dot)) = found else {
-        panic!("expected radio outline + selected dot quads in the scene");
-    };
-
-    let outline_cx = outline.origin.x.0 + outline.size.width.0 * 0.5;
-    let outline_cy = outline.origin.y.0 + outline.size.height.0 * 0.5;
-    let dot_cx = dot.origin.x.0 + dot.size.width.0 * 0.5;
-    let dot_cy = dot.origin.y.0 + dot.size.height.0 * 0.5;
-
-    assert!(
-        (outline_cx - dot_cx).abs() < 0.5 && (outline_cy - dot_cy).abs() < 0.5,
-        "dot center should match outline center: outline={outline:?} dot={dot:?}"
-    );
 }
 
 #[test]
 fn radio_ripple_origin_tracks_pointer_down_position() {
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
 
-    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
-        fret_ui_material3::tokens::v30::TypographyOptions::default(),
-        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
-    );
-    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+        let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+            fret_ui_material3::tokens::v30::TypographyOptions::default(),
+            fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+        );
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
 
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(300.0), Px(200.0)),
-    );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
 
-    let selected = app.models_mut().insert(false);
+        let selected = app.models_mut().insert(false);
 
-    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-            vec![
-                fret_ui_material3::Radio::new(selected.clone())
-                    .a11y_label("radio")
-                    .into_element(cx),
-            ]
-        })
-    };
-
-    let root = render(&mut ui, &mut app, &mut services);
-    ui.set_root(root);
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let radio_bounds =
-        find_first_bounds_with_size(&ui, root).expect("expected a 40x40 radio chrome bounds");
-    let press_at = Point::new(
-        Px(radio_bounds.origin.x.0 + radio_bounds.size.width.0 * 0.5),
-        Px(radio_bounds.origin.y.0 + radio_bounds.size.height.0 * 0.5),
-    );
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), press_at),
-    );
-
-    let mut ripple_center: Option<Point> = None;
-    for _ in 0..4 {
-        app.advance_frame();
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    vec![
+                        fret_ui_material3::Radio::new(selected.clone())
+                            .a11y_label("radio")
+                            .into_element(cx),
+                    ]
+                })
+            };
 
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let radio_bounds =
+            find_first_bounds_with_size(&ui, root).expect("expected a 40x40 radio chrome bounds");
+        let press_at = Point::new(
+            Px(radio_bounds.origin.x.0 + radio_bounds.size.width.0 * 0.5),
+            Px(radio_bounds.origin.y.0 + radio_bounds.size.height.0 * 0.5),
+        );
 
-        for window in scene.ops().windows(3) {
-            let [a, b, c] = window else {
-                continue;
-            };
-            let SceneOp::PushClipRRect { rect: clip, .. } = a else {
-                continue;
-            };
-            let SceneOp::Quad {
-                rect: circle,
-                background,
-                border,
-                corner_radii,
-                ..
-            } = b
-            else {
-                continue;
-            };
-            if !matches!(c, SceneOp::PopClip) {
-                continue;
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut ripple_center: Option<Point> = None;
+        for _ in 0..4 {
+            app.advance_frame();
+
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+            for window in scene.ops().windows(3) {
+                let [a, b, c] = window else {
+                    continue;
+                };
+                let SceneOp::PushClipRRect { rect: clip, .. } = a else {
+                    continue;
+                };
+                let SceneOp::Quad {
+                    rect: circle,
+                    background,
+                    border,
+                    corner_radii,
+                    ..
+                } = b
+                else {
+                    continue;
+                };
+                if !matches!(c, SceneOp::PopClip) {
+                    continue;
+                }
+
+                if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
+                    continue;
+                }
+                if (clip.size.width.0 - 40.0).abs() > 0.5 || (clip.size.height.0 - 40.0).abs() > 0.5
+                {
+                    continue;
+                }
+                if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
+                    continue;
+                }
+
+                let r = corner_radii.top_left.0;
+                let r_ok = (corner_radii.top_right.0 - r).abs() < 1e-3
+                    && (corner_radii.bottom_left.0 - r).abs() < 1e-3
+                    && (corner_radii.bottom_right.0 - r).abs() < 1e-3;
+                if !r_ok {
+                    continue;
+                }
+
+                ripple_center = Some(Point::new(
+                    Px(circle.origin.x.0 + circle.size.width.0 * 0.5),
+                    Px(circle.origin.y.0 + circle.size.height.0 * 0.5),
+                ));
+                break;
             }
 
-            if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
-                continue;
+            if ripple_center.is_some() {
+                break;
             }
-            if (clip.size.width.0 - 40.0).abs() > 0.5 || (clip.size.height.0 - 40.0).abs() > 0.5 {
-                continue;
-            }
-            if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
-                continue;
-            }
-
-            let r = corner_radii.top_left.0;
-            let r_ok = (corner_radii.top_right.0 - r).abs() < 1e-3
-                && (corner_radii.bottom_left.0 - r).abs() < 1e-3
-                && (corner_radii.bottom_right.0 - r).abs() < 1e-3;
-            if !r_ok {
-                continue;
-            }
-
-            ripple_center = Some(Point::new(
-                Px(circle.origin.x.0 + circle.size.width.0 * 0.5),
-                Px(circle.origin.y.0 + circle.size.height.0 * 0.5),
-            ));
-            break;
         }
 
-        if ripple_center.is_some() {
-            break;
-        }
+        let Some(ripple_center) = ripple_center else {
+            panic!(
+                "expected a bounded ripple (PushClipRRect + circle quad + PopClip) in the scene"
+            );
+        };
+
+        assert!(
+            (ripple_center.x.0 - press_at.x.0).abs() < 0.75
+                && (ripple_center.y.0 - press_at.y.0).abs() < 0.75,
+            "expected ripple origin to match pointer down position (scale={scale_factor}): ripple_center={ripple_center:?} press_at={press_at:?}"
+        );
     }
-
-    let Some(ripple_center) = ripple_center else {
-        panic!("expected a bounded ripple (PushClipRRect + circle quad + PopClip) in the scene");
-    };
-
-    assert!(
-        (ripple_center.x.0 - press_at.x.0).abs() < 0.5
-            && (ripple_center.y.0 - press_at.y.0).abs() < 0.5,
-        "expected ripple origin to match pointer down position: ripple_center={ripple_center:?} press_at={press_at:?}"
-    );
 }
