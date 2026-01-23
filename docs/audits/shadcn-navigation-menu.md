@@ -75,7 +75,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ### Indicator parity (new-york)
 
-- Pass: Indicator is rendered as a rotated square and shares the viewport's open/close motion.
+- Pass: Indicator support is available (rotated square). It is opt-in to match upstream
+  composition (upstream exports `NavigationMenuIndicator` but does not mount it in `NavigationMenu`).
 - Note: Exact positioning and shadow/token fidelity may still differ (Radix uses an indicator track
   ref + DOM layout measurement); Fret drives viewport sizing via a primitive contract and anchors
   using trigger element ids.
@@ -105,3 +106,5 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Consider exposing an opt-in custom indicator renderer if parity-sensitive recipes need it (today
   the indicator visuals are not user-supplied, only toggled on/off).
+- Add a dedicated shadcn-web golden page/variant that mounts `NavigationMenuIndicator`, so we can
+  gate its `shadow-md` token (`rounded-tl-sm shadow-md`) against web computed styles.

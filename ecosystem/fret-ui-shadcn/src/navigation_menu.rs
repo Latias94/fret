@@ -132,8 +132,8 @@ impl NavigationMenuViewport {
 
 /// shadcn/ui `NavigationMenuIndicator` (v4).
 ///
-/// Upstream renders this as an opt-in child. Fret currently renders an indicator by default to
-/// match the new-york look, but exposes an opt-out switch for parity-sensitive recipes.
+/// Upstream renders this as an opt-in child. Fret does not render the indicator by default; enable
+/// it via [`NavigationMenu::indicator`] or [`NavigationMenu::indicator_component`] when needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NavigationMenuIndicator {
     enabled: bool,
@@ -444,7 +444,7 @@ impl NavigationMenu {
             items: Vec::new(),
             disabled: false,
             viewport: true,
-            indicator: true,
+            indicator: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
@@ -458,7 +458,7 @@ impl NavigationMenu {
             items: Vec::new(),
             disabled: false,
             viewport: true,
-            indicator: true,
+            indicator: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
