@@ -1010,6 +1010,146 @@ pub(crate) fn inject_comp_button_scalars(cfg: &mut ThemeConfig) {
         .insert("md.comp.button.xsmall.trailing-space".to_string(), 12.0);
 }
 
+pub(crate) fn inject_comp_checkbox_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.checkbox.`
+
+    cfg.metrics
+        .insert("md.comp.checkbox.container.height".to_string(), 18.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.container.shape".to_string(), 2.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.container.size".to_string(), 18.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.container.width".to_string(), 18.0);
+    cfg.numbers.insert(
+        "md.comp.checkbox.disabled.selected.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.disabled.unselected.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.error.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.error.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.error.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.focus.indicator.outline.offset".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.focus.indicator.thickness".to_string(),
+        3.0,
+    );
+    cfg.metrics
+        .insert("md.comp.checkbox.icon.size".to_string(), 18.0);
+    cfg.numbers.insert(
+        "md.comp.checkbox.selected.disabled.container.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.disabled.container.outline.width".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.error.focus.outline.width".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.error.hover.outline.width".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.error.pressed.outline.width".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.focus.outline.width".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.selected.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.hover.outline.width".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.selected.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.checkbox.selected.outline.width".to_string(), 0.0);
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.pressed.outline.width".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.selected.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.checkbox.state-layer.shape".to_string(), 9999.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.state-layer.size".to_string(), 40.0);
+    cfg.numbers.insert(
+        "md.comp.checkbox.unselected.disabled.container.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.disabled.outline.width".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.error.focus.outline.width".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.error.hover.outline.width".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.error.pressed.outline.width".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.focus.outline.width".to_string(),
+        2.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.unselected.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.hover.outline.width".to_string(),
+        2.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.unselected.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.checkbox.unselected.outline.width".to_string(), 2.0);
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.pressed.outline.width".to_string(),
+        2.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.unselected.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+}
+
 pub(crate) fn inject_comp_switch_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.switch.`

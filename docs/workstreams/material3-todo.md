@@ -123,6 +123,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - [x] Import `md.comp.button.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_button_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_button_scalars`).
+    - [x] Import `md.comp.checkbox.*` scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_checkbox_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_checkbox_scalars`).
     - [x] Import `md.comp.switch.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_switch_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_scalars`).

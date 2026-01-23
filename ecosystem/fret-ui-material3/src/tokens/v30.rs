@@ -709,57 +709,7 @@ fn copy_color(cfg: &mut ThemeConfig, to_key: &str, from_key: &str) {
 }
 
 fn inject_comp_checkbox_scalars(cfg: &mut ThemeConfig) {
-    // Sources:
-    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-checkbox.scss
-    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-state-focus-indicator.scss
-
-    cfg.metrics
-        .insert("md.comp.checkbox.container.size".to_string(), 18.0);
-    cfg.metrics
-        .insert("md.comp.checkbox.container.shape".to_string(), 2.0);
-    cfg.metrics
-        .insert("md.comp.checkbox.icon.size".to_string(), 18.0);
-    cfg.metrics
-        .insert("md.comp.checkbox.state-layer.size".to_string(), 40.0);
-
-    cfg.metrics
-        .insert("md.comp.checkbox.selected.outline.width".to_string(), 0.0);
-    cfg.metrics
-        .insert("md.comp.checkbox.unselected.outline.width".to_string(), 2.0);
-    cfg.metrics.insert(
-        "md.comp.checkbox.selected.disabled.container.outline.width".to_string(),
-        0.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.checkbox.unselected.disabled.outline.width".to_string(),
-        2.0,
-    );
-
-    cfg.numbers.insert(
-        "md.comp.checkbox.selected.disabled.container.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.checkbox.unselected.disabled.container.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.checkbox.selected.pressed.state-layer.opacity".to_string(),
-        0.1,
-    );
-    cfg.numbers.insert(
-        "md.comp.checkbox.unselected.pressed.state-layer.opacity".to_string(),
-        0.1,
-    );
-
-    cfg.metrics.insert(
-        "md.comp.checkbox.focus.indicator.outline.offset".to_string(),
-        2.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.checkbox.focus.indicator.thickness".to_string(),
-        3.0,
-    );
+    material_web_v30::inject_comp_checkbox_scalars(cfg);
 }
 
 fn inject_comp_checkbox_colors_from_sys(cfg: &mut ThemeConfig) {
