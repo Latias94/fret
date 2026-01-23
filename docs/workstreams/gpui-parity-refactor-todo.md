@@ -549,7 +549,7 @@ topics (if/when we implement them):
 
 - [~] GPUI-MVP5-eco-008 Docking: make drag/drop indicators paint-only under view-cache reuse.
   - Touches: `ecosystem/fret-docking/src/*`, `ecosystem/fret-ui-kit/src/*` (if shared chrome helpers are needed).
-  - Done when: a UI Gallery harness can simulate “drag over docking targets” and confirm no cache-root rerender is needed
+  - Done when: a harness can simulate “drag over docking targets” and confirm no cache-root rerender is needed
     for the indicator ticks (paint-only invalidation only), while still passing stale-paint checks.
   - Progress (v0):
     - Allow prepaint to kick paint-cache invalidations for cache roots:
@@ -558,6 +558,13 @@ topics (if/when we implement them):
     - DockSpace kicks paint-cache replay on “start/stop frame-driven chrome” transitions:
       - `ecosystem/fret-docking/src/dock/space.rs` (`Widget::prepaint`, `PaintCx::request_animation_frame`)
     - Regression (unit): `ecosystem/fret-docking/src/dock/tests.rs` (`dock_space_kicks_paint_cache_on_drag_transition_for_cache_root`)
+  - Progress (v1):
+    - Scripted drags emit `InternalDrag` events so docking can be exercised without runner cursor routing:
+      - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`drag_pointer` -> `InternalDrag::Over` + final `Drop`)
+      - `docs/ui-diagnostics-and-scripted-tests.md` (step list + internal-drag note)
+    - Docking demo exposes stable semantics anchors in the tab bar for scripted drags:
+      - `apps/fret-examples/src/docking_demo.rs` (`dock-demo-tab-drag-anchor-{left,right}`)
+    - Script: `tools/diag-scripts/docking-demo-drag-indicators.json`
 
 - [ ] GPUI-MVP5-eco-009 Workspace/inspectors: identify list/outline/file-tree surfaces that should be windowed.
   - Touches: `ecosystem/fret-workspace/src/*`, `apps/fret-editor/src/*`.
