@@ -929,7 +929,7 @@ async function openOverlay(
   const waitExpr = `(() => {
     const root = document.querySelector("${rootSel}") || document.body;
     ${
-      name === "navigation-menu-demo"
+      name.startsWith("navigation-menu-demo")
         ? `
     // NavigationMenu does not portal its viewport by default, so "open" state stays within the
     // golden root. Treat an open viewport/content as success for open-mode extraction.
