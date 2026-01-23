@@ -378,8 +378,9 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       - Generate (example): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --dir target/fret-diag-perf-data-table-torture --launch -- cargo run -p fret-ui-gallery --release`
       - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-data-table-torture-root`
     - Baseline perf (one run, release, view-cache + shell enabled):
-      - `ui-gallery-data-table-torture-scroll-refresh`: worst tick ~14.3ms (layout-dominated).
-      - Example bundle: `target/fret-diag-perf-data-table-torture/1769145770765-script-step-0009-wheel/bundle.json`
+      - `ui-gallery-data-table-torture-scroll-refresh`: worst tick ~19.3ms (layout-dominated; includes real 50k-row scroll).
+      - Example bundle: `target/fret-diag-perf-data-table-torture5/1769150942029-script-step-0009-wheel/bundle.json`
+      - Note: the harness pins `TableState.pagination.page_size = data.len()` so the table is not stuck at the default 10-row page.
     - Tree harness (v1):
       - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_TREE_TORTURE`)
       - Harness implementation: `apps/fret-ui-gallery/src/ui.rs` (`preview_tree_torture`, `ui-gallery-tree-torture-root`)
@@ -451,6 +452,11 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
         `crates/fret-ui/src/tree/mod.rs` (`UiDebugScrollHandleChange`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiScrollHandleChangeV1`).
     - Scroll-handle revisions caused solely by viewport/content-size updates are now treated as `HitTestOnly` (repaint + hit-test), not `Layout`.
       This avoids view-cache rerenders/contained relayouts for scrollbars and other transform-only consumers.
+    - Scroll-handle "revision-only" changes (revision changed, but offset/viewport/content unchanged) are treated as `HitTestOnly` by default,
+      and are upgraded back to `Layout` only when a `VirtualList` must consume a deferred `scroll_to_item` request or the visible window leaves its overscan.
+      This avoids false cache-root rerenders when a scroll handle is shared across multiple layout surfaces (e.g. table horizontal scroll sync).
+      - Anchors: `crates/fret-ui/src/tree/layout.rs` (`invalidate_scroll_handle_bindings_for_changed_handles`),
+        `crates/fret-ui/src/scroll.rs` (`VirtualListScrollHandle` request tracking).
   - Evidence (local bundles):
     - In `target/fret-diag-scroll-handle-repro/1769098640774-ui-gallery-virtual-list-edit-9000/bundle.json` at `tick_id=7`, the scroll handle bound to the
       VirtualList reports `content_changed=true` (280032 -> 280064) and was previously classified as `kind=layout`.
@@ -462,6 +468,8 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Perf improvement evidence (same script, cache+shell):
       - Before: `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` top.us(total/layout/prepaint/paint)=503161/476991/241/25929
       - After: `target/fret-diag-perf-scroll-handle-after-fix/1769131393110-script-step-0011-click/bundle.json` top.us(total/layout/prepaint/paint)=244120/226780/165/17175
+    - Table scroll baseline now shows the "revision-only" scroll-handle churn does not force `scroll_handle_layout` dirtiness on the cache root:
+      - `target/fret-diag-perf-data-table-torture5/1769150942029-script-step-0009-wheel/bundle.json`
     - Mount invalidation overhead: reduce redundant invalidation propagation for newly mounted nodes.
       - Change: `declarative_instance_change_mask(None, _) -> 0` and a mount-only `UiTree::set_children_in_mount` path to avoid emitting
         per-node invalidation walks for freshly created nodes whose invalidation flags are already set.
