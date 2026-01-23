@@ -367,6 +367,7 @@ pub fn render<H: UiHost>(
         let initial_focus = req.initial_focus;
         let consume_outside_pointer_events = req.consume_outside_pointer_events;
         let disable_outside_pointer_events = req.disable_outside_pointer_events;
+        let restore_focus_on_close = req.restore_focus_on_close;
         let open = req.open;
         let open_for_dismiss = open.clone();
         let on_pointer_move = req.on_pointer_move.clone();
@@ -429,6 +430,7 @@ pub fn render<H: UiHost>(
                     initial_focus,
                     consume_outside_pointer_events,
                     disable_outside_pointer_events,
+                    restore_focus_on_close,
                     open: false,
                     restore_focus: None,
                     last_focus: focus_now,
@@ -439,6 +441,7 @@ pub fn render<H: UiHost>(
             entry.initial_focus = initial_focus;
             entry.consume_outside_pointer_events = consume_outside_pointer_events;
             entry.disable_outside_pointer_events = disable_outside_pointer_events;
+            entry.restore_focus_on_close = restore_focus_on_close;
 
             if let Some(barrier_layer) = entry.pointer_barrier_layer {
                 let present = open_now && disable_outside_pointer_events;
@@ -504,6 +507,7 @@ pub fn render<H: UiHost>(
             // open -> closed edge so recipes can animate out without deferring focus restoration.
             let closing = entry.open && !open_now;
             if closing
+                && entry.restore_focus_on_close
                 && (consume_outside_pointer_events
                     || focus_scope_prim::should_restore_focus_for_non_modal_overlay(
                         ui,
@@ -523,6 +527,12 @@ pub fn render<H: UiHost>(
                     ) {
                         ui.set_focus(Some(node));
                     }
+                }
+            } else if closing && !entry.restore_focus_on_close {
+                let focus_in_layer =
+                    focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
+                if focus_in_layer {
+                    ui.set_focus(None);
                 }
             }
 
@@ -549,12 +559,14 @@ pub fn render<H: UiHost>(
         Option<UiLayerId>,
         GlobalElementId,
         bool,
+        bool,
         Option<NodeId>,
     )> = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let mut out: Vec<(
             UiLayerId,
             Option<UiLayerId>,
             GlobalElementId,
+            bool,
             bool,
             Option<NodeId>,
         )> = Vec::new();
@@ -567,6 +579,7 @@ pub fn render<H: UiHost>(
                 active.pointer_barrier_layer,
                 active.trigger,
                 active.consume_outside_pointer_events,
+                active.restore_focus_on_close,
                 active.restore_focus,
             ));
         }
@@ -587,8 +600,14 @@ pub fn render<H: UiHost>(
                 .collect()
         });
 
-    for (layer, pointer_barrier_layer, trigger, consume_outside_pointer_events, restore_focus) in
-        to_hide_popovers
+    for (
+        layer,
+        pointer_barrier_layer,
+        trigger,
+        consume_outside_pointer_events,
+        restore_focus_on_close,
+        restore_focus,
+    ) in to_hide_popovers
     {
         let focus_now = ui.focus();
         let focus_in_layer = focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer));
@@ -612,14 +631,18 @@ pub fn render<H: UiHost>(
                 ui.set_layer_wants_pointer_move_events(layer, false);
                 ui.set_layer_wants_timer_events(layer, false);
             }
-            if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
-                ui,
-                app,
-                window,
-                Some(trigger),
-                restore_focus,
-            ) {
-                ui.set_focus(Some(node));
+            if restore_focus_on_close {
+                if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                    ui,
+                    app,
+                    window,
+                    Some(trigger),
+                    restore_focus,
+                ) {
+                    ui.set_focus(Some(node));
+                }
+            } else if focus_in_layer {
+                ui.set_focus(None);
             }
         } else {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);

@@ -3102,7 +3102,7 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
+                let mut request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     id,
                     trigger_id,
@@ -3115,6 +3115,7 @@ impl ContextMenu {
                     dismissible_on_pointer_move,
                     modal,
                 );
+                request.restore_focus_on_close = false;
                 OverlayController::request(cx, request);
             }
 

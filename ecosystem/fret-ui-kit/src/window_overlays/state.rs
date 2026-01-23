@@ -31,6 +31,7 @@ pub(super) struct ActivePopover {
     pub(super) initial_focus: Option<GlobalElementId>,
     pub(super) consume_outside_pointer_events: bool,
     pub(super) disable_outside_pointer_events: bool,
+    pub(super) restore_focus_on_close: bool,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) last_focus: Option<NodeId>,
