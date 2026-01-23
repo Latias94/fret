@@ -367,6 +367,8 @@ pub struct OverlayArbitrationSnapshot {
     /// When `modal_barrier_active=true`, this is always `PointerOcclusion::None` since the modal
     /// barrier already blocks underlay pointer routing.
     pub pointer_occlusion: fret_ui::tree::PointerOcclusion,
+    /// Whether any pointer is currently captured by the runtime.
+    pub pointer_capture_active: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -581,6 +583,7 @@ impl OverlayController {
             .iter()
             .any(|l| l.visible && base_root.is_none_or(|base| l.root != base));
         out.modal_barrier_active = runtime.modal_barrier_root.is_some();
+        out.pointer_capture_active = runtime.pointer_capture_active;
 
         if out.modal_barrier_active {
             out.pointer_occlusion = PointerOcclusion::None;
@@ -779,7 +782,8 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::CommandId;
     use fret_runtime::Effect;
-    use fret_ui::element::{LayoutStyle, Length, PressableProps};
+    use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, PressableProps};
+    use std::sync::Arc;
 
     #[derive(Default)]
     struct FakeServices;
@@ -848,6 +852,7 @@ mod tests {
                 has_any_overlays: false,
                 modal_barrier_active: false,
                 pointer_occlusion: fret_ui::tree::PointerOcclusion::None,
+                pointer_capture_active: false,
             }
         );
 
@@ -898,6 +903,74 @@ mod tests {
             snap.pointer_occlusion,
             fret_ui::tree::PointerOcclusion::None
         );
+    }
+
+    #[test]
+    fn arbitration_snapshot_reports_pointer_capture_active() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(300.0), Px(200.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "base",
+            |cx| {
+                vec![cx.pointer_region(
+                    PointerRegionProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                    },
+                    |cx| {
+                        cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {
+                            host.capture_pointer();
+                            true
+                        }));
+                        Vec::new()
+                    },
+                )]
+            },
+        );
+        ui.set_root(base);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let snap = OverlayController::arbitration_snapshot(&ui);
+        assert_eq!(snap.has_any_overlays, false);
+        assert_eq!(snap.modal_barrier_active, false);
+        assert_eq!(
+            snap.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
+        assert_eq!(snap.pointer_capture_active, true);
     }
 
     #[test]
