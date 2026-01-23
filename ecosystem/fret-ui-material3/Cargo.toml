@@ -15,6 +15,7 @@ default = []
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-icons = { path = "../fret-icons" }
+fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 material-colors.workspace = true
 serde.workspace = true

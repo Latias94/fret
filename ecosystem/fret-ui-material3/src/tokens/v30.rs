@@ -94,11 +94,13 @@ impl DynamicVariant {
 /// - This does not set `cfg.name`/`cfg.author`/`cfg.url`.
 pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_sys_state(cfg);
+    inject_sys_state_focus_indicator(cfg);
     inject_sys_motion(cfg);
     inject_sys_shape(cfg);
     inject_sys_typescale(cfg, typography);
     inject_comp_button_scalars(cfg);
     inject_comp_icon_button_scalars(cfg);
+    inject_comp_checkbox_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -236,6 +238,7 @@ pub fn theme_config_with_colors(
     inject_sys_colors(&mut cfg, colors);
     inject_comp_button_colors_from_sys(&mut cfg);
     inject_comp_icon_button_colors_from_sys(&mut cfg);
+    inject_comp_checkbox_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -799,6 +802,150 @@ fn inject_sys_state(cfg: &mut ThemeConfig) {
         .insert("md.sys.state.pressed.state-layer-opacity".to_string(), 0.1);
 }
 
+fn inject_sys_state_focus_indicator(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-state-focus-indicator.scss
+    cfg.metrics.insert(
+        "md.sys.state.focus-indicator.inner-offset".to_string(),
+        -3.0,
+    );
+    cfg.metrics
+        .insert("md.sys.state.focus-indicator.outer-offset".to_string(), 2.0);
+    cfg.metrics
+        .insert("md.sys.state.focus-indicator.thickness".to_string(), 3.0);
+}
+
+fn inject_comp_checkbox_scalars(cfg: &mut ThemeConfig) {
+    // Sources:
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-checkbox.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-state-focus-indicator.scss
+
+    cfg.metrics
+        .insert("md.comp.checkbox.container.size".to_string(), 18.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.container.shape".to_string(), 2.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.icon.size".to_string(), 18.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.state-layer.size".to_string(), 40.0);
+
+    cfg.metrics
+        .insert("md.comp.checkbox.selected.outline.width".to_string(), 0.0);
+    cfg.metrics
+        .insert("md.comp.checkbox.unselected.outline.width".to_string(), 2.0);
+    cfg.metrics.insert(
+        "md.comp.checkbox.selected.disabled.container.outline.width".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.unselected.disabled.outline.width".to_string(),
+        2.0,
+    );
+
+    cfg.numbers.insert(
+        "md.comp.checkbox.selected.disabled.container.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.unselected.disabled.container.opacity".to_string(),
+        0.38,
+    );
+
+    cfg.metrics.insert(
+        "md.comp.checkbox.focus.indicator.outline.offset".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.checkbox.focus.indicator.thickness".to_string(),
+        3.0,
+    );
+}
+
+fn inject_comp_checkbox_colors_from_sys(cfg: &mut ThemeConfig) {
+    copy_color(
+        cfg,
+        "md.comp.checkbox.selected.container.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.selected.icon.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.selected.hover.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.selected.focus.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.selected.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.selected.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.selected.disabled.icon.color",
+        "md.sys.color.surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.outline.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.hover.outline.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.focus.outline.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.pressed.outline.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.disabled.outline.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.checkbox.unselected.pressed.state-layer.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.checkbox.focus.indicator.color",
+        "md.sys.color.secondary",
+    );
+}
+
 fn inject_sys_motion(cfg: &mut ThemeConfig) {
     // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss
     cfg.durations_ms
@@ -1171,6 +1318,22 @@ mod tests {
             Some(40.0)
         );
         assert_eq!(
+            cfg.metrics
+                .get("md.sys.state.focus-indicator.thickness")
+                .copied(),
+            Some(3.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.checkbox.state-layer.size")
+                .copied(),
+            Some(40.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("md.comp.checkbox.container.size").copied(),
+            Some(18.0)
+        );
+        assert_eq!(
             cfg.numbers
                 .get("md.comp.button.filled.disabled.label-text.opacity")
                 .copied(),
@@ -1223,6 +1386,11 @@ mod tests {
         assert!(
             cfg.colors.contains_key("md.sys.color.outline-variant"),
             "expected outline-variant role"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.checkbox.selected.container.color"),
+            "expected checkbox color tokens to be derived from sys roles"
         );
     }
 

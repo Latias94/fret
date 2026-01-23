@@ -270,12 +270,8 @@ impl IconButton {
                             want_frames,
                         );
 
-                        let icon = material_icon(
-                            cx,
-                            &self.icon,
-                            size_tokens.icon_size,
-                            colors.icon_color,
-                        );
+                        let icon =
+                            material_icon(cx, &self.icon, size_tokens.icon_size, colors.icon_color);
                         let content = material_icon_button_content(cx, size_tokens, icon);
                         let chrome = material_icon_button_chrome(
                             cx,

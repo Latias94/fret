@@ -1547,6 +1547,7 @@ version = "0.1.0"
 dependencies = [
  "fret-core",
  "fret-icons",
+ "fret-runtime",
  "fret-ui",
  "material-colors",
  "serde",
