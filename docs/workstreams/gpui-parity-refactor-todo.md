@@ -308,13 +308,16 @@ Initial candidates (to be evidence-backed via `diag perf` bundles):
 - **1D scroll window (rows/lines)**
   - Code/text: `ecosystem/fret-code-view` (code blocks), `ecosystem/fret-markdown` (code blocks + long documents)
   - Tables/trees: `ecosystem/fret-ui-kit` (table/tree virtualization)
-  - Logs/inspectors: diagnostics panes and large “property inspectors” in `apps/*` and `ecosystem/fret-workspace`
+  - Workspace/inspectors: large “property inspectors” and pane sidebars in `apps/fret-editor` and `ecosystem/fret-workspace`
+  - Diagnostics: list-like surfaces in `apps/fretboard` + `ecosystem/fret-bootstrap` diagnostics panes
   - Search/commands: command palette, search results, outline panels (typically “list-of-rows” UIs with large datasets)
+  - Undo/history: `ecosystem/fret-undo` (history lists with frequent selection changes)
 - **2D viewport culling (nodes/sprites)**
   - Node graph / canvas: `ecosystem/fret-node`, `ecosystem/fret-canvas`
   - Gizmos/overlays: `ecosystem/fret-gizmo`, `ecosystem/fret-viewport-tooling`
 - **Sampling windows (data reduction)**
   - Charts/plots: `ecosystem/fret-chart`, `ecosystem/fret-plot`, `ecosystem/fret-plot3d`
+  - AI/chat transcripts: `ecosystem/fret-ui-ai` (large scrolling transcripts, incremental append, selection/search)
 
 Non-candidates (usually): small forms/menus/popovers where the “ephemeral window” complexity would outweigh the wins.
 
@@ -322,6 +325,46 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
   - Caret/selection blink and selection geometry updates (text/code views).
   - Hover/pressed/focus ring decoration layers (shadcn-style interaction chrome).
   - Drag previews / drop indicators (docking, lists/trees).
+  - Scrollbars and subtle scroll affordances (thumb hover/fade; scroll shadow/edge fades).
+  - Overlay arrows/anchors (position updates that should not imply rerender when content is stable).
+
+### Ecosystem Alignment Checklist (First Pass)
+
+This checklist is a “directional classification” to keep refactors incremental and avoid future rewrites. It is not
+meant to be perfect on day one; it is meant to be explicit.
+
+- **Prepaint-windowed (ADR 0190)**: viewport/scroll/camera primarily determines “what is visible”.
+  - `VirtualList` (v2): visible window + ephemeral items move toward `prepaint`; scroll should stay transform-only while the view is clean.
+  - Table/tree virtualization in `ecosystem/fret-ui-kit`: adopt the same window model to avoid rerendering huge row subtrees on scroll.
+  - Code/text lines: `ecosystem/fret-code-view`, `ecosystem/fret-markdown`, `ecosystem/fret-syntax` (retained caches) with a windowed “line/run” surface.
+  - 2D culling: `ecosystem/fret-node`, `ecosystem/fret-canvas`, `ecosystem/fret-viewport-tooling` (visible node/edge/handle windows).
+  - Sampling/data windows: `ecosystem/fret-chart`, `ecosystem/fret-plot`, `ecosystem/fret-plot3d`, `ecosystem/delinea` (pan/zoom updates a sampling window).
+  - Large transcripts/logs: `ecosystem/fret-ui-ai`, diagnostics panes in `ecosystem/fret-bootstrap`.
+
+- **Paint-only by default (ADR 0181)**: visual refinement derived from pointer/focus/selection state.
+  - Shadcn interaction chrome: `ecosystem/fret-ui-shadcn` (hover/pressed/focus rings, subtle transitions).
+  - Docking chrome: `ecosystem/fret-docking` (drop indicators, drag previews, tab hover).
+  - Text/code chrome: caret blink, selection highlight, IME underline/caret geometry (avoid `notify()` loops for blink/hover).
+  - Scrollbars and edge fades: hover/fade should be paint-only; structural changes stay in layout.
+
+- **Rerender on dirty view (ADR 0180)**: structural or semantic changes that must rebuild the declarative subtree.
+  - Data/model changes that alter the element tree shape (insert/remove/reorder).
+  - Overlay open/close (but keep overlay positioning/arrow placement paint-only when possible).
+  - Docking layout graph changes (but keep drag previews paint-only).
+
+- **Retained caches (cross-frame, must persist)**: moving these to “rebuild each frame” is usually a perf regression.
+  - Text shaping / line breaking caches, syntax parsing state (`ecosystem/fret-syntax`, renderer text systems).
+  - GPU caches/atlases (`crates/fret-render`, `ecosystem/fret-ui-assets`).
+  - Stable identity + element state stores (ADR 0028 / ADR 1151 / ADR 1152).
+
+### ADR Follow-ups (Create Only When We Cross a “Hard-to-change” Boundary)
+
+We should add a new ADR only when we are about to lock in behavior that would be expensive to change later. Likely ADR
+topics (if/when we implement them):
+
+- The exact contract and liveness rules for “ephemeral prepaint items” (debuggability, replay caching, inspector behavior).
+- Cache key gates for reuse beyond `layout` invalidation (bounds/text style/content mask parity with GPUI).
+- “Inspector mode disables caching” semantics (GPUI does this; helps explainability and avoids unstable debug identity).
 
 - [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
@@ -499,6 +542,21 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       - `crates/fret-ui/src/action.rs` (`UiPointerActionHost::invalidate`)
       - `crates/fret-ui/src/declarative/host_widget/event/pointer_region.rs`
       - `crates/fret-ui/src/declarative/host_widget/event/pressable.rs`
+
+- [ ] GPUI-MVP5-eco-008 Docking: make drag/drop indicators paint-only under view-cache reuse.
+  - Touches: `ecosystem/fret-docking/src/*`, `ecosystem/fret-ui-kit/src/*` (if shared chrome helpers are needed).
+  - Done when: a UI Gallery harness can simulate “drag over docking targets” and confirm no cache-root rerender is needed
+    for the indicator ticks (paint-only invalidation only), while still passing stale-paint checks.
+
+- [ ] GPUI-MVP5-eco-009 Workspace/inspectors: identify list/outline/file-tree surfaces that should be windowed.
+  - Touches: `ecosystem/fret-workspace/src/*`, `apps/fret-editor/src/*`.
+  - Done when: we have (1) an evidence-backed candidate list, (2) one migrated surface (windowed rows or VirtualList v2),
+    and (3) a `diag` script that catches “looks stale / click hits correct but paint is stale” regressions.
+
+- [ ] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
+  - Touches: `ecosystem/fret-ui-ai/src/*`.
+  - Done when: append-heavy transcript updates no longer rebuild/relayout the entire history while scrolling, and the harness
+    proves stable paint under view-cache reuse.
 - [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
