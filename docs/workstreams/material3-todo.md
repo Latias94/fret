@@ -124,6 +124,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - [x] Import `md.comp.menu.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_menu_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_menu_scalars`).
+    - [x] Import `md.comp.(outlined|filled)-text-field.*` scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_outlined_text_field_scalars`,
+        `inject_comp_filled_text_field_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_outlined_text_field_scalars`,
+        `inject_comp_filled_text_field_scalars`).
     - [ ] Expand scalar import coverage for other MVP components.
     - [ ] Decide how to represent non-scalar tokens (corner sets, etc.) in ThemeConfig.
 - [x] Add support for non-color/non-px token kinds needed by Material:

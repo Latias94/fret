@@ -670,3 +670,165 @@ pub(crate) fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
         24.0,
     );
 }
+
+pub(crate) fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.outlined-text-field.`
+
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.container.height".to_string(),
+        56.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.container.shape".to_string(),
+        4.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.input-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.leading-icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.outline.opacity".to_string(),
+        0.12,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.disabled.outline.width".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.supporting-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.disabled.trailing-icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.focus.indicator.outline.thickness".to_string(),
+        3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.focus.outline.width".to_string(),
+        3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.hover.outline.width".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.input-text.weight".to_string(),
+        400.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.label-text.weight".to_string(),
+        400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.leading-icon.size".to_string(),
+        24.0,
+    );
+    cfg.metrics
+        .insert("md.comp.outlined-text-field.outline.width".to_string(), 1.0);
+    cfg.numbers.insert(
+        "md.comp.outlined-text-field.supporting-text.weight".to_string(),
+        400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.outlined-text-field.trailing-icon.size".to_string(),
+        24.0,
+    );
+}
+
+pub(crate) fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.filled-text-field.`
+
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.active-indicator.height".to_string(),
+        1.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.container.height".to_string(),
+        56.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.disabled.active-indicator.height".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.active-indicator.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.container.opacity".to_string(),
+        0.04,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.input-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.label-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.leading-icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.supporting-text.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.disabled.trailing-icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.error.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.focus.active-indicator.height".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.focus.active-indicator.thickness".to_string(),
+        3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.hover.active-indicator.height".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.input-text.weight".to_string(),
+        400.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.label-text.weight".to_string(),
+        400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.leading-icon.size".to_string(),
+        24.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.filled-text-field.supporting-text.weight".to_string(),
+        400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.filled-text-field.trailing-icon.size".to_string(),
+        24.0,
+    );
+}

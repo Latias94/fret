@@ -43,6 +43,8 @@ impl Args {
             "md.comp.switch.".to_string(),
             "md.comp.primary-navigation-tab.".to_string(),
             "md.comp.menu.".to_string(),
+            "md.comp.outlined-text-field.".to_string(),
+            "md.comp.filled-text-field.".to_string(),
         ];
         let mut debug = false;
 
@@ -400,6 +402,22 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.menu.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.menu."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_outlined_text_field_scalars",
+        "md.comp.outlined-text-field.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-text-field."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_filled_text_field_scalars",
+        "md.comp.filled-text-field.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-text-field."))
             .collect::<Vec<_>>(),
     );
 

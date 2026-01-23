@@ -1244,132 +1244,17 @@ fn inject_comp_radio_button_colors_from_sys(cfg: &mut ThemeConfig) {
 }
 
 fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-text-field.scss
-
-    cfg.metrics.insert(
-        "md.comp.outlined-text-field.container.height".to_string(),
-        56.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.outlined-text-field.container.shape".to_string(),
-        4.0,
-    );
-
-    cfg.metrics
-        .insert("md.comp.outlined-text-field.outline.width".to_string(), 1.0);
-    cfg.metrics.insert(
-        "md.comp.outlined-text-field.hover.outline.width".to_string(),
-        1.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.outlined-text-field.focus.outline.width".to_string(),
-        3.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.outlined-text-field.disabled.outline.width".to_string(),
-        1.0,
-    );
-
-    cfg.metrics.insert(
-        "md.comp.outlined-text-field.leading-icon.size".to_string(),
-        24.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.outlined-text-field.trailing-icon.size".to_string(),
-        24.0,
-    );
-
-    cfg.numbers.insert(
-        "md.comp.outlined-text-field.disabled.input-text.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.outlined-text-field.disabled.label-text.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.outlined-text-field.disabled.supporting-text.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.outlined-text-field.disabled.outline.opacity".to_string(),
-        0.12,
-    );
+    material_web_v30::inject_comp_outlined_text_field_scalars(cfg);
 }
 
 fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-filled-text-field.scss
+    material_web_v30::inject_comp_filled_text_field_scalars(cfg);
 
-    cfg.metrics.insert(
-        "md.comp.filled-text-field.container.height".to_string(),
-        56.0,
-    );
+    // Material Web v30 models `md.comp.filled-text-field.container.shape` as a corner set
+    // (`md-sys-shape.$corner-extra-small-top`). Our `ThemeConfig` currently stores a single scalar
+    // corner radius, so we approximate with the common extra-small radius (4px).
     cfg.metrics
         .insert("md.comp.filled-text-field.container.shape".to_string(), 4.0);
-
-    cfg.metrics.insert(
-        "md.comp.filled-text-field.active-indicator.height".to_string(),
-        1.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.filled-text-field.hover.active-indicator.height".to_string(),
-        1.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.filled-text-field.focus.active-indicator.height".to_string(),
-        2.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.filled-text-field.disabled.active-indicator.height".to_string(),
-        1.0,
-    );
-
-    cfg.metrics.insert(
-        "md.comp.filled-text-field.leading-icon.size".to_string(),
-        24.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.filled-text-field.trailing-icon.size".to_string(),
-        24.0,
-    );
-
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.disabled.active-indicator.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.disabled.container.opacity".to_string(),
-        0.04,
-    );
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.disabled.input-text.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.disabled.label-text.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.disabled.leading-icon.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.disabled.supporting-text.opacity".to_string(),
-        0.38,
-    );
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.disabled.trailing-icon.opacity".to_string(),
-        0.38,
-    );
-
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.hover.state-layer.opacity".to_string(),
-        0.08,
-    );
-    cfg.numbers.insert(
-        "md.comp.filled-text-field.error.hover.state-layer.opacity".to_string(),
-        0.08,
-    );
 }
 
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
