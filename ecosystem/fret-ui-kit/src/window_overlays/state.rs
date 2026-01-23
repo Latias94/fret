@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::FrameId;
-use fret_ui::tree::UiLayerId;
+use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 
 use super::{
@@ -173,6 +173,9 @@ fn apply_overlay_layer_state<H: UiHost>(
     st: OverlayLayerState,
 ) {
     ui.set_layer_wants_timer_events(layer, st.wants_timer_events);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
 
     match kind {
         OverlayLayerKind::NonModalDismissible => {
@@ -188,6 +191,7 @@ fn apply_overlay_layer_state<H: UiHost>(
             // layer must remain hit-testable to keep the underlay inert and prevent click-through.
             ui.set_layer_hit_testable(layer, st.present);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
+            ui.set_layer_wants_pointer_move_events(layer, false);
         }
         OverlayLayerKind::Tooltip => {
             ui.set_layer_visible(layer, st.present);
@@ -199,13 +203,56 @@ fn apply_overlay_layer_state<H: UiHost>(
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, st.interactive);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
+            ui.set_layer_wants_pointer_move_events(layer, false);
         }
         OverlayLayerKind::Toast => {
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, st.interactive);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
+            ui.set_layer_wants_pointer_move_events(layer, false);
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct NonModalDismissibleLayerPolicy {
+    pub dismissable_branches: Vec<NodeId>,
+    pub consume_outside_pointer_events: bool,
+    pub disable_outside_pointer_events: bool,
+    pub wants_pointer_move_events: bool,
+}
+
+pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+    policy: NonModalDismissibleLayerPolicy,
+) {
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::NonModalDismissible,
+        OverlayLayerState::non_modal_dismissible(present, interactive),
+    );
+
+    let interactive = present && interactive;
+    if interactive {
+        ui.set_layer_pointer_down_outside_branches(layer, policy.dismissable_branches);
+    }
+    ui.set_layer_consume_pointer_down_outside_events(
+        layer,
+        interactive && policy.consume_outside_pointer_events,
+    );
+    ui.set_layer_pointer_occlusion(
+        layer,
+        if interactive && policy.disable_outside_pointer_events {
+            PointerOcclusion::BlockMouseExceptScroll
+        } else {
+            PointerOcclusion::None
+        },
+    );
+    ui.set_layer_wants_pointer_move_events(layer, interactive && policy.wants_pointer_move_events);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -227,10 +274,6 @@ impl OverlayLayer {
         Self::hidden(OverlayLayerKind::Modal)
     }
 
-    pub(super) fn hide_non_modal_dismissible() -> Self {
-        Self::hidden(OverlayLayerKind::NonModalDismissible)
-    }
-
     pub(super) fn hide_hover() -> Self {
         Self::hidden(OverlayLayerKind::Hover)
     }
@@ -247,13 +290,6 @@ impl OverlayLayer {
         Self::new(
             OverlayLayerKind::Modal,
             OverlayLayerState::modal(present, interactive),
-        )
-    }
-
-    pub(super) fn non_modal_dismissible(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::NonModalDismissible,
-            OverlayLayerState::non_modal_dismissible(present, interactive),
         )
     }
 

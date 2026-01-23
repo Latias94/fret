@@ -14,8 +14,9 @@ use crate::primitives::dismissable_layer as dismissable_layer_prim;
 use crate::primitives::focus_scope as focus_scope_prim;
 
 use super::state::{
-    ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip, OverlayLayer,
-    WindowOverlays,
+    ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip,
+    NonModalDismissibleLayerPolicy, OverlayLayer, WindowOverlays,
+    apply_non_modal_dismissible_layer,
 };
 use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{
@@ -392,6 +393,7 @@ pub fn render<H: UiHost>(
         let trigger = req.trigger;
         let initial_focus = req.initial_focus;
         let consume_outside_pointer_events = req.consume_outside_pointer_events;
+        let wants_pointer_move_events = req.on_pointer_move.is_some();
         let open = req.open;
         let open_for_dismiss = open.clone();
         let on_pointer_move = req.on_pointer_move.clone();
@@ -456,12 +458,20 @@ pub fn render<H: UiHost>(
                 && (disable_outside_pointer_events || consume_outside_pointer_events)
                 && arbitration.pointer_capture_active
             {
-                let trigger_layer = fret_ui::elements::node_for_element(app, window, trigger)
-                    .and_then(|node| ui.node_layer(node));
-                let capture_is_foreign = arbitration.pointer_capture_multiple_layers
-                    || arbitration.pointer_capture_layer.is_none()
-                    || (arbitration.pointer_capture_layer != Some(entry.layer)
-                        && arbitration.pointer_capture_layer != trigger_layer);
+                let trigger_node = fret_ui::elements::node_for_element(app, window, trigger);
+                let capture_is_foreign = if arbitration.pointer_capture_multiple_layers {
+                    true
+                } else {
+                    let captured_node = ui.any_captured_node();
+                    let captured_layer = captured_node.and_then(|n| ui.node_layer(n));
+                    let capture_belongs_to_overlay_layer = captured_layer == Some(entry.layer);
+                    let capture_belongs_to_trigger =
+                        captured_node.is_some() && captured_node == trigger_node;
+                    let capture_known = captured_node.is_some();
+                    capture_known
+                        && !capture_belongs_to_overlay_layer
+                        && !capture_belongs_to_trigger
+                };
                 if capture_is_foreign {
                     let _ = app.models_mut().update(&open, |v| *v = false);
                     open_now = false;
@@ -504,26 +514,18 @@ pub fn render<H: UiHost>(
             } else {
                 Vec::new()
             };
-            ui.set_layer_pointer_down_outside_branches(entry.layer, dismissable_branches);
-            ui.set_layer_consume_pointer_down_outside_events(
+            apply_non_modal_dismissible_layer(
+                ui,
                 entry.layer,
-                consume_outside_pointer_events && open_now,
+                true,
+                open_now,
+                NonModalDismissibleLayerPolicy {
+                    dismissable_branches,
+                    consume_outside_pointer_events,
+                    disable_outside_pointer_events,
+                    wants_pointer_move_events,
+                },
             );
-
-            // Non-modal overlays are click-through during close transitions:
-            // when `present=true` but `open=false`, they must not participate in hit-testing or
-            // the outside-press observer pass.
-            OverlayLayer::non_modal_dismissible(true, open_now).apply(ui, entry.layer);
-
-            // Radix `disableOutsidePointerEvents` outcome: prevent pointer interactions from
-            // reaching the underlay while the overlay is open, but allow scroll wheel routing to
-            // the underlay scroll target.
-            let occlusion = if open_now && disable_outside_pointer_events {
-                fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
-            } else {
-                fret_ui::tree::PointerOcclusion::None
-            };
-            ui.set_layer_pointer_occlusion(entry.layer, occlusion);
 
             // Radix-aligned focus restore: when a non-modal overlay closes but remains mounted for
             // a close transition (`present=true`), restore focus deterministically if focus is
@@ -641,10 +643,18 @@ pub fn render<H: UiHost>(
                 || (!focus_cleared_by_modal_scope
                     && focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer)))
         {
-            OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
-            ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
-            ui.set_layer_consume_pointer_down_outside_events(layer, false);
-            ui.set_layer_pointer_occlusion(layer, fret_ui::tree::PointerOcclusion::None);
+            apply_non_modal_dismissible_layer(
+                ui,
+                layer,
+                false,
+                false,
+                NonModalDismissibleLayerPolicy {
+                    dismissable_branches: Vec::new(),
+                    consume_outside_pointer_events: false,
+                    disable_outside_pointer_events: false,
+                    wants_pointer_move_events: false,
+                },
+            );
             if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                 ui,
                 app,
@@ -655,10 +665,18 @@ pub fn render<H: UiHost>(
                 ui.set_focus(Some(node));
             }
         } else {
-            OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
-            ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
-            ui.set_layer_consume_pointer_down_outside_events(layer, false);
-            ui.set_layer_pointer_occlusion(layer, fret_ui::tree::PointerOcclusion::None);
+            apply_non_modal_dismissible_layer(
+                ui,
+                layer,
+                false,
+                false,
+                NonModalDismissibleLayerPolicy {
+                    dismissable_branches: Vec::new(),
+                    consume_outside_pointer_events: false,
+                    disable_outside_pointer_events: false,
+                    wants_pointer_move_events: false,
+                },
+            );
         }
     }
 

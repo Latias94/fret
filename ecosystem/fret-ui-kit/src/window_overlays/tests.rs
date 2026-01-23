@@ -2807,7 +2807,16 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
     assert!(info.visible);
     assert!(!info.blocks_underlay_input);
     assert!(!info.hit_testable);
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None,
+        "expected non-modal overlays to drop pointer occlusion during close transitions"
+    );
     assert!(!info.wants_pointer_down_outside_events);
+    assert!(
+        !info.wants_pointer_move_events,
+        "expected non-modal overlays to stop receiving pointer-move observers during close transitions"
+    );
 }
 
 #[test]
