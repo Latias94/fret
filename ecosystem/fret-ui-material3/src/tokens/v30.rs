@@ -861,6 +861,14 @@ fn inject_comp_checkbox_scalars(cfg: &mut ThemeConfig) {
         "md.comp.checkbox.unselected.disabled.container.opacity".to_string(),
         0.38,
     );
+    cfg.numbers.insert(
+        "md.comp.checkbox.selected.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.checkbox.unselected.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
 
     cfg.metrics.insert(
         "md.comp.checkbox.focus.indicator.outline.offset".to_string(),
