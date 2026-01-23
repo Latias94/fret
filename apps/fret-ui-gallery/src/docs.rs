@@ -125,6 +125,31 @@ let block = CodeBlock::new(code).language("rust").show_line_numbers(true);
 ```
 "#;
 
+pub(crate) const DOC_WINDOWED_ROWS_SURFACE_TORTURE: &str = r#"
+## Windowed Rows Surface (torture harness)
+
+This page is a baseline for **scroll-driven windowing without per-row declarative subtrees**.
+
+It uses a structurally stable element tree (a `Scroll` + a leaf `Canvas`) and paints only the
+visible row window inside the canvas paint handler.
+
+This is intended to validate:
+
+- scroll stability under view-cache reuse (no stale paint),
+- near-minimal CPU work for scroll-only deltas,
+- a reusable pattern for huge “list-like” surfaces that do not need per-row semantics/focus.
+"#;
+
+pub(crate) const USAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = r#"
+```rust
+use fret_ui_kit::declarative::windowed_rows_surface::{
+    WindowedRowsSurfaceProps, windowed_rows_surface,
+};
+
+let el = windowed_rows_surface(cx, WindowedRowsSurfaceProps::default(), |_p, _i, _rect| {});
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 

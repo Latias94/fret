@@ -97,6 +97,7 @@ pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
+pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
@@ -128,6 +129,8 @@ pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
+pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
+    "ui_gallery.nav.select.windowed_rows_surface_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
@@ -294,6 +297,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CODE_VIEW_TORTURE,
                 docs::USAGE_CODE_VIEW_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_WINDOWED_ROWS_SURFACE_TORTURE,
+                "Windowed Rows Surface",
+                "Windowed Rows Surface / Scroll + Canvas Harness",
+                "fret-ui-kit (scroll + canvas pattern)",
+                CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE,
+                &["scroll", "performance", "gpui-parity", "canvas", "harness"],
+                docs::DOC_WINDOWED_ROWS_SURFACE_TORTURE,
+                docs::USAGE_WINDOWED_ROWS_SURFACE_TORTURE,
             ),
         ],
     },
