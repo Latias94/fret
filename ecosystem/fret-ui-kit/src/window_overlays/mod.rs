@@ -14,6 +14,8 @@ mod toast;
 mod tests;
 
 use fret_core::AppWindowId;
+use fret_ui::elements::GlobalElementId;
+use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
 
 pub use frame::{
@@ -91,4 +93,92 @@ pub fn try_handle_window_command<H: UiHost>(
     );
     app.request_redraw(window);
     true
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum WindowOverlayLayerKind {
+    Popover,
+    Modal,
+    Hover,
+    Tooltip,
+    ToastLayer,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct WindowOverlayLayerEntry {
+    pub kind: WindowOverlayLayerKind,
+    pub id: GlobalElementId,
+    pub layer: UiLayerId,
+    pub open: bool,
+}
+
+pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) -> Vec<WindowOverlayLayerEntry> {
+    app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
+        let mut out: Vec<WindowOverlayLayerEntry> = Vec::new();
+
+        for ((w, id), active) in overlays.popovers.iter() {
+            if *w != window {
+                continue;
+            }
+            out.push(WindowOverlayLayerEntry {
+                kind: WindowOverlayLayerKind::Popover,
+                id: *id,
+                layer: active.layer,
+                open: active.open,
+            });
+        }
+
+        for ((w, id), active) in overlays.modals.iter() {
+            if *w != window {
+                continue;
+            }
+            out.push(WindowOverlayLayerEntry {
+                kind: WindowOverlayLayerKind::Modal,
+                id: *id,
+                layer: active.layer,
+                open: active.open,
+            });
+        }
+
+        for ((w, id), active) in overlays.hover_overlays.iter() {
+            if *w != window {
+                continue;
+            }
+            out.push(WindowOverlayLayerEntry {
+                kind: WindowOverlayLayerKind::Hover,
+                id: *id,
+                layer: active.layer,
+                open: true,
+            });
+        }
+
+        for ((w, id), active) in overlays.tooltips.iter() {
+            if *w != window {
+                continue;
+            }
+            out.push(WindowOverlayLayerEntry {
+                kind: WindowOverlayLayerKind::Tooltip,
+                id: *id,
+                layer: active.layer,
+                open: true,
+            });
+        }
+
+        for ((w, id), active) in overlays.toast_layers.iter() {
+            if *w != window {
+                continue;
+            }
+            out.push(WindowOverlayLayerEntry {
+                kind: WindowOverlayLayerKind::ToastLayer,
+                id: *id,
+                layer: active.layer,
+                open: true,
+            });
+        }
+
+        out
+    })
 }

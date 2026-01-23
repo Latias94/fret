@@ -4,11 +4,12 @@ use fret_core::{
     MouseButton, MouseButtons, Point, PointerCancelEvent, PointerCancelReason, PointerEvent,
     PointerId, PointerType, Px, Rect,
 };
+use std::collections::HashMap;
 use std::time::Duration;
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
 use winit::event::{
-    ButtonSource, ElementState, KeyEvent, MouseButton as WinitMouseButton, MouseScrollDelta,
-    PointerKind, WindowEvent,
+    ButtonSource, DeviceId, ElementState, KeyEvent, MouseButton as WinitMouseButton,
+    MouseScrollDelta, PointerKind, PointerSource, WindowEvent,
 };
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::Window;
@@ -240,15 +241,25 @@ pub fn install_web_cursor_listener(
     })
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub struct WinitInputState {
     pub cursor_pos: Point,
     pub cursor_pos_physical: Option<PhysicalPosition<f64>>,
+    /// Mouse button state for the primary mouse pointer (`PointerId(0)`).
+    ///
+    /// This is a compatibility view used by higher-level runner glue. Multi-pointer state is
+    /// tracked in `pointers`.
     pub pressed_buttons: MouseButtons,
     pub modifiers: Modifiers,
     pub raw_modifiers: ModifiersState,
     pub alt_gr_down: bool,
     pub last_pointer_type: fret_core::PointerType,
+    pointers: HashMap<PointerId, PointerState>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct PointerState {
+    buttons: MouseButtons,
     click: ClickTracker,
 }
 
@@ -328,23 +339,25 @@ impl ClickTracker {
         }
     }
 
-    fn end_press(&mut self, button: MouseButton, pos: Point) -> u8 {
+    fn end_press(&mut self, button: MouseButton, pos: Point) -> (u8, bool) {
         if matches!(button, MouseButton::Other(_)) {
-            return 1;
+            return (1, true);
         }
         let now = Instant::now();
         let (state, press) = self.state_for_button_mut(button);
         let Some(press_state) = press.take() else {
-            return 1;
+            return (1, false);
         };
 
-        if !press_state.moved && distance_px(pos, press_state.start_pos) <= Self::CLICK_SLOP_PX {
+        let is_click =
+            !press_state.moved && distance_px(pos, press_state.start_pos) <= Self::CLICK_SLOP_PX;
+        if is_click {
             state.last_time = Some(now);
             state.last_pos = pos;
             state.count = press_state.click_count;
         }
 
-        press_state.click_count.max(1)
+        (press_state.click_count.max(1), is_click)
     }
 
     fn state_for_button_mut(
@@ -461,6 +474,24 @@ impl WinitWindowState {
 }
 
 impl WinitInputState {
+    fn pointer_state_mut(&mut self, pointer_id: PointerId) -> &mut PointerState {
+        let state = self.pointers.entry(pointer_id).or_default();
+        if pointer_id == PointerId(0) {
+            state.buttons = self.pressed_buttons;
+        }
+        state
+    }
+
+    fn pointer_buttons(&self, pointer_id: PointerId) -> MouseButtons {
+        if pointer_id == PointerId(0) {
+            return self.pressed_buttons;
+        }
+        self.pointers
+            .get(&pointer_id)
+            .map(|state| state.buttons)
+            .unwrap_or_default()
+    }
+
     pub fn handle_window_event(
         &mut self,
         window_scale_factor: f64,
@@ -513,43 +544,55 @@ impl WinitInputState {
             WindowEvent::KeyboardInput { event, .. } => {
                 self.handle_key_event(event, out);
             }
-            WindowEvent::PointerMoved { position, .. } => {
-                self.cursor_pos_physical = Some(*position);
+            WindowEvent::PointerMoved {
+                device_id,
+                position,
+                source,
+                ..
+            } => {
+                let pointer_id = map_pointer_id_from_pointer_source(*device_id, source);
+                let pointer_type = map_pointer_type_from_pointer_source(source);
+
                 let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
-                self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
-                self.click.update_move(self.cursor_pos);
+                let pos = Point::new(Px(logical.x), Px(logical.y));
+
+                if pointer_id == PointerId(0) {
+                    self.cursor_pos_physical = Some(*position);
+                    self.cursor_pos = pos;
+                    self.last_pointer_type = pointer_type;
+                }
+
+                self.pointer_state_mut(pointer_id).click.update_move(pos);
                 out.push(Event::Pointer(PointerEvent::Move {
-                    pointer_id: PointerId(0),
-                    position: self.cursor_pos,
-                    buttons: self.pressed_buttons,
+                    pointer_id,
+                    position: pos,
+                    buttons: self.pointer_buttons(pointer_id),
                     modifiers: self.modifiers,
-                    pointer_type: self.last_pointer_type,
+                    pointer_type,
                 }));
             }
             WindowEvent::PointerLeft {
+                device_id,
                 position,
-                primary,
                 kind,
                 ..
             } => {
-                if !primary {
-                    return;
-                }
-
                 let pos = position.map(|position| {
                     let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
                     Point::new(Px(logical.x), Px(logical.y))
                 });
-                if let Some(pos) = pos {
-                    self.cursor_pos = pos;
+                let pointer_type = map_pointer_kind(*kind);
+                let pointer_id = map_pointer_id_from_pointer_kind(*device_id, *kind);
+                if pointer_id == PointerId(0) {
+                    if let Some(pos) = pos {
+                        self.cursor_pos = pos;
+                    }
+                    self.last_pointer_type = pointer_type;
                 }
 
-                let pointer_type = map_pointer_kind(*kind);
-                self.last_pointer_type = pointer_type;
-
-                let buttons = self.pressed_buttons;
+                let buttons = self.pointer_buttons(pointer_id);
                 out.push(Event::PointerCancel(PointerCancelEvent {
-                    pointer_id: PointerId(0),
+                    pointer_id,
                     position: pos,
                     buttons,
                     modifiers: self.modifiers,
@@ -559,51 +602,72 @@ impl WinitInputState {
 
                 // `PointerLeft` may arrive without a matching button release (e.g. touch tracking
                 // canceled by the OS). Reset runner-side state to avoid stuck buttons/click counts.
-                self.pressed_buttons = MouseButtons::default();
-                self.click = ClickTracker::default();
+                self.pointers.remove(&pointer_id);
+                if pointer_id == PointerId(0) {
+                    self.pressed_buttons = MouseButtons::default();
+                }
             }
             WindowEvent::PointerButton {
                 state,
+                device_id,
                 position,
                 button,
                 ..
             } => {
-                self.cursor_pos_physical = Some(*position);
+                let pointer_id = map_pointer_id_from_button_source(*device_id, button);
                 let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
-                self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
+                let pos = Point::new(Px(logical.x), Px(logical.y));
+
+                if pointer_id == PointerId(0) {
+                    self.cursor_pos_physical = Some(*position);
+                    self.cursor_pos = pos;
+                }
 
                 let pointer_type = map_pointer_type(button);
-                self.last_pointer_type = pointer_type;
+                if pointer_id == PointerId(0) {
+                    self.last_pointer_type = pointer_type;
+                }
 
                 let Some(winit_button) = map_pointer_button(button) else {
                     return;
                 };
                 let pressed = matches!(state, ElementState::Pressed);
-                set_mouse_buttons(&mut self.pressed_buttons, winit_button, pressed);
-
                 let mapped_button = map_mouse_button(winit_button);
 
-                let evt = if pressed {
-                    let click_count = self.click.begin_press(mapped_button, self.cursor_pos);
-                    PointerEvent::Down {
-                        pointer_id: PointerId(0),
-                        position: self.cursor_pos,
-                        button: mapped_button,
-                        modifiers: self.modifiers,
-                        click_count,
-                        pointer_type,
-                    }
-                } else {
-                    let click_count = self.click.end_press(mapped_button, self.cursor_pos);
-                    PointerEvent::Up {
-                        pointer_id: PointerId(0),
-                        position: self.cursor_pos,
-                        button: mapped_button,
-                        modifiers: self.modifiers,
-                        click_count,
-                        pointer_type,
-                    }
+                let (evt, buttons_now) = {
+                    let pointer_state = self.pointer_state_mut(pointer_id);
+                    set_mouse_buttons(&mut pointer_state.buttons, winit_button, pressed);
+                    let buttons_now = pointer_state.buttons;
+
+                    let evt = if pressed {
+                        let click_count = pointer_state.click.begin_press(mapped_button, pos);
+                        PointerEvent::Down {
+                            pointer_id,
+                            position: pos,
+                            button: mapped_button,
+                            modifiers: self.modifiers,
+                            click_count,
+                            pointer_type,
+                        }
+                    } else {
+                        let (click_count, is_click) =
+                            pointer_state.click.end_press(mapped_button, pos);
+                        PointerEvent::Up {
+                            pointer_id,
+                            position: pos,
+                            button: mapped_button,
+                            modifiers: self.modifiers,
+                            is_click,
+                            click_count,
+                            pointer_type,
+                        }
+                    };
+
+                    (evt, buttons_now)
                 };
+                if pointer_id == PointerId(0) {
+                    self.pressed_buttons = buttons_now;
+                }
                 out.push(Event::Pointer(evt));
             }
             WindowEvent::MouseWheel { delta, .. } => {
@@ -665,7 +729,7 @@ impl WinitInputState {
             out.push(Event::Pointer(PointerEvent::Move {
                 pointer_id: PointerId(0),
                 position: self.cursor_pos,
-                buttons: self.pressed_buttons,
+                buttons: self.pointer_buttons(PointerId(0)),
                 modifiers: self.modifiers,
                 pointer_type: self.last_pointer_type,
             }));
@@ -786,6 +850,83 @@ pub fn map_pointer_type(button: &ButtonSource) -> fret_core::PointerType {
     }
 }
 
+const POINTER_ID_PAYLOAD_MASK: u64 = (1u64 << 56) - 1;
+const POINTER_ID_NAMESPACE_TOUCH: u64 = 1u64 << 56;
+const POINTER_ID_NAMESPACE_PEN: u64 = 2u64 << 56;
+const POINTER_ID_NAMESPACE_UNKNOWN: u64 = 3u64 << 56;
+
+fn namespaced_pointer_id(namespace: u64, payload: u64) -> PointerId {
+    PointerId(namespace | (payload & POINTER_ID_PAYLOAD_MASK))
+}
+
+fn map_pointer_id_from_device_id(kind_namespace: u64, device_id: Option<DeviceId>) -> PointerId {
+    let payload = device_id.map(|id| id.into_raw() as u64).unwrap_or(0);
+    namespaced_pointer_id(kind_namespace, payload)
+}
+
+pub fn map_pointer_id_from_pointer_source(
+    device_id: Option<DeviceId>,
+    source: &PointerSource,
+) -> PointerId {
+    match source {
+        PointerSource::Mouse => PointerId(0),
+        PointerSource::Touch { finger_id, .. } => {
+            namespaced_pointer_id(POINTER_ID_NAMESPACE_TOUCH, finger_id.into_raw() as u64)
+        }
+        PointerSource::TabletTool { .. } => {
+            map_pointer_id_from_device_id(POINTER_ID_NAMESPACE_PEN, device_id)
+        }
+        PointerSource::Unknown => {
+            map_pointer_id_from_device_id(POINTER_ID_NAMESPACE_UNKNOWN, device_id)
+        }
+    }
+}
+
+pub fn map_pointer_id_from_pointer_kind(
+    device_id: Option<DeviceId>,
+    kind: PointerKind,
+) -> PointerId {
+    match kind {
+        PointerKind::Mouse => PointerId(0),
+        PointerKind::Touch(finger_id) => {
+            namespaced_pointer_id(POINTER_ID_NAMESPACE_TOUCH, finger_id.into_raw() as u64)
+        }
+        PointerKind::TabletTool(_) => {
+            map_pointer_id_from_device_id(POINTER_ID_NAMESPACE_PEN, device_id)
+        }
+        PointerKind::Unknown => {
+            map_pointer_id_from_device_id(POINTER_ID_NAMESPACE_UNKNOWN, device_id)
+        }
+    }
+}
+
+pub fn map_pointer_id_from_button_source(
+    device_id: Option<DeviceId>,
+    button: &ButtonSource,
+) -> PointerId {
+    match button {
+        ButtonSource::Mouse(_) => PointerId(0),
+        ButtonSource::Touch { finger_id, .. } => {
+            namespaced_pointer_id(POINTER_ID_NAMESPACE_TOUCH, finger_id.into_raw() as u64)
+        }
+        ButtonSource::TabletTool { .. } => {
+            map_pointer_id_from_device_id(POINTER_ID_NAMESPACE_PEN, device_id)
+        }
+        ButtonSource::Unknown(_) => {
+            map_pointer_id_from_device_id(POINTER_ID_NAMESPACE_UNKNOWN, device_id)
+        }
+    }
+}
+
+pub fn map_pointer_type_from_pointer_source(source: &PointerSource) -> PointerType {
+    match source {
+        PointerSource::Mouse => PointerType::Mouse,
+        PointerSource::Touch { .. } => PointerType::Touch,
+        PointerSource::TabletTool { .. } => PointerType::Pen,
+        PointerSource::Unknown => PointerType::Unknown,
+    }
+}
+
 pub fn map_pointer_kind(kind: PointerKind) -> PointerType {
     match kind {
         PointerKind::Mouse => PointerType::Mouse,
@@ -794,6 +935,9 @@ pub fn map_pointer_kind(kind: PointerKind) -> PointerType {
         PointerKind::Unknown => PointerType::Unknown,
     }
 }
+
+#[cfg(test)]
+mod click_tracker_tests;
 
 pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
     match button {
@@ -853,5 +997,71 @@ mod tests {
             )),
             KeyCode::Unidentified
         );
+    }
+
+    #[test]
+    fn pointer_id_maps_mouse_to_zero() {
+        assert_eq!(
+            map_pointer_id_from_pointer_source(None, &winit::event::PointerSource::Mouse),
+            PointerId(0)
+        );
+        assert_eq!(
+            map_pointer_id_from_pointer_kind(None, winit::event::PointerKind::Mouse),
+            PointerId(0)
+        );
+        assert_eq!(
+            map_pointer_id_from_button_source(
+                None,
+                &winit::event::ButtonSource::Mouse(winit::event::MouseButton::Left)
+            ),
+            PointerId(0)
+        );
+    }
+
+    #[test]
+    fn pointer_id_maps_touch_finger_id_consistently() {
+        let finger_id = winit::event::FingerId::from_raw(7);
+        let source = winit::event::PointerSource::Touch {
+            finger_id,
+            force: None,
+        };
+        let button = winit::event::ButtonSource::Touch {
+            finger_id,
+            force: None,
+        };
+
+        let from_source = map_pointer_id_from_pointer_source(None, &source);
+        let from_button = map_pointer_id_from_button_source(None, &button);
+        let from_kind =
+            map_pointer_id_from_pointer_kind(None, winit::event::PointerKind::Touch(finger_id));
+
+        assert_ne!(from_source, PointerId(0));
+        assert_eq!(from_source, from_button);
+        assert_eq!(from_source, from_kind);
+    }
+
+    #[test]
+    fn pointer_id_maps_tablet_tool_using_device_id() {
+        let device_id = winit::event::DeviceId::from_raw(123);
+        let source = winit::event::PointerSource::TabletTool {
+            kind: winit::event::TabletToolKind::Pen,
+            data: winit::event::TabletToolData::default(),
+        };
+        let button = winit::event::ButtonSource::TabletTool {
+            kind: winit::event::TabletToolKind::Pen,
+            button: winit::event::TabletToolButton::Contact,
+            data: winit::event::TabletToolData::default(),
+        };
+
+        let from_source = map_pointer_id_from_pointer_source(Some(device_id), &source);
+        let from_button = map_pointer_id_from_button_source(Some(device_id), &button);
+        let from_kind = map_pointer_id_from_pointer_kind(
+            Some(device_id),
+            winit::event::PointerKind::TabletTool(winit::event::TabletToolKind::Pen),
+        );
+
+        assert_ne!(from_source, PointerId(0));
+        assert_eq!(from_source, from_button);
+        assert_eq!(from_source, from_kind);
     }
 }

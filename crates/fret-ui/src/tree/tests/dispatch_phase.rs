@@ -35,7 +35,16 @@ impl PhaseLogWidget {
 impl<H: UiHost> Widget<H> for PhaseLogWidget {
     fn event_capture(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
-            Event::Pointer(PointerEvent::Down { .. }) | Event::KeyDown { .. } => {}
+            Event::Pointer(
+                PointerEvent::Down { .. }
+                | PointerEvent::Up { .. }
+                | PointerEvent::Move { .. }
+                | PointerEvent::Wheel { .. }
+                | PointerEvent::PinchGesture { .. },
+            )
+            | Event::PointerCancel(_)
+            | Event::KeyDown { .. }
+            | Event::KeyUp { .. } => {}
             _ => return,
         }
 
@@ -47,7 +56,16 @@ impl<H: UiHost> Widget<H> for PhaseLogWidget {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
-            Event::Pointer(PointerEvent::Down { .. }) | Event::KeyDown { .. } => {}
+            Event::Pointer(
+                PointerEvent::Down { .. }
+                | PointerEvent::Up { .. }
+                | PointerEvent::Move { .. }
+                | PointerEvent::Wheel { .. }
+                | PointerEvent::PinchGesture { .. },
+            )
+            | Event::PointerCancel(_)
+            | Event::KeyDown { .. }
+            | Event::KeyUp { .. } => {}
             _ => return,
         }
         self.log.push(cx.input_ctx.dispatch_phase, self.name);
@@ -180,6 +198,190 @@ fn key_down_dispatches_capture_then_bubble() {
             modifiers: fret_core::Modifiers::default(),
             repeat: false,
         },
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Capture, "root"),
+            (fret_runtime::InputDispatchPhase::Capture, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
+
+#[test]
+fn key_up_dispatches_capture_then_bubble() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, child) = setup_ui(log.clone(), false);
+    ui.set_focus(Some(child));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyUp {
+            key: fret_core::KeyCode::KeyK,
+            modifiers: fret_core::Modifiers::default(),
+        },
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Capture, "root"),
+            (fret_runtime::InputDispatchPhase::Capture, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
+
+#[test]
+fn pointer_up_dispatches_capture_then_bubble() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, _child) = setup_ui(log.clone(), false);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Capture, "root"),
+            (fret_runtime::InputDispatchPhase::Capture, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
+
+#[test]
+fn pointer_wheel_dispatches_capture_then_bubble() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, _child) = setup_ui(log.clone(), false);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            position: Point::new(Px(10.0), Px(10.0)),
+            delta: Point::new(Px(0.0), Px(-8.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Capture, "root"),
+            (fret_runtime::InputDispatchPhase::Capture, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
+
+#[test]
+fn pointer_move_with_buttons_dispatches_capture_then_bubble() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, _child) = setup_ui(log.clone(), false);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Capture, "root"),
+            (fret_runtime::InputDispatchPhase::Capture, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
+
+#[test]
+fn pointer_move_without_buttons_skips_capture() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, _child) = setup_ui(log.clone(), false);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
+
+#[test]
+fn pointer_cancel_without_position_dispatches_capture_then_bubble_via_focus_path() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, child) = setup_ui(log.clone(), false);
+    ui.set_focus(Some(child));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: None,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
     );
 
     assert_eq!(

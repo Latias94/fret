@@ -11,7 +11,6 @@ pub struct DismissiblePopoverRequest {
     pub id: GlobalElementId,
     pub root_name: String,
     pub trigger: GlobalElementId,
-    pub restore_focus_on_close: bool,
     /// Extra subtrees that should be treated as "inside" for outside-press + focus-outside
     /// dismissal policy (Radix DismissableLayer branches).
     pub dismissable_branches: Vec<GlobalElementId>,
@@ -35,7 +34,6 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
             .field("id", &self.id)
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
-            .field("restore_focus_on_close", &self.restore_focus_on_close)
             .field("dismissable_branches_len", &self.dismissable_branches.len())
             .field(
                 "consume_outside_pointer_events",

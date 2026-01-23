@@ -22,6 +22,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "layout-engine-v2")]
@@ -35,7 +36,7 @@ use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 #[cfg(feature = "layout-engine-v2")]
 use slotmap::KeyData;
 #[cfg(feature = "layout-engine-v2")]
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 
 #[derive(Default)]
 struct FakeTextService;
@@ -167,18 +168,19 @@ impl DockViewportHarness {
     fn paint_scene(&mut self) -> Scene {
         let size = Size::new(Px(800.0), Px(600.0));
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
-        let _ = self
-            .ui
-            .layout(&mut self.app, &mut self.text, self.root, size, 1.0);
-        let mut scene = Scene::default();
-        self.ui.paint(
+        render_and_bind_dock_panels(
+            &mut self.ui,
             &mut self.app,
             &mut self.text,
-            self.root,
+            self.window,
             bounds,
-            &mut scene,
-            1.0,
+            self.root,
         );
+        self.ui
+            .layout_all(&mut self.app, &mut self.text, bounds, 1.0);
+        let mut scene = Scene::default();
+        self.ui
+            .paint_all(&mut self.app, &mut self.text, bounds, &mut scene, 1.0);
         scene
     }
 
@@ -217,6 +219,170 @@ impl DockViewportHarness {
         .max(index + 1);
         let tab_rect = TabBarGeometry::fixed(tab_bar, tab_count).tab_rect(index, Px(0.0));
         Point::new(Px(tab_rect.origin.x.0 + 2.0), Px(tab_rect.origin.y.0 + 2.0))
+    }
+}
+
+struct PropagationSpy {
+    right_downs: Arc<AtomicUsize>,
+    right_ups: Arc<AtomicUsize>,
+}
+
+impl PropagationSpy {
+    fn new(right_downs: Arc<AtomicUsize>, right_ups: Arc<AtomicUsize>) -> Self {
+        Self {
+            right_downs,
+            right_ups,
+        }
+    }
+}
+
+impl<H: UiHost> Widget<H> for PropagationSpy {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        for &child in cx.children {
+            let _ = cx.layout_in(child, cx.bounds);
+        }
+        cx.available
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        for &child in cx.children {
+            if let Some(bounds) = cx.child_bounds(child) {
+                cx.paint(child, bounds);
+            } else {
+                cx.paint(child, cx.bounds);
+            }
+        }
+    }
+
+    fn event(&mut self, _cx: &mut EventCx<'_, H>, event: &Event) {
+        match event {
+            Event::Pointer(fret_core::PointerEvent::Down { button, .. })
+                if *button == fret_core::MouseButton::Right =>
+            {
+                self.right_downs.fetch_add(1, Ordering::SeqCst);
+            }
+            Event::Pointer(fret_core::PointerEvent::Up { button, .. })
+                if *button == fret_core::MouseButton::Right =>
+            {
+                self.right_ups.fetch_add(1, Ordering::SeqCst);
+            }
+            _ => {}
+        }
+    }
+}
+
+struct DockViewportPropagationHarness {
+    window: AppWindowId,
+    target: fret_core::RenderTargetId,
+    root: fret_core::NodeId,
+    ui: UiTree<TestHost>,
+    app: TestHost,
+    text: FakeTextService,
+    spy_right_downs: Arc<AtomicUsize>,
+    spy_right_ups: Arc<AtomicUsize>,
+}
+
+impl DockViewportPropagationHarness {
+    fn new() -> Self {
+        let window = AppWindowId::default();
+        let target = fret_core::RenderTargetId::default();
+
+        let spy_right_downs = Arc::new(AtomicUsize::new(0));
+        let spy_right_ups = Arc::new(AtomicUsize::new(0));
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node_retained(PropagationSpy::new(
+            spy_right_downs.clone(),
+            spy_right_ups.clone(),
+        ));
+        let dock_space = ui.create_node_retained(DockSpace::new(window));
+        ui.add_child(root, dock_space);
+        ui.set_root(root);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let panel_key = PanelKey::new("core.viewport");
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel_key.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, tabs);
+            dock.panels.insert(
+                panel_key,
+                DockPanel {
+                    title: "Viewport".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: Some(super::ViewportPanel {
+                        target,
+                        target_px_size: (320, 240),
+                        fit: fret_core::ViewportFit::Stretch,
+                        context_menu_enabled: true,
+                    }),
+                },
+            );
+        });
+
+        Self {
+            window,
+            target,
+            root,
+            ui,
+            app,
+            text: FakeTextService,
+            spy_right_downs,
+            spy_right_ups,
+        }
+    }
+
+    fn layout(&mut self) {
+        let _ = self.paint_scene();
+    }
+
+    fn paint_scene(&mut self) -> Scene {
+        let size = Size::new(Px(800.0), Px(600.0));
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+        let _ = self
+            .ui
+            .layout(&mut self.app, &mut self.text, self.root, size, 1.0);
+        let mut scene = Scene::default();
+        self.ui.paint(
+            &mut self.app,
+            &mut self.text,
+            self.root,
+            bounds,
+            &mut scene,
+            1.0,
+        );
+        scene
+    }
+
+    fn viewport_point(&self) -> Point {
+        let layout = self
+            .app
+            .global::<DockManager>()
+            .and_then(|dock| dock.viewport_layout(self.window, self.target))
+            .expect("expected viewport layout to be recorded during paint");
+        let rect = layout.content_rect;
+        Point::new(Px(rect.origin.x.0 + 10.0), Px(rect.origin.y.0 + 10.0))
+    }
+
+    fn reset_spy(&self) {
+        self.spy_right_downs.store(0, Ordering::SeqCst);
+        self.spy_right_ups.store(0, Ordering::SeqCst);
+    }
+
+    fn spy_counts(&self) -> (usize, usize) {
+        (
+            self.spy_right_downs.load(Ordering::SeqCst),
+            self.spy_right_ups.load(Ordering::SeqCst),
+        )
     }
 }
 
@@ -1894,6 +2060,185 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
 }
 
 #[test]
+fn pointer_occlusion_blocks_viewport_hover_and_down_but_allows_wheel_forwarding() {
+    struct HitTestTransparent;
+
+    impl<H: UiHost> Widget<H> for HitTestTransparent {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    // Install a window-level pointer occlusion layer (Radix `disableOutsidePointerEvents`-like).
+    let overlay_root = harness.ui.create_node_retained(HitTestTransparent);
+    let overlay_layer = harness.ui.push_overlay_root_ex(overlay_root, false, true);
+    harness.ui.set_layer_pointer_occlusion(
+        overlay_layer,
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+    );
+    harness.layout();
+    let _ = harness.app.take_effects();
+
+    let position = harness.viewport_point();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected pointer occlusion to suppress viewport hover forwarding, got: {effects:?}",
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected pointer occlusion to suppress viewport capture start, got: {effects:?}",
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected pointer occlusion to prevent viewport capture from requesting pointer capture"
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Wheel {
+            position,
+            delta: Point::new(Px(0.0), Px(12.0)),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    let Some(Effect::ViewportInput(input)) = effects
+        .iter()
+        .find(|e| matches!(e, Effect::ViewportInput(_)))
+    else {
+        panic!(
+            "expected wheel forwarding to still emit a ViewportInput under pointer occlusion, got: {effects:?}"
+        );
+    };
+    assert!(
+        matches!(input.kind, fret_core::ViewportInputKind::Wheel { .. }),
+        "expected wheel forwarding to remain active under BlockMouseExceptScroll, got: {input:?}",
+    );
+}
+
+#[test]
+fn foreign_pointer_capture_suppresses_viewport_capture_start() {
+    struct CaptureOverlay;
+
+    impl<H: UiHost> Widget<H> for CaptureOverlay {
+        fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+            position.x.0 >= 0.0
+                && position.y.0 >= 0.0
+                && position.x.0 <= 20.0
+                && position.y.0 <= 20.0
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. })) {
+                cx.capture_pointer(cx.node);
+                cx.stop_propagation();
+            }
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let overlay_root = harness.ui.create_node_retained(CaptureOverlay);
+    let _overlay_layer = harness.ui.push_overlay_root_ex(overlay_root, false, true);
+    harness.layout();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(2.0), Px(2.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(1)),
+        Some(overlay_root),
+        "expected overlay to capture pointer 1"
+    );
+
+    // Advance a frame so docking can observe the runtime arbitration snapshot.
+    harness.layout();
+    let _ = harness.app.take_effects();
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected foreign pointer capture to suppress viewport capture start, got: {effects:?}",
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected foreign pointer capture to prevent viewport capture from requesting pointer capture"
+    );
+}
+
+#[test]
 fn pending_dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
@@ -2008,6 +2353,7 @@ fn pending_dock_drag_does_not_start_drag_session_on_pointer_up_before_activation
             position: tab_pos,
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -2202,6 +2548,7 @@ fn docking_tab_drag_threshold_is_configurable_via_settings() {
             position: move_pos,
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: false,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -2438,6 +2785,153 @@ fn viewport_capture_requests_animation_frames_while_active() {
             .iter()
             .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == harness.window)),
         "expected viewport capture to request animation frames, got: {effects:?}",
+    );
+}
+
+#[test]
+fn viewport_capture_emits_pointer_cancel_and_releases_capture() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let down_pos = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        Some(harness.root),
+        "expected viewport capture to request pointer capture on down"
+    );
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: None,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected pointer capture to be released on cancel",
+    );
+
+    let effects = harness.app.take_effects();
+    let Some(Effect::ViewportInput(evt)) = effects
+        .iter()
+        .find(|e| matches!(e, Effect::ViewportInput(_)))
+    else {
+        panic!("expected viewport cancel input effect, got: {effects:?}");
+    };
+    assert!(
+        matches!(evt.kind, fret_core::ViewportInputKind::PointerCancel { .. }),
+        "expected ViewportInputKind::PointerCancel, got: {evt:?}",
+    );
+}
+
+#[test]
+fn dock_drag_suppresses_viewport_capture_start_for_other_pointer() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    harness.app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(7),
+        DRAG_KIND_DOCK_PANEL,
+        harness.window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.viewport"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+        },
+    );
+    let _ = harness.app.take_effects();
+
+    let down_pos = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected viewport capture not to start during dock drag, got: {effects:?}"
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected viewport capture not to request pointer capture during dock drag"
+    );
+}
+
+#[test]
+fn viewport_capture_suppresses_viewport_moves_for_other_pointers() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let position = harness.viewport_point();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "viewport capture must suppress viewport moves for other pointers, got: {effects:?}",
     );
 }
 
@@ -3293,5 +3787,164 @@ fn render_and_bind_panels_falls_back_to_placeholder_for_missing_ui() {
     assert!(
         service.get(window, &panel).is_some(),
         "expected a placeholder node for a non-viewport panel with missing UI"
+    );
+}
+
+#[test]
+fn viewport_capture_suppresses_secondary_right_click_bubbling() {
+    let mut harness = DockViewportPropagationHarness::new();
+    harness.layout();
+
+    let position = harness.viewport_point();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.reset_spy();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let (downs, ups) = harness.spy_counts();
+    assert_eq!(
+        (downs, ups),
+        (0, 0),
+        "secondary right click must not bubble while viewport capture is active, got downs={downs} ups={ups}",
+    );
+}
+
+#[test]
+fn viewport_right_click_bubbles_when_not_dragging() {
+    let mut harness = DockViewportPropagationHarness::new();
+    harness.layout();
+    harness.reset_spy();
+
+    let position = harness.viewport_point();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let (downs, ups) = harness.spy_counts();
+    assert_eq!(
+        (downs, ups),
+        (0, 1),
+        "right click without drag should bubble on release so context menus can trigger, got downs={downs} ups={ups}",
+    );
+}
+
+#[test]
+fn viewport_right_drag_suppresses_context_menu_bubbling_on_release() {
+    let mut harness = DockViewportPropagationHarness::new();
+    harness.layout();
+    harness.reset_spy();
+
+    let start = harness.viewport_point();
+    let end = Point::new(Px(start.x.0 + 20.0), Px(start.y.0 + 20.0));
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: start,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: end,
+            buttons: fret_core::MouseButtons {
+                right: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    harness.reset_spy();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: end,
+            button: fret_core::MouseButton::Right,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let (downs, ups) = harness.spy_counts();
+    assert_eq!(
+        (downs, ups),
+        (0, 0),
+        "right-drag release must not bubble to avoid triggering context menus, got downs={downs} ups={ups}",
     );
 }

@@ -90,7 +90,7 @@ Tool input handling should expose phases:
 - `Begin` (capture start),
 - `Update` (dragging/moving),
 - `Commit` (capture end),
-- `Cancel` (escape / tool abort).
+- `Cancel` (escape / tool abort / pointer stream cancellation).
 
 This aligns with undo coalescing boundaries described in ADR 0024, without forcing undo policy into
 the framework.
@@ -132,6 +132,8 @@ Use:
 - Prototype tool interactions:
   - selection marquee: left-drag
   - navigation stub: right-drag orbit, middle-drag pan (drag thresholded so right-click context menu still works)
+    - Docking suppresses bubbling for the right-button release once the pointer moves beyond
+      `DockingInteractionSettings::viewport_context_menu_drag_threshold`.
 - Overlay rendering path (framework-owned hosting, editor-owned state):
   - host: `ecosystem/fret-docking/src/dock/mod.rs` (`DockViewportOverlayHooks`)
   - editor/app-owned overlay painting: `apps/fret-editor/src/viewport_overlays.rs` (e.g. `paint_viewport_marquee`)

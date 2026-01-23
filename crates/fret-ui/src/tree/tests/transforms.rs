@@ -104,6 +104,7 @@ fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
             position: Point::new(Px(45.0), Px(5.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,

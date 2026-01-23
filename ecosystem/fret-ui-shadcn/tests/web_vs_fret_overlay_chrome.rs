@@ -623,6 +623,7 @@ fn right_click_center(
             position: center,
             button: MouseButton::Right,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -655,6 +656,7 @@ fn left_click_center(
             position: center,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -7585,62 +7587,6 @@ fn web_vs_fret_menubar_demo_shadow_matches_web_dark() {
     );
 }
 
-#[test]
-fn web_vs_fret_menubar_demo_small_viewport_shadow_matches_web() {
-    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
-        "menubar-demo.vp1440x320",
-        "menubar-content",
-        "light",
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-        SemanticsRole::MenuItem,
-        "File",
-        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        build_shadcn_menubar_demo,
-    );
-}
-
-#[test]
-fn web_vs_fret_menubar_demo_small_viewport_shadow_matches_web_dark() {
-    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
-        "menubar-demo.vp1440x320",
-        "menubar-content",
-        "dark",
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-        SemanticsRole::MenuItem,
-        "File",
-        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        build_shadcn_menubar_demo,
-    );
-}
-
-#[test]
-fn web_vs_fret_menubar_demo_tiny_viewport_shadow_matches_web() {
-    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
-        "menubar-demo.vp1440x240",
-        "menubar-content",
-        "light",
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-        SemanticsRole::MenuItem,
-        "File",
-        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        build_shadcn_menubar_demo,
-    );
-}
-
-#[test]
-fn web_vs_fret_menubar_demo_tiny_viewport_shadow_matches_web_dark() {
-    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
-        "menubar-demo.vp1440x240",
-        "menubar-content",
-        "dark",
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-        SemanticsRole::MenuItem,
-        "File",
-        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
-        build_shadcn_menubar_demo,
-    );
-}
-
 fn build_shadcn_menubar_demo(cx: &mut ElementContext<'_, App>) -> AnyElement {
     use fret_ui_shadcn::{
         Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarRadioGroup,
@@ -7821,6 +7767,62 @@ fn web_vs_fret_menubar_demo_profiles_shadow_matches_web_dark() {
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         SemanticsRole::MenuItem,
         "Profiles",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_small_viewport_shadow_matches_web() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.vp1440x320",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "File",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_small_viewport_shadow_matches_web_dark() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.vp1440x320",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "File",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_tiny_viewport_shadow_matches_web() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.vp1440x240",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "File",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_tiny_viewport_shadow_matches_web_dark() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.vp1440x240",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "File",
         fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
         build_shadcn_menubar_demo,
     );

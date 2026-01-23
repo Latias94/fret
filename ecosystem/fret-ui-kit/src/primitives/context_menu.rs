@@ -6,10 +6,12 @@
 //! In Fret we share the same underlying behavior via `crate::primitives::menu` and expose
 //! Radix-named entry points here for reuse outside the shadcn layer.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{MouseButton, Px, Rect};
-use fret_runtime::Model;
+use fret_core::{MouseButton, Point, Px, Rect};
+use fret_runtime::{Model, ModelId};
+use fret_ui::UiHost;
 use fret_ui::action::{OnPointerDown, PointerDownCx, UiPointerActionHost};
 
 use crate::primitives::popper;
@@ -21,6 +23,39 @@ pub use crate::primitives::menu::root::dismissible_menu_request_with_dismiss_han
 pub use crate::primitives::menu::root::menu_overlay_root_name as context_menu_root_name;
 pub use crate::primitives::menu::root::with_root_name_sync_root_open_and_ensure_submenu as context_menu_sync_root_open_and_ensure_submenu;
 pub use crate::primitives::menu::trigger::wire_open_on_shift_f10 as wire_context_menu_open_on_shift_f10;
+
+#[derive(Default)]
+struct ContextMenuAnchorStore {
+    by_open_model: Option<Model<HashMap<ModelId, Point>>>,
+}
+
+/// Returns a shared anchor store keyed by the context menu's open model id.
+///
+/// This is intended for context menus that need to anchor by cursor position even when the trigger
+/// is not a `PointerRegion` (e.g. viewport tools opened via `Effect::ViewportInput`).
+pub fn context_menu_anchor_store_model<H: UiHost>(app: &mut H) -> Model<HashMap<ModelId, Point>> {
+    app.with_global_mut_untracked(ContextMenuAnchorStore::default, |st, app| {
+        if let Some(model) = st.by_open_model.clone() {
+            return model;
+        }
+        let model = app.models_mut().insert(HashMap::<ModelId, Point>::new());
+        st.by_open_model = Some(model.clone());
+        model
+    })
+}
+
+/// Updates the anchor point for the given open model.
+pub fn set_context_menu_anchor_for_open_model<H: UiHost>(
+    app: &mut H,
+    open: &Model<bool>,
+    position: Point,
+) {
+    let open_model_id = open.id();
+    let anchor_store_model = context_menu_anchor_store_model(app);
+    let _ = app.models_mut().update(&anchor_store_model, |map| {
+        map.insert(open_model_id, position);
+    });
+}
 
 /// A Radix-aligned pointer-down policy for opening a context menu.
 ///

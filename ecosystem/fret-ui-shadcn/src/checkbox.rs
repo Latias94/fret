@@ -208,8 +208,15 @@ impl Checkbox {
 
             let a11y_label = self.a11y_label.clone();
             let test_id = self.test_id.clone();
-            let disabled = self.disabled;
+            let disabled_explicit = self.disabled;
             let on_click = self.on_click.clone();
+            let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+            let disabled = disabled_explicit
+                || crate::command_gating::command_is_disabled_by_gating(
+                    &*cx.app,
+                    &gating,
+                    on_click.as_ref(),
+                );
             let chrome = self.chrome.clone();
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
@@ -355,7 +362,12 @@ mod tests {
         PathService, PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService,
         TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_runtime::{
+        CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
+        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
+    };
     use fret_ui::tree::UiTree;
+    use std::collections::HashMap;
 
     struct FakeServices;
 
@@ -465,6 +477,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -533,6 +546,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -606,6 +620,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -738,5 +753,193 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&model), Some(true));
+    }
+
+    #[test]
+    fn command_gating_checkbox_is_disabled_by_window_command_enabled_service() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let checked = app.models_mut().insert(false);
+        let cmd = CommandId::from("test.disabled-command");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Disabled Command").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-checkbox-enabled-service",
+            |cx| {
+                vec![
+                    Checkbox::new(checked.clone())
+                        .a11y_label("Checkbox")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
+            .expect("expected a semantics node for the checkbox test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_checkbox_is_disabled_when_widget_action_is_unavailable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let checked = app.models_mut().insert(false);
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-checkbox-action-availability",
+            |cx| {
+                vec![
+                    Checkbox::new(checked.clone())
+                        .a11y_label("Checkbox")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
+            .expect("expected a semantics node for the checkbox test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_checkbox_prefers_window_command_gating_snapshot_when_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let checked = app.models_mut().insert(false);
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        app.set_global(WindowCommandGatingService::default());
+        app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
+            let input_ctx = crate::command_gating::default_input_context(app);
+            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut availability: HashMap<CommandId, bool> = HashMap::new();
+            availability.insert(cmd.clone(), false);
+            svc.set_snapshot(
+                window,
+                WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                    .with_action_availability(Some(Arc::new(availability))),
+            );
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-checkbox-gating-snapshot",
+            |cx| {
+                vec![
+                    Checkbox::new(checked.clone())
+                        .a11y_label("Checkbox")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
+            .expect("expected a semantics node for the checkbox test_id");
+        assert!(node.flags.disabled);
     }
 }

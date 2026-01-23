@@ -137,4 +137,24 @@ impl ElementHostWidget {
             && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
         {}
     }
+
+    pub(super) fn event_observer_impl<H: UiHost>(
+        &mut self,
+        cx: &mut crate::widget::ObserverCx<'_, H>,
+        event: &Event,
+    ) {
+        let Some(window) = cx.window else {
+            return;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return;
+        };
+
+        match instance {
+            ElementInstance::DismissibleLayer(props) => {
+                dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
+            }
+            _ => {}
+        }
+    }
 }

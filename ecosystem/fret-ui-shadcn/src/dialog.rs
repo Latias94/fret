@@ -883,6 +883,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -935,6 +936,7 @@ mod tests {
                 position: inside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -973,6 +975,7 @@ mod tests {
                 position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1035,6 +1038,7 @@ mod tests {
                 position: Point::new(Px(4.0), Px(4.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1288,6 +1292,7 @@ mod tests {
                 position: point,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1299,10 +1304,18 @@ mod tests {
             Some(false),
             "underlay should not activate while modal dialog is open"
         );
-        assert_eq!(
-            dismiss_reason.get(),
-            Some(fret_ui::action::DismissReason::OutsidePress)
-        );
+        let reason = dismiss_reason.get();
+        let Some(fret_ui::action::DismissReason::OutsidePress { pointer }) = reason else {
+            panic!("expected outside-press dismissal, got {reason:?}");
+        };
+        let Some(cx) = pointer else {
+            panic!("expected pointer payload for outside-press dismissal");
+        };
+        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+        assert_eq!(cx.button, fret_core::MouseButton::Left);
+        assert_eq!(cx.modifiers, fret_core::Modifiers::default());
+        assert_eq!(cx.click_count, 1);
     }
 
     #[test]
@@ -1360,6 +1373,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1480,6 +1494,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1531,6 +1546,7 @@ mod tests {
                 position: click,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1687,6 +1703,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1929,6 +1946,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

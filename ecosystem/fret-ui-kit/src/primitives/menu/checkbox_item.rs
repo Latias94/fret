@@ -211,6 +211,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 click_count: 1,
                 pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),

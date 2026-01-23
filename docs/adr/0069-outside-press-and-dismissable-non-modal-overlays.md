@@ -77,6 +77,17 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
   - it must not override focus,
   - it must not block/bubble-stop the subsequent normal dispatch *except* when the layer is
     explicitly configured to consume outside pointer-down events as described above.
+  - Implementation note: observer dispatch runs through the normal widget event entrypoint with
+    `InputDispatchPhase::Observer`; the runtime ignores focus/capture/propagation requests during
+    this pass (except for the explicit consume-on-outside-pointer-down suppression described
+    above).
+- Touch pointers are treated differently to preserve scroll/drag ergonomics:
+  - the runtime records a touch pointer-down-outside candidate on `PointerDown`,
+  - cancels it once the pointer moves beyond a small slop threshold,
+  - and dispatches the outside-press observer event on `PointerUp` only when the candidate remains
+    valid.
+  - When `consume_pointer_down_outside_events = true`, the runtime suppresses the normal hit-tested
+    **pointer-up** dispatch for the same touch interaction.
 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.
@@ -90,8 +101,10 @@ This differs materially from `consume_pointer_down_outside_events`:
 
 - `consume_pointer_down_outside_events` only suppresses the normal hit-tested **pointer-down**
   dispatch for the same input event that triggered the outside-press observer.
-- `disableOutsidePointerEvents` must also prevent underlay hover/move/wheel interactions while the
+- `disableOutsidePointerEvents` must also prevent underlay hover/move/click interactions while the
   overlay remains open.
+  - Wheel events are allowed to route to underlay scrollables by default (editor ergonomics),
+    matching GPUI's `BlockMouseExceptScroll` behavior.
 
 To express that outcome in Fret without turning menus into full modal barriers, the overlay
 substrate supports an additional per-overlay flag:
@@ -101,12 +114,9 @@ substrate supports an additional per-overlay flag:
 
 Runtime mechanism:
 
-- While `disable_outside_pointer_events=true` and the overlay is open, the overlay controller
-  enables a **pointer occlusion** mechanism on the overlay layer that prevents pointer interactions
-  from reaching the underlay (ADR 0011 scoping still applies).
-- Default policy is **occlude mouse, except scroll**: underlay hover/move/down/up are blocked, but
-  wheel events are still allowed to route to the underlay scroll target. This matches common
-  desktop UI expectations and GPUI's `HitboxBehavior::BlockMouseExceptScroll`.
+- While `disable_outside_pointer_events=true` and the overlay is open, the overlay controller sets
+  `pointer_occlusion = BlockMouseExceptScroll` on the overlay layer, causing mouse hit-test
+  dispatch to ignore targets in underlay layers (except wheel, respecting ADR 0011 scoping).
 - Outside-press dismissal still uses the observer pass described above (the overlay can close on
   outside press even though the underlay is inert for non-scroll pointer interactions).
 
@@ -139,6 +149,11 @@ click while the overlay is open can:
 
 Therefore, component-layer overlay policies should treat the trigger as an implicit
 `DismissableLayerBranch` by default (in addition to any explicit branches).
+
+Note: for non-click-through overlays that both consume outside pointer-down events and disable
+outside pointer interactions (menu-like `modal=true` outcomes), treating the trigger as an implicit
+branch can prevent trigger presses from dismissing the overlay, because the trigger itself may be
+pointer-occluded. In that case, policy may choose to *not* treat the trigger as a branch.
 
 ### Presence and close transitions (click-through correctness)
 
