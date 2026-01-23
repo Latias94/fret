@@ -8,7 +8,9 @@
 use std::sync::Arc;
 use std::{cell::RefCell, rc::Rc};
 
-use fret_core::{Color, Corners, DrawOrder, Edges, KeyCode, Px, Rect, SemanticsRole};
+use fret_core::{
+    Color, Corners, DrawOrder, Edges, KeyCode, Point, Px, Rect, SceneOp, SemanticsRole, Size,
+};
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -254,6 +256,17 @@ impl RadioGroup {
                         let Some(value) = values_for_roving.get(idx).cloned() else {
                             return;
                         };
+                        let already_selected = host
+                            .models_mut()
+                            .read(&model_for_roving, |v| {
+                                v.as_ref()
+                                    .is_some_and(|current| current.as_ref() == value.as_ref())
+                            })
+                            .ok()
+                            .unwrap_or(false);
+                        if already_selected {
+                            return;
+                        }
                         let next = Some(value);
                         let _ = host.update_model(&model_for_roving, |v| *v = next);
                         host.request_redraw(action_cx.window);
@@ -598,14 +611,29 @@ impl Radio {
                     if enabled_for_toggle {
                         match &selection_for_activate {
                             RadioSelectionModel::Bool(m) => {
-                                let _ = host.update_model(m, |v| *v = true);
+                                let already_selected =
+                                    host.models_mut().read(m, |v| *v).ok().unwrap_or(false);
+                                if !already_selected {
+                                    let _ = host.update_model(m, |v| *v = true);
+                                }
                             }
                             RadioSelectionModel::Group {
                                 value,
                                 selected_value,
                             } => {
                                 let value = value.clone();
-                                let _ = host.update_model(selected_value, |v| *v = Some(value));
+                                let already_selected = host
+                                    .models_mut()
+                                    .read(selected_value, |v| {
+                                        v.as_ref().is_some_and(|current| {
+                                            current.as_ref() == value.as_ref()
+                                        })
+                                    })
+                                    .ok()
+                                    .unwrap_or(false);
+                                if !already_selected {
+                                    let _ = host.update_model(selected_value, |v| *v = Some(value));
+                                }
                             }
                         }
                         host.request_redraw(action_cx.window);
@@ -974,43 +1002,52 @@ fn radio_icon<H: UiHost>(
     color: Color,
     dot_scale: f32,
 ) -> AnyElement {
+    // Note: this intentionally uses a Canvas-backed icon to avoid relying on absolute child
+    // positioning semantics for the inner dot.
     let outline_width = Px(2.0);
     let dot_max = Px(10.0);
     let dot_size = Px(dot_max.0 * dot_scale.clamp(0.0, 1.0));
-    let dot_inset = Px(((size.icon.0 - dot_size.0) * 0.5).max(0.0));
 
-    let mut outer = ContainerProps::default();
-    outer.layout.size.width = Length::Px(size.state_layer);
-    outer.layout.size.height = Length::Px(size.state_layer);
-    outer.layout.overflow = Overflow::Visible;
-    outer.corner_radii = Corners::all(Px(9999.0));
-    cx.container(outer, move |cx| {
-        let mut icon = ContainerProps::default();
-        icon.layout.position = fret_ui::element::PositionStyle::Absolute;
-        icon.layout.inset.left = Some(Px((size.state_layer.0 - size.icon.0) * 0.5));
-        icon.layout.inset.top = Some(Px((size.state_layer.0 - size.icon.0) * 0.5));
-        icon.layout.size.width = Length::Px(size.icon);
-        icon.layout.size.height = Length::Px(size.icon);
-        icon.corner_radii = Corners::all(Px(9999.0));
-        icon.background = Some(Color::TRANSPARENT);
-        icon.border = Edges::all(outline_width);
-        icon.border_color = Some(color);
+    let mut props = CanvasProps::default();
+    props.layout.position = fret_ui::element::PositionStyle::Absolute;
+    props.layout.inset.top = Some(Px(0.0));
+    props.layout.inset.right = Some(Px(0.0));
+    props.layout.inset.bottom = Some(Px(0.0));
+    props.layout.inset.left = Some(Px(0.0));
 
-        let dot = if checked || dot_size.0 > 0.1 {
-            let mut dot_props = ContainerProps::default();
-            dot_props.layout.position = fret_ui::element::PositionStyle::Absolute;
-            dot_props.layout.inset.left = Some(dot_inset);
-            dot_props.layout.inset.top = Some(dot_inset);
-            dot_props.layout.size.width = Length::Px(dot_size);
-            dot_props.layout.size.height = Length::Px(dot_size);
-            dot_props.corner_radii = Corners::all(Px(9999.0));
-            dot_props.background = Some(color);
-            vec![cx.container(dot_props, |_cx| Vec::new())]
-        } else {
-            Vec::new()
-        };
+    cx.canvas(props, move |p| {
+        let bounds = p.bounds();
 
-        vec![cx.container(icon, move |_cx| dot)]
+        let icon_left = Px(bounds.origin.x.0 + (bounds.size.width.0 - size.icon.0) * 0.5);
+        let icon_top = Px(bounds.origin.y.0 + (bounds.size.height.0 - size.icon.0) * 0.5);
+        let icon_rect = Rect::new(
+            Point::new(icon_left, icon_top),
+            Size::new(size.icon, size.icon),
+        );
+        let icon_radius = Px(size.icon.0 * 0.5);
+
+        p.scene().push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: icon_rect,
+            background: Color::TRANSPARENT,
+            border: Edges::all(outline_width),
+            border_color: color,
+            corner_radii: Corners::all(icon_radius),
+        });
+
+        if checked || dot_size.0 > 0.1 {
+            let dot_left = Px(icon_rect.origin.x.0 + (icon_rect.size.width.0 - dot_size.0) * 0.5);
+            let dot_top = Px(icon_rect.origin.y.0 + (icon_rect.size.height.0 - dot_size.0) * 0.5);
+            let dot_rect = Rect::new(Point::new(dot_left, dot_top), Size::new(dot_size, dot_size));
+            p.scene().push(SceneOp::Quad {
+                order: DrawOrder(1),
+                rect: dot_rect,
+                background: color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(dot_size.0 * 0.5)),
+            });
+        }
     })
 }
 

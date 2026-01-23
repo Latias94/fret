@@ -241,6 +241,14 @@ impl Tabs {
                                 let Some(value) = values_for_roving.get(idx).cloned() else {
                                     return;
                                 };
+                                let already_selected = host
+                                    .models_mut()
+                                    .read(&model_for_roving, |v| v.as_ref() == value.as_ref())
+                                    .ok()
+                                    .unwrap_or(false);
+                                if already_selected {
+                                    return;
+                                }
                                 let _ = host.update_model(&model_for_roving, |v| *v = value);
                                 host.request_redraw(action_cx.window);
                             }));
@@ -296,6 +304,14 @@ fn material_primary_tab<H: UiHost>(
             let model_for_press = model.clone();
             let value_for_press = value.clone();
             let handler: OnActivate = Arc::new(move |host, action_cx, _reason| {
+                let already_selected = host
+                    .models_mut()
+                    .read(&model_for_press, |v| v.as_ref() == value_for_press.as_ref())
+                    .ok()
+                    .unwrap_or(false);
+                if already_selected {
+                    return;
+                }
                 let _ = host.update_model(&model_for_press, |v| *v = value_for_press.clone());
                 host.request_redraw(action_cx.window);
             });
@@ -431,7 +447,7 @@ fn material_primary_tab<H: UiHost>(
                     want_frames,
                 );
                 let label_el = primary_tab_label(cx, theme, &label, label_color);
-                let indicator = selected.then(|| primary_tab_indicator(cx, theme));
+                let indicator = primary_tab_indicator(cx, theme, selected);
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
@@ -442,13 +458,7 @@ fn material_primary_tab<H: UiHost>(
                 row.align = CrossAlign::Center;
                 row.padding = Edges::all(Px(0.0));
 
-                vec![cx.flex(row, move |_cx| {
-                    let mut children: Vec<AnyElement> = vec![ink, label_el];
-                    if let Some(indicator) = indicator.clone() {
-                        children.push(indicator);
-                    }
-                    children
-                })]
+                vec![cx.flex(row, move |_cx| vec![ink, label_el, indicator.clone()])]
             })
         });
 
@@ -474,14 +484,26 @@ fn primary_tab_label<H: UiHost>(
     cx.text_props(props)
 }
 
-fn primary_tab_indicator<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Theme) -> AnyElement {
-    let height = theme
-        .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
-        .unwrap_or(Px(3.0));
-    let color = theme
-        .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("foreground"));
+fn primary_tab_indicator<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    active: bool,
+) -> AnyElement {
+    let height = if active {
+        theme
+            .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
+            .unwrap_or(Px(3.0))
+    } else {
+        Px(0.0)
+    };
+    let color = if active {
+        theme
+            .color_by_key("md.comp.primary-navigation-tab.active-indicator.color")
+            .or_else(|| theme.color_by_key("md.sys.color.primary"))
+            .unwrap_or_else(|| theme.color_required("foreground"))
+    } else {
+        Color::TRANSPARENT
+    };
     let radius = theme
         .metric_by_key("md.comp.primary-navigation-tab.active-indicator.shape")
         .unwrap_or(Px(3.0));
