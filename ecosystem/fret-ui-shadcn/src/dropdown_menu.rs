@@ -1246,6 +1246,7 @@ impl DropdownMenu {
                 let gating = gating.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
+                let content_focus_id_for_children_for_content = content_focus_id_for_children.clone();
                 let first_item_focus_id = first_item_focus_id.clone();
                 let last_item_focus_id = last_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -1452,6 +1453,8 @@ impl DropdownMenu {
                                         ..Default::default()
                                     };
 
+                                    let content_focus_id_for_panel =
+                                        content_focus_id_for_children_for_content.clone();
                                     vec![cx.keyed("menu-scroll", |cx| {
                                         cx.scroll(
                                         ScrollProps {
@@ -2248,6 +2251,9 @@ impl DropdownMenu {
                                                     )
                                                 },
                                             );
+                                            if content_focus_id_for_panel.get().is_none() {
+                                                content_focus_id_for_panel.set(Some(roving.id));
+                                            }
                                             vec![roving]
                                         },
                                         )
@@ -2264,7 +2270,9 @@ impl DropdownMenu {
                             )]
                         },
                     );
-                    content_focus_id_for_children.set(Some(content_id));
+                    if content_focus_id_for_children.get().is_none() {
+                        content_focus_id_for_children.set(Some(content_id));
+                    }
                     cx.key_on_key_down_for(
                         content_id,
                         Arc::new({
@@ -2379,6 +2387,10 @@ impl DropdownMenu {
                         let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
                             return (children, Some(dismissible_on_pointer_move));
                         };
+
+                        // Keep submenu geometry up to date so pointer-grace / safe-hover policies
+                        // can arm close timers when the pointer leaves the submenu corridor.
+                        menu::sub::set_geometry_if_changed(cx, geometry, &submenu_for_panel.geometry);
 
                         let submenu_entries = find_submenu_entries_by_value(
                             entries_for_submenu.as_ref(),
@@ -4705,8 +4717,8 @@ mod tests {
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
         let position = rect_center(trigger_bounds);
 
-        // shadcn `DropdownMenu` uses a caller-owned open model; treat this pointer interaction as
-        // the "open reason" and flip the open model like a trigger would.
+        // shadcn `DropdownMenu` uses a caller-owned open model; treat this click interaction as
+        // the "open reason" and flip the open model like a trigger would (on pointer-up activate).
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -4715,6 +4727,19 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -4993,7 +5018,6 @@ mod tests {
         } else {
             Point::new(more_center.x, Px(bounds.size.height.0 + 100.0))
         };
-
         ui.dispatch_event(
             &mut app,
             &mut services,

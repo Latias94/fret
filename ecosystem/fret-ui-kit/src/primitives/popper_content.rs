@@ -7,7 +7,7 @@
 //! This module provides a small, reusable skeleton for the wrapper container so wrappers can
 //! avoid duplicating the same absolute-layout boilerplate.
 
-use fret_core::{Edges, Px, Rect};
+use fret_core::{Edges, Point, Px, Rect};
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
     PositionStyle, SizeStyle,
@@ -30,6 +30,25 @@ pub fn popper_wrapper_layout(placed: Rect, wrapper_insets: Edges) -> LayoutStyle
             height: Length::Px(Px(placed.size.height.0
                 + wrapper_insets.top.0
                 + wrapper_insets.bottom.0)),
+            ..Default::default()
+        },
+        overflow: Overflow::Visible,
+        ..Default::default()
+    }
+}
+
+/// Returns an autosizing wrapper layout positioned at `origin`.
+///
+/// Unlike [`popper_wrapper_layout`], this layout does **not** force the wrapper size to match an
+/// externally computed `placed.size`. This is useful for primitives whose placement does not
+/// require knowing the floating panel size up-front (e.g. bottom-start anchors), allowing the
+/// wrapper bounds to be determined by its children (intrinsic sizing).
+pub fn popper_wrapper_layout_autosize(origin: Point) -> LayoutStyle {
+    LayoutStyle {
+        position: PositionStyle::Absolute,
+        inset: InsetStyle {
+            left: Some(origin.x),
+            top: Some(origin.y),
             ..Default::default()
         },
         overflow: Overflow::Visible,
@@ -90,6 +109,23 @@ pub fn popper_wrapper_at<H: UiHost>(
     cx.container(
         ContainerProps {
             layout: popper_wrapper_layout(placed, wrapper_insets),
+            ..Default::default()
+        },
+        f,
+    )
+}
+
+/// Render an autosizing popper wrapper positioned at `origin`.
+///
+/// This wrapper uses `overflow: visible` and relies on its children to determine its size.
+pub fn popper_wrapper_at_autosize<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    origin: Point,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: popper_wrapper_layout_autosize(origin),
             ..Default::default()
         },
         f,

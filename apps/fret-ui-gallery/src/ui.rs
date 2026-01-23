@@ -2556,6 +2556,7 @@ fn preview_overlay(
                 |cx| {
                     shadcn::Button::new("AlertDialog")
                         .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-alert-dialog-trigger")
                         .toggle_model(alert_dialog_open.clone())
                         .into_element(cx)
                 },
@@ -2572,8 +2573,10 @@ fn preview_overlay(
                         .into_element(cx),
                         shadcn::AlertDialogFooter::new(vec![
                             shadcn::AlertDialogCancel::new("Cancel", alert_dialog_open.clone())
+                                .test_id("ui-gallery-alert-dialog-cancel")
                                 .into_element(cx),
                             shadcn::AlertDialogAction::new("Continue", alert_dialog_open.clone())
+                                .test_id("ui-gallery-alert-dialog-action")
                                 .into_element(cx),
                         ])
                         .into_element(cx),
@@ -2657,6 +2660,23 @@ fn preview_overlay(
         }
     };
 
+    let alert_dialog_open_flag = {
+        let open = cx
+            .get_model_copied(&alert_dialog_open, Invalidation::Layout)
+            .unwrap_or(false);
+        if open {
+            Some(cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    test_id: Some(Arc::from("ui-gallery-alert-dialog-open")),
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("AlertDialog open")],
+            ))
+        } else {
+            None
+        }
+    };
+
     let popover_dismissed_flag = {
         let last = cx
             .get_model_cloned(&last_action, Invalidation::Layout)
@@ -2680,6 +2700,9 @@ fn preview_overlay(
         out.push(flag);
     }
     if let Some(flag) = dialog_open_flag {
+        out.push(flag);
+    }
+    if let Some(flag) = alert_dialog_open_flag {
         out.push(flag);
     }
 

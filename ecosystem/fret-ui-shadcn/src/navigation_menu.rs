@@ -1033,14 +1033,13 @@ impl NavigationMenu {
                                         (slide * t, -slide * (1.0 - t))
                                     };
 
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size = SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    };
-                                    layout.overflow = fret_ui::element::Overflow::Clip;
-                                    let layout_for_layers = layout;
+                                    // In shadcn/ui (Radix), `NavigationMenuContent` keeps its
+                                    // intrinsic size even during switch animations. In Fret, we
+                                    // must preserve that intrinsic sizing so overlay placement can
+                                    // converge to the same bounds and so viewport sizing can
+                                    // observe the real content size (not the previous panel size).
+                                    let mut layout_for_layers = LayoutStyle::default();
+                                    layout_for_layers.overflow = fret_ui::element::Overflow::Clip;
 
                                     vec![cx.stack_props(
                                         StackProps {
@@ -1048,11 +1047,6 @@ impl NavigationMenu {
                                         },
                                         move |cx| {
                                             let mut layer_layout = LayoutStyle::default();
-                                            layer_layout.size = SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            };
 
                                             let from_opacity = 1.0 - t;
                                             let to_opacity = t;
@@ -1141,11 +1135,14 @@ impl NavigationMenu {
                             scale,
                         );
 
-                        let panel = popper_content::popper_wrapper_panel_at(
+                        // `NavigationMenuContent` (desktop) and `NavigationMenuViewport` (mobile)
+                        // are intrinsically sized in Radix/shadcn. Use an autosizing wrapper so we
+                        // don't have to provide a fixed `placed.size` up-front (which would
+                        // otherwise lock the content to an estimated/previous size during switch
+                        // interactions).
+                        let panel = popper_content::popper_wrapper_at_autosize(
                             cx,
-                            layout.placed,
-                            Edges::all(Px(0.0)),
-                            fret_ui::element::Overflow::Visible,
+                            layout.placed.origin,
                             move |_cx| vec![content],
                         );
 

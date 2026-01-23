@@ -431,6 +431,36 @@ For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
 
+### View-cache regression gating
+
+Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
+you can enforce a minimum number of cache-root reuse events observed in the exported `bundle.json`.
+
+Example (UI gallery):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events in snapshots after `--warmup-frames`.
+- If `view_cache_active` is false for all snapshots (or `cache_roots` are not exported), the check will fail by design.
+
+### Bundle comparison (cached vs uncached)
+
+To build confidence that view-cache is "behavior preserving", compare two captured bundles.
+`fretboard diag compare` focuses on stable `debug.semantics.nodes[].test_id` anchors and can also compare
+`scene_fingerprint` (paint output fingerprint) for the selected snapshots.
+
+Example:
+
+- `cargo run -p fretboard -- diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json`
+
+Notes:
+
+- By default, the command compares the last snapshot after `--warmup-frames` (per bundle, first window).
+- Use `--compare-ignore-bounds` if you only want structural semantics checks (role/flags/actions).
+- Use `--compare-ignore-scene-fingerprint` if the scene fingerprint is expected to differ (e.g. non-deterministic content).
+
 ## Troubleshooting
 
 **The app never dumps bundles**
