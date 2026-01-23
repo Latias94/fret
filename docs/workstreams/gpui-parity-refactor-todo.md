@@ -418,7 +418,7 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       - Windowed (`FRET_UI_GALLERY_CODE_VIEW_WINDOWED=1`): `target/fret-diag/1769092702700-ui-gallery-code-view-scroll-refresh/bundle.json`
         - `diag stats` time sum (us): total=4976556 layout=4533404 paint=438751
       - Both pass stale-paint verification: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`
-- [ ] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
+- [~] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-node/src/*` (node graph viewport culling, edges/handles).
     - `ecosystem/fret-canvas/src/*` (large canvas surfaces).
@@ -433,6 +433,10 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Add stale-paint checks for pan/zoom (bounds/camera changed but scene fingerprint did not).
   - Likely first target:
     - `ecosystem/fret-node` (node graph) because it combines 2D culling + heavy paint ops and will stress both interaction routing and paint caching.
+  - Progress (v1):
+    - UI Gallery harness: `PAGE_CANVAS_CULL_TORTURE` with root test id `ui-gallery-canvas-cull-root` (pan/zoom canvas + viewport culling baseline).
+    - Script: `tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json` (middle-drag + wheel).
+    - Evidence bundle (cache+shell, release): `target/fret-diag-canvas-cull-torture/1769162100494-ui-gallery-canvas-cull-pan-zoom/bundle.json`
 - [~] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-chart/src/*` (timeseries/table-driven plots).
