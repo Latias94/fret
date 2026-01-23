@@ -102,6 +102,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_icon_button_scalars(cfg);
     inject_comp_checkbox_scalars(cfg);
     inject_comp_switch_scalars(cfg);
+    inject_comp_radio_button_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -241,6 +242,7 @@ pub fn theme_config_with_colors(
     inject_comp_icon_button_colors_from_sys(&mut cfg);
     inject_comp_checkbox_colors_from_sys(&mut cfg);
     inject_comp_switch_colors_from_sys(&mut cfg);
+    inject_comp_radio_button_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -1175,6 +1177,128 @@ fn inject_comp_switch_colors_from_sys(cfg: &mut ThemeConfig) {
     );
 }
 
+fn inject_comp_radio_button_scalars(cfg: &mut ThemeConfig) {
+    // Sources:
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-radio-button.scss
+
+    cfg.metrics
+        .insert("md.comp.radio-button.icon.size".to_string(), 20.0);
+    cfg.metrics
+        .insert("md.comp.radio-button.state-layer.size".to_string(), 40.0);
+
+    cfg.numbers.insert(
+        "md.comp.radio-button.disabled.selected.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.radio-button.disabled.unselected.icon.opacity".to_string(),
+        0.38,
+    );
+
+    // State layer opacities are derived from sys state by default.
+    for group in ["selected", "unselected"] {
+        cfg.numbers.insert(
+            format!("md.comp.radio-button.{group}.hover.state-layer.opacity"),
+            0.08,
+        );
+        cfg.numbers.insert(
+            format!("md.comp.radio-button.{group}.focus.state-layer.opacity"),
+            0.1,
+        );
+        cfg.numbers.insert(
+            format!("md.comp.radio-button.{group}.pressed.state-layer.opacity"),
+            0.1,
+        );
+    }
+}
+
+fn inject_comp_radio_button_colors_from_sys(cfg: &mut ThemeConfig) {
+    copy_color(
+        cfg,
+        "md.comp.radio-button.disabled.selected.icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.disabled.unselected.icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.radio-button.selected.icon.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.selected.hover.icon.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.selected.focus.icon.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.selected.pressed.icon.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.radio-button.selected.hover.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.selected.focus.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.selected.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.radio-button.unselected.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.unselected.hover.icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.unselected.focus.icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.unselected.pressed.icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.radio-button.unselected.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.unselected.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.radio-button.unselected.pressed.state-layer.color",
+        "md.sys.color.primary",
+    );
+}
+
 fn inject_sys_motion(cfg: &mut ThemeConfig) {
     // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-motion.scss
     cfg.durations_ms
@@ -1571,6 +1695,16 @@ mod tests {
             Some(32.0)
         );
         assert_eq!(
+            cfg.metrics.get("md.comp.radio-button.icon.size").copied(),
+            Some(20.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.radio-button.state-layer.size")
+                .copied(),
+            Some(40.0)
+        );
+        assert_eq!(
             cfg.numbers
                 .get("md.comp.button.filled.disabled.label-text.opacity")
                 .copied(),
@@ -1633,6 +1767,11 @@ mod tests {
             cfg.colors
                 .contains_key("md.comp.switch.selected.track.color"),
             "expected switch color tokens to be derived from sys roles"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.radio-button.selected.icon.color"),
+            "expected radio-button color tokens to be derived from sys roles"
         );
     }
 
