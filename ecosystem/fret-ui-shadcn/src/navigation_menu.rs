@@ -98,10 +98,10 @@ fn nav_menu_content_switch_slide_px(theme: &Theme) -> Px {
         .unwrap_or(Px(208.0))
 }
 
-fn nav_menu_indicator_size(theme: &Theme) -> Px {
+fn nav_menu_indicator_diamond_size(theme: &Theme) -> Px {
     theme
-        .metric_by_key("component.navigation_menu.indicator.size")
-        .unwrap_or(Px(14.0))
+        .metric_by_key("component.navigation_menu.indicator.diamond_size")
+        .unwrap_or(Px(8.0))
 }
 
 /// shadcn/ui `NavigationMenuViewport` (v4).
@@ -813,10 +813,13 @@ impl NavigationMenu {
             if overlay_presence.present {
                 let side_offset = nav_menu_viewport_side_offset(&theme);
                 let window_margin = nav_menu_viewport_window_margin(&theme);
-                let indicator_size = if indicator_enabled {
-                    nav_menu_indicator_size(&theme)
-                } else {
-                    Px(0.0)
+                let indicator_thickness = if indicator_enabled { side_offset } else { Px(0.0) };
+                let indicator_diamond_size = nav_menu_indicator_diamond_size(&theme);
+                let indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(2.0));
+                let indicator_diamond_corners = {
+                    let mut corners = Corners::all(Px(0.0));
+                    corners.top_left = Px(2.0);
+                    corners
                 };
 
                 let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
@@ -901,7 +904,7 @@ impl NavigationMenu {
                     window_margin,
                     placement,
                     content_size,
-                    indicator_size,
+                    indicator_thickness,
                 };
 
                 let opacity = opacity;
@@ -937,6 +940,8 @@ impl NavigationMenu {
                         let content_switch = content_switch;
                         let content_switch_slide_px = content_switch_slide_px;
                         let content_padding = content_padding;
+                        let indicator_diamond_shadow = indicator_diamond_shadow;
+                        let indicator_diamond_corners = indicator_diamond_corners;
 
                         let content =
                             radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
@@ -1112,29 +1117,36 @@ impl NavigationMenu {
                         }
 
                         let mut children = Vec::new();
-                        if indicator_enabled && indicator_size.0 > 0.0 {
+                        if indicator_enabled && indicator_thickness.0 > 0.0 {
                             let indicator = popper_content::popper_wrapper_panel_at(
                                 cx,
                                 layout.indicator_rect,
                                 Edges::all(Px(0.0)),
-                                fret_ui::element::Overflow::Visible,
+                                fret_ui::element::Overflow::Clip,
                                 move |cx| {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size = SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
+                                    let track_w = layout.indicator_rect.size.width.0.max(0.0);
+                                    let track_h = layout.indicator_rect.size.height.0.max(0.0);
+
+                                    let diamond_size = indicator_diamond_size.0.max(0.0);
+                                    let diamond_left = ((track_w - diamond_size) * 0.5).max(0.0);
+                                    let diamond_top = (track_h - diamond_size + diamond_size * 0.60).max(0.0);
+
+                                    let mut diamond_layout = LayoutStyle::default();
+                                    diamond_layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    diamond_layout.inset.left = Some(Px(diamond_left));
+                                    diamond_layout.inset.top = Some(Px(diamond_top));
+                                    diamond_layout.size = SizeStyle {
+                                        width: Length::Px(Px(diamond_size)),
+                                        height: Length::Px(Px(diamond_size)),
                                         ..Default::default()
                                     };
 
-                                    let center = Point::new(
-                                        Px(indicator_size.0 * 0.5),
-                                        Px(indicator_size.0 * 0.5),
-                                    );
+                                    let center = Point::new(Px(diamond_size * 0.5), Px(diamond_size * 0.5));
                                     let rotate = Transform2D::rotation_about_degrees(45.0, center);
 
-                                    vec![cx.visual_transform_props(
+                                    let diamond = cx.visual_transform_props(
                                         VisualTransformProps {
-                                            layout,
+                                            layout: diamond_layout,
                                             transform: rotate,
                                         },
                                         move |cx| {
@@ -1144,21 +1156,30 @@ impl NavigationMenu {
                                                 height: Length::Fill,
                                                 ..Default::default()
                                             };
+
                                             vec![cx.container(
                                                 ContainerProps {
                                                     layout,
                                                     padding: Edges::all(Px(0.0)),
-                                                    background: Some(viewport_bg),
-                                                    shadow: None,
-                                                    border: Edges::all(Px(1.0)),
-                                                    border_color: Some(viewport_border),
-                                                    corner_radii: Corners::all(Px(2.0)),
+                                                    background: Some(viewport_border),
+                                                    shadow: Some(indicator_diamond_shadow),
+                                                    border: Edges::all(Px(0.0)),
+                                                    border_color: None,
+                                                    corner_radii: indicator_diamond_corners,
                                                     ..Default::default()
                                                 },
                                                 |_cx| Vec::new(),
                                             )]
                                         },
-                                    )]
+                                    );
+
+                                    radix_navigation_menu::navigation_menu_register_indicator_diamond_id(
+                                        cx,
+                                        root_id,
+                                        diamond.id,
+                                    );
+
+                                    vec![diamond]
                                 },
                             );
                             children.push(indicator);

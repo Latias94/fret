@@ -1184,6 +1184,7 @@ fn assert_navigation_menu_content_chrome_matches(
         .iter()
         .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
         .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    let _trigger_bounds = trigger.bounds;
     left_click_center(
         &mut ui,
         &mut app,
@@ -1313,6 +1314,7 @@ fn assert_navigation_menu_content_surface_colors_match(
         .iter()
         .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
         .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    let _trigger_bounds = trigger.bounds;
     left_click_center(
         &mut ui,
         &mut app,
@@ -1478,6 +1480,7 @@ fn assert_navigation_menu_content_shadow_insets_match(
         .iter()
         .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
         .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    let _trigger_bounds = trigger.bounds;
     left_click_center(
         &mut ui,
         &mut app,
@@ -1584,6 +1587,7 @@ fn assert_navigation_menu_viewport_shadow_insets_match(
         .iter()
         .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
         .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    let _trigger_bounds = trigger.bounds;
     left_click_center(
         &mut ui,
         &mut app,
@@ -1628,6 +1632,108 @@ fn assert_navigation_menu_viewport_shadow_insets_match(
         .expect("painted quad for navigation-menu viewport panel");
 
     let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+    assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
+}
+
+fn assert_navigation_menu_indicator_shadow_insets_match(
+    web_name: &str,
+    web_slot: &str,
+    web_state: &str,
+    trigger_label: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &Model<Option<Arc<str>>>,
+        &Rc<Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_indicator = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
+        .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
+    let web_diamond = find_first(web_indicator, &|n| {
+        let box_shadow = n
+            .computed_style
+            .get("boxShadow")
+            .map(String::as_str)
+            .unwrap_or("");
+        !box_shadow.is_empty() && box_shadow != "none"
+    })
+    .expect("missing web indicator diamond node (expected non-empty boxShadow)");
+
+    let expected = web_drop_shadow_insets(web_diamond);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &model, &root_id_out)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &model, &root_id_out)],
+        );
+    }
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let near = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 + 7.0),
+    );
+    let panel_rect = find_best_solid_quad_near_point(&scene, near)
+        .expect("painted quad for navigation-menu indicator diamond");
+
+    let candidates = fret_drop_shadow_insets_candidates(&scene, panel_rect);
     assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
 }
 
@@ -1683,6 +1789,50 @@ fn find_best_chrome_quad_by_size(
                     corner_radii.bottom_left.0,
                 ],
             });
+        }
+    }
+
+    best
+}
+
+fn find_best_solid_quad_near_point(scene: &Scene, near: Point) -> Option<Rect> {
+    let mut best: Option<Rect> = None;
+    let mut best_score = f32::INFINITY;
+
+    for op in scene.ops() {
+        let SceneOp::Quad {
+            rect,
+            background,
+            border,
+            ..
+        } = *op
+        else {
+            continue;
+        };
+
+        let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+        if has_border(&border) {
+            continue;
+        }
+        if background.a < 0.01 {
+            continue;
+        }
+
+        let w = rect.size.width.0;
+        let h = rect.size.height.0;
+        if !(6.0..=20.0).contains(&w) || !(6.0..=20.0).contains(&h) {
+            continue;
+        }
+
+        let cx = rect.origin.x.0 + w * 0.5;
+        let cy = rect.origin.y.0 + h * 0.5;
+        let dist_score = (cx - near.x.0).abs() + (cy - near.y.0).abs();
+        let area_score = (w * h) * 0.02;
+        let score = dist_score + area_score;
+
+        if score < best_score {
+            best_score = score;
+            best = Some(rect);
         }
     }
 
@@ -8780,6 +8930,60 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matc
                     "home",
                     "Home",
                     vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_indicator_shadow_insets_match(
+        "navigation-menu-demo-indicator",
+        "navigation-menu-indicator",
+        "visible",
+        "Home",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(true)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Home content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web_dark() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_indicator_shadow_insets_match(
+        "navigation-menu-demo-indicator",
+        "navigation-menu-indicator",
+        "visible",
+        "Home",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(true)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Home content")],
                 )])
                 .into_element(cx);
             root_id_out.set(Some(el.id));

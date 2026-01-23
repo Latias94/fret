@@ -77,10 +77,12 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Pass: Indicator support is available (rotated square). It is opt-in to match upstream
   composition (upstream exports `NavigationMenuIndicator` but does not mount it in `NavigationMenu`).
-- Note: Exact positioning and shadow/token fidelity may still differ (Radix uses an indicator track
-  ref + DOM layout measurement); Fret drives viewport sizing via a primitive contract and anchors
-  using trigger element ids.
-  - Indicator placement logic is shared via `fret-ui-kit::primitives::navigation_menu::navigation_menu_indicator_rect(...)`.
+- Pass: Indicator placement is track-based (trigger width + gutter thickness) and uses the same
+  `shadow-md` token as upstream for the diamond.
+- Note: Exact positioning still differs in the details (Radix uses a DOM-measured indicator track);
+  Fret anchors from trigger element ids + popper geometry.
+  - Placement logic: `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
+    (`navigation_menu_indicator_rect(...)`).
 
 ## Validation
 
@@ -89,16 +91,20 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo nextest run -p fret-ui-shadcn navigation_menu_viewport_align_start_respects_direction_provider`
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_navigation_menu_open_geometry_matches_fret`).
-- shadcn-web gates:
+  - shadcn-web gates:
   - Chrome: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
     (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`, `web_vs_fret_navigation_menu_demo_surface_colors_match_web`,
     `web_vs_fret_navigation_menu_demo_surface_colors_match_web_dark`, `web_vs_fret_navigation_menu_demo_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_shadow_matches_web_dark`,
+    `web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web`,
+    `web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web_dark`,
     `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web_dark`,
     `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web`,
     `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web_dark`;
-    consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo*.open.json`).
+    consumes:
+    - `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo*.open.json`
+    - `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo-indicator.open.json`).
   - Placement: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
     (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.open.json`).
 
@@ -106,5 +112,5 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Consider exposing an opt-in custom indicator renderer if parity-sensitive recipes need it (today
   the indicator visuals are not user-supplied, only toggled on/off).
-- Add a dedicated shadcn-web golden page/variant that mounts `NavigationMenuIndicator`, so we can
-  gate its `shadow-md` token (`rounded-tl-sm shadow-md`) against web computed styles.
+- Add layout-focused gates for the indicator track (height = `h-1.5`) and diamond offset
+  (`top-[60%]`) to catch regressions in the “clipped arrow” look.
