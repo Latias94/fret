@@ -1989,7 +1989,7 @@ mod tests {
 
         app.set_global(WindowCommandEnabledService::default());
         app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-            svc.set_enabled_for_command(window, cmd.clone(), false);
+            svc.set_enabled(window, cmd.clone(), false);
         });
 
         let bounds = Rect::new(
