@@ -342,6 +342,17 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
         `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_window_jump_rerender_uses_latest_handle_offset`).
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
 
+- [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
+  - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
+  - Notes: this does not fix the `virtual_list_torture` worst tick because it is dominated by row subtree layout (shadcn-heavy row composition),
+    but it is useful for fixed-height tables/trees with occasional deterministic height changes (group headers, separators).
+  - Evidence:
+    - API: `crates/fret-ui/src/element.rs` (`VirtualListMeasureMode::Known`, `VirtualListOptions::known`)
+    - Metrics import: `crates/fret-ui/src/virtual_list.rs` (`rebuild_from_known_heights`)
+    - Layout path: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+    - Unit test: `crates/fret-ui/src/virtual_list.rs` (`known_mode_can_import_fixed_per_index_heights`)
+    - Diagnostics schema: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiVirtualListMeasureModeV1::Known`)
+
 - [x] GPUI-MVP5-eco-007 Provide a “windowed rows surface” building block for simple lists/inspectors.
   - Goal: allow huge row surfaces to update the visible window via paint/prepaint without requiring per-row declarative subtrees.
   - Notes: this is the “single-node surface” escape hatch; composable rows still use `VirtualList` for semantics/focus correctness.
