@@ -211,6 +211,43 @@ let el = windowed_rows_surface(cx, WindowedRowsSurfaceProps::default(), |_p, _i,
 ```
 "#;
 
+pub(crate) const DOC_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str = r#"
+## Windowed Rows Surface (interactive harness)
+
+This page demonstrates a “windowed surface” pattern (ADR 0190) with **paint-only hover chrome**
+(ADR 0181) using a stable element tree:
+
+- `Scroll` (retained scroll state + transform)
+- `PointerRegion` (row hit-testing in event hooks)
+- `Canvas` (paint only the visible row window)
+
+The goal is to show that pointer-driven chrome (hover highlight) can update via paint invalidation
+without forcing rerender or relayout.
+"#;
+
+pub(crate) const USAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str = r#"
+```rust
+use fret_ui::element::PointerRegionProps;
+use fret_ui_kit::declarative::windowed_rows_surface::{
+    WindowedRowsSurfacePointerHandlers, WindowedRowsSurfaceProps,
+    windowed_rows_surface_with_pointer_region,
+};
+
+let props = WindowedRowsSurfaceProps::default();
+let pointer = PointerRegionProps::default();
+let handlers = WindowedRowsSurfacePointerHandlers::default();
+
+let el = windowed_rows_surface_with_pointer_region(
+    cx,
+    props,
+    pointer,
+    handlers,
+    None,
+    |_p, _i, _rect| {},
+);
+```
+"#;
+
 pub(crate) const DOC_DATA_TABLE_TORTURE: &str = r#"
 ## DataTable (torture harness)
 

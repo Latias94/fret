@@ -101,6 +101,8 @@ pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
 pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
+pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
+    "windowed_rows_surface_interactive_torture";
 pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -139,6 +141,8 @@ pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canv
 pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
 pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_torture";
+pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
+    "ui_gallery.nav.select.windowed_rows_surface_interactive_torture";
 pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
 pub(crate) const CMD_NAV_TREE_TORTURE: &str = "ui_gallery.nav.select.tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -370,6 +374,23 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["scroll", "performance", "gpui-parity", "canvas", "harness"],
                 docs::DOC_WINDOWED_ROWS_SURFACE_TORTURE,
                 docs::USAGE_WINDOWED_ROWS_SURFACE_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE,
+                "Windowed Rows (Interactive)",
+                "Windowed Rows Surface / Pointer + Paint-only Chrome",
+                "fret-ui-kit (windowed surface + pointer hit testing)",
+                CMD_NAV_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE,
+                &[
+                    "scroll",
+                    "performance",
+                    "gpui-parity",
+                    "canvas",
+                    "pointer",
+                    "harness",
+                ],
+                docs::DOC_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE,
+                docs::USAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE,
             ),
             PageSpec::new(
                 PAGE_DATA_TABLE_TORTURE,
