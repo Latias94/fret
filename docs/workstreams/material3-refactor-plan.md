@@ -122,6 +122,12 @@ Goal: prove the foundation approach reduces divergence and removes flicker/misma
   - light/dark,
   - (later) Expressive variants.
 - Add scripted interaction tests where feasible.
+- Add token coverage tooling to detect drift:
+  - `cargo run -p fret-ui-material3 --bin material3_token_audit -- --material-web-dir <path>`
+  - This reports:
+    - keys referenced by `fret-ui-material3` sources but missing from `tokens::v30` injection,
+    - keys that do not exist in Material Web v30 sassvars (typos / wrong namespaces),
+    - (optional) Material Web keys missing in our injection by component prefix.
 
 ## Definition of Done (per component)
 
@@ -134,4 +140,3 @@ Goal: prove the foundation approach reduces divergence and removes flicker/misma
 - Semantics:
   - correct role, selected/checked, `pos_in_set`/`set_size` where relevant,
   - stable focus policy (roving behavior) for groups.
-
