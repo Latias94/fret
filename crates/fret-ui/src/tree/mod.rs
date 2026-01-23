@@ -1310,7 +1310,12 @@ impl<H: UiHost> UiTree<H> {
         !n.invalidation.layout
     }
 
-    pub(crate) fn set_node_view_cache_flags(
+    /// Configure view-cache behavior for a specific node.
+    ///
+    /// This is an advanced/low-level knob. Most applications should prefer declarative
+    /// view-cache boundaries, but retained widgets (and diagnostics harnesses) may need to enable
+    /// view caching explicitly on a node.
+    pub fn set_node_view_cache_flags(
         &mut self,
         node: NodeId,
         enabled: bool,

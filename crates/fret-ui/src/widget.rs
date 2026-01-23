@@ -441,6 +441,23 @@ pub struct PrepaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    /// Mark an invalidation on `node` for the next frame.
+    ///
+    /// Prefer `Invalidation::Paint` / `Invalidation::HitTest` here. Invalidating `Layout` from
+    /// prepaint is allowed but can easily introduce avoidable churn.
+    pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
+        self.tree.invalidate_with_detail(
+            node,
+            kind,
+            crate::tree::UiDebugInvalidationDetail::Unknown,
+        );
+    }
+
+    /// Mark an invalidation on the current node for the next frame.
+    pub fn invalidate_self(&mut self, kind: Invalidation) {
+        self.invalidate(self.node, kind);
+    }
+
     /// Request a window redraw (one-shot).
     ///
     /// Use this for one-shot updates after prepaint-driven state changes.
