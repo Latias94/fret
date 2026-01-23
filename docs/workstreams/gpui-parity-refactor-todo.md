@@ -352,6 +352,7 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (multiple small wheel deltas; should cross the overscan window boundary without a massive jump).
     - Evidence bundle (cache+shell, release): `target/fret-diag-perf-vlist-window-boundary-cache-shell2/1769171174767-script-step-0027-wheel/bundle.json`
     - Notes: the current worst tick is layout-dominated when the wheel crosses the window boundary; this is the baseline we want to improve by moving window derivation toward prepaint (ADR 0190).
+    - Tip: for a more stable baseline (avoid measure noise), run the harness with `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1` so the page uses `VirtualListOptions::known(...)`.
 
 - [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
   - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
