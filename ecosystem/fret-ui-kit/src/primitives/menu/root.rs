@@ -89,8 +89,7 @@ pub fn submenu_pointer_move_handler(
     cfg: sub::MenuSubmenuConfig,
 ) -> OnDismissiblePointerMove {
     dismissable_layer::pointer_move_handler(move |host, acx, mv| {
-        let _ = sub::handle_dismissible_pointer_move(host, acx, mv, &models, cfg);
-        false
+        sub::handle_dismissible_pointer_move(host, acx, mv, &models, cfg)
     })
 }
 
