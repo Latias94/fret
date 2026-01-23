@@ -219,6 +219,7 @@ pub(crate) fn content_view(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -352,6 +353,7 @@ pub(crate) fn content_view(
         material3_checkbox,
         material3_switch,
         material3_radio_value,
+        material3_tabs_value,
         material3_text_field_value,
         material3_text_field_disabled,
         material3_text_field_error,
@@ -460,6 +462,7 @@ fn page_preview(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -549,6 +552,7 @@ fn page_preview(
             material3_text_field_disabled,
             material3_text_field_error,
         ),
+        PAGE_MATERIAL3_TABS => preview_material3_tabs(cx, material3_tabs_value),
         _ => preview_intro(cx, theme),
     };
 
@@ -1525,6 +1529,38 @@ fn preview_material3_text_field(
         toggles,
         outlined_card,
         filled_card,
+    ]
+}
+
+fn preview_material3_tabs(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    let current = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let tabs = material3::Tabs::new(value)
+        .a11y_label("Material 3 Tabs")
+        .test_id("ui-gallery-material3-tabs")
+        .items(vec![
+            material3::TabItem::new("overview", "Overview")
+                .a11y_label("Tab Overview")
+                .test_id("ui-gallery-material3-tab-overview"),
+            material3::TabItem::new("settings", "Settings")
+                .a11y_label("Tab Settings")
+                .test_id("ui-gallery-material3-tab-settings"),
+            material3::TabItem::new("disabled", "Disabled")
+                .disabled(true)
+                .a11y_label("Tab Disabled")
+                .test_id("ui-gallery-material3-tab-disabled"),
+        ])
+        .into_element(cx);
+
+    vec![
+        cx.text("Material 3 Tabs: roving focus + state layer + bounded ripple."),
+        tabs,
+        cx.text(format!("value={}", current.as_ref())),
     ]
 }
 

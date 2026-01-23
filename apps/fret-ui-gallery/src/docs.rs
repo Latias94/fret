@@ -262,6 +262,32 @@ let tf = m3::TextField::new(model)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_TABS: &str = r#"
+## Material 3 Tabs (MVP)
+
+This page validates a Material 3 primary navigation tabs surface:
+
+- roving focus + automatic activation (selection follows focus)
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TABS: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let value = app.models_mut().insert(Arc::<str>::from("overview"));
+let tabs = m3::Tabs::new(value)
+    .a11y_label("Demo tabs")
+    .items(vec![
+        m3::TabItem::new("overview", "Overview"),
+        m3::TabItem::new("settings", "Settings"),
+    ])
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 

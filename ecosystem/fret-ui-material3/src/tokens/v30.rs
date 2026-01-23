@@ -105,6 +105,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_radio_button_scalars(cfg);
     inject_comp_outlined_text_field_scalars(cfg);
     inject_comp_filled_text_field_scalars(cfg);
+    inject_comp_primary_navigation_tab_scalars(cfg);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -247,6 +248,7 @@ pub fn theme_config_with_colors(
     inject_comp_radio_button_colors_from_sys(&mut cfg);
     inject_comp_outlined_text_field_colors_from_sys(&mut cfg);
     inject_comp_filled_text_field_colors_from_sys(&mut cfg);
+    inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -1432,6 +1434,69 @@ fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-primary-navigation-tab.scss
+
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.container.height".to_string(),
+        48.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.with-icon-and-label-text.container.height".to_string(),
+        64.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.with-icon.icon.size".to_string(),
+        24.0,
+    );
+
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.active-indicator.height".to_string(),
+        3.0,
+    );
+    // Note: the upstream token is a 4-corner set (`3px 3px 0px 0px`). We store the top-corner
+    // radius scalar and build the composite shape in the component recipe.
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.active-indicator.shape".to_string(),
+        3.0,
+    );
+
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.focus.indicator.thickness".to_string(),
+        3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.focus.indicator.outline.offset".to_string(),
+        -3.0,
+    );
+
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.active.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.active.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.active.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.inactive.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.inactive.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.inactive.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+}
+
 fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
@@ -1742,6 +1807,100 @@ fn inject_comp_filled_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.filled-text-field.error.focus.supporting-text.color",
         "md.sys.color.error",
+    );
+}
+
+fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-primary-navigation-tab.scss
+
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.container.color",
+        "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.active-indicator.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.focus.indicator.color",
+        "md.sys.color.secondary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.active.focus.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.active.hover.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.active.pressed.state-layer.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.inactive.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.inactive.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.inactive.pressed.state-layer.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.active.label-text.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.active.focus.label-text.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.active.hover.label-text.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.active.pressed.label-text.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.inactive.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.inactive.focus.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.inactive.hover.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.primary-navigation-tab.with-label-text.inactive.pressed.label-text.color",
+        "md.sys.color.on-surface",
     );
 }
 

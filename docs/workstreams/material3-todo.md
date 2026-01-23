@@ -118,7 +118,10 @@ Material 3 Expressive) in Fret.
   - Evidence: `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_(outlined|filled)_text_field_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_text_field`).
-- [ ] Tabs
+- [x] Tabs (MVP: roving focus + state layer + bounded ripple + active indicator)
+  - Evidence: `ecosystem/fret-ui-material3/src/tabs.rs` (`Tabs`, `TabItem`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_primary_navigation_tab_*`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_tabs`).
 - [ ] List / Menu
 - [ ] Dialog / Snackbar / Tooltip (pick order based on demos)
 
