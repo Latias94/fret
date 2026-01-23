@@ -92,7 +92,12 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   - Chrome: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
     (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`, `web_vs_fret_navigation_menu_demo_surface_colors_match_web`,
     `web_vs_fret_navigation_menu_demo_surface_colors_match_web_dark`, `web_vs_fret_navigation_menu_demo_shadow_matches_web`,
-    `web_vs_fret_navigation_menu_demo_shadow_matches_web_dark`; consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.open.json`).
+    `web_vs_fret_navigation_menu_demo_shadow_matches_web_dark`,
+    `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web`,
+    `web_vs_fret_navigation_menu_demo_home_mobile_viewport_shadow_matches_web_dark`,
+    `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web`,
+    `web_vs_fret_navigation_menu_demo_home_mobile_constrained_viewport_shadow_matches_web_dark`;
+    consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo*.open.json`).
   - Placement: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
     (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo.open.json`).
 
