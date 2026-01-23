@@ -467,6 +467,9 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       explicitly.
       - Anchors: `crates/fret-ui/src/action.rs` (`UiActionHost::notify`), `crates/fret-ui/src/declarative/host_widget/event/pressable.rs`
       - Example adoption: `ecosystem/fret-code-view/src/copy_button.rs` (Copied feedback uses `host.notify(...)` from both activate + timer hooks).
+      - Perf evidence (cache+shell, release): `target/fret-diag-perf-explicit-notify/1769155887844-script-step-0011-click/bundle.json`
+        - Note: the worst “steady-state” tick in this bundle is layout-dominated, but `diag stats --sort time` no longer reports a dirty-view source
+          attributed to `UiDebugInvalidationDetail::notify_call` from `pressable.rs:*`.
 - [x] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
   - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
   - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).
