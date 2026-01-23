@@ -1,6 +1,8 @@
 use super::*;
 use std::any::TypeId;
 
+use crate::WindowInputArbitrationService;
+
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
     pub fn paint_all(
@@ -64,6 +66,17 @@ impl<H: UiHost> UiTree<H> {
                         svc.set_snapshot(window, input_ctx);
                     },
                 );
+            }
+
+            let arbitration = self.input_arbitration_snapshot();
+            let needs_update = app
+                .global::<WindowInputArbitrationService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != arbitration);
+            if needs_update {
+                app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
+                    svc.set_snapshot(window, arbitration);
+                });
             }
         }
 

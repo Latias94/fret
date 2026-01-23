@@ -168,18 +168,19 @@ impl DockViewportHarness {
     fn paint_scene(&mut self) -> Scene {
         let size = Size::new(Px(800.0), Px(600.0));
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
-        let _ = self
-            .ui
-            .layout(&mut self.app, &mut self.text, self.root, size, 1.0);
-        let mut scene = Scene::default();
-        self.ui.paint(
+        render_and_bind_dock_panels(
+            &mut self.ui,
             &mut self.app,
             &mut self.text,
-            self.root,
+            self.window,
             bounds,
-            &mut scene,
-            1.0,
+            self.root,
         );
+        self.ui
+            .layout_all(&mut self.app, &mut self.text, bounds, 1.0);
+        let mut scene = Scene::default();
+        self.ui
+            .paint_all(&mut self.app, &mut self.text, bounds, &mut scene, 1.0);
         scene
     }
 
@@ -2154,6 +2155,86 @@ fn pointer_occlusion_blocks_viewport_hover_and_down_but_allows_wheel_forwarding(
     assert!(
         matches!(input.kind, fret_core::ViewportInputKind::Wheel { .. }),
         "expected wheel forwarding to remain active under BlockMouseExceptScroll, got: {input:?}",
+    );
+}
+
+#[test]
+fn foreign_pointer_capture_suppresses_viewport_capture_start() {
+    struct CaptureOverlay;
+
+    impl<H: UiHost> Widget<H> for CaptureOverlay {
+        fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+            position.x.0 >= 0.0
+                && position.y.0 >= 0.0
+                && position.x.0 <= 20.0
+                && position.y.0 <= 20.0
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. })) {
+                cx.capture_pointer(cx.node);
+                cx.stop_propagation();
+            }
+        }
+    }
+
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let overlay_root = harness.ui.create_node_retained(CaptureOverlay);
+    let _overlay_layer = harness.ui.push_overlay_root_ex(overlay_root, false, true);
+    harness.layout();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(2.0), Px(2.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(1)),
+        Some(overlay_root),
+        "expected overlay to capture pointer 1"
+    );
+
+    // Advance a frame so docking can observe the runtime arbitration snapshot.
+    harness.layout();
+    let _ = harness.app.take_effects();
+
+    let position = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let effects = harness.app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::ViewportInput(_))),
+        "expected foreign pointer capture to suppress viewport capture start, got: {effects:?}",
+    );
+    assert_eq!(
+        harness.ui.captured_for(fret_core::PointerId(0)),
+        None,
+        "expected foreign pointer capture to prevent viewport capture from requesting pointer capture"
     );
 }
 

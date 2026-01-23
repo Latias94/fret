@@ -1,6 +1,8 @@
 use super::*;
 use std::collections::HashMap;
 
+use crate::WindowInputArbitrationService;
+
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
     inv: Invalidation,
@@ -393,6 +395,7 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         services: &mut *services,
                         node: node_id,
+                        layer_id: tree.node_layer(node_id),
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
@@ -524,6 +527,7 @@ impl<H: UiHost> UiTree<H> {
                     app,
                     services: &mut *services,
                     node: node_id,
+                    layer_id: tree.node_layer(node_id),
                     window: tree.window,
                     pointer_id: pointer_id_for_capture,
                     input_ctx: input_ctx.clone(),
@@ -699,6 +703,9 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
+                svc.set_snapshot(window, self.input_arbitration_snapshot());
+            });
         }
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
@@ -1388,6 +1395,7 @@ impl<H: UiHost> UiTree<H> {
                             app,
                             services: &mut *services,
                             node: node_id,
+                            layer_id: tree.node_layer(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
                             input_ctx: input_ctx.clone(),
@@ -1504,6 +1512,7 @@ impl<H: UiHost> UiTree<H> {
                             app,
                             services: &mut *services,
                             node: node_id,
+                            layer_id: tree.node_layer(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
                             input_ctx: input_ctx.clone(),
@@ -1933,6 +1942,9 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx);
                 },
             );
+            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
+                svc.set_snapshot(window, self.input_arbitration_snapshot());
+            });
         }
     }
 
@@ -1974,6 +1986,7 @@ impl<H: UiHost> UiTree<H> {
                             app,
                             services: &mut *services,
                             node: node_id,
+                            layer_id: tree.node_layer(node_id),
                             window: tree.window,
                             pointer_id: pointer_id_for_capture,
                             input_ctx: observer_ctx,
@@ -2039,6 +2052,7 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         services: &mut *services,
                         node: node_id,
+                        layer_id: tree.node_layer(node_id),
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: observer_ctx,

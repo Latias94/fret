@@ -939,6 +939,29 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let dock_space_node = cx.node;
         let allow_tear_off =
             cx.input_ctx.caps.ui.window_tear_off && cx.input_ctx.caps.ui.multi_window;
+        let foreign_capture_active = cx
+            .app
+            .global::<fret_ui::WindowInputArbitrationService>()
+            .and_then(|svc| svc.snapshot(self.window))
+            .is_some_and(|snapshot| {
+                if !snapshot.pointer_capture_active {
+                    return false;
+                }
+
+                let Some(dock_layer) = cx.layer_id else {
+                    // If the dock space's layer cannot be determined, be conservative: treat
+                    // captures as foreign so we don't start competing interactions.
+                    return true;
+                };
+
+                if snapshot.pointer_capture_multiple_layers {
+                    return true;
+                }
+
+                snapshot
+                    .pointer_capture_layer
+                    .is_none_or(|layer| layer != dock_layer)
+            });
 
         if cx.app.global::<DockManager>().is_none() {
             return;
@@ -961,6 +984,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             pointer_type,
                             ..
                         } => {
+                            // When a different UI layer owns a pointer capture (typically an
+                            // editor interaction), avoid starting competing dock/viewport capture
+                            // sessions from other pointers.
+                            if foreign_capture_active && cx.captured != Some(dock_space_node) {
+                                return;
+                            }
                             // Arbitration: while a dock drag session is active (or viewport capture is
                             // active), we do not allow starting competing capture sessions from a
                             // secondary button press. The active session owns the interaction.

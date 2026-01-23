@@ -219,4 +219,5 @@ mod semantics_focus_shortcuts;
 mod stack_safety;
 mod transforms;
 mod view_cache;
+mod window_input_arbitration_snapshot;
 mod window_input_context_snapshot;

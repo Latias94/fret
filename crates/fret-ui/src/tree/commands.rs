@@ -44,6 +44,12 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+            app.with_global_mut(
+                crate::WindowInputArbitrationService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, self.input_arbitration_snapshot());
+                },
+            );
         }
         let is_focus_traversal_command =
             matches!(command.as_str(), "focus.next" | "focus.previous");
@@ -174,6 +180,12 @@ impl<H: UiHost> UiTree<H> {
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx);
+                },
+            );
+            app.with_global_mut(
+                crate::WindowInputArbitrationService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, self.input_arbitration_snapshot());
                 },
             );
         }

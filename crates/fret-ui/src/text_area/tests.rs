@@ -274,6 +274,7 @@ fn event_cx<'a>(
         app,
         services,
         node,
+        layer_id: None,
         window: Some(window),
         input_ctx: fret_runtime::InputContext {
             caps: PlatformCapabilities::default(),

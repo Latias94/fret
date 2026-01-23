@@ -48,6 +48,7 @@ pub mod tree;
 pub mod virtual_list;
 #[allow(dead_code)]
 pub(crate) mod widget;
+mod window_input_arbitration;
 
 #[cfg(feature = "compat-policy-shortcuts")]
 compile_error!(
@@ -74,3 +75,4 @@ pub use tree::{
     UiDebugHoverDeclarativeInvalidationHotspot, UiDebugLayerInfo, UiLayerId, UiTree,
 };
 pub use widget::Invalidation;
+pub use window_input_arbitration::WindowInputArbitrationService;
