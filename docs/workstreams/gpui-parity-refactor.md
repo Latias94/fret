@@ -176,6 +176,10 @@ Concrete ecosystem entry points (current state):
 
 - `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`: a Scroll + Canvas pattern that paints only the
   visible row window while keeping the element tree structurally stable (good for huge simple lists/inspectors).
+  - UI Gallery harness: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WINDOWED_ROWS_SURFACE_TORTURE`) and
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_windowed_rows_surface_torture`).
+  - Scripted scroll capture: `tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json` (run via
+    `cargo run -p fretboard -- diag run ...`).
 
 ### 1.6.1 Retained vs. “Rebuilt Each Frame” (GPUI-style hybrid)
 
