@@ -29,3 +29,59 @@ pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation};
 pub use switch::Switch;
 pub use tabs::{TabItem, Tabs};
 pub use text_field::{TextField, TextFieldVariant};
+
+#[cfg(test)]
+mod tests {
+    fn assert_material_only_tokens(source: &str) {
+        let forbidden_literals = [
+            "color_required(\"card\")",
+            "color_required(\"foreground\")",
+            "color_required(\"muted-foreground\")",
+            "color_required(\"border\")",
+            "color_required(\"background\")",
+            "color_required(\"color.accent\")",
+            "color_required(\"color.text.primary\")",
+            "color_required(\"color.text.disabled\")",
+            "color_required(\"color.border\")",
+            "color_by_key(\"card\")",
+            "color_by_key(\"foreground\")",
+            "color_by_key(\"muted-foreground\")",
+            "color_by_key(\"border\")",
+            "color_by_key(\"background\")",
+            "color_by_key(\"color.accent\")",
+            "color_by_key(\"color.text.primary\")",
+            "color_by_key(\"color.text.disabled\")",
+            "color_by_key(\"color.border\")",
+        ];
+
+        for lit in forbidden_literals {
+            assert!(
+                !source.contains(lit),
+                "forbidden non-Material theme token reference: {lit}"
+            );
+        }
+    }
+
+    #[test]
+    fn material3_component_sources_do_not_fallback_to_non_material_tokens() {
+        let sources = [
+            include_str!("button.rs"),
+            include_str!("checkbox.rs"),
+            include_str!("dropdown_menu.rs"),
+            include_str!("icon_button.rs"),
+            include_str!("menu.rs"),
+            include_str!("radio.rs"),
+            include_str!("switch.rs"),
+            include_str!("tabs.rs"),
+            include_str!("text_field.rs"),
+            include_str!("foundation/indication.rs"),
+            include_str!("foundation/focus_ring.rs"),
+            include_str!("foundation/geometry.rs"),
+            include_str!("foundation/tokens.rs"),
+        ];
+
+        for src in sources {
+            assert_material_only_tokens(src);
+        }
+    }
+}

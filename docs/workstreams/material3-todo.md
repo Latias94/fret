@@ -72,6 +72,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/radio.rs`.
 - [x] Remove non-Material fallbacks from `TextField` (foundation migration TBD).
   - Evidence: `ecosystem/fret-ui-material3/src/text_field.rs`.
+- [x] Add a regression test to prevent non-Material token fallbacks.
+  - Evidence: `ecosystem/fret-ui-material3/src/lib.rs` (`material3_component_sources_do_not_fallback_to_non_material_tokens`).
 - [ ] Migrate the remaining components and delete duplicated per-component helpers.
 
 ## Audit Anchors (Fret)
