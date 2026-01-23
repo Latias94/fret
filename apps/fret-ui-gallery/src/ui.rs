@@ -94,6 +94,7 @@ pub(crate) fn sidebar_view(
                     if item.id == PAGE_VIRTUAL_LIST_TORTURE
                         || item.id == PAGE_CODE_VIEW_TORTURE
                         || item.id == PAGE_WINDOWED_ROWS_SURFACE_TORTURE
+                        || item.id == PAGE_DATA_TABLE_TORTURE
                     {
                         let on_activate: fret_ui::action::OnActivate =
                             Arc::new(move |host, action_cx, _reason| {
@@ -484,6 +485,7 @@ fn page_preview(
         ),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
         PAGE_WINDOWED_ROWS_SURFACE_TORTURE => preview_windowed_rows_surface_torture(cx, theme),
+        PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -2127,6 +2129,120 @@ fn preview_data_table(
         cx.text(sorting_text.as_ref()),
         table,
     ]
+}
+
+fn preview_data_table_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    state: Model<fret_ui_headless::table::TableState>,
+) -> Vec<AnyElement> {
+    use fret_ui_headless::table::{ColumnDef, RowKey};
+
+    #[derive(Debug, Clone)]
+    struct Row {
+        id: u64,
+        name: Arc<str>,
+        status: Arc<str>,
+        cpu: u64,
+        mem_mb: u64,
+    }
+
+    let (data, columns) = cx.with_state(
+        || {
+            let mut rows: Vec<Row> = Vec::with_capacity(50_000);
+            for i in 0..50_000u64 {
+                let status = match i % 4 {
+                    0 => "Running",
+                    1 => "Idle",
+                    2 => "Sleeping",
+                    _ => "Blocked",
+                };
+                rows.push(Row {
+                    id: i,
+                    name: Arc::from(format!("Process {i}")),
+                    status: Arc::from(status),
+                    cpu: (i * 7) % 100,
+                    mem_mb: 32 + ((i * 13) % 4096),
+                });
+            }
+
+            let columns: Arc<[ColumnDef<Row>]> = Arc::from(vec![
+                ColumnDef::new("name")
+                    .sort_by(|a: &Row, b: &Row| a.name.cmp(&b.name))
+                    .size(220.0),
+                ColumnDef::new("status")
+                    .sort_by(|a: &Row, b: &Row| a.status.cmp(&b.status))
+                    .size(140.0),
+                ColumnDef::new("cpu%")
+                    .sort_by(|a: &Row, b: &Row| a.cpu.cmp(&b.cpu))
+                    .size(90.0),
+                ColumnDef::new("mem_mb")
+                    .sort_by(|a: &Row, b: &Row| a.mem_mb.cmp(&b.mem_mb))
+                    .size(110.0),
+            ]);
+
+            (Arc::<[Row]>::from(rows), columns)
+        },
+        |(data, columns)| (data.clone(), columns.clone()),
+    );
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
+                cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
+            ]
+        },
+    );
+
+    let table = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-data-table-torture-root")),
+            ..Default::default()
+        },
+        |cx| {
+            vec![
+                shadcn::DataTable::new()
+                    .overscan(10)
+                    .row_height(Px(28.0))
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(Px(420.0))),
+                    )
+                    .into_element(
+                        cx,
+                        data.clone(),
+                        1,
+                        state,
+                        columns.clone(),
+                        |row, _index, _parent| RowKey(row.id),
+                        |col| Arc::<str>::from(col.id.as_ref()),
+                        |cx, col, row| match col.id.as_ref() {
+                            "name" => cx.text(row.name.as_ref()),
+                            "status" => cx.text(row.status.as_ref()),
+                            "cpu%" => cx.text(format!("{}%", row.cpu)),
+                            "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                            _ => cx.text("?"),
+                        },
+                    ),
+            ]
+        },
+    );
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full(),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![header, cx.container(container_props, |_cx| vec![table])]
 }
 
 fn preview_data_grid(

@@ -150,6 +150,27 @@ let el = windowed_rows_surface(cx, WindowedRowsSurfaceProps::default(), |_p, _i,
 ```
 "#;
 
+pub(crate) const DOC_DATA_TABLE_TORTURE: &str = r#"
+## DataTable (torture harness)
+
+This page is a baseline for **virtualized business tables** built with:
+
+- `fret-ui-headless` TanStack-aligned table engine,
+- `fret-ui-kit` virtualization helpers,
+- `fret-ui-shadcn` `DataTable` integration surface.
+
+This harness exists to make performance regressions measurable and reproducible when refactoring
+VirtualList windowing, row measurement modes, and cache-root placement.
+"#;
+
+pub(crate) const USAGE_DATA_TABLE_TORTURE: &str = r#"
+```rust
+use fret_ui_shadcn::DataTable;
+
+let table = DataTable::new();
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 
