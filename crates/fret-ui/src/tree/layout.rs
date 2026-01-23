@@ -181,24 +181,42 @@ impl<H: UiHost> UiTree<H> {
                     }
                 };
 
-                // VirtualList needs a layout-driven rerender only when the viewport leaves the
-                // last rendered overscan window. For scroll-handle offset changes (HitTestOnly),
-                // upgrade to Layout only when necessary. This also covers out-of-band
-                // `set_offset(...)` updates that do not go through pointer wheel events.
+                // A scroll handle can see multiple updates during a single layout pass when the
+                // same handle is (incorrectly) shared across multiple scroll surfaces (e.g. a
+                // horizontal scroll handle reused per-row in a table). This can bump the handle
+                // revision even when the final observed offset/viewport/content are unchanged.
+                //
+                // Treat these "revision-only" changes as HitTestOnly by default. Upgrade to
+                // Layout only for VirtualList cases where we must consume a deferred scroll
+                // request, or when the visible window leaves the last rendered overscan window.
+                if inv == Invalidation::Layout
+                    && !change.offset_changed
+                    && !change.viewport_changed
+                    && !change.content_changed
+                {
+                    inv = Invalidation::HitTestOnly;
+                    detail = UiDebugInvalidationDetail::ScrollHandleHitTestOnly;
+                }
+
                 if inv == Invalidation::HitTestOnly
                     && let Some(record) =
                         crate::declarative::frame::element_record_for_node(&mut *app, window, node)
                     && let crate::declarative::frame::ElementInstance::VirtualList(props) =
                         &record.instance
-                    && Self::virtual_list_scroll_handle_requires_layout(
+                {
+                    let requires_deferred_consumption =
+                        props.scroll_handle.deferred_scroll_to_item().is_some();
+                    let requires_window_update = Self::virtual_list_scroll_handle_requires_layout(
                         &mut *app,
                         window,
                         record.element,
                         props,
-                    )
-                {
-                    inv = Invalidation::Layout;
-                    detail = UiDebugInvalidationDetail::ScrollHandleLayout;
+                    );
+
+                    if requires_deferred_consumption || requires_window_update {
+                        inv = Invalidation::Layout;
+                        detail = UiDebugInvalidationDetail::ScrollHandleLayout;
+                    }
                 }
 
                 self.mark_invalidation_dedup_with_detail(
