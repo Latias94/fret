@@ -125,6 +125,27 @@ let block = CodeBlock::new(code).language("rust").show_line_numbers(true);
 ```
 "#;
 
+pub(crate) const DOC_CHART_TORTURE: &str = r#"
+## Chart (torture harness)
+
+This page is a stress surface for **canvas-driven charts** with pan/zoom interactions.
+
+It exists to support the GPUI parity workstream:
+
+- validate “no stale scene” behavior under view-cache reuse,
+- identify where charts/plots should adopt prepaint-windowed sampling (ADR 0190),
+- provide a deterministic bundle capture target for perf investigations.
+"#;
+
+pub(crate) const USAGE_CHART_TORTURE: &str = r#"
+```rust
+use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+
+let props = ChartCanvasPanelProps::new(spec);
+let el = chart_canvas_panel(cx, props);
+```
+"#;
+
 pub(crate) const DOC_WINDOWED_ROWS_SURFACE_TORTURE: &str = r#"
 ## Windowed Rows Surface (torture harness)
 

@@ -1471,8 +1471,10 @@ name = "fret-ui-gallery"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "delinea",
  "fret-app",
  "fret-bootstrap",
+ "fret-chart",
  "fret-code-view",
  "fret-core",
  "fret-icons",

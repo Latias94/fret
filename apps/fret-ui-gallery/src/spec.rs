@@ -97,6 +97,7 @@ pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
+pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
 pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
@@ -131,6 +132,7 @@ pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
+pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_torture";
 pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
@@ -301,6 +303,23 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CODE_VIEW_TORTURE,
                 docs::USAGE_CODE_VIEW_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_CHART_TORTURE,
+                "Chart (Torture)",
+                "Chart / Pan-Zoom Canvas Harness",
+                "fret-chart + delinea (sampling/window candidate)",
+                CMD_NAV_CHART_TORTURE,
+                &[
+                    "chart",
+                    "plot",
+                    "canvas",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_CHART_TORTURE,
+                docs::USAGE_CHART_TORTURE,
             ),
             PageSpec::new(
                 PAGE_WINDOWED_ROWS_SURFACE_TORTURE,
