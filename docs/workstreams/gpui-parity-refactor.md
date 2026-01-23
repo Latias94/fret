@@ -219,6 +219,12 @@ Concrete alignment targets (beyond VirtualList):
 - **Sampling surfaces**:
   - plots/charts where pan/zoom should adjust a data window or sampling window without rebuilding full series.
 
+- **Paint-only chrome surfaces** (should avoid rerender by default; ADR 0181):
+  - hover/focus/pressed style refinements across common controls,
+  - caret blink + selection highlights in text/code views,
+  - scrollbars and drag/drop indicators.
+  - Harness: UI Gallery `PAGE_CHROME_TORTURE` + `tools/diag-scripts/ui-gallery-chrome-torture.json`.
+
 Fearless refactor tactic:
 
 1) Keep the *retained* state stable (data revisions, selection, scroll/camera state).

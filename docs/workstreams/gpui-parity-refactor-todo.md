@@ -456,7 +456,7 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Script: `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json` (drag + wheel).
     - Evidence bundle (cache+shell, release): `target/fret-diag-chart-torture/1769159171953-ui-gallery-chart-torture-pan-zoom/bundle.json`
     - Infrastructure: add `drag_pointer` to UI diagnostics steps (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`).
-- [ ] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
+- [~] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
   - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
   - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.
   - Anchors:
@@ -465,6 +465,11 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Add a UI Gallery “chrome torture” page that exercises hover/focus/pressed states across many widgets while view-cache + shell are enabled.
     - Scripted capture should include pointer-move sweeps, focus traversal, and repeated open/close of overlays.
     - Add a regression expectation: “hover-only” ticks should not list `notify_call` as a dirty-view source for the relevant cache roots.
+  - Progress (v1):
+    - UI Gallery harness: `PAGE_CHROME_TORTURE` with root test id `ui-gallery-chrome-torture-root`.
+    - Script: `tools/diag-scripts/ui-gallery-chrome-torture.json` (pointer sweeps + focus traversal).
+    - Evidence bundle (cache+shell, release): `target/fret-diag-chrome-torture/1769164619875-ui-gallery-chrome-torture/bundle.json`
+    - Note: overlay open/close remains covered by `tools/diag-scripts/ui-gallery-overlay-torture.json` until the chrome harness grows stable overlay toggles.
 - [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
