@@ -129,6 +129,7 @@ struct UiGalleryWindowState {
     switch: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -398,6 +399,7 @@ impl UiGalleryDriver {
         let switch = app.models_mut().insert(true);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
+        let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
@@ -503,6 +505,7 @@ impl UiGalleryDriver {
             switch,
             material3_checkbox,
             material3_switch,
+            material3_radio_value,
             text_input,
             text_area,
             dropdown_open,
@@ -943,6 +946,7 @@ impl UiGalleryDriver {
         let switch = state.switch.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
+        let material3_radio_value = state.material3_radio_value.clone();
         let text_input = state.text_input.clone();
         let text_area = state.text_area.clone();
         let dropdown_open = state.dropdown_open.clone();
@@ -1306,6 +1310,7 @@ impl UiGalleryDriver {
                                             switch.clone(),
                                             material3_checkbox.clone(),
                                             material3_switch.clone(),
+                                            material3_radio_value.clone(),
                                             text_input.clone(),
                                             text_area.clone(),
                                             dropdown_open.clone(),
@@ -1380,6 +1385,7 @@ impl UiGalleryDriver {
                                         switch.clone(),
                                         material3_checkbox.clone(),
                                         material3_switch.clone(),
+                                        material3_radio_value.clone(),
                                         text_input.clone(),
                                         text_area.clone(),
                                         dropdown_open.clone(),

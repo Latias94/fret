@@ -125,6 +125,7 @@ pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
 pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
 pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
+pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
@@ -160,6 +161,7 @@ pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
     "ui_gallery.nav.select.material3_icon_button";
 pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
+pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
 
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
@@ -590,6 +592,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["material3", "switch", "state-layer", "ripple", "forms"],
                 docs::DOC_MATERIAL3_SWITCH,
                 docs::USAGE_MATERIAL3_SWITCH,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_RADIO,
+                "Radio",
+                "Material 3 Radio (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_RADIO,
+                &["material3", "radio", "state-layer", "ripple", "forms"],
+                docs::DOC_MATERIAL3_RADIO,
+                docs::USAGE_MATERIAL3_RADIO,
             ),
         ],
     },

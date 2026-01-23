@@ -214,6 +214,28 @@ let sw = m3::Switch::new(selected)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_RADIO: &str = r#"
+## Material 3 Radio (MVP)
+
+This page validates a Material 3 radio button surface:
+
+- token-driven sizing + colors
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
+
+This page uses the group-value binding API (`Model<Option<Arc<str>>>`) so multiple items behave like a real radio group.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_RADIO: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let value = app.models_mut().insert(None::<Arc<str>>);
+let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 

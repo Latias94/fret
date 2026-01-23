@@ -218,6 +218,7 @@ pub(crate) fn content_view(
     switch: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -347,6 +348,7 @@ pub(crate) fn content_view(
         switch,
         material3_checkbox,
         material3_switch,
+        material3_radio_value,
         text_input,
         text_area,
         dropdown_open,
@@ -451,6 +453,7 @@ fn page_preview(
     switch: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -530,6 +533,7 @@ fn page_preview(
         PAGE_MATERIAL3_ICON_BUTTON => preview_material3_icon_button(cx),
         PAGE_MATERIAL3_CHECKBOX => preview_material3_checkbox(cx, material3_checkbox),
         PAGE_MATERIAL3_SWITCH => preview_material3_switch(cx, material3_switch),
+        PAGE_MATERIAL3_RADIO => preview_material3_radio(cx, material3_radio_value),
         _ => preview_intro(cx, theme),
     };
 
@@ -1367,6 +1371,44 @@ fn preview_material3_switch(
 
     vec![
         cx.text("Material 3 Switch: token-driven sizing/colors + state layer + bounded ripple."),
+        row,
+    ]
+}
+
+fn preview_material3_radio(
+    cx: &mut ElementContext<'_, App>,
+    group_value: Model<Option<Arc<str>>>,
+) -> Vec<AnyElement> {
+    let current = cx
+        .get_model_cloned(&group_value, Invalidation::Layout)
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                material3::Radio::new_value("A", group_value.clone())
+                    .a11y_label("Radio A")
+                    .test_id("ui-gallery-material3-radio-a")
+                    .into_element(cx),
+                material3::Radio::new_value("B", group_value.clone())
+                    .a11y_label("Radio B")
+                    .test_id("ui-gallery-material3-radio-b")
+                    .into_element(cx),
+                material3::Radio::new_value("C", group_value.clone())
+                    .a11y_label("Radio C (disabled)")
+                    .disabled(true)
+                    .test_id("ui-gallery-material3-radio-c-disabled")
+                    .into_element(cx),
+                cx.text(format!("value={}", current.as_ref())),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Radio: group-value binding + state layer + bounded ripple."),
         row,
     ]
 }
