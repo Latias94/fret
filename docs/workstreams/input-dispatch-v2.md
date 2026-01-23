@@ -64,6 +64,9 @@ This aligns `fret-runtime::WindowCommandActionAvailabilityService` with the `Com
 For menus / command palette / shortcut help, we want a single data seam:
 
 - `InputContext` (`WindowInputContextService`)
+  - Includes a window-scoped input arbitration snapshot (`InputContext.window_arbitration`) so
+    ecosystem policies (overlays, docking, viewport tools) can make consistent decisions without
+    reaching into global services.
 - explicit overrides (`WindowCommandEnabledService`)
 - dispatch-path availability (`WindowCommandActionAvailabilityService`)
 
@@ -109,4 +112,3 @@ That keeps runner/menus/palette gating consistent even as the internal authoring
 4) Extend availability coverage for core text commands (`text.copy/cut/paste/select_all/clear/delete*`) across
    text widgets and read-only selection surfaces.
 5) Expand menu/OS runner gating to use the same aggregated snapshot (no divergent heuristics).
-
