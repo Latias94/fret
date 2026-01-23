@@ -344,6 +344,10 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
       - Evidence: `crates/fret-ui/src/elements/cx.rs` (preview offset windowing),
         `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_window_jump_rerender_uses_latest_handle_offset`).
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-torture.json` worst bundles show reduced `contained_relayout_time_us`.
+  - Harness (window boundary scroll):
+    - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (small wheel deltas + large jumps across overscan).
+    - Evidence bundle (cache+shell, release): `target/fret-diag-perf-vlist-window-boundary-cache-shell/1769170718784-script-step-0015-wheel/bundle.json`
+    - Notes: the current worst tick is layout-dominated when the wheel crosses the window boundary; this is the baseline we want to improve by moving window derivation toward prepaint (ADR 0190).
 
 - [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
   - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
