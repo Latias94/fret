@@ -4,7 +4,7 @@
 //! stable "inject tokens into ThemeConfig" surface. It does not attempt to mirror the
 //! `@material/web` API or DOM/Lit implementation details.
 
-use fret_core::{Corners, FontId, Px};
+use fret_core::FontId;
 use fret_ui::theme::ThemeConfig;
 use material_colors::color::Argb;
 use material_colors::dynamic_color::Variant as MaterialVariant;
@@ -101,7 +101,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     material_web_v30::inject_sys_state(cfg);
     material_web_v30::inject_sys_state_focus_indicator(cfg);
     material_web_v30::inject_sys_motion(cfg);
-    inject_sys_shape(cfg);
+    material_web_v30::inject_sys_shape(cfg);
     material_web_v30::inject_sys_typescale(cfg, typography);
     inject_comp_button_scalars(cfg);
     inject_comp_icon_button_scalars(cfg);
@@ -1249,48 +1249,10 @@ fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_text_field_scalars(cfg);
-
-    if let Some(corners) = cfg
-        .corners
-        .get("md.sys.shape.corner.extra-small.top")
-        .copied()
-    {
-        cfg.corners.insert(
-            "md.comp.filled-text-field.container.shape".to_string(),
-            corners,
-        );
-        return;
-    }
-
-    let r = cfg
-        .metrics
-        .get("md.sys.shape.corner.extra-small")
-        .copied()
-        .unwrap_or(4.0);
-    cfg.corners.insert(
-        "md.comp.filled-text-field.container.shape".to_string(),
-        Corners {
-            top_left: Px(r),
-            top_right: Px(r),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        },
-    );
 }
 
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
-
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-primary-navigation-tab.scss
-    cfg.corners.insert(
-        "md.comp.primary-navigation-tab.active-indicator.shape".to_string(),
-        Corners {
-            top_left: Px(3.0),
-            top_right: Px(3.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        },
-    );
 }
 
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
@@ -1782,80 +1744,6 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
     );
 }
 
-fn inject_sys_shape(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-shape.scss
-
-    for (key, px) in [
-        ("md.sys.shape.corner-value.none", 0.0),
-        ("md.sys.shape.corner-value.extra-small", 4.0),
-        ("md.sys.shape.corner-value.small", 8.0),
-        ("md.sys.shape.corner-value.medium", 12.0),
-        ("md.sys.shape.corner-value.large", 16.0),
-        ("md.sys.shape.corner-value.large-increased", 20.0),
-        ("md.sys.shape.corner-value.extra-large", 28.0),
-        ("md.sys.shape.corner-value.extra-large-increased", 32.0),
-        ("md.sys.shape.corner-value.extra-extra-large", 48.0),
-        ("md.sys.shape.corner.none", 0.0),
-        ("md.sys.shape.corner.extra-small", 4.0),
-        ("md.sys.shape.corner.small", 8.0),
-        ("md.sys.shape.corner.medium", 12.0),
-        ("md.sys.shape.corner.large", 16.0),
-        ("md.sys.shape.corner.large-increased", 20.0),
-        ("md.sys.shape.corner.extra-large", 28.0),
-        ("md.sys.shape.corner.extra-large-increased", 32.0),
-        ("md.sys.shape.corner.extra-extra-large", 48.0),
-        ("md.sys.shape.corner.full", 9999.0),
-    ] {
-        cfg.metrics.insert(key.to_string(), px);
-    }
-
-    cfg.corners.insert(
-        "md.sys.shape.corner.extra-small.top".to_string(),
-        Corners {
-            top_left: Px(4.0),
-            top_right: Px(4.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        },
-    );
-    cfg.corners.insert(
-        "md.sys.shape.corner.large.top".to_string(),
-        Corners {
-            top_left: Px(16.0),
-            top_right: Px(16.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        },
-    );
-    cfg.corners.insert(
-        "md.sys.shape.corner.extra-large.top".to_string(),
-        Corners {
-            top_left: Px(28.0),
-            top_right: Px(28.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        },
-    );
-    cfg.corners.insert(
-        "md.sys.shape.corner.large.start".to_string(),
-        Corners {
-            top_left: Px(16.0),
-            top_right: Px(0.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(16.0),
-        },
-    );
-    cfg.corners.insert(
-        "md.sys.shape.corner.large.end".to_string(),
-        Corners {
-            top_left: Px(0.0),
-            top_right: Px(16.0),
-            bottom_right: Px(16.0),
-            bottom_left: Px(0.0),
-        },
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
@@ -1904,6 +1792,16 @@ mod tests {
         assert_eq!(
             cfg.metrics.get("md.sys.shape.corner.medium").copied(),
             Some(12.0)
+        );
+        assert!(
+            cfg.corners
+                .contains_key("md.sys.shape.corner.extra-small.top"),
+            "expected corner set token"
+        );
+        assert!(
+            cfg.corners
+                .contains_key("md.comp.primary-navigation-tab.active-indicator.shape"),
+            "expected component corner set token"
         );
         assert_eq!(
             cfg.metrics

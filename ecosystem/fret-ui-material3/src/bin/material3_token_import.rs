@@ -39,6 +39,7 @@ impl Args {
             "md.sys.state.".to_string(),
             "md.sys.state.focus-indicator.".to_string(),
             "md.sys.typescale.".to_string(),
+            "md.sys.shape.".to_string(),
             // MVP component prefixes we actively align today.
             "md.comp.switch.".to_string(),
             "md.comp.primary-navigation-tab.".to_string(),
@@ -124,11 +125,25 @@ enum Expr {
     Null,
     Number(f32),
     Px(f32),
+    CornerSetPx {
+        top_left: f32,
+        top_right: f32,
+        bottom_right: f32,
+        bottom_left: f32,
+    },
     Rem(f32),
     Ms(u32),
-    CubicBezier { x1: f32, y1: f32, x2: f32, y2: f32 },
+    CubicBezier {
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+    },
     LocalVar(String),
-    ModuleVar { module: String, var: String },
+    ModuleVar {
+        module: String,
+        var: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -343,7 +358,7 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     writeln!(out, "use fret_ui::ThemeConfig;").ok();
     writeln!(
         out,
-        "use fret_core::{{FontId, FontWeight, Px, TextSlant, TextStyle}};"
+        "use fret_core::{{Corners, FontId, FontWeight, Px, TextSlant, TextStyle}};"
     )
     .ok();
     writeln!(out).ok();
@@ -370,6 +385,12 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "inject_sys_motion",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.sys.motion."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_sys_shape(
+        &mut out,
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.sys.shape."))
             .collect::<Vec<_>>(),
     );
 
@@ -621,6 +642,18 @@ fn emit_inject_comp_scalars(out: &mut String, fn_name: &str, prefix: &str, defs:
             Expr::Px(px) => {
                 writeln!(out, "    cfg.metrics.insert({k:?}.to_string(), {px:?});").ok();
             }
+            Expr::CornerSetPx {
+                top_left,
+                top_right,
+                bottom_right,
+                bottom_left,
+            } => {
+                writeln!(
+                    out,
+                    "    cfg.corners.insert({k:?}.to_string(), Corners {{ top_left: Px({top_left:?}), top_right: Px({top_right:?}), bottom_right: Px({bottom_right:?}), bottom_left: Px({bottom_left:?}) }});"
+                )
+                .ok();
+            }
             Expr::Number(n) => {
                 writeln!(out, "    cfg.numbers.insert({k:?}.to_string(), {n:?});").ok();
             }
@@ -631,6 +664,51 @@ fn emit_inject_comp_scalars(out: &mut String, fn_name: &str, prefix: &str, defs:
                 writeln!(
                     out,
                     "    cfg.easings.insert({k:?}.to_string(), CubicBezier {{ x1: {x1:?}, y1: {y1:?}, x2: {x2:?}, y2: {y2:?} }});"
+                )
+                .ok();
+            }
+            _ => {}
+        }
+    }
+
+    writeln!(out, "}}").ok();
+    writeln!(out).ok();
+}
+
+fn emit_inject_sys_shape(out: &mut String, defs: Vec<&TokenDef>) {
+    if defs.is_empty() {
+        return;
+    }
+
+    let mut keys: Vec<(&str, &Expr)> = defs
+        .iter()
+        .map(|d| (d.token_key.as_str(), &d.expr))
+        .collect();
+    keys.sort_by(|a, b| a.0.cmp(b.0));
+
+    writeln!(
+        out,
+        "pub(crate) fn inject_sys_shape(cfg: &mut ThemeConfig) {{"
+    )
+    .ok();
+    writeln!(out, "    // Source: Material Web v30 sassvars").ok();
+    writeln!(out, "    // Prefix: `md.sys.shape.`").ok();
+    writeln!(out).ok();
+
+    for (k, expr) in keys {
+        match expr {
+            Expr::Px(px) => {
+                writeln!(out, "    cfg.metrics.insert({k:?}.to_string(), {px:?});").ok();
+            }
+            Expr::CornerSetPx {
+                top_left,
+                top_right,
+                bottom_right,
+                bottom_left,
+            } => {
+                writeln!(
+                    out,
+                    "    cfg.corners.insert({k:?}.to_string(), Corners {{ top_left: Px({top_left:?}), top_right: Px({top_right:?}), bottom_right: Px({bottom_right:?}), bottom_left: Px({bottom_left:?}) }});"
                 )
                 .ok();
             }
@@ -716,6 +794,24 @@ fn parse_expr(rhs: String) -> Expr {
     let rhs = rhs.trim();
     if rhs.contains("null") {
         return Expr::Null;
+    }
+
+    let corner_parts: Vec<&str> = rhs.split_whitespace().collect();
+    if corner_parts.len() == 4 && corner_parts.iter().all(|p| p.ends_with("px")) {
+        let parse_px = |p: &str| -> Option<f32> { p.trim_end_matches("px").trim().parse().ok() };
+        if let (Some(top_left), Some(top_right), Some(bottom_right), Some(bottom_left)) = (
+            parse_px(corner_parts[0]),
+            parse_px(corner_parts[1]),
+            parse_px(corner_parts[2]),
+            parse_px(corner_parts[3]),
+        ) {
+            return Expr::CornerSetPx {
+                top_left,
+                top_right,
+                bottom_right,
+                bottom_left,
+            };
+        }
     }
 
     if let Some(rest) = rhs.strip_suffix("ms") {

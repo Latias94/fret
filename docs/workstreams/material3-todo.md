@@ -112,6 +112,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`,
       `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`,
       `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`).
+  - [x] Generate sys shape injectors from Material Web sassvars (including corner sets).
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_shape`),
+      `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`),
+      `crates/fret-ui/src/theme.rs` (`ThemeConfig.corners`).
   - [x] Import typescale tokens (`md.sys.typescale.*`) into `ThemeConfig.text_styles`.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_typescale`),
       `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`TypographyOptions`).

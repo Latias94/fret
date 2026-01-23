@@ -2,7 +2,7 @@
 //
 // Source: Material Web v30 sassvars in `repo-ref\material-web\tokens\versions\v30_0\sass`
 
-use fret_core::{FontId, FontWeight, Px, TextSlant, TextStyle};
+use fret_core::{Corners, FontId, FontWeight, Px, TextSlant, TextStyle};
 use fret_ui::ThemeConfig;
 use fret_ui::theme::CubicBezier;
 
@@ -155,6 +155,103 @@ pub(crate) fn inject_sys_motion(cfg: &mut ThemeConfig) {
             y2: 1.0,
         },
     );
+}
+
+pub(crate) fn inject_sys_shape(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.sys.shape.`
+
+    cfg.metrics.insert(
+        "md.sys.shape.corner-value.extra-extra-large".to_string(),
+        48.0,
+    );
+    cfg.metrics
+        .insert("md.sys.shape.corner-value.extra-large".to_string(), 28.0);
+    cfg.metrics.insert(
+        "md.sys.shape.corner-value.extra-large-increased".to_string(),
+        32.0,
+    );
+    cfg.metrics
+        .insert("md.sys.shape.corner-value.extra-small".to_string(), 4.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner-value.large".to_string(), 16.0);
+    cfg.metrics.insert(
+        "md.sys.shape.corner-value.large-increased".to_string(),
+        20.0,
+    );
+    cfg.metrics
+        .insert("md.sys.shape.corner-value.medium".to_string(), 12.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner-value.none".to_string(), 0.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner-value.small".to_string(), 8.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner.extra-extra-large".to_string(), 48.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner.extra-large".to_string(), 28.0);
+    cfg.metrics.insert(
+        "md.sys.shape.corner.extra-large-increased".to_string(),
+        32.0,
+    );
+    cfg.corners.insert(
+        "md.sys.shape.corner.extra-large.top".to_string(),
+        Corners {
+            top_left: Px(28.0),
+            top_right: Px(28.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.metrics
+        .insert("md.sys.shape.corner.extra-small".to_string(), 4.0);
+    cfg.corners.insert(
+        "md.sys.shape.corner.extra-small.top".to_string(),
+        Corners {
+            top_left: Px(4.0),
+            top_right: Px(4.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.metrics
+        .insert("md.sys.shape.corner.full".to_string(), 9999.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner.large".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner.large-increased".to_string(), 20.0);
+    cfg.corners.insert(
+        "md.sys.shape.corner.large.end".to_string(),
+        Corners {
+            top_left: Px(0.0),
+            top_right: Px(16.0),
+            bottom_right: Px(16.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.sys.shape.corner.large.start".to_string(),
+        Corners {
+            top_left: Px(16.0),
+            top_right: Px(0.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(16.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.sys.shape.corner.large.top".to_string(),
+        Corners {
+            top_left: Px(16.0),
+            top_right: Px(16.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.metrics
+        .insert("md.sys.shape.corner.medium".to_string(), 12.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner.none".to_string(), 0.0);
+    cfg.metrics
+        .insert("md.sys.shape.corner.small".to_string(), 8.0);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -549,6 +646,15 @@ pub(crate) fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) 
         "md.comp.primary-navigation-tab.active-indicator.height".to_string(),
         3.0,
     );
+    cfg.corners.insert(
+        "md.comp.primary-navigation-tab.active-indicator.shape".to_string(),
+        Corners {
+            top_left: Px(3.0),
+            top_right: Px(3.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
     cfg.numbers.insert(
         "md.comp.primary-navigation-tab.active.focus.state-layer.opacity".to_string(),
         0.1,
@@ -758,6 +864,15 @@ pub(crate) fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
     cfg.metrics.insert(
         "md.comp.filled-text-field.container.height".to_string(),
         56.0,
+    );
+    cfg.corners.insert(
+        "md.comp.filled-text-field.container.shape".to_string(),
+        Corners {
+            top_left: Px(4.0),
+            top_right: Px(4.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
     );
     cfg.metrics.insert(
         "md.comp.filled-text-field.disabled.active-indicator.height".to_string(),
