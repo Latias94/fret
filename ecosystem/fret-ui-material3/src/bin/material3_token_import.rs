@@ -38,6 +38,7 @@ impl Args {
             "md.sys.motion.".to_string(),
             "md.sys.state.".to_string(),
             "md.sys.state.focus-indicator.".to_string(),
+            "md.sys.typescale.".to_string(),
         ];
         let mut debug = false;
 
@@ -117,6 +118,7 @@ enum Expr {
     Null,
     Number(f32),
     Px(f32),
+    Rem(f32),
     Ms(u32),
     CubicBezier { x1: f32, y1: f32, x2: f32, y2: f32 },
     LocalVar(String),
@@ -278,6 +280,12 @@ fn resolve_expr(
             Ok(resolved)
         }
         Expr::ModuleVar { module, var } => {
+            if module == "md-ref-typeface" && (var == "plain" || var == "brand") {
+                return Ok(Expr::ModuleVar {
+                    module: module.clone(),
+                    var: var.clone(),
+                });
+            }
             let key = (module.clone(), var.clone());
             if !stack.insert(key.clone()) {
                 return Err(format!("cycle while resolving {module}.${var}").into());
@@ -327,6 +335,11 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     writeln!(out).ok();
     writeln!(out, "use fret_ui::theme::CubicBezier;").ok();
     writeln!(out, "use fret_ui::ThemeConfig;").ok();
+    writeln!(
+        out,
+        "use fret_core::{{FontId, FontWeight, Px, TextSlant, TextStyle}};"
+    )
+    .ok();
     writeln!(out).ok();
 
     emit_inject_fn(
@@ -354,6 +367,13 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
             .collect::<Vec<_>>(),
     );
 
+    emit_inject_sys_typescale(
+        &mut out,
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.sys.typescale."))
+            .collect::<Vec<_>>(),
+    );
+
     out
 }
 
@@ -365,6 +385,170 @@ fn path_ends_with(path: &Path, suffix: &Path) -> bool {
     }
     let offset = path.len() - suffix.len();
     path[offset..] == suffix[..]
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TypefaceFlavor {
+    Plain,
+    Brand,
+}
+
+#[derive(Debug, Clone)]
+struct SysTypescaleRoleDef {
+    key: String,
+    size_rem: f32,
+    line_height_rem: f32,
+    tracking_rem: f32,
+    weight: u16,
+    face: TypefaceFlavor,
+}
+
+fn emit_inject_sys_typescale(out: &mut String, defs: Vec<&TokenDef>) {
+    let role_names = [
+        "display-large",
+        "display-medium",
+        "display-small",
+        "headline-large",
+        "headline-medium",
+        "headline-small",
+        "title-large",
+        "title-medium",
+        "title-small",
+        "label-large",
+        "label-medium",
+        "label-small",
+        "body-large",
+        "body-medium",
+        "body-small",
+    ];
+
+    let mut roles: Vec<SysTypescaleRoleDef> = Vec::new();
+    for name in role_names {
+        let base = format!("md.sys.typescale.{name}");
+        if let Some(r) = read_typescale_role(&defs, &base) {
+            roles.push(r);
+        }
+        let emphasized = format!("md.sys.typescale.emphasized.{name}");
+        if let Some(r) = read_typescale_role(&defs, &emphasized) {
+            roles.push(r);
+        }
+    }
+    roles.sort_by(|a, b| a.key.cmp(&b.key));
+
+    if roles.is_empty() {
+        return;
+    }
+
+    writeln!(out, "#[derive(Debug, Clone, Copy)]").ok();
+    writeln!(out, "struct SysTypescaleRole {{").ok();
+    writeln!(out, "    key: &'static str,").ok();
+    writeln!(out, "    size_rem: f32,").ok();
+    writeln!(out, "    line_height_rem: f32,").ok();
+    writeln!(out, "    tracking_rem: f32,").ok();
+    writeln!(out, "    weight: u16,").ok();
+    writeln!(out, "    face: TypefaceFlavor,").ok();
+    writeln!(out, "}}").ok();
+    writeln!(out).ok();
+
+    writeln!(out, "#[derive(Debug, Clone, Copy, PartialEq, Eq)]").ok();
+    writeln!(out, "enum TypefaceFlavor {{ Plain, Brand }}").ok();
+    writeln!(out).ok();
+
+    writeln!(
+        out,
+        "pub(crate) fn inject_sys_typescale(cfg: &mut ThemeConfig, typography: &super::v30::TypographyOptions) {{"
+    )
+    .ok();
+    writeln!(out, "    let rem_in_px = typography.rem_in_px;").ok();
+    writeln!(out, "    for role in [").ok();
+    for r in &roles {
+        let face = match r.face {
+            TypefaceFlavor::Plain => "TypefaceFlavor::Plain",
+            TypefaceFlavor::Brand => "TypefaceFlavor::Brand",
+        };
+        writeln!(
+            out,
+            "        SysTypescaleRole {{ key: {:?}, size_rem: {:?}, line_height_rem: {:?}, tracking_rem: {:?}, weight: {:?}, face: {} }},",
+            r.key, r.size_rem, r.line_height_rem, r.tracking_rem, r.weight, face
+        )
+        .ok();
+    }
+    writeln!(out, "    ] {{").ok();
+    writeln!(out, "        let size_px = Px(role.size_rem * rem_in_px);").ok();
+    writeln!(
+        out,
+        "        let line_height_px = Px(role.line_height_rem * rem_in_px);"
+    )
+    .ok();
+    writeln!(
+        out,
+        "        let tracking_em = if role.size_rem.abs() <= f32::EPSILON {{ 0.0 }} else {{ role.tracking_rem / role.size_rem }};"
+    )
+    .ok();
+    writeln!(
+        out,
+        "        let font: FontId = match role.face {{ TypefaceFlavor::Plain => typography.plain_font.clone(), TypefaceFlavor::Brand => typography.brand_font.clone() }};"
+    )
+    .ok();
+    writeln!(
+        out,
+        "        cfg.text_styles.insert(role.key.to_string(), TextStyle {{"
+    )
+    .ok();
+    writeln!(out, "            font,").ok();
+    writeln!(out, "            size: size_px,").ok();
+    writeln!(out, "            weight: FontWeight(role.weight),").ok();
+    writeln!(out, "            slant: TextSlant::Normal,").ok();
+    writeln!(out, "            line_height: Some(line_height_px),").ok();
+    writeln!(out, "            letter_spacing_em: Some(tracking_em),").ok();
+    writeln!(out, "        }});").ok();
+    writeln!(out, "    }}").ok();
+    writeln!(out, "}}").ok();
+    writeln!(out).ok();
+}
+
+fn read_typescale_role(defs: &[&TokenDef], base_key: &str) -> Option<SysTypescaleRoleDef> {
+    let get = |suffix: &str| -> Option<&Expr> {
+        let key = format!("{base_key}.{suffix}");
+        defs.iter().find(|d| d.token_key == key).map(|d| &d.expr)
+    };
+
+    let size_rem = match get("size")? {
+        Expr::Rem(v) => *v,
+        _ => return None,
+    };
+    let line_height_rem = match get("line-height")? {
+        Expr::Rem(v) => *v,
+        _ => return None,
+    };
+    let tracking_rem = match get("tracking")? {
+        Expr::Rem(v) => *v,
+        _ => return None,
+    };
+
+    let weight = match get("weight")? {
+        Expr::Number(n) => n.round().clamp(1.0, 10_000.0) as u16,
+        _ => return None,
+    };
+
+    let face = match get("font")? {
+        Expr::ModuleVar { module, var } if module == "md-ref-typeface" && var == "plain" => {
+            TypefaceFlavor::Plain
+        }
+        Expr::ModuleVar { module, var } if module == "md-ref-typeface" && var == "brand" => {
+            TypefaceFlavor::Brand
+        }
+        _ => TypefaceFlavor::Plain,
+    };
+
+    Some(SysTypescaleRoleDef {
+        key: base_key.to_string(),
+        size_rem,
+        line_height_rem,
+        tracking_rem,
+        weight,
+        face,
+    })
 }
 
 fn emit_inject_fn(out: &mut String, fn_name: &str, defs: Vec<&TokenDef>) {
@@ -452,6 +636,12 @@ fn parse_expr(rhs: String) -> Expr {
     if let Some(rest) = rhs.strip_suffix("px") {
         if let Ok(px) = rest.trim().parse::<f32>() {
             return Expr::Px(px);
+        }
+    }
+
+    if let Some(rest) = rhs.strip_suffix("rem") {
+        if let Ok(rem) = rest.trim().parse::<f32>() {
+            return Expr::Rem(rem);
         }
     }
 

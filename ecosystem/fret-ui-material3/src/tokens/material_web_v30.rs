@@ -2,6 +2,7 @@
 //
 // Source: Material Web v30 sassvars in `repo-ref\material-web\tokens\versions\v30_0\sass`
 
+use fret_core::{FontId, FontWeight, Px, TextSlant, TextStyle};
 use fret_ui::ThemeConfig;
 use fret_ui::theme::CubicBezier;
 
@@ -154,4 +155,292 @@ pub(crate) fn inject_sys_motion(cfg: &mut ThemeConfig) {
             y2: 1.0,
         },
     );
+}
+
+#[derive(Debug, Clone, Copy)]
+struct SysTypescaleRole {
+    key: &'static str,
+    size_rem: f32,
+    line_height_rem: f32,
+    tracking_rem: f32,
+    weight: u16,
+    face: TypefaceFlavor,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TypefaceFlavor {
+    Plain,
+    Brand,
+}
+
+pub(crate) fn inject_sys_typescale(
+    cfg: &mut ThemeConfig,
+    typography: &super::v30::TypographyOptions,
+) {
+    let rem_in_px = typography.rem_in_px;
+    for role in [
+        SysTypescaleRole {
+            key: "md.sys.typescale.body-large",
+            size_rem: 1.0,
+            line_height_rem: 1.5,
+            tracking_rem: 0.03125,
+            weight: 400,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.body-medium",
+            size_rem: 0.875,
+            line_height_rem: 1.25,
+            tracking_rem: 0.015625,
+            weight: 400,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.body-small",
+            size_rem: 0.75,
+            line_height_rem: 1.0,
+            tracking_rem: 0.025,
+            weight: 400,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.display-large",
+            size_rem: 3.5625,
+            line_height_rem: 4.0,
+            tracking_rem: -0.015625,
+            weight: 400,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.display-medium",
+            size_rem: 2.8125,
+            line_height_rem: 3.25,
+            tracking_rem: 0.0,
+            weight: 400,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.display-small",
+            size_rem: 2.25,
+            line_height_rem: 2.75,
+            tracking_rem: 0.0,
+            weight: 400,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.body-large",
+            size_rem: 1.0,
+            line_height_rem: 1.5,
+            tracking_rem: 0.03125,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.body-medium",
+            size_rem: 0.875,
+            line_height_rem: 1.25,
+            tracking_rem: 0.015625,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.body-small",
+            size_rem: 0.75,
+            line_height_rem: 1.0,
+            tracking_rem: 0.025,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.display-large",
+            size_rem: 3.5625,
+            line_height_rem: 4.0,
+            tracking_rem: -0.015625,
+            weight: 500,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.display-medium",
+            size_rem: 2.8125,
+            line_height_rem: 3.25,
+            tracking_rem: 0.0,
+            weight: 500,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.display-small",
+            size_rem: 2.25,
+            line_height_rem: 2.75,
+            tracking_rem: 0.0,
+            weight: 500,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.headline-large",
+            size_rem: 2.0,
+            line_height_rem: 2.5,
+            tracking_rem: 0.0,
+            weight: 500,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.headline-medium",
+            size_rem: 1.75,
+            line_height_rem: 2.25,
+            tracking_rem: 0.0,
+            weight: 500,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.headline-small",
+            size_rem: 1.5,
+            line_height_rem: 2.0,
+            tracking_rem: 0.0,
+            weight: 500,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.label-large",
+            size_rem: 0.875,
+            line_height_rem: 1.25,
+            tracking_rem: 0.00625,
+            weight: 700,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.label-medium",
+            size_rem: 0.75,
+            line_height_rem: 1.0,
+            tracking_rem: 0.03125,
+            weight: 700,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.label-small",
+            size_rem: 0.6875,
+            line_height_rem: 1.0,
+            tracking_rem: 0.03125,
+            weight: 700,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.title-large",
+            size_rem: 1.375,
+            line_height_rem: 1.75,
+            tracking_rem: 0.0,
+            weight: 500,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.title-medium",
+            size_rem: 1.0,
+            line_height_rem: 1.5,
+            tracking_rem: 0.009375,
+            weight: 600,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.emphasized.title-small",
+            size_rem: 0.875,
+            line_height_rem: 1.25,
+            tracking_rem: 0.00625,
+            weight: 600,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.headline-large",
+            size_rem: 2.0,
+            line_height_rem: 2.5,
+            tracking_rem: 0.0,
+            weight: 400,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.headline-medium",
+            size_rem: 1.75,
+            line_height_rem: 2.25,
+            tracking_rem: 0.0,
+            weight: 400,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.headline-small",
+            size_rem: 1.5,
+            line_height_rem: 2.0,
+            tracking_rem: 0.0,
+            weight: 400,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.label-large",
+            size_rem: 0.875,
+            line_height_rem: 1.25,
+            tracking_rem: 0.00625,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.label-medium",
+            size_rem: 0.75,
+            line_height_rem: 1.0,
+            tracking_rem: 0.03125,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.label-small",
+            size_rem: 0.6875,
+            line_height_rem: 1.0,
+            tracking_rem: 0.03125,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.title-large",
+            size_rem: 1.375,
+            line_height_rem: 1.75,
+            tracking_rem: 0.0,
+            weight: 400,
+            face: TypefaceFlavor::Brand,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.title-medium",
+            size_rem: 1.0,
+            line_height_rem: 1.5,
+            tracking_rem: 0.009375,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+        SysTypescaleRole {
+            key: "md.sys.typescale.title-small",
+            size_rem: 0.875,
+            line_height_rem: 1.25,
+            tracking_rem: 0.00625,
+            weight: 500,
+            face: TypefaceFlavor::Plain,
+        },
+    ] {
+        let size_px = Px(role.size_rem * rem_in_px);
+        let line_height_px = Px(role.line_height_rem * rem_in_px);
+        let tracking_em = if role.size_rem.abs() <= f32::EPSILON {
+            0.0
+        } else {
+            role.tracking_rem / role.size_rem
+        };
+        let font: FontId = match role.face {
+            TypefaceFlavor::Plain => typography.plain_font.clone(),
+            TypefaceFlavor::Brand => typography.brand_font.clone(),
+        };
+        cfg.text_styles.insert(
+            role.key.to_string(),
+            TextStyle {
+                font,
+                size: size_px,
+                weight: FontWeight(role.weight),
+                slant: TextSlant::Normal,
+                line_height: Some(line_height_px),
+                letter_spacing_em: Some(tracking_em),
+            },
+        );
+    }
 }

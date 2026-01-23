@@ -4,7 +4,7 @@
 //! stable "inject tokens into ThemeConfig" surface. It does not attempt to mirror the
 //! `@material/web` API or DOM/Lit implementation details.
 
-use fret_core::{FontId, FontWeight, Px, TextSlant, TextStyle};
+use fret_core::FontId;
 use fret_ui::theme::ThemeConfig;
 use material_colors::color::Argb;
 use material_colors::dynamic_color::Variant as MaterialVariant;
@@ -26,15 +26,18 @@ pub struct TypographyOptions {
     /// Material Web emits typography tokens in `rem` units. For a desktop UI toolkit, we need a
     /// conventional mapping. The default uses the web convention: `1rem = 16px`.
     pub rem_in_px: f32,
-    /// The default font id used for Material typescale roles.
-    pub font: FontId,
+    /// Typeface used for roles that map to `md.ref.typeface.plain`.
+    pub plain_font: FontId,
+    /// Typeface used for roles that map to `md.ref.typeface.brand`.
+    pub brand_font: FontId,
 }
 
 impl Default for TypographyOptions {
     fn default() -> Self {
         Self {
             rem_in_px: 16.0,
-            font: FontId::Ui,
+            plain_font: FontId::Ui,
+            brand_font: FontId::Ui,
         }
     }
 }
@@ -99,7 +102,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     material_web_v30::inject_sys_state_focus_indicator(cfg);
     material_web_v30::inject_sys_motion(cfg);
     inject_sys_shape(cfg);
-    inject_sys_typescale(cfg, typography);
+    material_web_v30::inject_sys_typescale(cfg, typography);
     inject_comp_button_scalars(cfg);
     inject_comp_icon_button_scalars(cfg);
     inject_comp_checkbox_scalars(cfg);
@@ -2044,153 +2047,6 @@ fn inject_sys_shape(cfg: &mut ThemeConfig) {
         ("md.sys.shape.corner.full", 9999.0),
     ] {
         cfg.metrics.insert(key.to_string(), px);
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct TypescaleRoleRem {
-    key: &'static str,
-    size_rem: f32,
-    line_height_rem: f32,
-    tracking_rem: f32,
-    weight: u16,
-}
-
-fn inject_sys_typescale(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-sys-typescale.scss
-    //
-    // We inject a *composed* `TextStyle` per role, keyed by `md.sys.typescale.<role>`.
-    // This avoids making every widget compute line-height/tracking manually.
-
-    let rem_in_px = typography.rem_in_px;
-    let font = typography.font.clone();
-
-    for role in [
-        TypescaleRoleRem {
-            key: "md.sys.typescale.display-large",
-            size_rem: 3.5625,
-            line_height_rem: 4.0,
-            tracking_rem: -0.015625,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.display-medium",
-            size_rem: 2.8125,
-            line_height_rem: 3.25,
-            tracking_rem: 0.0,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.display-small",
-            size_rem: 2.25,
-            line_height_rem: 2.75,
-            tracking_rem: 0.0,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.headline-large",
-            size_rem: 2.0,
-            line_height_rem: 2.5,
-            tracking_rem: 0.0,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.headline-medium",
-            size_rem: 1.75,
-            line_height_rem: 2.25,
-            tracking_rem: 0.0,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.headline-small",
-            size_rem: 1.5,
-            line_height_rem: 2.0,
-            tracking_rem: 0.0,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.title-large",
-            size_rem: 1.375,
-            line_height_rem: 1.75,
-            tracking_rem: 0.0,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.title-medium",
-            size_rem: 1.0,
-            line_height_rem: 1.5,
-            tracking_rem: 0.009375,
-            weight: 500,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.title-small",
-            size_rem: 0.875,
-            line_height_rem: 1.25,
-            tracking_rem: 0.00625,
-            weight: 500,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.label-large",
-            size_rem: 0.875,
-            line_height_rem: 1.25,
-            tracking_rem: 0.00625,
-            weight: 500,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.label-medium",
-            size_rem: 0.75,
-            line_height_rem: 1.0,
-            tracking_rem: 0.03125,
-            weight: 500,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.label-small",
-            size_rem: 0.6875,
-            line_height_rem: 1.0,
-            tracking_rem: 0.03125,
-            weight: 500,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.body-large",
-            size_rem: 1.0,
-            line_height_rem: 1.5,
-            tracking_rem: 0.03125,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.body-medium",
-            size_rem: 0.875,
-            line_height_rem: 1.25,
-            tracking_rem: 0.015625,
-            weight: 400,
-        },
-        TypescaleRoleRem {
-            key: "md.sys.typescale.body-small",
-            size_rem: 0.75,
-            line_height_rem: 1.0,
-            tracking_rem: 0.025,
-            weight: 400,
-        },
-    ] {
-        let size_px = Px(role.size_rem * rem_in_px);
-        let line_height_px = Px(role.line_height_rem * rem_in_px);
-        let tracking_em = if role.size_rem.abs() <= f32::EPSILON {
-            0.0
-        } else {
-            role.tracking_rem / role.size_rem
-        };
-
-        cfg.text_styles.insert(
-            role.key.to_string(),
-            TextStyle {
-                font: font.clone(),
-                size: size_px,
-                weight: FontWeight(role.weight),
-                slant: TextSlant::Normal,
-                line_height: Some(line_height_px),
-                letter_spacing_em: Some(tracking_em),
-            },
-        );
     }
 }
 

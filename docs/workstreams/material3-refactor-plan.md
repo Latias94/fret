@@ -148,6 +148,8 @@ Goal: prove the foundation approach reduces divergence and removes flicker/misma
 - Add a token import generator to keep sys/comp tokens in sync with Material Web:
   - `cargo run -p fret-ui-material3 --bin material3_token_import -- --material-web-dir <path>`
   - This regenerates `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`.
+  - Typescale injection is generated as composed `TextStyle` tokens and maps `md.ref.typeface`
+    (`plain` vs `brand`) via `TypographyOptions`.
 
 ## Definition of Done (per component)
 
