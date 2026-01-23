@@ -171,6 +171,24 @@ let table = DataTable::new();
 ```
 "#;
 
+pub(crate) const DOC_TREE_TORTURE: &str = r#"
+## Tree (torture harness)
+
+This page is a baseline for **virtualized trees** built with `fret-ui-kit::declarative::tree_view`.
+
+It exists to validate:
+
+- scroll stability under view-cache reuse (no stale paint),
+- row-window correctness (expand/collapse does not detach state on cache hits),
+- future migrations toward prepaint-driven windowing (ADR 0190).
+"#;
+
+pub(crate) const USAGE_TREE_TORTURE: &str = r#"
+```rust
+use fret_ui_kit::declarative::tree::tree_view;
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 

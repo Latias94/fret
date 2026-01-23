@@ -95,6 +95,7 @@ pub(crate) fn sidebar_view(
                         || item.id == PAGE_CODE_VIEW_TORTURE
                         || item.id == PAGE_WINDOWED_ROWS_SURFACE_TORTURE
                         || item.id == PAGE_DATA_TABLE_TORTURE
+                        || item.id == PAGE_TREE_TORTURE
                     {
                         let on_activate: fret_ui::action::OnActivate =
                             Arc::new(move |host, action_cx, _reason| {
@@ -486,6 +487,7 @@ fn page_preview(
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
         PAGE_WINDOWED_ROWS_SURFACE_TORTURE => preview_windowed_rows_surface_torture(cx, theme),
         PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
+        PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -2243,6 +2245,119 @@ fn preview_data_table_torture(
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
     vec![header, cx.container(container_props, |_cx| vec![table])]
+}
+
+fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    use std::collections::HashSet;
+
+    use fret_ui_kit::TreeItem;
+    use fret_ui_kit::TreeState;
+
+    #[derive(Default)]
+    struct TreeTortureModels {
+        items: Option<Model<Vec<TreeItem>>>,
+        state: Option<Model<TreeState>>,
+    }
+
+    let (items, state) = cx.with_state(TreeTortureModels::default, |st| {
+        (st.items.clone(), st.state.clone())
+    });
+    let (items, state) = match (items, state) {
+        (Some(items), Some(state)) => (items, state),
+        _ => {
+            let (items_value, state_value) = {
+                let root_count = 200u64;
+                let folders_per_root = 10u64;
+                let leaves_per_folder = 25u64;
+
+                let mut expanded: HashSet<u64> = HashSet::new();
+                let mut roots: Vec<TreeItem> = Vec::with_capacity(root_count as usize);
+
+                for r in 0..root_count {
+                    let root_id = r;
+                    expanded.insert(root_id);
+
+                    let mut folders: Vec<TreeItem> = Vec::with_capacity(folders_per_root as usize);
+                    for f in 0..folders_per_root {
+                        let folder_id = 1_000_000 + r * 100 + f;
+                        expanded.insert(folder_id);
+
+                        let mut leaves: Vec<TreeItem> =
+                            Vec::with_capacity(leaves_per_folder as usize);
+                        for l in 0..leaves_per_folder {
+                            let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
+                            leaves.push(
+                                TreeItem::new(leaf_id, format!("Leaf {r}/{f}/{l} (id={leaf_id})"))
+                                    .disabled(leaf_id % 97 == 0),
+                            );
+                        }
+
+                        folders.push(
+                            TreeItem::new(folder_id, format!("Folder {r}/{f}")).children(leaves),
+                        );
+                    }
+
+                    roots.push(TreeItem::new(root_id, format!("Root {r}")).children(folders));
+                }
+
+                (
+                    roots,
+                    TreeState {
+                        selected: None,
+                        expanded,
+                    },
+                )
+            };
+
+            let items = cx.app.models_mut().insert(items_value);
+            let state = cx.app.models_mut().insert(state_value);
+            cx.with_state(TreeTortureModels::default, |st| {
+                st.items = Some(items.clone());
+                st.state = Some(state.clone());
+            });
+            (items, state)
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: baseline perf harness for a virtualized tree (expand/collapse + selection + scroll)."),
+                cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
+            ]
+        },
+    );
+
+    let tree = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-tree-torture-root")),
+            ..Default::default()
+        },
+        |cx| {
+            vec![fret_ui_kit::declarative::tree::tree_view(
+                cx,
+                items,
+                state,
+                fret_ui_kit::Size::Medium,
+            )]
+        },
+    );
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default()
+            .w_full()
+            .h_px(MetricRef::Px(Px(460.0))),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![header, cx.container(container_props, |_cx| vec![tree])]
 }
 
 fn preview_data_grid(
