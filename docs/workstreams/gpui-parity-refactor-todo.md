@@ -352,6 +352,10 @@ Non-candidates (usually): small forms/menus/popovers where the “ephemeral wind
     - Bundle-based stale-paint check:
       - Generate: `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json --release`
       - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-windowed-rows-root`.
+    - A/B perf sanity (one run, release, view-cache + shell enabled):
+      - `windowed_rows_surface_scroll_refresh`: worst tick ~2.6ms (layout-dominated).
+      - `virtual_list_torture`: worst tick ~29.8ms (layout-dominated).
+      - Takeaway: large headroom remains for `GPUI-MVP5-virt-001` (prepaint-driven window to reduce scroll-time rerender/layout work).
 - [ ] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
   - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.
