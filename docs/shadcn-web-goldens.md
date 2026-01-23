@@ -37,7 +37,11 @@ Force webpack instead, and provide the required `NEXT_PUBLIC_*` env vars at buil
 
 `pnpm -C repo-ref/ui --filter shadcn build`
 
-`cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
+If your environment cannot reach Google Fonts during `next build`, you can still build shadcn v4
+offline by using Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` hook (maps requested families to local
+Windows font files):
+
+`cd repo-ref/ui/apps/v4; $env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES=(Resolve-Path ../../../../goldens/shadcn-web/scripts/next-font-google-mock.cjs).Path; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
 
 3) Start a production server (Terminal A):
 
@@ -216,6 +220,10 @@ Constrained viewport (useful for clamping/placement regressions):
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=1440 --viewportH=320 --openAction=click --openVariants="components-vp1440x320=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];list-vp1440x320=[data-fret-golden-target] li:nth-of-type(4) [data-slot='navigation-menu-trigger'];simple-vp1440x320=[data-fret-golden-target] li:nth-of-type(5) [data-slot='navigation-menu-trigger'];with-icon-vp1440x320=[data-fret-golden-target] li:nth-of-type(6) [data-slot='navigation-menu-trigger']"`
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']"`
+
+Indicator (opt-in child, `shadow-md` diamond):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo-indicator --modes=open --update`
 
 Other constrained overlay variants (useful for tight-height flip/shift behavior):
 
