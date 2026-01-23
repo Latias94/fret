@@ -236,6 +236,11 @@ pub trait UiPointerActionHost: UiFocusActionHost + UiDragActionHost {
     fn capture_pointer(&mut self);
     fn release_pointer_capture(&mut self);
     fn set_cursor_icon(&mut self, icon: CursorIcon);
+    /// Request a node-level invalidation for the current pointer region / pressable.
+    ///
+    /// This is intentionally separate from `notify()`: it enables paint-only updates (e.g. hover
+    /// chrome) under view-cache reuse without forcing a rerender.
+    fn invalidate(&mut self, _invalidation: crate::widget::Invalidation) {}
 }
 
 pub struct UiActionHostAdapter<'a, H: UiHost> {

@@ -30,6 +30,7 @@ pub(super) fn handle_pressable<H: UiHost>(
         requested_capture: &'a mut Option<Option<NodeId>>,
         requested_cursor: &'a mut Option<fret_core::CursorIcon>,
         notify_requested: &'a mut bool,
+        invalidations: &'a mut Vec<(NodeId, Invalidation)>,
     }
 
     impl<H: UiHost> action::UiActionHost for PressablePointerHookHost<'_, H> {
@@ -103,6 +104,10 @@ pub(super) fn handle_pressable<H: UiHost>(
                 return;
             }
             *self.requested_cursor = Some(icon);
+        }
+
+        fn invalidate(&mut self, invalidation: Invalidation) {
+            self.invalidations.push((self.node, invalidation));
         }
     }
 
@@ -197,6 +202,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
                         notify_requested: &mut cx.notify_requested,
+                        invalidations: &mut cx.invalidations,
                     };
 
                     if h(
@@ -251,6 +257,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
                         notify_requested: &mut cx.notify_requested,
+                        invalidations: &mut cx.invalidations,
                     };
 
                     match h(
@@ -330,6 +337,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
                         notify_requested: &mut cx.notify_requested,
+                        invalidations: &mut cx.invalidations,
                     };
 
                     skip_activate = matches!(
