@@ -63,6 +63,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Migrate `Checkbox` and `IconButton` to the foundation indication path and remove non-Material fallbacks.
   - Evidence: `ecosystem/fret-ui-material3/src/checkbox.rs`,
     `ecosystem/fret-ui-material3/src/icon_button.rs`.
+- [x] Migrate `Switch` to the foundation indication path and remove non-Material fallbacks.
+  - Evidence: `ecosystem/fret-ui-material3/src/switch.rs`,
+    `ecosystem/fret-ui-material3/src/foundation/indication.rs` (ripple-bounds support).
 - [ ] Migrate the remaining components and delete duplicated per-component helpers.
 
 ## Audit Anchors (Fret)
