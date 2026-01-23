@@ -444,3 +444,169 @@ pub(crate) fn inject_sys_typescale(
         );
     }
 }
+
+pub(crate) fn inject_comp_switch_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.switch.`
+
+    cfg.metrics
+        .insert("md.comp.switch.disabled.handle.elevation".to_string(), 0.0);
+    cfg.numbers
+        .insert("md.comp.switch.disabled.handle.opacity".to_string(), 0.38);
+    cfg.numbers.insert(
+        "md.comp.switch.disabled.selected.handle.opacity".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.switch.disabled.selected.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers
+        .insert("md.comp.switch.disabled.track.opacity".to_string(), 0.12);
+    cfg.numbers.insert(
+        "md.comp.switch.disabled.unselected.handle.opacity".to_string(),
+        0.38,
+    );
+    cfg.numbers.insert(
+        "md.comp.switch.disabled.unselected.icon.opacity".to_string(),
+        0.38,
+    );
+    cfg.metrics
+        .insert("md.comp.switch.focus.indicator.offset".to_string(), 2.0);
+    cfg.metrics
+        .insert("md.comp.switch.focus.indicator.thickness".to_string(), 3.0);
+    cfg.metrics
+        .insert("md.comp.switch.handle.elevation".to_string(), 1.0);
+    cfg.metrics
+        .insert("md.comp.switch.handle.height".to_string(), 20.0);
+    cfg.metrics
+        .insert("md.comp.switch.handle.shape".to_string(), 9999.0);
+    cfg.metrics
+        .insert("md.comp.switch.handle.width".to_string(), 20.0);
+    cfg.metrics
+        .insert("md.comp.switch.pressed.handle.height".to_string(), 28.0);
+    cfg.metrics
+        .insert("md.comp.switch.pressed.handle.width".to_string(), 28.0);
+    cfg.numbers.insert(
+        "md.comp.switch.selected.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.switch.selected.handle.height".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.switch.selected.handle.width".to_string(), 24.0);
+    cfg.numbers.insert(
+        "md.comp.switch.selected.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.switch.selected.icon.size".to_string(), 16.0);
+    cfg.numbers.insert(
+        "md.comp.switch.selected.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.switch.state-layer.shape".to_string(), 9999.0);
+    cfg.metrics
+        .insert("md.comp.switch.state-layer.size".to_string(), 40.0);
+    cfg.metrics
+        .insert("md.comp.switch.track.height".to_string(), 32.0);
+    cfg.metrics
+        .insert("md.comp.switch.track.outline.width".to_string(), 2.0);
+    cfg.metrics
+        .insert("md.comp.switch.track.shape".to_string(), 9999.0);
+    cfg.metrics
+        .insert("md.comp.switch.track.width".to_string(), 52.0);
+    cfg.numbers.insert(
+        "md.comp.switch.unselected.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.switch.unselected.handle.height".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.switch.unselected.handle.width".to_string(), 16.0);
+    cfg.numbers.insert(
+        "md.comp.switch.unselected.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.switch.unselected.icon.size".to_string(), 16.0);
+    cfg.numbers.insert(
+        "md.comp.switch.unselected.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.switch.with-icon.handle.height".to_string(), 24.0);
+    cfg.metrics
+        .insert("md.comp.switch.with-icon.handle.width".to_string(), 24.0);
+}
+
+pub(crate) fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.primary-navigation-tab.`
+
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.active-indicator.height".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.active.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.active.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.active.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.container.height".to_string(),
+        48.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.container.shape".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.divider.height".to_string(),
+        1.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.focus.indicator.outline.offset".to_string(),
+        -3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.focus.indicator.thickness".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.inactive.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.inactive.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.inactive.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.with-icon-and-label-text.container.height".to_string(),
+        64.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.primary-navigation-tab.with-icon.icon.size".to_string(),
+        24.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.primary-navigation-tab.with-label-text.label-text.weight".to_string(),
+        500.0,
+    );
+}

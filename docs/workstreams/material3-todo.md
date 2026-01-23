@@ -115,6 +115,14 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_typescale`),
       `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`TypographyOptions`).
   - [ ] Import the subset of `md.comp.*` tokens used by MVP components (drive by `material3_token_audit`).
+    - [x] Import `md.comp.switch.*` scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_switch_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_scalars`).
+    - [x] Import `md.comp.primary-navigation-tab.*` scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_primary_navigation_tab_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_primary_navigation_tab_scalars`).
+    - [ ] Expand scalar import coverage for other MVP components.
+    - [ ] Decide how to represent non-scalar tokens (corner sets, etc.) in ThemeConfig.
 - [x] Add support for non-color/non-px token kinds needed by Material:
   - [x] scalar numbers (e.g. state-layer opacity)
   - [x] durations (ms)

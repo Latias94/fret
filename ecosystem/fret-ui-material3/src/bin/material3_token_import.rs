@@ -39,6 +39,9 @@ impl Args {
             "md.sys.state.".to_string(),
             "md.sys.state.focus-indicator.".to_string(),
             "md.sys.typescale.".to_string(),
+            // MVP component prefixes we actively align today.
+            "md.comp.switch.".to_string(),
+            "md.comp.primary-navigation-tab.".to_string(),
         ];
         let mut debug = false;
 
@@ -374,6 +377,23 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
             .collect::<Vec<_>>(),
     );
 
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_switch_scalars",
+        "md.comp.switch.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.switch."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_primary_navigation_tab_scalars",
+        "md.comp.primary-navigation-tab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.primary-navigation-tab."))
+            .collect::<Vec<_>>(),
+    );
+
     out
 }
 
@@ -549,6 +569,50 @@ fn read_typescale_role(defs: &[&TokenDef], base_key: &str) -> Option<SysTypescal
         weight,
         face,
     })
+}
+
+fn emit_inject_comp_scalars(out: &mut String, fn_name: &str, prefix: &str, defs: Vec<&TokenDef>) {
+    let mut keys: Vec<(&str, &Expr)> = defs
+        .iter()
+        .map(|d| (d.token_key.as_str(), &d.expr))
+        .collect();
+    keys.sort_by(|a, b| a.0.cmp(b.0));
+
+    writeln!(out, "pub(crate) fn {fn_name}(cfg: &mut ThemeConfig) {{").ok();
+    writeln!(out, "    // Source: Material Web v30 sassvars").ok();
+    writeln!(out, "    // Prefix: `{prefix}`").ok();
+    writeln!(out).ok();
+
+    for (k, expr) in keys {
+        // Skip color tokens: our runtime expects parsed color strings, but Material3 uses dynamic
+        // `md.sys.color.*` generation. Colors remain derived via `theme_config_with_colors`.
+        if k.ends_with(".color") || k.contains(".color.") {
+            continue;
+        }
+
+        match expr {
+            Expr::Px(px) => {
+                writeln!(out, "    cfg.metrics.insert({k:?}.to_string(), {px:?});").ok();
+            }
+            Expr::Number(n) => {
+                writeln!(out, "    cfg.numbers.insert({k:?}.to_string(), {n:?});").ok();
+            }
+            Expr::Ms(ms) => {
+                writeln!(out, "    cfg.durations_ms.insert({k:?}.to_string(), {ms});").ok();
+            }
+            Expr::CubicBezier { x1, y1, x2, y2 } => {
+                writeln!(
+                    out,
+                    "    cfg.easings.insert({k:?}.to_string(), CubicBezier {{ x1: {x1:?}, y1: {y1:?}, x2: {x2:?}, y2: {y2:?} }});"
+                )
+                .ok();
+            }
+            _ => {}
+        }
+    }
+
+    writeln!(out, "}}").ok();
+    writeln!(out).ok();
 }
 
 fn emit_inject_fn(out: &mut String, fn_name: &str, defs: Vec<&TokenDef>) {

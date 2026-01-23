@@ -944,77 +944,7 @@ fn inject_comp_checkbox_colors_from_sys(cfg: &mut ThemeConfig) {
 }
 
 fn inject_comp_switch_scalars(cfg: &mut ThemeConfig) {
-    // Sources:
-    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-switch.scss
-
-    cfg.metrics
-        .insert("md.comp.switch.state-layer.size".to_string(), 40.0);
-    cfg.metrics
-        .insert("md.comp.switch.track.width".to_string(), 52.0);
-    cfg.metrics
-        .insert("md.comp.switch.track.height".to_string(), 32.0);
-    cfg.metrics
-        .insert("md.comp.switch.track.outline.width".to_string(), 2.0);
-
-    cfg.metrics
-        .insert("md.comp.switch.handle.width".to_string(), 20.0);
-    cfg.metrics
-        .insert("md.comp.switch.handle.height".to_string(), 20.0);
-
-    cfg.metrics
-        .insert("md.comp.switch.selected.handle.width".to_string(), 24.0);
-    cfg.metrics
-        .insert("md.comp.switch.selected.handle.height".to_string(), 24.0);
-    cfg.metrics
-        .insert("md.comp.switch.unselected.handle.width".to_string(), 16.0);
-    cfg.metrics
-        .insert("md.comp.switch.unselected.handle.height".to_string(), 16.0);
-    cfg.metrics
-        .insert("md.comp.switch.pressed.handle.width".to_string(), 28.0);
-    cfg.metrics
-        .insert("md.comp.switch.pressed.handle.height".to_string(), 28.0);
-
-    cfg.metrics
-        .insert("md.comp.switch.with-icon.handle.width".to_string(), 24.0);
-    cfg.metrics
-        .insert("md.comp.switch.with-icon.handle.height".to_string(), 24.0);
-
-    cfg.metrics
-        .insert("md.comp.switch.selected.icon.size".to_string(), 16.0);
-    cfg.metrics
-        .insert("md.comp.switch.unselected.icon.size".to_string(), 16.0);
-
-    cfg.metrics
-        .insert("md.comp.switch.focus.indicator.offset".to_string(), 2.0);
-    cfg.metrics
-        .insert("md.comp.switch.focus.indicator.thickness".to_string(), 3.0);
-
-    cfg.numbers
-        .insert("md.comp.switch.disabled.track.opacity".to_string(), 0.12);
-    cfg.numbers.insert(
-        "md.comp.switch.disabled.selected.handle.opacity".to_string(),
-        1.0,
-    );
-    cfg.numbers.insert(
-        "md.comp.switch.disabled.unselected.handle.opacity".to_string(),
-        0.38,
-    );
-
-    // State layer opacities are derived from sys state by default.
-    for group in ["selected", "unselected"] {
-        cfg.numbers.insert(
-            format!("md.comp.switch.{group}.hover.state-layer.opacity"),
-            0.08,
-        );
-        cfg.numbers.insert(
-            format!("md.comp.switch.{group}.focus.state-layer.opacity"),
-            0.1,
-        );
-        cfg.numbers.insert(
-            format!("md.comp.switch.{group}.pressed.state-layer.opacity"),
-            0.1,
-        );
-    }
+    material_web_v30::inject_comp_switch_scalars(cfg);
 }
 
 fn inject_comp_switch_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -1443,65 +1373,14 @@ fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
 }
 
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
-    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-primary-navigation-tab.scss
+    material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
 
-    cfg.metrics.insert(
-        "md.comp.primary-navigation-tab.container.height".to_string(),
-        48.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.primary-navigation-tab.with-icon-and-label-text.container.height".to_string(),
-        64.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.primary-navigation-tab.with-icon.icon.size".to_string(),
-        24.0,
-    );
-
-    cfg.metrics.insert(
-        "md.comp.primary-navigation-tab.active-indicator.height".to_string(),
-        3.0,
-    );
-    // Note: the upstream token is a 4-corner set (`3px 3px 0px 0px`). We store the top-corner
-    // radius scalar and build the composite shape in the component recipe.
+    // Note: the upstream `md.comp.primary-navigation-tab.active-indicator.shape` token is a 4-corner
+    // set (e.g. `3px 3px 0px 0px`). Until ThemeConfig gains structured corner tokens, we store the
+    // top-corner radius scalar and build the composite shape in the component recipe.
     cfg.metrics.insert(
         "md.comp.primary-navigation-tab.active-indicator.shape".to_string(),
         3.0,
-    );
-
-    cfg.metrics.insert(
-        "md.comp.primary-navigation-tab.focus.indicator.thickness".to_string(),
-        3.0,
-    );
-    cfg.metrics.insert(
-        "md.comp.primary-navigation-tab.focus.indicator.outline.offset".to_string(),
-        -3.0,
-    );
-
-    cfg.numbers.insert(
-        "md.comp.primary-navigation-tab.active.focus.state-layer.opacity".to_string(),
-        0.1,
-    );
-    cfg.numbers.insert(
-        "md.comp.primary-navigation-tab.active.hover.state-layer.opacity".to_string(),
-        0.08,
-    );
-    cfg.numbers.insert(
-        "md.comp.primary-navigation-tab.active.pressed.state-layer.opacity".to_string(),
-        0.1,
-    );
-
-    cfg.numbers.insert(
-        "md.comp.primary-navigation-tab.inactive.focus.state-layer.opacity".to_string(),
-        0.1,
-    );
-    cfg.numbers.insert(
-        "md.comp.primary-navigation-tab.inactive.hover.state-layer.opacity".to_string(),
-        0.08,
-    );
-    cfg.numbers.insert(
-        "md.comp.primary-navigation-tab.inactive.pressed.state-layer.opacity".to_string(),
-        0.1,
     );
 }
 
