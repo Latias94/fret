@@ -99,6 +99,7 @@ pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
+pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
 pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
@@ -135,6 +136,7 @@ pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.vir
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
+pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
 pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_torture";
 pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
@@ -340,6 +342,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CANVAS_CULL_TORTURE,
                 docs::USAGE_CANVAS_CULL_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_CHROME_TORTURE,
+                "Chrome (Torture)",
+                "Chrome / Hover-Focus Overlay Harness",
+                "fret-ui-shadcn + fret-ui (paint-only candidate)",
+                CMD_NAV_CHROME_TORTURE,
+                &[
+                    "hover",
+                    "focus",
+                    "overlay",
+                    "chrome",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_CHROME_TORTURE,
+                docs::USAGE_CHROME_TORTURE,
             ),
             PageSpec::new(
                 PAGE_WINDOWED_ROWS_SURFACE_TORTURE,

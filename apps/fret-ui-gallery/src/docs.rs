@@ -167,6 +167,25 @@ let el = pan_zoom_canvas_surface_panel(cx, props, |_painter, _cx| {});
 ```
 "#;
 
+pub(crate) const DOC_CHROME_TORTURE: &str = r#"
+## Chrome (torture harness)
+
+This page is a stress surface for interaction-driven “chrome”:
+
+- hover/pressed/focus rings,
+- caret/selection visuals,
+- overlay open/close loops.
+
+It exists to support the GPUI parity workstream:
+
+- validate that “hover-only” and “focus-only” ticks can be paint-only under view-cache reuse,
+- catch stale-paint regressions where semantics/hit-testing updates but the scene does not.
+"#;
+
+pub(crate) const USAGE_CHROME_TORTURE: &str = r#"
+This page is intentionally policy-heavy and should be driven via diagnostics scripts.
+"#;
+
 pub(crate) const DOC_WINDOWED_ROWS_SURFACE_TORTURE: &str = r#"
 ## Windowed Rows Surface (torture harness)
 
