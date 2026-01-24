@@ -58,7 +58,7 @@ fn select_list_desired_height(
     Px(content_height.0.min(max_height.0).max(min_height.0))
 }
 
-fn select_scroll_with_buttons<H: UiHost>(
+fn select_scroll_with_buttons<H: UiHost, C, I>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
@@ -71,8 +71,12 @@ fn select_scroll_with_buttons<H: UiHost>(
     set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
     should_focus_selected_item: impl Fn() -> bool + Clone + 'static,
     on_focused_selected_item: impl Fn() + Clone + 'static,
-    content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
-) -> AnyElement {
+    content: C,
+) -> AnyElement
+where
+    C: FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.flex(
         FlexProps {
             layout: {
@@ -270,7 +274,11 @@ fn select_scroll_with_buttons<H: UiHost>(
                                     padding: Edges::all(Px(0.0)),
                                     ..Default::default()
                                 },
-                                move |cx| content(cx, active_element_ref),
+                                move |cx| {
+                                    content(cx, active_element_ref)
+                                        .into_iter()
+                                        .collect::<Vec<_>>()
+                                },
                             )]
                         },
                     );
