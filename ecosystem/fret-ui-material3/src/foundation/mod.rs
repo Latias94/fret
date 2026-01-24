@@ -13,6 +13,7 @@ pub mod elevation;
 pub mod focus_ring;
 pub mod geometry;
 pub mod indication;
+pub mod interactive_size;
 pub mod layout_probe;
 pub mod motion_scheme;
 pub mod token_resolver;

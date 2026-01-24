@@ -20,6 +20,7 @@ use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable_with_ripple_bounds,
     material_ink_layer_with_bounds,
 };
+use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 
@@ -114,6 +115,7 @@ impl Switch {
                     layout: {
                         let mut l = fret_ui::element::LayoutStyle::default();
                         l.overflow = Overflow::Visible;
+                        enforce_minimum_interactive_size(&mut l, &theme);
                         l
                     },
                     focus_ring: Some(material_focus_ring_for_component(
@@ -127,6 +129,8 @@ impl Switch {
                 let pointer_region = cx.named("pointer_region", |cx| {
                     let mut props = PointerRegionProps::default();
                     props.enabled = enabled;
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Fill;
                     cx.pointer_region(props, |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -259,7 +263,7 @@ impl Switch {
                         outer.corner_radii = Corners::all(Px(0.0));
 
                         let chrome = cx.container(outer, move |_cx| vec![overlay, track]);
-                        vec![chrome]
+                        vec![centered_fill(cx, chrome)]
                     })
                 });
 

@@ -194,6 +194,14 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `crates/fret-ui/src/tree/dispatch.rs` (gate hovered element updates by `PointerType`),
     tests in `crates/fret-ui/src/declarative/tests/interactions.rs` (`pressable_on_hover_change_hook_ignores_touch_pointer_move`),
     `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/PrecisionPointer.kt`.
+- [x] Minimum interactive touch target (48dp) enforced for core pressables; visual chrome centered.
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/interactive_size.rs`,
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.sys.layout.minimum-touch-target.size`),
+    `ecosystem/fret-ui-material3/src/checkbox.rs`,
+    `ecosystem/fret-ui-material3/src/radio.rs`,
+    `ecosystem/fret-ui-material3/src/switch.rs`,
+    `ecosystem/fret-ui-material3/src/icon_button.rs`,
+    Compose reference: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/InteractiveComponentSize.kt`.
 - [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.
   - Evidence: `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RippleAnimator`),
     `ecosystem/fret-ui-material3/src/button.rs` (`PointerRegion` → `PointerRegionState.last_down`),

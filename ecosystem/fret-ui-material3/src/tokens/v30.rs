@@ -98,6 +98,10 @@ impl DynamicVariant {
 /// Notes:
 /// - This does not set `cfg.name`/`cfg.author`/`cfg.url`.
 pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
+    // Compose `minimumInteractiveComponentSize()` default (48dp).
+    cfg.metrics
+        .insert("md.sys.layout.minimum-touch-target.size".to_string(), 48.0);
+
     material_web_v30::inject_sys_state(cfg);
     material_web_v30::inject_sys_state_focus_indicator(cfg);
     material_web_v30::inject_sys_motion(cfg);
@@ -2491,6 +2495,12 @@ mod tests {
                 .get("md.sys.motion.duration.short1")
                 .copied(),
             Some(50)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.sys.layout.minimum-touch-target.size")
+                .copied(),
+            Some(48.0)
         );
         assert_eq!(
             cfg.numbers

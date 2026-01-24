@@ -186,6 +186,7 @@ Rule of thumb:
 - `foundation::tokens` + `foundation::token_resolver` (typed access + strict fallback chain).
 - `foundation::content` (content color defaults + disabled opacity conventions).
 - `foundation::elevation` (MD3 level → shadow + tonal overlay mapping).
+- `foundation::interactive_size` (minimum touch target enforcement + centered chrome).
 
 **Component recipes (`ecosystem/fret-ui-material3/src/*.rs`)**
 
