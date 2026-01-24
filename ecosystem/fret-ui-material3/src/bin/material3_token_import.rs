@@ -47,6 +47,7 @@ impl Args {
             "md.comp.icon-button.".to_string(),
             "md.comp.primary-navigation-tab.".to_string(),
             "md.comp.navigation-bar.".to_string(),
+            "md.comp.navigation-drawer.".to_string(),
             "md.comp.menu.".to_string(),
             "md.comp.outlined-text-field.".to_string(),
             "md.comp.filled-text-field.".to_string(),
@@ -451,6 +452,14 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.navigation-bar.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.navigation-bar."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_navigation_drawer_scalars",
+        "md.comp.navigation-drawer.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.navigation-drawer."))
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_scalars(

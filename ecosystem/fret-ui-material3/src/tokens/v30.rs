@@ -112,6 +112,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_filled_text_field_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
     inject_comp_navigation_bar_scalars(cfg);
+    inject_comp_navigation_drawer_scalars(cfg);
     inject_comp_menu_scalars(cfg);
 }
 
@@ -257,6 +258,7 @@ pub fn theme_config_with_colors(
     inject_comp_filled_text_field_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
     inject_comp_navigation_bar_colors_from_sys(&mut cfg);
+    inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
     inject_comp_menu_colors_from_sys(&mut cfg);
     cfg
 }
@@ -1116,6 +1118,10 @@ fn inject_comp_navigation_bar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_navigation_bar_scalars(cfg);
 }
 
+fn inject_comp_navigation_drawer_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_navigation_drawer_scalars(cfg);
+}
+
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_menu_scalars(cfg);
 }
@@ -1686,6 +1692,179 @@ fn inject_comp_navigation_bar_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.navigation-bar.inactive.pressed.state-layer.color",
         "md.sys.color.on-surface",
+    );
+}
+
+fn inject_comp_navigation_drawer_colors_from_sys(cfg: &mut ThemeConfig) {
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active-indicator.color",
+        "md.sys.color.secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.focus.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.focus.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.focus.state-layer.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.hover.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.hover.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.hover.state-layer.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.pressed.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.pressed.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.active.pressed.state-layer.color",
+        "md.sys.color.on-secondary-container",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.container.color",
+        "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.standard.container.color",
+        "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.modal.container.color",
+        "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.container.surface-tint-layer.color",
+        "md.sys.color.surface-tint",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.divider.color",
+        "md.sys.color.outline",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.focus.indicator.color",
+        "md.sys.color.secondary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.headline.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.large-badge-label.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.focus.icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.focus.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.hover.icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.hover.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.label-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.pressed.icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.pressed.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.inactive.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.navigation-drawer.scrim.color",
+        "md.sys.color.scrim",
     );
 }
 

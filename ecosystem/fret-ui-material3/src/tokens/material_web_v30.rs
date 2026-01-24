@@ -1935,6 +1935,94 @@ pub(crate) fn inject_comp_navigation_bar_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+pub(crate) fn inject_comp_navigation_drawer_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.navigation-drawer.`
+
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.active-indicator.height".to_string(),
+        56.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.active-indicator.shape".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.active-indicator.width".to_string(),
+        336.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-drawer.active.label-text.weight".to_string(),
+        700.0,
+    );
+    cfg.corners.insert(
+        "md.comp.navigation-drawer.bottom.container.shape".to_string(),
+        Corners {
+            top_left: Px(16.0),
+            top_right: Px(16.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.comp.navigation-drawer.container.shape".to_string(),
+        Corners {
+            top_left: Px(0.0),
+            top_right: Px(16.0),
+            bottom_right: Px(16.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.container.width".to_string(),
+        360.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.focus.indicator.outline.offset".to_string(),
+        -3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.focus.indicator.thickness".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-drawer.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-drawer.headline.weight".to_string(),
+        500.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-drawer.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-drawer.icon.size".to_string(), 24.0);
+    cfg.numbers.insert(
+        "md.comp.navigation-drawer.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-drawer.large-badge-label.weight".to_string(),
+        500.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.modal.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-drawer.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers
+        .insert("md.comp.navigation-drawer.scrim.opacity".to_string(), 0.4);
+    cfg.metrics.insert(
+        "md.comp.navigation-drawer.standard.container.elevation".to_string(),
+        0.0,
+    );
+}
+
 pub(crate) fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.menu.`
