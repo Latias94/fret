@@ -91,16 +91,13 @@ Keep this list short and evidence-backed:
 
 ## MVP5 — Overlay / Menu Parity (Radix-shadcn Hand Feel)
 
-- [~] IDV2-ovl-050 Normalize “present vs interactive” for overlay close transitions (click-through + no observer routing).
-  - Active branch: `feat/input-dispatch-capture-pass`
+- [x] IDV2-ovl-050 Normalize “present vs interactive” for overlay close transitions (click-through + no observer routing).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
-- [~] IDV2-ovl-051 Stabilize submenu safe-hover + timer routing (menu hover intent under caching/multi-layer routing).
-  - Active branch: `feat/input-dispatch-capture-pass`
+- [x] IDV2-ovl-051 Stabilize submenu safe-hover + timer routing (menu hover intent under caching/multi-layer routing).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/*`, shadcn tests in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 - [ ] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract.
   - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers).
-- [~] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
-  - Active branch: `feat/input-dispatch-capture-pass`
+- [x] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
   - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
 
 ## Open Questions (Keep Short)
