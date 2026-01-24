@@ -155,6 +155,46 @@ pub(crate) fn inject_sys_motion(cfg: &mut ThemeConfig) {
             y2: 1.0,
         },
     );
+    cfg.numbers.insert(
+        "md.sys.motion.spring.default.effects.damping".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.motion.spring.default.effects.stiffness".to_string(),
+        1600.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.motion.spring.default.spatial.damping".to_string(),
+        0.9,
+    );
+    cfg.numbers.insert(
+        "md.sys.motion.spring.default.spatial.stiffness".to_string(),
+        700.0,
+    );
+    cfg.numbers
+        .insert("md.sys.motion.spring.fast.effects.damping".to_string(), 1.0);
+    cfg.numbers.insert(
+        "md.sys.motion.spring.fast.effects.stiffness".to_string(),
+        3800.0,
+    );
+    cfg.numbers
+        .insert("md.sys.motion.spring.fast.spatial.damping".to_string(), 0.9);
+    cfg.numbers.insert(
+        "md.sys.motion.spring.fast.spatial.stiffness".to_string(),
+        1400.0,
+    );
+    cfg.numbers
+        .insert("md.sys.motion.spring.slow.effects.damping".to_string(), 1.0);
+    cfg.numbers.insert(
+        "md.sys.motion.spring.slow.effects.stiffness".to_string(),
+        800.0,
+    );
+    cfg.numbers
+        .insert("md.sys.motion.spring.slow.spatial.damping".to_string(), 0.9);
+    cfg.numbers.insert(
+        "md.sys.motion.spring.slow.spatial.stiffness".to_string(),
+        300.0,
+    );
 }
 
 pub(crate) fn inject_sys_shape(cfg: &mut ThemeConfig) {

@@ -160,10 +160,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 
 ### Material Foundation Backlog (Compose baseline)
 
-- [ ] Add a tree-local Material context provider (theme-ish overrides) in `fret-ui-material3`:
+- [x] Add a tree-local Material context provider (theme-ish overrides) in `fret-ui-material3`:
   - content defaults (Compose `LocalContentColor` analogue),
   - ripple configuration escape hatch (Compose `LocalRippleConfiguration` analogue),
-  - motion scheme override (Compose `LocalMotionScheme` analogue).
+  - motion scheme override (Compose `LocalMotionScheme` analogue) (TODO).
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/context.rs`
 - [ ] Decide whether we need a hoistable interaction source surface (Compose
   `MutableInteractionSource` analogue) or whether `PressableState` + foundation runtime state is
   sufficient for our current authoring model.

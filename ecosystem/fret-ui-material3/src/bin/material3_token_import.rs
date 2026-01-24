@@ -771,7 +771,10 @@ fn emit_inject_fn(out: &mut String, fn_name: &str, defs: Vec<&TokenDef>) {
                 }
             }
             (k, Expr::Number(n)) => {
-                if k.starts_with("md.sys.state.") {
+                if k.starts_with("md.sys.state.")
+                    || (k.starts_with("md.sys.motion.spring.")
+                        && (k.ends_with(".damping") || k.ends_with(".stiffness")))
+                {
                     writeln!(out, "    cfg.numbers.insert({k:?}.to_string(), {n:?});").ok();
                 }
             }

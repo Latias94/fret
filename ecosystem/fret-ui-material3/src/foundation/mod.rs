@@ -12,5 +12,6 @@ pub mod context;
 pub mod focus_ring;
 pub mod geometry;
 pub mod indication;
+pub mod motion_scheme;
 pub mod token_resolver;
 pub mod tokens;

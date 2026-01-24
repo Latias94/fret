@@ -1622,6 +1622,12 @@ mod tests {
                 .copied(),
             Some(50)
         );
+        assert_eq!(
+            cfg.numbers
+                .get("md.sys.motion.spring.fast.spatial.stiffness")
+                .copied(),
+            Some(1400.0)
+        );
         assert!(
             cfg.easings.contains_key("md.sys.motion.easing.standard"),
             "expected standard easing token"
