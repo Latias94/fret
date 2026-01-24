@@ -324,6 +324,12 @@ Initial candidates (to be evidence-backed via `diag perf` bundles):
 
 Non-candidates (usually): small forms/menus/popovers where the “ephemeral window” complexity would outweigh the wins.
 
+- **Dirty-view rebuild (ADR 0180; structural)**
+  - Overlay open/close, portal attach/detach, and overlay stack reordering.
+  - Docking graph mutations (split/merge, tab reorder, tear-out/reattach).
+  - Text/content reflow that changes layout structure (wrap width, font/style changes, inline reflow).
+  - Large data set updates that change the shape/order of rows/nodes (search results, outlines, histories).
+
 - **Paint-only chrome (should not rerender by default; ADR 0181)**
   - Caret/selection blink and selection geometry updates (text/code views).
   - Hover/pressed/focus ring decoration layers (shadcn-style interaction chrome).
