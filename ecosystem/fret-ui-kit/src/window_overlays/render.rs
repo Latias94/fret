@@ -892,7 +892,7 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            OverlayLayer::hover(true).apply(ui, entry.layer);
+            OverlayLayer::hover(true, req.interactive).apply(ui, entry.layer);
         });
     }
 
@@ -956,7 +956,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
-            OverlayLayer::tooltip(true).apply(ui, entry.layer);
+            OverlayLayer::tooltip(true, req.interactive).apply(ui, entry.layer);
 
             ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
         });

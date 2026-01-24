@@ -525,6 +525,7 @@ impl OverlayController {
                     window_overlays::TooltipRequest {
                         id: request.id,
                         root_name,
+                        interactive: request.presence.interactive,
                         trigger: request.trigger,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
@@ -533,6 +534,9 @@ impl OverlayController {
                 );
             }
             OverlayKind::Hover => {
+                if !request.presence.present {
+                    return;
+                }
                 let trigger = request.trigger.expect("Hover requires trigger");
                 let root_name = request
                     .root_name
@@ -543,6 +547,7 @@ impl OverlayController {
                     window_overlays::HoverOverlayRequest {
                         id: request.id,
                         root_name,
+                        interactive: request.presence.interactive,
                         trigger,
                         children: request.children,
                     },

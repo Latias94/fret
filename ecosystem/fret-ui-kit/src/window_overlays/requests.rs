@@ -106,6 +106,11 @@ impl std::fmt::Debug for ModalRequest {
 pub struct HoverOverlayRequest {
     pub id: GlobalElementId,
     pub root_name: String,
+    /// Whether the overlay should participate in hit-testing and input routing.
+    ///
+    /// When `false`, the overlay may remain mounted for close transitions but must be click-through
+    /// and excluded from any observer passes.
+    pub interactive: bool,
     pub trigger: GlobalElementId,
     pub children: Vec<AnyElement>,
 }
@@ -115,6 +120,7 @@ impl std::fmt::Debug for HoverOverlayRequest {
         f.debug_struct("HoverOverlayRequest")
             .field("id", &self.id)
             .field("root_name", &self.root_name)
+            .field("interactive", &self.interactive)
             .field("trigger", &self.trigger)
             .field("children_len", &self.children.len())
             .finish()
@@ -125,6 +131,11 @@ impl std::fmt::Debug for HoverOverlayRequest {
 pub struct TooltipRequest {
     pub id: GlobalElementId,
     pub root_name: String,
+    /// Whether the tooltip should participate in input observer routing.
+    ///
+    /// When `false`, the tooltip may remain mounted for close transitions but must not observe
+    /// outside-press or pointer-move events.
+    pub interactive: bool,
     pub trigger: Option<GlobalElementId>,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
@@ -136,6 +147,7 @@ impl std::fmt::Debug for TooltipRequest {
         f.debug_struct("TooltipRequest")
             .field("id", &self.id)
             .field("root_name", &self.root_name)
+            .field("interactive", &self.interactive)
             .field("trigger", &self.trigger)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())
