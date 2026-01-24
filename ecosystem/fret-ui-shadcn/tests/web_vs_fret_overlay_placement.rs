@@ -16248,6 +16248,37 @@ fn web_vs_fret_dialog_demo_overlay_center_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_sidebar_13_dialog_overlay_center_matches() {
+    use fret_ui_shadcn::{Button, ButtonSize, Dialog, DialogContent};
+
+    assert_centered_overlay_placement_matches(
+        "sidebar-13",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Dialog")
+                        .size(ButtonSize::Sm)
+                        .into_element(cx)
+                },
+                |cx| {
+                    DialogContent::new(Vec::new())
+                        .refine_style(fret_ui_kit::ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .max_w(fret_ui_kit::MetricRef::Px(Px(800.0)))
+                                .max_h(fret_ui_kit::MetricRef::Px(Px(500.0))),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_command_dialog_overlay_center_matches() {
     use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
 
