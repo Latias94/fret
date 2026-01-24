@@ -4622,6 +4622,7 @@ fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) ->
         position: end,
         button,
         modifiers,
+        is_click: false,
         click_count: 1,
         pointer_type,
     }));
