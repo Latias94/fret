@@ -596,6 +596,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if check_stale_paint_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
                     || check_hover_layout_max.is_some()
+                    || check_view_cache_reuse_min.is_some()
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -614,6 +615,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_view_cache_reuse_min,
                         warmup_frames,
                     )?;
                 }
@@ -632,6 +634,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
                 [
                     "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                    "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
                     "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
                     "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
                     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
@@ -739,7 +742,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if result.stage.as_deref() == Some("passed")
                     && (check_stale_paint_test_id.is_some()
                         || check_wheel_scroll_test_id.is_some()
-                        || check_hover_layout_max.is_some())
+                        || check_hover_layout_max.is_some()
+                        || check_view_cache_reuse_min.is_some())
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -759,6 +763,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_view_cache_reuse_min,
                         warmup_frames,
                     )?;
                 }
@@ -1340,6 +1345,7 @@ fn apply_post_run_checks(
     check_stale_paint_eps: f32,
     check_wheel_scroll_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
+    check_view_cache_reuse_min: Option<u64>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -1356,6 +1362,9 @@ fn apply_post_run_checks(
             BundleStatsOptions { warmup_frames },
         )?;
         check_report_for_hover_layout_invalidations(&report, max_allowed)?;
+    }
+    if let Some(min) = check_view_cache_reuse_min {
+        check_bundle_for_view_cache_reuse_min(bundle_path, min, warmup_frames)?;
     }
     Ok(())
 }
@@ -3657,6 +3666,90 @@ fn check_bundle_for_wheel_scroll_json(
     Err(msg)
 }
 
+fn check_bundle_for_view_cache_reuse_min(
+    bundle_path: &Path,
+    min_reuse_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_view_cache_reuse_min_json(
+        &bundle,
+        bundle_path,
+        min_reuse_events,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_view_cache_reuse_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_reuse_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut reuse_events: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if !view_cache_active {
+                continue;
+            }
+
+            let roots = s
+                .get("debug")
+                .and_then(|v| v.get("cache_roots"))
+                .and_then(|v| v.as_array());
+            let Some(roots) = roots else {
+                continue;
+            };
+
+            for r in roots {
+                if r.get("reused").and_then(|v| v.as_bool()) == Some(true) {
+                    reuse_events = reuse_events.saturating_add(1);
+                    if reuse_events >= min_reuse_events {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_reuse_events} view-cache reuse events, got {reuse_events} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+in bundle: {}",
+        bundle_path.display()
+    ))
+}
+
 fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
     top: usize,
@@ -5067,6 +5160,7 @@ fn unescape_json_pointer_token(raw: &str) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::path::Path;
 
     #[test]
     fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
