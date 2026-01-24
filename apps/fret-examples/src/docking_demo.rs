@@ -7,8 +7,9 @@ use fret_core::{
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
-    handle_dock_window_created, render_and_bind_dock_panels, render_cached_panel_root,
+    DockViewportOverlayHooksService, create_dock_space_node_with_test_id,
+    handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+    render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
@@ -229,9 +230,9 @@ impl DockingDemoDriver {
     ) {
         Self::ensure_dock_graph(app, window);
 
-        let dock_space = state
-            .dock_space
-            .get_or_insert_with(|| fret_docking::create_dock_space_node(&mut state.ui, window));
+        let dock_space = state.dock_space.get_or_insert_with(|| {
+            create_dock_space_node_with_test_id(&mut state.ui, window, "dock-demo-dock-space")
+        });
 
         if state.root.is_none() {
             let left_anchor = state

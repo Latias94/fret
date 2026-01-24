@@ -107,5 +107,14 @@ pub fn create_dock_space_node<H: UiHost>(
     ui.create_node_retained(DockSpace::new(window))
 }
 
+pub fn create_dock_space_node_with_test_id<H: UiHost>(
+    ui: &mut fret_ui::UiTree<H>,
+    window: fret_core::AppWindowId,
+    test_id: &'static str,
+) -> NodeId {
+    use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+    ui.create_node_retained(DockSpace::new(window).with_semantics_test_id(test_id))
+}
+
 #[cfg(test)]
 mod tests;

@@ -36,6 +36,7 @@ const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
 
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
+    semantics_test_id: Option<&'static str>,
     last_bounds: Rect,
     prepaint_wants_animation_frames: bool,
     divider_drag: Option<DividerDragSession>,
@@ -98,6 +99,7 @@ impl DockSpace {
     pub fn new(window: fret_core::AppWindowId) -> Self {
         Self {
             window,
+            semantics_test_id: None,
             last_bounds: Rect::default(),
             prepaint_wants_animation_frames: false,
             divider_drag: None,
@@ -136,6 +138,11 @@ impl DockSpace {
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
         }
+    }
+
+    pub fn with_semantics_test_id(mut self, id: &'static str) -> Self {
+        self.semantics_test_id = Some(id);
+        self
     }
 
     pub fn with_panel_content(mut self, panel: PanelKey, root: NodeId) -> Self {
@@ -477,6 +484,9 @@ impl DockSpace {
 impl<H: UiHost> Widget<H> for DockSpace {
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Panel);
+        if let Some(id) = self.semantics_test_id {
+            cx.set_test_id(id);
+        }
     }
 
     fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
@@ -503,15 +513,21 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
         // If the node is a view-cache root and paint caching is active, a "no-op" frame can
         // replay the previous paint ops and skip `Widget::paint()`. This makes it easy to miss
-        // transitions into/out of frame-driven UI (dragging, capture, resize).
+        // frame-driven UI (dragging, capture, resize).
         //
-        // Kick the paint cache once on transitions so `paint()` runs and can establish the
-        // per-frame animation-frame loop via `PaintCx::request_animation_frame()`.
-        if wants_animation_frames != self.prepaint_wants_animation_frames {
-            self.prepaint_wants_animation_frames = wants_animation_frames;
+        // Keep paint invalidated while the chrome is active so cached replay cannot suppress
+        // per-frame indicator updates. On transitions, request a redraw to ensure we get at least
+        // one paint pass to establish/tear down the frame loop.
+        if wants_animation_frames {
+            cx.invalidate_self(Invalidation::Paint);
+            if !self.prepaint_wants_animation_frames {
+                cx.request_redraw();
+            }
+        } else if self.prepaint_wants_animation_frames {
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
         }
+        self.prepaint_wants_animation_frames = wants_animation_frames;
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
@@ -2227,9 +2243,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             || self.floating_drag.is_some()
             || self.viewport_capture.is_some();
         if wants_animation_frames {
-            cx.request_animation_frame();
+            cx.request_animation_frame_paint_only();
         }
-
         if cx.app.global::<DockManager>().is_none() {
             self.paint_empty_state(cx);
             return;
