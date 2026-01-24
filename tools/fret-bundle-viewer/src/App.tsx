@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react'
 import { useBundleStore } from '@/store/use-bundle-store'
 import { HeaderBar } from '@/components/header-bar'
 import { EmptyState } from '@/components/empty-state'
+import { useTranslation } from '@/hooks/use-i18n'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -32,6 +33,7 @@ function PanelFallback({ label }: { label: string }) {
 export default function App() {
   const bundle = useBundleStore((s) => s.bundle)
   const parseError = useBundleStore((s) => s.parseError)
+  const { t } = useTranslation()
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -46,7 +48,7 @@ export default function App() {
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
               <div className="h-full border-r border-border bg-card">
-                <Suspense fallback={<PanelFallback label="Loading tree..." />}>
+                <Suspense fallback={<PanelFallback label={t('common.loadingTree')} />}>
                   <LazySemanticsTreePanel />
                 </Suspense>
               </div>
@@ -56,7 +58,7 @@ export default function App() {
 
             <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
               <div className="h-full border-r border-border bg-card">
-                <Suspense fallback={<PanelFallback label="Loading snapshots..." />}>
+                <Suspense fallback={<PanelFallback label={t('common.loadingSnapshots')} />}>
                   <LazySnapshotsPanel />
                 </Suspense>
               </div>
@@ -66,7 +68,7 @@ export default function App() {
 
             <ResizablePanel defaultSize={35} minSize={25}>
               <div className="h-full bg-card">
-                <Suspense fallback={<PanelFallback label="Loading details..." />}>
+                <Suspense fallback={<PanelFallback label={t('common.loadingDetails')} />}>
                   <LazyDetailsPanel />
                 </Suspense>
               </div>
@@ -76,7 +78,7 @@ export default function App() {
       )}
 
       <footer className="flex items-center justify-center border-t border-border bg-muted/30 px-4 py-2">
-        <p className="text-xs text-muted-foreground">Offline — no data leaves your machine.</p>
+        <p className="text-xs text-muted-foreground">{t('app.offline')}</p>
       </footer>
     </div>
   )

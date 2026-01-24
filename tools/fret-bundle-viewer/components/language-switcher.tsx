@@ -17,14 +17,14 @@ const languages: { code: Locale; label: string; flag: string }[] = [
 ]
 
 export function LanguageSwitcher() {
-  const { locale, setLocale } = useTranslation()
+  const { t, locale, setLocale } = useTranslation()
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Languages className="h-4 w-4" />
-          <span className="sr-only">Switch language</span>
+          <span className="sr-only">{t('lang.switchLanguage')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

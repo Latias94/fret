@@ -11,9 +11,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useTranslation } from "@/hooks/use-i18n"
 
 export function ThemeToggle() {
   const { setTheme, theme } = useTheme()
+  const { t } = useTranslation()
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -24,7 +26,7 @@ export function ThemeToggle() {
     return (
       <Button variant="ghost" size="icon" className="h-7 w-7">
         <Sun className="h-3.5 w-3.5" />
-        <span className="sr-only">Toggle theme</span>
+        <span className="sr-only">{t('theme.toggle')}</span>
       </Button>
     )
   }
@@ -40,21 +42,21 @@ export function ThemeToggle() {
           ) : (
             <Monitor className="h-3.5 w-3.5" />
           )}
-          <span className="sr-only">Toggle theme</span>
+          <span className="sr-only">{t('theme.toggle')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setTheme("light")}>
           <Sun className="mr-2 h-4 w-4" />
-          Light
+          {t('theme.light')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("dark")}>
           <Moon className="mr-2 h-4 w-4" />
-          Dark
+          {t('theme.dark')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("system")}>
           <Monitor className="mr-2 h-4 w-4" />
-          System
+          {t('theme.system')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -15,10 +15,12 @@ import {
 import { FileJson, FolderOpen, ChevronDown, AlertCircle, Clock, X, Trash2 } from 'lucide-react'
 import { useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from '@/hooks/use-i18n'
+import { isLocalizedErrorLike } from '@/lib/localized-error'
 
 export function EmptyState() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const loadBundle = useBundleStore((s) => s.loadBundle)
+  const setParseError = useBundleStore((s) => s.setParseError)
   const loadSampleBundle = useBundleStore((s) => s.loadSampleBundle)
   const parseError = useBundleStore((s) => s.parseError)
   const rawText = useBundleStore((s) => s.rawText)
@@ -45,19 +47,27 @@ export function EmptyState() {
       void (async () => {
         try {
           if (isZip) {
-            const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
-            const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
-            const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
-            loadBundle(bundleText, {
-              fileName: derivedName,
-              fileSize: bundleText.length,
-              recordRecent: true,
-              zip: {
-                zipFileName: file.name,
-                bundlePathInZip,
-                artifacts,
-              },
-            })
+            try {
+              const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
+              const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
+              const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
+              loadBundle(bundleText, {
+                fileName: derivedName,
+                fileSize: bundleText.length,
+                recordRecent: true,
+                zip: {
+                  zipFileName: file.name,
+                  bundlePathInZip,
+                  artifacts,
+                },
+              })
+            } catch (err) {
+              if (isLocalizedErrorLike(err)) {
+                setParseError({ key: err.key, params: err.params, detail: err.detail })
+              } else {
+                setParseError({ key: 'error.unknownParse', detail: err instanceof Error ? err.message : String(err) })
+              }
+            }
           } else {
             const text = await file.text()
             loadBundle(text, { fileName: file.name, fileSize: file.size, recordRecent: true })
@@ -67,7 +77,7 @@ export function EmptyState() {
         }
       })()
     },
-    [loadBundle]
+    [loadBundle, setParseError]
   )
 
   if (parseError) {
@@ -77,7 +87,18 @@ export function EmptyState() {
           <AlertCircle className="w-8 h-8 text-destructive" />
         </div>
         <h2 className="text-lg font-semibold text-foreground mb-2">{t('error.title')}</h2>
-        <p className="text-sm text-muted-foreground mb-4 max-w-md">{parseError}</p>
+        <p className="text-sm text-muted-foreground mb-4 max-w-md">
+          {t(parseError.key, parseError.params)}
+        </p>
+
+        {parseError.detail && (
+          <div className="w-full max-w-lg mb-4">
+            <p className="text-xs text-muted-foreground mb-2">{t('error.details')}</p>
+            <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-32 text-left font-mono">
+              {parseError.detail}
+            </pre>
+          </div>
+        )}
         
         {rawText && (
           <div className="w-full max-w-lg mb-4">

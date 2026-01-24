@@ -7,6 +7,7 @@ import type {
   SemanticsNodeModel,
   NormalizedEvent,
   PerfData,
+  UiMessage,
 } from './types'
 
 // Zod schemas for best-effort parsing
@@ -49,16 +50,16 @@ const SemanticsNodeSchema = z.object({
   actions: z.record(z.boolean()).optional(),
 })
 
-function normalizeNode(raw: unknown, warnings: string[]): SemanticsNodeModel | null {
+function normalizeNode(raw: unknown, warnings: UiMessage[]): SemanticsNodeModel | null {
   const parsed = SemanticsNodeSchema.safeParse(raw)
   if (!parsed.success) {
-    warnings.push(`Failed to parse semantics node: ${parsed.error.message}`)
+    warnings.push({ key: 'warn.semanticsNodeParseFailed' })
     return null
   }
   const d = parsed.data
   const id = d.id ?? d.node_id ?? d.nodeId
   if (!id) {
-    warnings.push('Semantics node missing id')
+    warnings.push({ key: 'warn.semanticsNodeMissingId' })
     return null
   }
   return {
@@ -75,7 +76,7 @@ function normalizeNode(raw: unknown, warnings: string[]): SemanticsNodeModel | n
   }
 }
 
-function normalizeSemantics(raw: unknown, warnings: string[]): SemanticsModel | undefined {
+function normalizeSemantics(raw: unknown, warnings: UiMessage[]): SemanticsModel | undefined {
   if (!raw || typeof raw !== 'object') return undefined
 
   const obj = raw as Record<string, unknown>
@@ -157,7 +158,7 @@ function normalizeSemantics(raw: unknown, warnings: string[]): SemanticsModel | 
   return { roots, nodesById }
 }
 
-function normalizeEvents(raw: unknown, warnings: string[]): NormalizedEvent[] {
+function normalizeEvents(raw: unknown, warnings: UiMessage[]): NormalizedEvent[] {
   if (!Array.isArray(raw)) return []
   const events: NormalizedEvent[] = []
   for (const e of raw) {
@@ -191,7 +192,7 @@ function normalizeEvents(raw: unknown, warnings: string[]): NormalizedEvent[] {
   return events
 }
 
-function normalizePerf(raw: unknown, warnings: string[]): PerfData | undefined {
+function normalizePerf(raw: unknown, warnings: UiMessage[]): PerfData | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const obj = raw as Record<string, unknown>
   return {
@@ -253,7 +254,7 @@ function normalizePerfFromDebugStats(raw: unknown): PerfData | undefined {
   }
 }
 
-function normalizeSnapshot(raw: unknown, warnings: string[]): SnapshotModel {
+function normalizeSnapshot(raw: unknown, warnings: UiMessage[]): SnapshotModel {
   if (!raw || typeof raw !== 'object') {
     return { raw }
   }
@@ -427,7 +428,7 @@ function normalizeSnapshot(raw: unknown, warnings: string[]): SnapshotModel {
   return snapshot
 }
 
-function normalizeWindow(raw: unknown, index: number, warnings: string[]): WindowModel {
+function normalizeWindow(raw: unknown, index: number, warnings: UiMessage[]): WindowModel {
   if (!raw || typeof raw !== 'object') {
     return { windowId: `window-${index}`, snapshots: [] }
   }
@@ -459,13 +460,16 @@ function normalizeWindow(raw: unknown, index: number, warnings: string[]): Windo
 }
 
 export function parseBundle(jsonText: string, fileName?: string): BundleModel {
-  const warnings: string[] = []
+  const warnings: UiMessage[] = []
   let parsed: unknown
 
   try {
     parsed = JSON.parse(jsonText)
   } catch (e) {
-    warnings.push(`JSON parse error: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    warnings.push({
+      key: 'error.jsonParse',
+      detail: e instanceof Error ? e.message : String(e),
+    })
     return {
       meta: { fileName, fileSize: jsonText.length },
       windows: [],
@@ -474,7 +478,7 @@ export function parseBundle(jsonText: string, fileName?: string): BundleModel {
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    warnings.push('Bundle root is not an object')
+    warnings.push({ key: 'error.bundleRootNotObject' })
     return {
       meta: { fileName, fileSize: jsonText.length },
       windows: [],
@@ -505,16 +509,16 @@ export function parseBundle(jsonText: string, fileName?: string): BundleModel {
       },
     ]
   } else {
-    warnings.push('Could not find windows or snapshots in bundle')
+    warnings.push({ key: 'warn.cannotFindWindowsOrSnapshots' })
   }
 
   // Check for empty data
   if (windows.length === 0) {
-    warnings.push('No windows found in bundle')
+    warnings.push({ key: 'warn.noWindows' })
   } else {
     const totalSnapshots = windows.reduce((sum, w) => sum + w.snapshots.length, 0)
     if (totalSnapshots === 0) {
-      warnings.push('No snapshots found in any window')
+      warnings.push({ key: 'warn.noSnapshots' })
     }
   }
 

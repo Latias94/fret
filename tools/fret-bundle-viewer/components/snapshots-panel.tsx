@@ -34,6 +34,7 @@ function SnapshotRow({
   onSelectA,
   onSelectB,
 }: SnapshotRowProps) {
+  const { t } = useTranslation()
   const handleClick = useCallback(() => {
     if (compareMode && isSelectedA) {
       onSelectB(index)
@@ -102,12 +103,12 @@ function SnapshotRow({
 
         {snapshot.tickId && (
           <Badge variant="outline" className="text-xs font-mono">
-            tick:{snapshot.tickId}
+            {t('snapshots.tick', { id: snapshot.tickId })}
           </Badge>
         )}
         {snapshot.frameId && (
           <Badge variant="outline" className="text-xs font-mono">
-            frame:{snapshot.frameId}
+            {t('snapshots.frame', { id: snapshot.frameId })}
           </Badge>
         )}
         <span className="text-xs text-muted-foreground ml-auto font-mono">
@@ -148,7 +149,7 @@ function SnapshotRow({
         )}
         {!hasSemantics && (
           <Badge variant="outline" className="text-[10px] shrink-0 h-5 px-1.5 text-muted-foreground">
-            no sem
+            {t('snapshots.noSemanticsShort')}
           </Badge>
         )}
       </div>

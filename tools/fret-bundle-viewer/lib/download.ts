@@ -1,7 +1,21 @@
-import type { BundleModel, SnapshotModel, SemanticsNodeModel, DiffResult } from './types'
+import type { BundleModel, SnapshotModel, SemanticsNodeModel, DiffResult, UiMessage } from './types'
 import { getDiffSummary, diffSnapshots } from './diff'
+import { translations } from './i18n'
 
 type JsonObject = Record<string, unknown>
+
+function formatUiMessageEnglish(msg: UiMessage): string {
+  let text = translations.en[msg.key] ?? msg.key
+  if (msg.params) {
+    for (const [k, v] of Object.entries(msg.params)) {
+      text = text.replaceAll(`{${k}}`, String(v))
+    }
+  }
+  if (msg.detail) {
+    text = `${text}: ${msg.detail}`
+  }
+  return text
+}
 
 function asObject(v: unknown): JsonObject | null {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null
@@ -33,7 +47,7 @@ export function generateMarkdownSummary(
     lines.push('## Parse Warnings')
     lines.push('')
     for (const warning of bundle.warnings) {
-      lines.push(`- ${warning}`)
+      lines.push(`- ${formatUiMessageEnglish(warning)}`)
     }
     lines.push('')
   }

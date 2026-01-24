@@ -4,6 +4,29 @@ export type Locale = 'en' | 'zh'
 
 export const translations = {
   en: {
+    // Common
+    'common.unknown': 'Unknown',
+    'common.loading': 'Loading...',
+    'common.loadingAria': 'Loading',
+    'common.loadingTree': 'Loading tree...',
+    'common.loadingSnapshots': 'Loading snapshots...',
+    'common.loadingDetails': 'Loading details...',
+    'common.close': 'Close',
+
+    // Errors
+    'error.unknownParse': 'Unknown parse error',
+    'error.jsonParse': 'JSON parse error',
+    'error.bundleRootNotObject': 'Bundle root is not an object',
+    'error.zipNoBundleJson': 'No bundle.json found in zip',
+    'error.zipMissingEntry': 'Missing zip entry: {path}',
+
+    // Warnings
+    'warn.semanticsNodeParseFailed': 'Failed to parse semantics node',
+    'warn.semanticsNodeMissingId': 'Semantics node missing id',
+    'warn.cannotFindWindowsOrSnapshots': 'Could not find windows or snapshots in bundle',
+    'warn.noWindows': 'No windows found in bundle',
+    'warn.noSnapshots': 'No snapshots found in any window',
+
     // App
     'app.title': 'Fret Bundle Viewer',
     'app.description': 'Offline diagnostics bundle inspector',
@@ -47,6 +70,7 @@ export const translations = {
 
     // Error State
     'error.title': 'Parse Error',
+    'error.details': 'Details:',
     'error.rawPreview': 'Raw text preview (truncated):',
     'error.tryAnother': 'Try another file',
 
@@ -61,6 +85,8 @@ export const translations = {
     'tree.previousMatch': 'Previous match (Shift+Enter)',
     'tree.nextMatch': 'Next match (Enter)',
     'tree.closeSearch': 'Close search (Esc)',
+    'tree.depth': 'Depth',
+    'tree.levelPrefix': 'L',
 
     // Context Menu
     'context.copySelector': 'Copy selector JSON',
@@ -77,6 +103,9 @@ export const translations = {
     'snapshots.noMatch': 'No snapshots match the current filter',
     'snapshots.frameTiming': 'Frame timing (first {count})',
     'snapshots.of': 'of',
+    'snapshots.tick': 'tick:{id}',
+    'snapshots.frame': 'frame:{id}',
+    'snapshots.noSemanticsShort': 'no sem',
 
     // Details Panel Tabs
     'details.summary': 'Summary',
@@ -102,6 +131,8 @@ export const translations = {
     'summary.overlayRouting': 'Overlay Routing',
     'summary.barrierRoot': 'Barrier Root',
     'summary.topLayerRoots': 'Top Layer Roots:',
+    'summary.blocksUnderlayShort': 'block',
+    'summary.noHitShort': 'no-hit',
     'summary.layerRoots': 'Layer Roots',
     'summary.hitTest': 'Hit Test',
     'summary.pointer': 'Pointer',
@@ -165,8 +196,11 @@ export const translations = {
     'perf.timing': 'Timing',
     'perf.total': 'Total',
     'perf.layout': 'Layout',
+    'perf.layoutShort': 'L',
     'perf.prepaint': 'Prepaint',
+    'perf.prepaintShort': 'P',
     'perf.paint': 'Paint',
+    'perf.paintShort': 'R',
     'perf.timingBreakdown': 'Timing Breakdown',
     'perf.cache': 'Cache',
     'perf.hits': 'Hits',
@@ -204,6 +238,7 @@ export const translations = {
     'diff.enableCompare': 'Enable Compare Mode',
     'diff.comparing': 'Comparing',
     'diff.noChanges': 'No changes detected',
+    'diff.unableCompute': 'Unable to compute diff',
     'diff.added': 'Added',
     'diff.removed': 'Removed',
     'diff.changed': 'Changed',
@@ -246,13 +281,44 @@ export const translations = {
     'theme.system': 'System',
     'theme.toggle': 'Toggle theme',
 
+    // Language
+    'lang.switchLanguage': 'Switch language',
+
     // Time
     'time.justNow': 'just now',
     'time.minutesAgo': '{count}m ago',
     'time.hoursAgo': '{count}h ago',
     'time.daysAgo': '{count}d ago',
+
+    // Phases
+    'phase.layout': 'Layout',
+    'phase.prepaint': 'Prepaint',
+    'phase.paint': 'Paint',
   },
   zh: {
+    // Common
+    'common.unknown': '未知',
+    'common.loading': '加载中...',
+    'common.loadingAria': '加载中',
+    'common.loadingTree': '正在加载语义树...',
+    'common.loadingSnapshots': '正在加载快照列表...',
+    'common.loadingDetails': '正在加载详情...',
+    'common.close': '关闭',
+
+    // Errors
+    'error.unknownParse': '未知解析错误',
+    'error.jsonParse': 'JSON 解析错误',
+    'error.bundleRootNotObject': 'Bundle 根不是对象',
+    'error.zipNoBundleJson': 'Zip 中未找到 bundle.json',
+    'error.zipMissingEntry': 'Zip 缺少条目：{path}',
+
+    // Warnings
+    'warn.semanticsNodeParseFailed': '解析语义节点失败',
+    'warn.semanticsNodeMissingId': '语义节点缺少 id',
+    'warn.cannotFindWindowsOrSnapshots': 'Bundle 中未找到 windows 或 snapshots',
+    'warn.noWindows': 'Bundle 中没有窗口',
+    'warn.noSnapshots': '所有窗口都没有快照',
+
     // App
     'app.title': 'Fret Bundle 查看器',
     'app.description': '离线诊断包检查工具',
@@ -296,6 +362,7 @@ export const translations = {
 
     // Error State
     'error.title': '解析错误',
+    'error.details': '详情：',
     'error.rawPreview': '原始文本预览（已截断）：',
     'error.tryAnother': '尝试其他文件',
 
@@ -310,6 +377,8 @@ export const translations = {
     'tree.previousMatch': '上一个匹配 (Shift+Enter)',
     'tree.nextMatch': '下一个匹配 (Enter)',
     'tree.closeSearch': '关闭搜索 (Esc)',
+    'tree.depth': '深度',
+    'tree.levelPrefix': '层',
 
     // Context Menu
     'context.copySelector': '复制选择器 JSON',
@@ -326,6 +395,9 @@ export const translations = {
     'snapshots.noMatch': '没有匹配当前筛选条件的快照',
     'snapshots.frameTiming': '帧耗时 (前 {count} 个)',
     'snapshots.of': '/',
+    'snapshots.tick': 'tick:{id}',
+    'snapshots.frame': '帧:{id}',
+    'snapshots.noSemanticsShort': '无语义',
 
     // Details Panel Tabs
     'details.summary': '摘要',
@@ -351,6 +423,8 @@ export const translations = {
     'summary.overlayRouting': '覆盖层路由',
     'summary.barrierRoot': '屏障根',
     'summary.topLayerRoots': '顶层根节点：',
+    'summary.blocksUnderlayShort': '阻挡',
+    'summary.noHitShort': '无命中',
     'summary.layerRoots': '层根节点',
     'summary.hitTest': '命中测试',
     'summary.pointer': '指针',
@@ -414,8 +488,11 @@ export const translations = {
     'perf.timing': '耗时',
     'perf.total': '总计',
     'perf.layout': '布局',
+    'perf.layoutShort': '布',
     'perf.prepaint': '预绘制',
+    'perf.prepaintShort': '预',
     'perf.paint': '绘制',
+    'perf.paintShort': '绘',
     'perf.timingBreakdown': '耗时分解',
     'perf.cache': '缓存',
     'perf.hits': '命中',
@@ -453,6 +530,7 @@ export const translations = {
     'diff.enableCompare': '启用对比模式',
     'diff.comparing': '正在对比',
     'diff.noChanges': '未检测到变化',
+    'diff.unableCompute': '无法计算快照差异',
     'diff.added': '新增',
     'diff.removed': '删除',
     'diff.changed': '修改',
@@ -495,11 +573,19 @@ export const translations = {
     'theme.system': '跟随系统',
     'theme.toggle': '切换主题',
 
+    // Language
+    'lang.switchLanguage': '切换语言',
+
     // Time
     'time.justNow': '刚刚',
     'time.minutesAgo': '{count} 分钟前',
     'time.hoursAgo': '{count} 小时前',
     'time.daysAgo': '{count} 天前',
+
+    // Phases
+    'phase.layout': '布局',
+    'phase.prepaint': '预绘制',
+    'phase.paint': '绘制',
   },
 } as const
 

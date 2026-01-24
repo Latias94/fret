@@ -1,5 +1,13 @@
 // Core types for Fret Bundle Viewer
 
+import type { TranslationKey } from './i18n'
+
+export interface UiMessage {
+  key: TranslationKey
+  params?: Record<string, string | number>
+  detail?: string
+}
+
 export interface SemanticsNodeModel {
   id: string
   role?: string
@@ -106,7 +114,7 @@ export interface ZipImportMeta {
 export interface BundleModel {
   meta: BundleMeta
   windows: WindowModel[]
-  warnings: string[]
+  warnings: UiMessage[]
 }
 
 export interface Selector {

@@ -27,6 +27,7 @@ import { LanguageSwitcher } from '@/components/language-switcher'
 import { useTranslation } from '@/hooks/use-i18n'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { isLocalizedErrorLike } from '@/lib/localized-error'
 import {
   FolderOpen,
   ClipboardPaste,
@@ -52,6 +53,7 @@ export function HeaderBar() {
     bundle,
     loadBundle,
     loadSampleBundle,
+    setParseError,
     compareMode,
     setCompareMode,
     redactText,
@@ -75,19 +77,27 @@ export function HeaderBar() {
       void (async () => {
         try {
           if (isZip) {
-            const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
-            const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
-            const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
-            loadBundle(bundleText, {
-              fileName: derivedName,
-              fileSize: bundleText.length,
-              recordRecent: true,
-              zip: {
-                zipFileName: file.name,
-                bundlePathInZip,
-                artifacts,
-              },
-            })
+            try {
+              const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
+              const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
+              const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
+              loadBundle(bundleText, {
+                fileName: derivedName,
+                fileSize: bundleText.length,
+                recordRecent: true,
+                zip: {
+                  zipFileName: file.name,
+                  bundlePathInZip,
+                  artifacts,
+                },
+              })
+            } catch (err) {
+              if (isLocalizedErrorLike(err)) {
+                setParseError({ key: err.key, params: err.params, detail: err.detail })
+              } else {
+                setParseError({ key: 'error.unknownParse', detail: err instanceof Error ? err.message : String(err) })
+              }
+            }
           } else {
             const text = await file.text()
             loadBundle(text, { fileName: file.name, fileSize: file.size, recordRecent: true })
@@ -98,7 +108,7 @@ export function HeaderBar() {
         }
       })()
     },
-    [loadBundle]
+    [loadBundle, setParseError]
   )
 
   const handleExportSummary = useCallback(() => {
@@ -320,12 +330,12 @@ export function HeaderBar() {
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <FileJson className="h-3.5 w-3.5" />
                   <span className="max-w-24 truncate font-medium lg:max-w-40">
-                    {bundle.meta.fileName ?? 'Unknown'}
+                    {bundle.meta.fileName ?? t('common.unknown')}
                   </span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{bundle.meta.fileName} ({formatFileSize(bundle.meta.fileSize ?? 0)})</p>
+                <p>{bundle.meta.fileName ?? t('common.unknown')} ({formatFileSize(bundle.meta.fileSize ?? 0)})</p>
               </TooltipContent>
             </Tooltip>
 
@@ -340,10 +350,10 @@ export function HeaderBar() {
                 <TooltipContent className="max-w-sm">
                   <ul className="space-y-1 text-xs">
                     {bundle.warnings.slice(0, 5).map((w, i) => (
-                      <li key={i}>{w}</li>
+                      <li key={i}>{t(w.key, w.params)}</li>
                     ))}
                     {bundle.warnings.length > 5 && (
-                      <li>...and {bundle.warnings.length - 5} more</li>
+                      <li>{t('header.andMore', { count: bundle.warnings.length - 5 })}</li>
                     )}
                   </ul>
                 </TooltipContent>

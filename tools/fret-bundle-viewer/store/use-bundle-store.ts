@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import type { BundleModel, SnapshotModel, SemanticsNodeModel, ZipImportMeta } from '@/lib/types'
+import type { BundleModel, SnapshotModel, SemanticsNodeModel, UiMessage, ZipImportMeta } from '@/lib/types'
 import { parseBundle } from '@/lib/parser'
 import { simpleSampleBundle, multiWindowSampleBundle } from '@/lib/sample-bundles'
+import { isLocalizedErrorLike } from '@/lib/localized-error'
 
 // Callback for when a file is loaded (to track recent files)
 type OnFileLoadedCallback = (fileName: string, fileSize: number, content: string) => void
@@ -15,7 +16,7 @@ interface BundleState {
   // Bundle data
   bundle: BundleModel | null
   rawText: string | null
-  parseError: string | null
+  parseError: UiMessage | null
 
   // Selection state
   selectedWindowIndex: number
@@ -41,6 +42,7 @@ interface BundleState {
     text: string,
     fileNameOrOptions?: string | { fileName?: string; fileSize?: number; recordRecent?: boolean; zip?: ZipImportMeta }
   ) => void
+  setParseError: (error: UiMessage | null, rawText?: string | null) => void
   loadSampleBundle: (type: 'simple' | 'multi-window') => void
   clearBundle: () => void
 
@@ -122,7 +124,7 @@ export const useBundleStore = create<BundleState>((set, get) => ({
       const fatalWarning =
         bundle.windows.length === 0
           ? bundle.warnings.find(
-              (w) => w.startsWith('JSON parse error:') || w === 'Bundle root is not an object'
+              (w) => w.key === 'error.jsonParse' || w.key === 'error.bundleRootNotObject'
             )
           : undefined
       if (fatalWarning) {
@@ -169,12 +171,40 @@ export const useBundleStore = create<BundleState>((set, get) => ({
         onFileLoadedCallback(fileName, typeof options.fileSize === 'number' ? options.fileSize : text.length, text)
       }
     } catch (error) {
+      if (isLocalizedErrorLike(error)) {
+        set({
+          bundle: null,
+          rawText: text,
+          parseError: {
+            key: error.key,
+            params: error.params,
+            detail: error.detail,
+          },
+        })
+        return
+      }
       set({
         bundle: null,
         rawText: text,
-        parseError: error instanceof Error ? error.message : 'Unknown parse error',
+        parseError: {
+          key: 'error.unknownParse',
+          detail: error instanceof Error ? error.message : String(error),
+        },
       })
     }
+  },
+
+  setParseError: (error, rawText = null) => {
+    set({
+      bundle: null,
+      rawText,
+      parseError: error,
+      selectedWindowIndex: 0,
+      selectedSnapshotAIndex: 0,
+      selectedSnapshotBIndex: null,
+      selectedNodeId: null,
+      expandedNodes: new Set<string>(),
+    })
   },
 
   loadSampleBundle: (type) => {

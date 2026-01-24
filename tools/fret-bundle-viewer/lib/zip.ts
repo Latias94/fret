@@ -2,6 +2,7 @@
 
 import { strFromU8, unzipSync } from 'fflate'
 import type { ZipArtifact } from './types'
+import { LocalizedError } from './localized-error'
 
 function pickBundleJsonPath(entries: Record<string, Uint8Array>): string | null {
   const names = Object.keys(entries).filter((n) => !n.endsWith('/'))
@@ -75,12 +76,12 @@ export async function extractBundleAndArtifactsFromZipFile(file: File): Promise<
   const entries = unzipSync(new Uint8Array(buf))
   const bundlePathInZip = pickBundleJsonPath(entries)
   if (!bundlePathInZip) {
-    throw new Error('No bundle.json found in zip')
+    throw new LocalizedError('error.zipNoBundleJson')
   }
 
   const payload = entries[bundlePathInZip]
   if (!payload) {
-    throw new Error(`Missing zip entry: ${bundlePathInZip}`)
+    throw new LocalizedError('error.zipMissingEntry', { params: { path: bundlePathInZip } })
   }
 
   const artifacts = pickArtifacts(entries, bundlePathInZip)

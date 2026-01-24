@@ -51,7 +51,9 @@ function toOptNumber(v: unknown): number | undefined {
   return undefined
 }
 
-function InfoRow({ label, value, mono = false, warning = false, missingText = 'Missing' }: { label: string; value?: string | number | null; mono?: boolean; warning?: boolean; missingText?: string }) {
+function InfoRow({ label, value, mono = false, warning = false, missingText }: { label: string; value?: string | number | null; mono?: boolean; warning?: boolean; missingText?: string }) {
+  const { t } = useTranslation()
+  const resolvedMissingText = missingText ?? t('summary.missing')
   if (value === undefined || value === null || value === '') {
     if (warning) {
       return (
@@ -59,7 +61,7 @@ function InfoRow({ label, value, mono = false, warning = false, missingText = 'M
           <span className="text-xs text-muted-foreground w-28 shrink-0">{label}</span>
           <span className="text-xs text-amber-600 flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" />
-            {missingText}
+            {resolvedMissingText}
           </span>
         </div>
       )
@@ -130,6 +132,19 @@ function SummaryTab() {
       else if (totalUs >= 33_000) out.push({ level: 'warn', text: t('triage.slowFrameTime', { us: totalUs }) })
       else out.push({ level: 'info', text: t('triage.frameTime', { us: totalUs }) })
 
+      const phaseLabel = (phase: string): string => {
+        switch (phase) {
+          case 'layout':
+            return t('phase.layout')
+          case 'prepaint':
+            return t('phase.prepaint')
+          case 'paint':
+            return t('phase.paint')
+          default:
+            return phase
+        }
+      }
+
       const phases: Array<{ phase: string; us?: number }> = [
         { phase: 'layout', us: layoutUs },
         { phase: 'prepaint', us: prepaintUs },
@@ -139,7 +154,7 @@ function SummaryTab() {
         .filter((p) => typeof p.us === 'number')
         .sort((a, b) => (b.us ?? 0) - (a.us ?? 0))[0]
       if (best && typeof best.us === 'number') {
-        out.push({ level: 'info', text: t('triage.dominantPhase', { phase: best.phase, us: best.us }) })
+        out.push({ level: 'info', text: t('triage.dominantPhase', { phase: phaseLabel(best.phase), us: best.us }) })
       }
     }
 
@@ -335,8 +350,8 @@ function SummaryTab() {
                     <Badge key={i} variant="outline" className="text-[10px] mr-1">
                       {lr.nodeId}
                       {lr.zIndex !== undefined ? ` (z:${lr.zIndex})` : ''}
-                      {lr.blocksUnderlay ? ' block' : ''}
-                      {lr.hitTestable === false ? ' no-hit' : ''}
+                      {lr.blocksUnderlay ? ` ${t('summary.blocksUnderlayShort')}` : ''}
+                      {lr.hitTestable === false ? ` ${t('summary.noHitShort')}` : ''}
                     </Badge>
                   ))}
                 </div>
@@ -363,7 +378,7 @@ function SummaryTab() {
                   {snapshot.hitTest.chain.map((entry, i) => (
                     <div key={i} className="flex items-center gap-1">
                       <Badge variant="outline" className="text-[10px]">
-                        {entry.role ?? 'Unknown'}
+                        {entry.role ?? t('common.unknown')}
                       </Badge>
                       {entry.testId && (
                         <span className="text-[10px] text-muted-foreground">{entry.testId}</span>
@@ -920,9 +935,9 @@ function PerformanceTab() {
                   style={{
                     width: `${((perf.layoutUs / (perf.totalUs ?? perf.layoutUs)) * 100).toFixed(1)}%`,
                   }}
-                  title={`Layout: ${perf.layoutUs}μs`}
+                  title={`${t('perf.layout')}: ${perf.layoutUs}μs`}
                 >
-                  <span className="text-[10px] text-white font-medium">L</span>
+                  <span className="text-[10px] text-white font-medium">{t('perf.layoutShort')}</span>
                 </div>
               )}
               {perf.prepaintUs !== undefined && perf.prepaintUs > 0 && (
@@ -931,9 +946,9 @@ function PerformanceTab() {
                   style={{
                     width: `${((perf.prepaintUs / (perf.totalUs ?? perf.prepaintUs)) * 100).toFixed(1)}%`,
                   }}
-                  title={`Prepaint: ${perf.prepaintUs}μs`}
+                  title={`${t('perf.prepaint')}: ${perf.prepaintUs}μs`}
                 >
-                  <span className="text-[10px] text-white font-medium">P</span>
+                  <span className="text-[10px] text-white font-medium">{t('perf.prepaintShort')}</span>
                 </div>
               )}
               {perf.paintUs !== undefined && perf.paintUs > 0 && (
@@ -942,9 +957,9 @@ function PerformanceTab() {
                   style={{
                     width: `${((perf.paintUs / (perf.totalUs ?? perf.paintUs)) * 100).toFixed(1)}%`,
                   }}
-                  title={`Paint: ${perf.paintUs}μs`}
+                  title={`${t('perf.paint')}: ${perf.paintUs}μs`}
                 >
-                  <span className="text-[10px] text-white font-medium">R</span>
+                  <span className="text-[10px] text-white font-medium">{t('perf.paintShort')}</span>
                 </div>
               )}
             </div>
@@ -1228,7 +1243,7 @@ function RawTab() {
           fallback={
             <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
               <Spinner />
-              <span>Loading...</span>
+              <span>{t('common.loading')}</span>
             </div>
           }
         >
@@ -1303,7 +1318,7 @@ export function DetailsPanel() {
               fallback={
                 <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Spinner />
-                  <span>Loading...</span>
+                  <span>{t('common.loading')}</span>
                 </div>
               }
             >
