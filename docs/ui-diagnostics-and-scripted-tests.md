@@ -33,7 +33,7 @@ Related ADRs:
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
 
    - `FRET_DIAG=1`
-   - (Optional) `FRET_DIAG_SCREENSHOTS=1` to request a GPU readback screenshot alongside each bundle dump (written under `target/fret-diag/screenshots/<bundle_timestamp>/`).
+   - (Optional) `FRET_DIAG_SCREENSHOTS=1` to request a GPU readback screenshot alongside each bundle dump (written under `target/fret-diag/screenshots/<bundle_timestamp>/` with a `manifest.json`).
 
 2. Reproduce the issue.
 
@@ -94,7 +94,8 @@ Workflow tip:
     { "type": "type_text", "text": "hello" },
     { "type": "press_key", "key": "enter" },
     { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "role_and_name", "role": "text_field", "name": "Search" } } },
-    { "type": "capture_bundle", "label": "after-typing" }
+    { "type": "capture_bundle", "label": "after-typing" },
+    { "type": "capture_screenshot", "label": "after-typing" }
   ]
 }
 ```
@@ -275,6 +276,16 @@ Script harness:
 - `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
 
+Screenshot capture:
+
+- `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
+- `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
+- `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
+- `FRET_DIAG_SCREENSHOT_RESULT_PATH=...`: screenshot completion log JSON path (default `<dir>/screenshots.result.json`).
+- `FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH=...`: screenshot completion trigger file (default `<dir>/screenshots.result.touch`).
+
+The screenshot completion log is append-only (bounded) and includes a `request_id` that scripted steps can wait on.
+
 Picking:
 
 - `FRET_DIAG_PICK_TRIGGER_PATH=...`: pick trigger file (default `<dir>/pick.touch`).
@@ -309,6 +320,12 @@ Supported selectors (v1 MVP):
 - `wait_until`
 - `assert`
 - `capture_bundle`
+- `capture_screenshot` (optional `label`, optional `timeout_frames`)
+
+Notes:
+
+- `capture_bundle` always writes a new `bundle.json` directory. When `FRET_DIAG_SCREENSHOTS=1`, the step waits until the corresponding screenshot has been written (so downstream automation can rely on it deterministically).
+- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`). It also waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness will create one first.
 
 Example: right click a context menu trigger
 

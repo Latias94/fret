@@ -1497,6 +1497,7 @@ fn zip_add_root_artifacts(
         "script.json",
         "script.result.json",
         "pick.result.json",
+        "screenshots.result.json",
         "triage.json",
         "picked.script.json",
     ];

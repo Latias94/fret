@@ -6,6 +6,7 @@ use std::time::SystemTime;
 struct PendingCapture {
     out_dir: PathBuf,
     bundle_dir_name: String,
+    request_id: Option<String>,
     tick_id: u64,
     frame_id: u64,
     scale_factor: f32,
@@ -15,6 +16,8 @@ struct PendingCapture {
 pub(crate) struct InFlightCapture {
     out_path: PathBuf,
     manifest_path: PathBuf,
+    bundle_dir_name: String,
+    request_id: Option<String>,
     window_ffi: u64,
     tick_id: u64,
     frame_id: u64,
@@ -31,6 +34,8 @@ pub(crate) struct InFlightCapture {
 pub(crate) struct DiagScreenshotCapture {
     request_path: PathBuf,
     trigger_path: PathBuf,
+    result_path: PathBuf,
+    result_trigger_path: PathBuf,
     last_trigger_mtime: Option<SystemTime>,
     pending_by_window_ffi: HashMap<u64, PendingCapture>,
 }
@@ -57,9 +62,21 @@ impl DiagScreenshotCapture {
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("screenshots.touch"));
 
+        let result_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("screenshots.result.json"));
+
+        let result_trigger_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
+
         Some(Self {
             request_path,
             trigger_path,
+            result_path,
+            result_trigger_path,
             last_trigger_mtime: None,
             pending_by_window_ffi: HashMap::new(),
         })
@@ -95,6 +112,7 @@ impl DiagScreenshotCapture {
                 PendingCapture {
                     out_dir: req.out_dir.clone(),
                     bundle_dir_name: req.bundle_dir_name.clone(),
+                    request_id: req.request_id.clone(),
                     tick_id: item.tick_id,
                     frame_id: item.frame_id,
                     scale_factor: item.scale_factor,
@@ -175,6 +193,8 @@ impl DiagScreenshotCapture {
             InFlightCapture {
                 out_path,
                 manifest_path,
+                bundle_dir_name: pending.bundle_dir_name,
+                request_id: pending.request_id,
                 window_ffi,
                 tick_id: pending.tick_id,
                 frame_id: pending.frame_id,
@@ -255,6 +275,27 @@ impl DiagScreenshotCapture {
             },
         )?;
 
+        update_result(
+            &self.result_path,
+            &self.result_trigger_path,
+            ResultEntry {
+                request_id: inflight.request_id,
+                bundle_dir_name: inflight.bundle_dir_name,
+                window_ffi: inflight.window_ffi,
+                tick_id: inflight.tick_id,
+                frame_id: inflight.frame_id,
+                scale_factor: inflight.scale_factor,
+                file: inflight
+                    .out_path
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("screenshot.png")
+                    .to_string(),
+                width_px: inflight.width_px,
+                height_px: inflight.height_px,
+            },
+        )?;
+
         Ok(())
     }
 }
@@ -263,6 +304,7 @@ impl DiagScreenshotCapture {
 struct ParsedRequest {
     out_dir: PathBuf,
     bundle_dir_name: String,
+    request_id: Option<String>,
     windows: Vec<ParsedWindowRequest>,
 }
 
@@ -293,6 +335,10 @@ fn parse_request_json(bytes: &[u8]) -> Result<ParsedRequest, String> {
         .get("bundle_dir_name")
         .and_then(|v| v.as_str())
         .ok_or_else(|| "missing bundle_dir_name".to_string())?;
+    let request_id = v
+        .get("request_id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
     let windows = v
         .get("windows")
         .and_then(|v| v.as_array())
@@ -328,6 +374,7 @@ fn parse_request_json(bytes: &[u8]) -> Result<ParsedRequest, String> {
     Ok(ParsedRequest {
         out_dir: PathBuf::from(out_dir),
         bundle_dir_name: bundle_dir_name.to_string(),
+        request_id,
         windows: parsed_windows,
     })
 }
@@ -406,6 +453,98 @@ fn update_manifest(path: &Path, entry: ManifestEntry) -> Result<(), String> {
         let _ = std::fs::create_dir_all(dir);
     }
     std::fs::write(path, bytes).map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Clone)]
+struct ResultEntry {
+    request_id: Option<String>,
+    bundle_dir_name: String,
+    window_ffi: u64,
+    tick_id: u64,
+    frame_id: u64,
+    scale_factor: f32,
+    file: String,
+    width_px: u32,
+    height_px: u32,
+}
+
+fn update_result(path: &Path, trigger_path: &Path, entry: ResultEntry) -> Result<(), String> {
+    let mut root: serde_json::Value = if path.is_file() {
+        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+        serde_json::from_slice(&bytes).unwrap_or_else(|_| serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    if root
+        .get("schema_version")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1)
+        != 1
+    {
+        root = serde_json::json!({});
+    }
+
+    if !root.is_object() {
+        root = serde_json::json!({});
+    }
+
+    if root.get("schema_version").is_none() {
+        root["schema_version"] = serde_json::json!(1);
+    }
+    let now_unix_ms = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or_default();
+    root["updated_unix_ms"] = serde_json::json!(now_unix_ms);
+
+    if !root.get("completed").is_some_and(|v| v.is_array()) {
+        root["completed"] = serde_json::json!([]);
+    }
+    let completed = root
+        .get_mut("completed")
+        .and_then(|v| v.as_array_mut())
+        .ok_or_else(|| "diag screenshot: invalid result completed".to_string())?;
+
+    if let Some(ref request_id) = entry.request_id {
+        completed.retain(|v| {
+            v.get("request_id").and_then(|x| x.as_str()) != Some(request_id.as_str())
+                || v.get("window").and_then(|x| x.as_u64()) != Some(entry.window_ffi)
+        });
+    }
+
+    completed.push(serde_json::json!({
+        "request_id": entry.request_id,
+        "bundle_dir_name": entry.bundle_dir_name,
+        "window": entry.window_ffi,
+        "tick_id": entry.tick_id,
+        "frame_id": entry.frame_id,
+        "scale_factor": entry.scale_factor,
+        "file": entry.file,
+        "width_px": entry.width_px,
+        "height_px": entry.height_px,
+        "completed_unix_ms": now_unix_ms,
+    }));
+
+    if completed.len() > 200 {
+        let drain = completed.len().saturating_sub(200);
+        completed.drain(0..drain);
+    }
+
+    let bytes = serde_json::to_vec_pretty(&root).map_err(|e| e.to_string())?;
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    std::fs::write(path, bytes).map_err(|e| e.to_string())?;
+    touch_stamp_file(trigger_path, now_unix_ms);
+    Ok(())
+}
+
+fn touch_stamp_file(path: &Path, stamp: u64) {
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::write(path, format!("{stamp}\n").as_bytes());
 }
 
 fn env_flag_default_false(name: &str) -> bool {

@@ -23,6 +23,8 @@ pub struct UiDiagnosticsConfig {
     pub capture_screenshots: bool,
     pub screenshot_request_path: PathBuf,
     pub screenshot_trigger_path: PathBuf,
+    pub screenshot_result_path: PathBuf,
+    pub screenshot_result_trigger_path: PathBuf,
     pub script_path: PathBuf,
     pub script_trigger_path: PathBuf,
     pub script_result_path: PathBuf,
@@ -77,6 +79,15 @@ impl Default for UiDiagnosticsConfig {
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
             .unwrap_or_else(|| out_dir.join("screenshots.touch"));
+        let screenshot_result_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("screenshots.result.json"));
+        let screenshot_result_trigger_path =
+            std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH")
+                .filter(|v| !v.is_empty())
+                .map(PathBuf::from)
+                .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
         let script_path = std::env::var_os("FRET_DIAG_SCRIPT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
@@ -133,6 +144,8 @@ impl Default for UiDiagnosticsConfig {
             capture_screenshots,
             screenshot_request_path,
             screenshot_trigger_path,
+            screenshot_result_path,
+            screenshot_result_trigger_path,
             script_path,
             script_trigger_path,
             script_result_path,
@@ -582,6 +595,7 @@ impl UiDiagnosticsService {
                     next_step: 0,
                     wait_frames_remaining: 0,
                     wait_until: None,
+                    wait_screenshot: None,
                     last_reported_step: Some(0),
                 },
             );
@@ -634,6 +648,49 @@ impl UiDiagnosticsService {
             };
         }
 
+        if let Some(mut wait) = active.wait_screenshot.take() {
+            if wait.step_index != active.next_step {
+                active.wait_screenshot = Some(wait);
+            } else if self.screenshot_request_completed(window, &wait.request_id) {
+                active.next_step = active.next_step.saturating_add(1);
+                self.active_scripts.insert(window, active);
+                return UiScriptFrameOutput {
+                    request_redraw: true,
+                    ..UiScriptFrameOutput::default()
+                };
+            } else if wait.remaining_frames == 0 {
+                let label = format!("script-step-{:04}-screenshot-timeout", active.next_step);
+                if self.cfg.script_auto_dump {
+                    self.dump_bundle(Some(&label));
+                }
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id: active.run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: Some(window.data().as_ffi()),
+                    stage: UiScriptStageV1::Failed,
+                    step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                    reason: Some("screenshot_timeout".to_string()),
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                });
+                return UiScriptFrameOutput {
+                    request_redraw: true,
+                    ..UiScriptFrameOutput::default()
+                };
+            } else {
+                wait.remaining_frames = wait.remaining_frames.saturating_sub(1);
+                active.wait_screenshot = Some(wait);
+                self.active_scripts.insert(window, active);
+                return UiScriptFrameOutput {
+                    request_redraw: true,
+                    ..UiScriptFrameOutput::default()
+                };
+            }
+        }
+
         let step_index = active.next_step;
         let step = active.script.steps.get(step_index).cloned();
         let Some(step) = step else {
@@ -653,11 +710,126 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
             }
             UiActionStepV1::CaptureBundle { label } => {
-                force_dump_label =
-                    Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
                 active.wait_until = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
+                let label = label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture"));
+
+                let dir = self.dump_bundle(Some(&label));
+                let Some(dir) = dir else {
+                    stop_script = true;
+                    failure_reason = Some("capture_bundle_failed".to_string());
+                    output.request_redraw = true;
+                    break;
+                };
+
+                if self.cfg.capture_screenshots {
+                    let Some(dir_name) = dir.file_name().and_then(|s| s.to_str()) else {
+                        stop_script = true;
+                        failure_reason = Some("capture_bundle_failed".to_string());
+                        output.request_redraw = true;
+                        break;
+                    };
+                    active.wait_screenshot = Some(WaitScreenshotState {
+                        step_index,
+                        request_id: format!("bundle:{dir_name}"),
+                        remaining_frames: default_script_screenshot_timeout_frames(),
+                    });
+                    output.request_redraw = true;
+                } else {
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV1::CaptureScreenshot {
+                label,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+
+                let (bundle_dir_name, request_id, needs_request) =
+                    match self.last_dump_dir.as_ref() {
+                        Some(dir) => {
+                            let Some(dir_name) = dir.file_name().and_then(|s| s.to_str()) else {
+                                stop_script = true;
+                                failure_reason = Some("no_last_bundle_dir".to_string());
+                                output.request_redraw = true;
+                                break;
+                            };
+                            let label = label.as_deref().map(sanitize_label).unwrap_or_else(|| {
+                                format!("script-step-{step_index:04}-screenshot")
+                            });
+                            (
+                                dir_name.to_string(),
+                                format!(
+                                    "script:{run_id}:{step_index:04}:{label}",
+                                    run_id = active.run_id
+                                ),
+                                true,
+                            )
+                        }
+                        None => {
+                            let label = label.unwrap_or_else(|| {
+                                format!("script-step-{step_index:04}-screenshot-bundle")
+                            });
+                            let dir = self.dump_bundle(Some(&label));
+                            let Some(dir) = dir else {
+                                stop_script = true;
+                                failure_reason = Some("capture_bundle_failed".to_string());
+                                output.request_redraw = true;
+                                break;
+                            };
+                            let Some(dir_name) = dir.file_name().and_then(|s| s.to_str()) else {
+                                stop_script = true;
+                                failure_reason = Some("capture_bundle_failed".to_string());
+                                output.request_redraw = true;
+                                break;
+                            };
+                            (dir_name.to_string(), format!("bundle:{dir_name}"), false)
+                        }
+                    };
+
+                if self.cfg.capture_screenshots {
+                    if needs_request {
+                        let Some(ring) = self.per_window.get(&window) else {
+                            stop_script = true;
+                            failure_reason = Some("no_window_state".to_string());
+                            output.request_redraw = true;
+                            break;
+                        };
+                        let Some(snapshot) = ring.snapshots.back() else {
+                            stop_script = true;
+                            failure_reason = Some("no_snapshot".to_string());
+                            output.request_redraw = true;
+                            break;
+                        };
+
+                        let request = UiDiagScreenshotRequestV1 {
+                            schema_version: 1,
+                            requested_unix_ms: unix_ms_now(),
+                            out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                            bundle_dir_name,
+                            request_id: Some(request_id.clone()),
+                            windows: vec![UiDiagScreenshotWindowRequestV1 {
+                                window: window.data().as_ffi(),
+                                tick_id: snapshot.tick_id,
+                                frame_id: snapshot.frame_id,
+                                scale_factor: snapshot.scale_factor,
+                                window_bounds: snapshot.window_bounds,
+                            }],
+                        };
+                        let _ = write_json(self.cfg.screenshot_request_path.clone(), &request);
+                        let _ = touch_file(&self.cfg.screenshot_trigger_path);
+                    }
+
+                    active.wait_screenshot = Some(WaitScreenshotState {
+                        step_index,
+                        request_id,
+                        remaining_frames: timeout_frames,
+                    });
+                    output.request_redraw = true;
+                } else {
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                }
             }
             UiActionStepV1::PressKey {
                 key,
@@ -1600,7 +1772,9 @@ impl UiDiagnosticsService {
         }
 
         if self.cfg.capture_screenshots {
-            let request = UiDiagScreenshotRequestV1::from_service(&dir_name, &self.cfg, self);
+            let request_id = Some(format!("bundle:{dir_name}"));
+            let request =
+                UiDiagScreenshotRequestV1::from_service(&dir_name, request_id, &self.cfg, self);
             let _ = write_json(self.cfg.screenshot_request_path.clone(), &request);
             let _ = touch_file(&self.cfg.screenshot_trigger_path);
         }
@@ -1641,6 +1815,25 @@ impl UiDiagnosticsService {
         }
         let _ = write_json(self.cfg.pick_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.pick_result_trigger_path);
+    }
+
+    fn screenshot_request_completed(&self, window: AppWindowId, request_id: &str) -> bool {
+        let bytes = match std::fs::read(&self.cfg.screenshot_result_path) {
+            Ok(b) => b,
+            Err(_) => return false,
+        };
+        let root: serde_json::Value = match serde_json::from_slice(&bytes) {
+            Ok(v) => v,
+            Err(_) => return false,
+        };
+        let Some(completed) = root.get("completed").and_then(|v| v.as_array()) else {
+            return false;
+        };
+        let window_ffi = window.data().as_ffi();
+        completed.iter().any(|item| {
+            item.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+                && item.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+        })
     }
 
     fn poll_pick_trigger(&mut self) {
@@ -1873,6 +2066,10 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub screenshot_request_path: String,
     #[serde(default)]
     pub screenshot_trigger_path: String,
+    #[serde(default)]
+    pub screenshot_result_path: String,
+    #[serde(default)]
+    pub screenshot_result_trigger_path: String,
     pub script_path: String,
     pub script_trigger_path: String,
     pub script_result_path: String,
@@ -1916,6 +2113,14 @@ impl UiDiagnosticsBundleV1 {
                 screenshot_trigger_path: sanitize_path_for_bundle(
                     &svc.cfg.out_dir,
                     &svc.cfg.screenshot_trigger_path,
+                ),
+                screenshot_result_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.screenshot_result_path,
+                ),
+                screenshot_result_trigger_path: sanitize_path_for_bundle(
+                    &svc.cfg.out_dir,
+                    &svc.cfg.screenshot_result_trigger_path,
                 ),
                 script_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.script_path),
                 script_trigger_path: sanitize_path_for_bundle(
@@ -1971,6 +2176,8 @@ struct UiDiagScreenshotRequestV1 {
     requested_unix_ms: u64,
     out_dir: String,
     bundle_dir_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    request_id: Option<String>,
     windows: Vec<UiDiagScreenshotWindowRequestV1>,
 }
 
@@ -1986,6 +2193,7 @@ struct UiDiagScreenshotWindowRequestV1 {
 impl UiDiagScreenshotRequestV1 {
     fn from_service(
         bundle_dir_name: &str,
+        request_id: Option<String>,
         cfg: &UiDiagnosticsConfig,
         svc: &UiDiagnosticsService,
     ) -> Self {
@@ -2008,6 +2216,7 @@ impl UiDiagScreenshotRequestV1 {
             requested_unix_ms: unix_ms_now(),
             out_dir: cfg.out_dir.to_string_lossy().to_string(),
             bundle_dir_name: bundle_dir_name.to_string(),
+            request_id,
             windows,
         }
     }
@@ -2322,6 +2531,15 @@ pub enum UiActionStepV1 {
     CaptureBundle {
         label: Option<String>,
     },
+    CaptureScreenshot {
+        label: Option<String>,
+        #[serde(default = "default_script_screenshot_timeout_frames")]
+        timeout_frames: u32,
+    },
+}
+
+fn default_script_screenshot_timeout_frames() -> u32 {
+    300
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -2483,12 +2701,20 @@ struct ActiveScript {
     next_step: usize,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
+    wait_screenshot: Option<WaitScreenshotState>,
     last_reported_step: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
 struct WaitUntilState {
     step_index: usize,
+    remaining_frames: u32,
+}
+
+#[derive(Debug, Clone)]
+struct WaitScreenshotState {
+    step_index: usize,
+    request_id: String,
     remaining_frames: u32,
 }
 
