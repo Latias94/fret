@@ -137,6 +137,7 @@ pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
 pub(crate) const PAGE_MATERIAL3_SNACKBAR: &str = "material3_snackbar";
 pub(crate) const PAGE_MATERIAL3_TOOLTIP: &str = "material3_tooltip";
 pub(crate) const PAGE_MATERIAL3_STATE_MATRIX: &str = "material3_state_matrix";
+pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
@@ -189,6 +190,8 @@ pub(crate) const CMD_NAV_MATERIAL3_SNACKBAR: &str = "ui_gallery.nav.select.mater
 pub(crate) const CMD_NAV_MATERIAL3_TOOLTIP: &str = "ui_gallery.nav.select.material3_tooltip";
 pub(crate) const CMD_NAV_MATERIAL3_STATE_MATRIX: &str =
     "ui_gallery.nav.select.material3_state_matrix";
+pub(crate) const CMD_NAV_MATERIAL3_TOUCH_TARGETS: &str =
+    "ui_gallery.nav.select.material3_touch_targets";
 
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
@@ -583,6 +586,21 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["material3", "states", "regression", "matrix"],
                 docs::DOC_MATERIAL3_STATE_MATRIX,
                 docs::USAGE_MATERIAL3_STATE_MATRIX,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TOUCH_TARGETS,
+                "Touch Targets",
+                "Material 3 Touch Targets (minimum interactive size)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TOUCH_TARGETS,
+                &[
+                    "material3",
+                    "touch-target",
+                    "interactive-size",
+                    "regression",
+                ],
+                docs::DOC_MATERIAL3_TOUCH_TARGETS,
+                docs::USAGE_MATERIAL3_TOUCH_TARGETS,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_BUTTON,

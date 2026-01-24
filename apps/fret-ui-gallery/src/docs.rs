@@ -154,6 +154,22 @@ Use the controls below to exercise:
 - Menu open/close (Esc and outside press)
 "#;
 
+pub(crate) const DOC_MATERIAL3_TOUCH_TARGETS: &str = r#"
+## Material 3 Touch Targets
+
+This page validates minimum interactive sizing outcomes (touch targets):
+
+- pressable bounds enforce a minimum size (default: 48x48)
+- visual chrome remains token-sized (usually 40x40) and is centered
+
+Notes:
+- This mirrors Compose Material3 `minimumInteractiveComponentSize()` outcomes.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TOUCH_TARGETS: &str = r#"
+Token: `md.sys.layout.minimum-touch-target.size` (default: 48).
+"#;
+
 pub(crate) const USAGE_MATERIAL3_BUTTON: &str = r#"
 ```rust
 use fret_ui_material3 as m3;
