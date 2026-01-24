@@ -8,6 +8,10 @@ This audit tracks visual/behavior alignment gaps between:
 Goal: align **default outcomes** (spacing, sizing, truncation, focus ring, indicator slots, overlay chrome)
 for the `new-york-v4` preset, without expanding `fret-ui` mechanism scope.
 
+For coverage status (what is gated vs only has goldens), see:
+
+- `docs/audits/shadcn-new-york-v4-coverage.md`
+
 ## How to validate
 
 - Run the component gallery: `cargo run -p fret-demo --bin components_gallery`

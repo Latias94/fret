@@ -1,0 +1,61 @@
+# shadcn/ui new-york-v4 Coverage (Fret)
+
+This document tracks **coverage**, not deep conformance details:
+
+- Which shadcn-web goldens exist for `new-york-v4`
+- Which golden keys are referenced by `ecosystem/fret-ui-shadcn/tests`
+- Where to focus next to increase “1:1” confidence efficiently
+
+For deep, high-impact alignment notes and “gaps to check” per component, see:
+
+- `docs/audits/shadcn-new-york-v4-alignment.md`
+
+## Why coverage matters (and why viewport variants are not “nice-to-have”)
+
+If the goal is 1:1 parity with upstream shadcn/ui + Radix primitives, coverage must include:
+
+- **Breadth**: every component gets at least one golden + one gate (default outcome)
+- **Depth for behavior-shaping viewports**: overlays and responsive components must be gated under
+  constrained viewports early (clamp/shift/flip/max-height/scroll buttons/viewport sizing)
+
+Practical rule:
+
+- First pass: add a “default golden + minimal gate” for each component.
+- In parallel: for overlays (menus, popovers, dialogs, navigation menu, etc.), add at least one
+  constrained viewport variant as soon as the default is gated.
+
+## Current snapshot (shadcn-web, v4/new-york-v4)
+
+This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
+
+- Golden files: `476`
+- Golden keys (normalized `.open` suffix): `448`
+- Keys referenced by tests: `193` (`43.1%`)
+- Keys not referenced by tests: `255`
+
+Recompute locally:
+
+```powershell
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowMissing -TopMissing 50
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowUsed
+```
+
+## What to do next (recommended order)
+
+1. **Gate missing primitives-heavy widgets** first (high churn risk): Calendar, Carousel, etc.
+2. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
+3. **Add constrained viewport variants** for overlay-like components (if not already gated):
+   - menus: height/width clamp + scroll buttons
+   - popovers/tooltips: flip/shift under low height
+   - dialogs/sheets: insets under low height/width
+4. Keep `docs/audits/shadcn-new-york-v4-alignment.md` updated as behavior becomes audited (add
+   “Conformance gates” anchors and “Known gaps” notes).
+
+## Common “coverage smells”
+
+- Many goldens exist, but none are referenced by tests (coverage drift).
+- A component is gated only at one viewport size, but it changes behavior at others (false confidence).
+- A gate checks only placement while ignoring geometry (panel width/height), allowing “menu height”
+  regressions to slip through.
+
