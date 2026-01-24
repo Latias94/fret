@@ -401,7 +401,7 @@ pub(crate) const DOC_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = r#"
 This page validates a Material 3 **modal** navigation drawer surface:
 
 - modal barrier (no click-through)
-- token-driven scrim opacity
+- scrim: Neutral-Variant10 @ 50% (token-driven override)
 - slide-in motion driven by theme easing tokens
 - focus trap while open + focus restore on close
 "#;

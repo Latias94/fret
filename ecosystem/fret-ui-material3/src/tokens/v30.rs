@@ -120,6 +120,11 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_snackbar_scalars(cfg);
     inject_comp_dialog_scalars(cfg);
     inject_comp_full_screen_dialog_scalars(cfg);
+
+    // Material Web v30 notes that the navigation drawer scrim tokens are deprecated and do not
+    // represent the intended M3 defaults. Prefer Neutral-Variant10 at 50% opacity for scrims.
+    cfg.numbers
+        .insert("md.comp.navigation-drawer.scrim.opacity".to_string(), 0.5);
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -136,6 +141,14 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
         SchemeMode::Light => theme.schemes.light,
         SchemeMode::Dark => theme.schemes.dark,
     };
+
+    // Palette tokens (limited subset) for outcomes that are specified in terms of raw palette
+    // tones rather than scheme roles (e.g. scrims).
+    insert_color(
+        cfg,
+        "md.ref.palette.neutral-variant10",
+        theme.palettes.neutral_variant.tone(10),
+    );
 
     insert_color(cfg, "md.sys.color.primary", scheme.primary);
     insert_color(cfg, "md.sys.color.on-primary", scheme.on_primary);
@@ -1900,7 +1913,7 @@ fn inject_comp_navigation_drawer_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.navigation-drawer.scrim.color",
-        "md.sys.color.scrim",
+        "md.ref.palette.neutral-variant10",
     );
 }
 
@@ -2675,5 +2688,36 @@ mod tests {
             tonal_primary, expressive_primary,
             "expected expressive scheme to differ"
         );
+    }
+
+    #[test]
+    fn v30_navigation_drawer_scrim_defaults_follow_material_web_note() {
+        let cfg = theme_config_with_colors(
+            TypographyOptions::default(),
+            ColorSchemeOptions {
+                mode: SchemeMode::Dark,
+                variant: DynamicVariant::TonalSpot,
+                ..Default::default()
+            },
+        );
+
+        assert_eq!(
+            cfg.numbers
+                .get("md.comp.navigation-drawer.scrim.opacity")
+                .copied(),
+            Some(0.5)
+        );
+
+        let palette = cfg
+            .colors
+            .get("md.ref.palette.neutral-variant10")
+            .cloned()
+            .expect("expected palette token for neutral-variant10");
+        let scrim = cfg
+            .colors
+            .get("md.comp.navigation-drawer.scrim.color")
+            .cloned()
+            .expect("expected navigation-drawer scrim color token");
+        assert_eq!(scrim, palette);
     }
 }

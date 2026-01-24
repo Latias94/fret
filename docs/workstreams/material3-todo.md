@@ -220,6 +220,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (focus trap),
       `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (focus restore),
       `ecosystem/fret-ui-primitives/src/focus_scope.rs` (`FocusScopeProps { trap_focus: true }`).
+  - [x] scrim defaults (modal navigation drawer)
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.comp.navigation-drawer.scrim.*` defaults),
+      `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (token lookup + fade),
+      `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-navigation-drawer.scss` (token note).
   - [ ] click-through semantics (non-modal)
 
 ### Visual Outcomes
