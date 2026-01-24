@@ -83,6 +83,9 @@ Related ADRs:
 - While a pointer capture session is active, hover-driven overlays (hover overlays, tooltips) are
   suppressed so capture-heavy interactions (viewport tools, drags) don't spawn incidental overlays.
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `crates/fret-ui/src/tree/mod.rs`
+- Hover overlays render into input-transparent `DismissibleLayer` roots so hit-testing falls through
+  outside overlay content (click-through underlay routing is not blocked by empty overlay roots).
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `crates/fret-ui/src/declarative/mount.rs`
 
 ### Policy migration (ui-kit)
 
