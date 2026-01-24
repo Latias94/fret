@@ -20,7 +20,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
 
-use crate::foundation::focus_ring::material_focus_ring;
+use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
@@ -681,7 +681,11 @@ impl Radio {
                         l.overflow = Overflow::Visible;
                         l
                     },
-                    focus_ring: Some(material_focus_ring(&theme, corner_radii)),
+                    focus_ring: Some(material_focus_ring_for_component(
+                        &theme,
+                        "md.comp.radio-button",
+                        corner_radii,
+                    )),
                     focus_ring_bounds: None,
                 };
 

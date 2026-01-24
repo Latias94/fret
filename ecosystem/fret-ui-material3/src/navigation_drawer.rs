@@ -23,6 +23,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
+use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
@@ -352,7 +353,8 @@ fn navigation_drawer_item<H: UiHost>(
             .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
             .unwrap_or(Px(9999.0));
         let corner_radii = Corners::all(radius);
-        let focus_ring = navigation_drawer_focus_ring(theme, corner_radii);
+        let focus_ring =
+            material_focus_ring_for_component(theme, "md.comp.navigation-drawer", corner_radii);
 
         let pressable_props = PressableProps {
             enabled,
@@ -710,35 +712,5 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
     match resolved {
         ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
         ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
-    }
-}
-
-fn navigation_drawer_focus_ring(
-    theme: &Theme,
-    corner_radii: Corners,
-) -> fret_ui::element::RingStyle {
-    let tokens = MaterialTokenResolver::new(theme);
-    let mut c = tokens.color_comp_or_sys(
-        "md.comp.navigation-drawer.focus.indicator.color",
-        "md.sys.color.secondary",
-    );
-    c.a = 1.0;
-
-    let thickness = theme
-        .metric_by_key("md.comp.navigation-drawer.focus.indicator.thickness")
-        .or_else(|| theme.metric_by_key("md.sys.state.focus-indicator.thickness"))
-        .unwrap_or(Px(3.0));
-    let outline_offset = theme
-        .metric_by_key("md.comp.navigation-drawer.focus.indicator.outline.offset")
-        .or_else(|| theme.metric_by_key("md.sys.state.focus-indicator.inner-offset"))
-        .unwrap_or(Px(-3.0));
-
-    fret_ui::element::RingStyle {
-        placement: fret_ui::element::RingPlacement::Outset,
-        width: thickness,
-        offset: outline_offset,
-        color: c,
-        offset_color: None,
-        corner_radii,
     }
 }

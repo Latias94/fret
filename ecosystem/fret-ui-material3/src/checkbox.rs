@@ -17,6 +17,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
+use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
@@ -115,7 +116,11 @@ impl Checkbox {
                         l.overflow = Overflow::Visible;
                         l
                     },
-                    focus_ring: Some(material_focus_ring(&theme, size, corner_radii)),
+                    focus_ring: Some(material_focus_ring_for_component(
+                        &theme,
+                        "md.comp.checkbox",
+                        corner_radii,
+                    )),
                     focus_ring_bounds: None,
                 };
 
@@ -245,8 +250,6 @@ struct CheckboxSizeTokens {
     icon: Px,
     state_layer: Px,
     container_corner: Px,
-    focus_indicator_thickness: Px,
-    focus_indicator_offset: Px,
 }
 
 fn checkbox_size_tokens(theme: &Theme) -> CheckboxSizeTokens {
@@ -263,22 +266,11 @@ fn checkbox_size_tokens(theme: &Theme) -> CheckboxSizeTokens {
         .metric_by_key("md.comp.checkbox.container.shape")
         .unwrap_or(Px(2.0));
 
-    let focus_indicator_thickness = theme
-        .metric_by_key("md.comp.checkbox.focus.indicator.thickness")
-        .or_else(|| theme.metric_by_key("md.sys.state.focus-indicator.thickness"))
-        .unwrap_or(Px(2.0));
-    let focus_indicator_offset = theme
-        .metric_by_key("md.comp.checkbox.focus.indicator.outline.offset")
-        .or_else(|| theme.metric_by_key("md.sys.state.focus-indicator.outer-offset"))
-        .unwrap_or(Px(2.0));
-
     CheckboxSizeTokens {
         container,
         icon,
         state_layer,
         container_corner,
-        focus_indicator_thickness,
-        focus_indicator_offset,
     }
 }
 
@@ -562,27 +554,6 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
     match resolved {
         ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
         ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
-    }
-}
-
-fn material_focus_ring(
-    theme: &Theme,
-    size: CheckboxSizeTokens,
-    corner_radii: Corners,
-) -> fret_ui::element::RingStyle {
-    let mut c = theme
-        .color_by_key("md.comp.checkbox.focus.indicator.color")
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"));
-    c.a = 1.0;
-
-    fret_ui::element::RingStyle {
-        placement: fret_ui::element::RingPlacement::Outset,
-        width: size.focus_indicator_thickness,
-        offset: size.focus_indicator_offset,
-        color: c,
-        offset_color: None,
-        corner_radii,
     }
 }
 

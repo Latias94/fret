@@ -20,6 +20,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 
+use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
@@ -408,7 +409,11 @@ fn material_primary_tab<H: UiHost>(
                 l.overflow = Overflow::Visible;
                 l
             },
-            focus_ring: Some(primary_tab_focus_ring(theme, corner_radii)),
+            focus_ring: Some(material_focus_ring_for_component(
+                theme,
+                "md.comp.primary-navigation-tab",
+                corner_radii,
+            )),
             focus_ring_bounds: None,
         };
 
@@ -821,30 +826,4 @@ fn primary_tab_state_layer_opacity(
             .unwrap_or(0.08);
     }
     0.0
-}
-
-fn primary_tab_focus_ring(theme: &Theme, corner_radii: Corners) -> fret_ui::element::RingStyle {
-    let c = theme
-        .color_by_key("md.comp.primary-navigation-tab.focus.indicator.color")
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"));
-
-    let width = theme
-        .metric_by_key("md.comp.primary-navigation-tab.focus.indicator.thickness")
-        .or_else(|| theme.metric_by_key("md.sys.state.focus-indicator.thickness"))
-        .unwrap_or(Px(3.0));
-
-    let offset = theme
-        .metric_by_key("md.comp.primary-navigation-tab.focus.indicator.outline.offset")
-        .or_else(|| theme.metric_by_key("md.sys.state.focus-indicator.inner-offset"))
-        .unwrap_or(Px(0.0));
-
-    fret_ui::element::RingStyle {
-        placement: fret_ui::element::RingPlacement::Inset,
-        width,
-        offset,
-        color: c,
-        offset_color: None,
-        corner_radii,
-    }
 }

@@ -195,7 +195,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/button.rs` (`PointerRegion` → `PointerRegionState.last_down`),
     `crates/fret-ui/src/paint.rs` (`paint_ripple`).
 - [ ] Ripple (unbounded, keyboard click synthesis, spec fade rules).
-- [ ] Focus ring style and focus-visible heuristics aligned with Material expectations.
+- [x] Focus ring style and focus-visible heuristics aligned with Material expectations.
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/focus_ring.rs` (`material_focus_ring_for_component`),
+    `crates/fret-ui/src/declarative/host_widget/paint.rs` (`paint_focus_ring` gated by `focus_visible::is_focus_visible`).
 - [x] Transition timelines support theme cubic-bezier easing (overlay motion parity).
   - Evidence: `ecosystem/fret-ui-headless/src/transition.rs` (`update_with_cubic_bezier`),
     `ecosystem/fret-ui-kit/src/declarative/transition.rs` (`drive_transition_with_durations_and_cubic_bezier`),
