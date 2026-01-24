@@ -154,6 +154,8 @@ impl Default for ToastIconButtonStyle {
 #[derive(Debug, Clone)]
 pub struct ToastLayerStyle {
     pub palette: ToastVariantPalette,
+    /// Optional shadow for the toast container.
+    pub shadow: Option<fret_ui::element::ShadowStyle>,
     /// Optional border color. When omitted, no border is drawn.
     pub border_color_key: Option<String>,
     pub border_width: Px,
@@ -174,6 +176,7 @@ impl Default for ToastLayerStyle {
     fn default() -> Self {
         Self {
             palette: ToastVariantPalette::default(),
+            shadow: None,
             border_color_key: Some("border".to_string()),
             border_width: Px(1.0),
             description_color_key: Some("muted-foreground".to_string()),

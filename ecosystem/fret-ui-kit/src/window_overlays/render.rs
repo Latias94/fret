@@ -1514,7 +1514,7 @@ pub fn render<H: UiHost>(
                                         layout: toast_layout,
                                         padding: container_padding,
                                         background: Some(bg),
-                                        shadow: None,
+                                        shadow: toast_style.shadow,
                                         border: if border_color.is_some() {
                                             fret_core::Edges::all(toast_style.border_width)
                                         } else {
