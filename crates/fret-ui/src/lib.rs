@@ -73,4 +73,5 @@ pub use tree::{
     PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest,
     UiDebugHoverDeclarativeInvalidationHotspot, UiDebugLayerInfo, UiLayerId, UiTree,
 };
+pub use widget::CommandAvailability;
 pub use widget::Invalidation;
