@@ -1035,6 +1035,214 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
 }
 
 #[test]
+fn outside_press_observer_dispatches_only_topmost_dismissible_non_modal_overlay() {
+    struct RecordOutsidePress {
+        observer_down: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordOutsidePress {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer_down, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let a_down = app.models_mut().insert(0u32);
+    let b_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(TestStack);
+    ui.set_root(base);
+
+    let overlay_a = ui.create_node(RecordOutsidePress {
+        observer_down: a_down.clone(),
+    });
+    let layer_a = ui.push_overlay_root_ex(overlay_a, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer_a, true);
+
+    let overlay_b = ui.create_node(RecordOutsidePress {
+        observer_down: b_down.clone(),
+    });
+    let layer_b = ui.push_overlay_root_ex(overlay_b, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer_b, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&b_down),
+        Some(1),
+        "expected topmost overlay to receive outside-press observer dispatch"
+    );
+    assert_eq!(
+        app.models().get_copied(&a_down),
+        Some(0),
+        "expected lower overlays to not receive outside-press observer dispatch"
+    );
+}
+
+#[test]
+fn outside_press_branches_can_exempt_triggers_outside_layer_subtree() {
+    struct TriggerCounter {
+        downs: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for TriggerCounter {
+        fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+            position.x.0 <= 20.0 && position.y.0 <= 20.0
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Bubble {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.downs, |v: &mut u32| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct RecordOutsidePress {
+        observer_down: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordOutsidePress {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer_down, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let trigger_downs = app.models_mut().insert(0u32);
+    let submenu_observer_downs = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(TestStack);
+    ui.set_root(base);
+
+    let parent_root = ui.create_node(TestStack);
+    let trigger = ui.create_node(TriggerCounter {
+        downs: trigger_downs.clone(),
+    });
+    ui.add_child(parent_root, trigger);
+    ui.push_overlay_root_ex(parent_root, false, true);
+
+    let submenu_root = ui.create_node(RecordOutsidePress {
+        observer_down: submenu_observer_downs.clone(),
+    });
+    let submenu_layer = ui.push_overlay_root_ex(submenu_root, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(submenu_layer, true);
+    ui.set_layer_pointer_down_outside_branches(submenu_layer, vec![trigger]);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Clicking the trigger (outside the submenu layer subtree) must not count as an outside-press
+    // for the submenu overlay when the trigger is registered as a branch.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&trigger_downs), Some(1));
+    assert_eq!(
+        app.models().get_copied(&submenu_observer_downs),
+        Some(0),
+        "expected branch click to not trigger submenu outside-press observer dispatch"
+    );
+
+    // Clicking away from the trigger should count as an outside-press for the submenu overlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(90.0), Px(90.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&submenu_observer_downs), Some(1));
+}
+
+#[test]
 fn outside_press_observer_can_suppress_hit_test_dispatch() {
     struct RecordObserverDown {
         observer: Model<u32>,
