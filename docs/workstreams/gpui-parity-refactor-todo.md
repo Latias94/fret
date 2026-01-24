@@ -201,6 +201,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
         - `debug.removed_subtrees[*].reachable_from_layer_roots=true` indicates a likely broken parent-chain / `node_layer(..)` attachment classification.
       - If `reachable_from_layer_roots` remains `false` for the subtree that contains the missing semantics target, prioritize explaining *why it became detached*:
         - export whether the parent still referenced the removed root via `ui.children(parent)` and/or `WindowFrame.children[parent]` on the failing frame.
+          - `debug.removed_subtrees[*].root_parent_children_contains_root` / `root_parent_frame_children_contains_root` + corresponding `*_len` fields.
       - Confirm whether parent-pointer repair is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the repair seed set if needed.
     - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
 
