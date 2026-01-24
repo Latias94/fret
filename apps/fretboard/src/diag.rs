@@ -34,6 +34,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
     let mut pack_out: Option<PathBuf> = None;
+    let mut pack_include_root_artifacts: bool = false;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -89,6 +90,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --pack-out".to_string());
                 };
                 pack_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--include-root-artifacts" => {
+                pack_include_root_artifacts = true;
                 i += 1;
             }
             "--script-path" => {
@@ -535,7 +540,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 .map(|p| resolve_path(&workspace_root, p))
                 .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
 
-            pack_bundle_dir_to_zip(&bundle_dir, &out)?;
+            let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                resolved_out_dir.clone()
+            } else {
+                bundle_dir
+                    .parent()
+                    .unwrap_or(&resolved_out_dir)
+                    .to_path_buf()
+            };
+
+            pack_bundle_dir_to_zip(
+                &bundle_dir,
+                &out,
+                pack_include_root_artifacts,
+                &artifacts_root,
+            )?;
             println!("{}", out.display());
             Ok(())
         }
@@ -1215,7 +1234,12 @@ fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     }
 }
 
-fn pack_bundle_dir_to_zip(bundle_dir: &Path, out_path: &Path) -> Result<(), String> {
+fn pack_bundle_dir_to_zip(
+    bundle_dir: &Path,
+    out_path: &Path,
+    include_root_artifacts: bool,
+    artifacts_root: &Path,
+) -> Result<(), String> {
     if !bundle_dir.is_dir() {
         return Err(format!(
             "bundle_dir is not a directory: {}",
@@ -1256,7 +1280,39 @@ fn pack_bundle_dir_to_zip(bundle_dir: &Path, out_path: &Path) -> Result<(), Stri
         options,
     )?;
 
+    if include_root_artifacts {
+        let root_prefix = format!("{bundle_name}/_root");
+        zip_add_root_artifacts(&mut zip, artifacts_root, &root_prefix, options)?;
+    }
+
     zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn zip_add_root_artifacts(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    artifacts_root: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    let candidates = [
+        "script.json",
+        "script.result.json",
+        "pick.result.json",
+        "picked.script.json",
+    ];
+
+    for name in candidates {
+        let src = artifacts_root.join(name);
+        if !src.is_file() {
+            continue;
+        }
+        let dst = format!("{zip_prefix}/{name}");
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
     Ok(())
 }
 

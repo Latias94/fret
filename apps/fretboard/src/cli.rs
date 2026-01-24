@@ -59,7 +59,7 @@ Usage:
   fretboard diag path [--trigger-path <path>] [--dir <dir>]
   fretboard diag poke [--trigger-path <path>] [--dir <dir>]
   fretboard diag latest [--dir <dir>]
-  fretboard diag pack [<bundle_dir|bundle.json>] [--dir <dir>] [--pack-out <path>]
+  fretboard diag pack [<bundle_dir|bundle.json>] [--dir <dir>] [--pack-out <path>] [--include-root-artifacts]
   fretboard diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]
   fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
