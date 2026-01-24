@@ -207,6 +207,7 @@ At a high level:
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, with optional `reuse_reason`)
+  - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
   - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals; includes optional `*_path` strings for key elements)
@@ -447,6 +448,14 @@ Notes:
 
 - `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events in snapshots after `--warmup-frames`.
 - If `view_cache_active` is false for all snapshots (or `cache_roots` are not exported), the check will fail by design.
+
+### Overlay synthesis regression gating
+
+Some overlay regressions only show up when overlay requests must be synthesized from cached declarations
+(because view caching skipped rerendering the producer subtree). To avoid "it passed but never tested
+the synthesis seam", you can gate on synthesis events exported in `bundle.json`:
+
+- `--check-overlay-synthesis-min N` counts `debug.overlay_synthesis[].outcome == "synthesized"` events in snapshots after `--warmup-frames`.
 
 ### Matrix runner (uncached vs cached)
 

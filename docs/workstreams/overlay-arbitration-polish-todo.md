@@ -37,7 +37,7 @@ Each TODO is labeled:
 - [x] OVERLAY-life-001 Define and document overlay lifecycle phases.
   - Output: `docs/workstreams/overlay-lifecycle-phases.md`
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
-  - Notes: documents current authoritative `open/present` (modal + popover) and explicitly calls out hover/tooltip as per-frame-only (tracked separately).
+  - Notes: baseline lifecycle phases were documented before hover/tooltip gained authoritative presence; see OVERLAY-life-002 for the updated contract.
 - [x] OVERLAY-life-002 Introduce authoritative presence for hover/tooltip overlays.
   - Target: make hover/tooltip safe under view-cache reuse without creating “ghost overlays” (authoritative `open/present` + liveness gate).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
@@ -78,6 +78,14 @@ Each TODO is labeled:
 - [x] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
   - Mechanism: record cached+uncached bundles and enforce `diag compare` + `--check-view-cache-reuse-min`.
   - Evidence: `fretboard diag matrix ui-gallery` (runs both variants and compares per-script bundles).
+
+## P0 — Diagnostics (Synthesis Observability)
+
+- [x] OVERLAY-diag-014 Export cached overlay synthesis events to diagnostic bundles.
+  - Target: make it easy to assert (and debug) whether cached request synthesis happened under view-cache reuse.
+  - Output: `bundle.json` includes `debug.overlay_synthesis` events for each window/frame.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/{mod,frame,render}.rs` (recording), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (export), `apps/fretboard/src/diag.rs` (gate: `--check-overlay-synthesis-min`).
+  - Done when: scripts can gate on “at least N synthesized overlays” and report suppression reasons when synthesis does not occur.
 
 ## P1 — Ergonomics (Ecosystem Integration)
 

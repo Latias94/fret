@@ -123,6 +123,12 @@ The scripted harness (UI Gallery) is intended to validate lifecycle invariants u
 - cached vs uncached runs (`fretboard diag matrix ui-gallery`)
 - portal placement + window clamping (`bounds_within_window` predicate)
 
+Synthesis observability:
+
+- Cached request synthesis events are recorded via `fret-ui-kit` and exported to `bundle.json` as
+  `debug.overlay_synthesis`. This makes it possible to assert that synthesis happened under view-cache
+  reuse (and to triage suppression reasons from bundles).
+
 Entry points:
 
 - `docs/ui-diagnostics-and-scripted-tests.md`
