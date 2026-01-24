@@ -278,7 +278,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_plain_tooltip_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_tooltip`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TOOLTIP`).
-- [ ] Snackbar (pick order based on demos)
+- [x] Snackbar (MVP: toast-layer skin using `md.comp.snackbar.*` tokens, action + dismiss icon)
+  - Evidence: `ecosystem/fret-ui-material3/src/snackbar.rs` (`SnackbarHost`, `SnackbarController`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_snackbar_*`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_snackbar`),
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_SNACKBAR`).
 
 ### Conformance / Regression
 

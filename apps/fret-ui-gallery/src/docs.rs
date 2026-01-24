@@ -472,6 +472,30 @@ let menu = m3::Menu::new().entries(vec![
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_SNACKBAR: &str = r#"
+## Material 3 Snackbar (MVP)
+
+This page validates a Material 3 snackbar surface:
+
+- posted via a dedicated toast store (so it does not conflict with the gallery's shadcn toaster)
+- rendered by `fret-ui-kit` toast layer using a Material token-driven skin (`md.comp.snackbar.*`)
+- action + dismiss icon use snackbar state-layer tokens
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SNACKBAR: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_ui_kit::ToastStore;
+
+let store = cx.app.models_mut().insert(ToastStore::default());
+let _snackbar_host = m3::SnackbarHost::new(store.clone()).into_element(cx);
+
+// In an action handler:
+let controller = m3::SnackbarController::new(store);
+let _id = controller.show(host, acx.window, m3::Snackbar::new("Saved").action("Undo", cmd));
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_TOOLTIP: &str = r#"
 ## Material 3 Tooltip (MVP)
 

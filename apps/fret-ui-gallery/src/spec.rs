@@ -134,6 +134,7 @@ pub(crate) const PAGE_MATERIAL3_NAVIGATION_DRAWER: &str = "material3_navigation_
 pub(crate) const PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = "material3_modal_navigation_drawer";
 pub(crate) const PAGE_MATERIAL3_DIALOG: &str = "material3_dialog";
 pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
+pub(crate) const PAGE_MATERIAL3_SNACKBAR: &str = "material3_snackbar";
 pub(crate) const PAGE_MATERIAL3_TOOLTIP: &str = "material3_tooltip";
 pub(crate) const PAGE_MATERIAL3_STATE_MATRIX: &str = "material3_state_matrix";
 
@@ -184,6 +185,7 @@ pub(crate) const CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str =
     "ui_gallery.nav.select.material3_modal_navigation_drawer";
 pub(crate) const CMD_NAV_MATERIAL3_DIALOG: &str = "ui_gallery.nav.select.material3_dialog";
 pub(crate) const CMD_NAV_MATERIAL3_MENU: &str = "ui_gallery.nav.select.material3_menu";
+pub(crate) const CMD_NAV_MATERIAL3_SNACKBAR: &str = "ui_gallery.nav.select.material3_snackbar";
 pub(crate) const CMD_NAV_MATERIAL3_TOOLTIP: &str = "ui_gallery.nav.select.material3_tooltip";
 pub(crate) const CMD_NAV_MATERIAL3_STATE_MATRIX: &str =
     "ui_gallery.nav.select.material3_state_matrix";
@@ -761,6 +763,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_MATERIAL3_MENU,
                 docs::USAGE_MATERIAL3_MENU,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SNACKBAR,
+                "Snackbar",
+                "Material 3 Snackbar (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SNACKBAR,
+                &["material3", "snackbar", "toast-layer"],
+                docs::DOC_MATERIAL3_SNACKBAR,
+                docs::USAGE_MATERIAL3_SNACKBAR,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TOOLTIP,
