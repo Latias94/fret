@@ -113,6 +113,9 @@ Related ADRs:
 - Policy-level capture suppression conformance:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`pointer_capture_hides_hover_overlays_in_same_window`,
     `pointer_capture_hides_tooltips_in_same_window`)
+- Policy-level close-transition observer invariants:
+  - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_while_closing`,
+    `hover_overlay_is_click_through_while_closing`)
 - Policy-level Radix outcome regression:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_can_disable_outside_pointer_events_while_open`)
 - Shadcn parity regression:
