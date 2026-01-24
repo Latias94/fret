@@ -276,6 +276,8 @@ Supported selectors (v1 MVP):
 ## Supported scripted steps (v1 MVP)
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`)
+- `move_pointer`
+- `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
@@ -339,6 +341,7 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
+- `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}`
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

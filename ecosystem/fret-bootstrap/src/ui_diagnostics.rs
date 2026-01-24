@@ -544,6 +544,7 @@ impl UiDiagnosticsService {
         &mut self,
         app: &App,
         window: AppWindowId,
+        window_bounds: Rect,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
@@ -692,7 +693,8 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
+                    {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -723,7 +725,8 @@ impl UiDiagnosticsService {
             UiActionStepV1::Assert { predicate } => {
                 active.wait_until = None;
                 if let Some(snapshot) = semantics_snapshot {
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
+                    {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -2269,8 +2272,17 @@ pub struct UiKeyModifiersV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
-    Exists { target: UiSelectorV1 },
-    FocusIs { target: UiSelectorV1 },
+    Exists {
+        target: UiSelectorV1,
+    },
+    FocusIs {
+        target: UiSelectorV1,
+    },
+    BoundsWithinWindow {
+        target: UiSelectorV1,
+        #[serde(default)]
+        padding_px: f32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3943,6 +3955,7 @@ fn pick_best_match<'a>(
 
 fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
+    window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
     pred: &UiPredicateV1,
@@ -3960,6 +3973,29 @@ fn eval_predicate(
                 return false;
             };
             node.id == focus
+        }
+        UiPredicateV1::BoundsWithinWindow { target, padding_px } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let bounds = node.bounds;
+            let pad = padding_px.max(0.0);
+
+            let window_left = window_bounds.origin.x.0 + pad;
+            let window_top = window_bounds.origin.y.0 + pad;
+            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0 - pad;
+            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0 - pad;
+
+            let node_left = bounds.origin.x.0;
+            let node_top = bounds.origin.y.0;
+            let node_right = bounds.origin.x.0 + bounds.size.width.0;
+            let node_bottom = bounds.origin.y.0 + bounds.size.height.0;
+
+            node_left >= window_left
+                && node_top >= window_top
+                && node_right <= window_right
+                && node_bottom <= window_bottom
         }
     }
 }
@@ -4641,6 +4677,66 @@ mod tests {
             UiSelectorV1::TestId { id } => assert_eq!(id, "open"),
             other => panic!("expected TestId selector, got: {other:?}"),
         }
+    }
+
+    #[test]
+    fn bounds_within_window_predicate_respects_padding() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "content",
+                    "content",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsWithinWindow {
+            target: UiSelectorV1::TestId {
+                id: "content".to_string(),
+            },
+            padding_px: 0.0,
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::BoundsWithinWindow {
+            target: UiSelectorV1::TestId {
+                id: "content".to_string(),
+            },
+            padding_px: 12.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected padding to shrink the allowed window rect"
+        );
     }
 
     #[test]
