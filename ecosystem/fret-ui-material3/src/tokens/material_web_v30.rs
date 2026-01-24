@@ -2165,6 +2165,50 @@ pub(crate) fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+pub(crate) fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.plain-tooltip.`
+
+    cfg.metrics
+        .insert("md.comp.plain-tooltip.container.shape".to_string(), 4.0);
+    cfg.numbers.insert(
+        "md.comp.plain-tooltip.supporting-text.weight".to_string(),
+        400.0,
+    );
+}
+
+pub(crate) fn inject_comp_rich_tooltip_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.rich-tooltip.`
+
+    cfg.numbers.insert(
+        "md.comp.rich-tooltip.action.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.rich-tooltip.action.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.rich-tooltip.action.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.rich-tooltip.action.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.rich-tooltip.container.elevation".to_string(), 3.0);
+    cfg.metrics
+        .insert("md.comp.rich-tooltip.container.shape".to_string(), 12.0);
+    cfg.numbers
+        .insert("md.comp.rich-tooltip.subhead.weight".to_string(), 500.0);
+    cfg.numbers.insert(
+        "md.comp.rich-tooltip.supporting-text.weight".to_string(),
+        400.0,
+    );
+}
+
 pub(crate) fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.dialog.`

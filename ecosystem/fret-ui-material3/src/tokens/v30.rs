@@ -115,6 +115,8 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_navigation_drawer_scalars(cfg);
     inject_comp_navigation_rail_scalars(cfg);
     inject_comp_menu_scalars(cfg);
+    inject_comp_plain_tooltip_scalars(cfg);
+    inject_comp_rich_tooltip_scalars(cfg);
     inject_comp_dialog_scalars(cfg);
     inject_comp_full_screen_dialog_scalars(cfg);
 }
@@ -264,6 +266,8 @@ pub fn theme_config_with_colors(
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
     inject_comp_navigation_rail_colors_from_sys(&mut cfg);
     inject_comp_menu_colors_from_sys(&mut cfg);
+    inject_comp_plain_tooltip_colors_from_sys(&mut cfg);
+    inject_comp_rich_tooltip_colors_from_sys(&mut cfg);
     inject_comp_dialog_colors_from_sys(&mut cfg);
     inject_comp_full_screen_dialog_colors_from_sys(&mut cfg);
     cfg
@@ -1134,6 +1138,14 @@ fn inject_comp_navigation_rail_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_menu_scalars(cfg);
+}
+
+fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_plain_tooltip_scalars(cfg);
+}
+
+fn inject_comp_rich_tooltip_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_rich_tooltip_scalars(cfg);
 }
 
 fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
@@ -2067,6 +2079,88 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.menu.list-item.pressed.state-layer.color",
         "md.sys.color.on-surface",
+    );
+}
+
+fn inject_comp_plain_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-plain-tooltip.scss
+
+    copy_color(
+        cfg,
+        "md.comp.plain-tooltip.container.color",
+        "md.sys.color.inverse-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.plain-tooltip.supporting-text.color",
+        "md.sys.color.inverse-on-surface",
+    );
+}
+
+fn inject_comp_rich_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-rich-tooltip.scss
+
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.action.label-text.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.action.hover.label-text.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.action.hover.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.action.focus.label-text.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.action.focus.state-layer.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.action.pressed.label-text.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.action.pressed.state-layer.color",
+        "md.sys.color.primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.container.color",
+        "md.sys.color.surface-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.container.shadow-color",
+        "md.sys.color.shadow",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.container.surface-tint-layer.color",
+        "md.sys.color.surface-tint",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.subhead.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.rich-tooltip.supporting-text.color",
+        "md.sys.color.on-surface-variant",
     );
 }
 
