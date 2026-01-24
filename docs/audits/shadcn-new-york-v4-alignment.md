@@ -203,10 +203,11 @@ are caught as layout/style outcomes, not just placement drift).
 
 Recent fixes:
 
-- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshot.
+- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshots, including hover-switch (`home-then-hover-components`).
+- `viewport=true` viewport geometry now matches shadcn-web mobile snapshots, including “click then hover” switching (`home-mobile-then-hover-components`) and the viewport/indicator chrome gates.
 - Conformance gates:
-  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
-  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`).
+  - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`, `web_vs_fret_navigation_menu_demo_viewport_*`, `web_vs_fret_navigation_menu_demo_indicator_*`).
+  - Placement + geometry: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_*`, including mobile viewport height/width and hover-switch coverage).
 
 ### `Input`
 

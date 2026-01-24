@@ -899,8 +899,11 @@ fn shadcn_nav_menu_demo_components_mobile_panel<H: UiHost>(
     model: Model<Option<Arc<str>>>,
 ) -> AnyElement {
     // Match extracted shadcn web golden (mobile viewport content width).
-    // Web `navigation-menu-viewport` width is ~296px; the viewport panel adds padding + border.
-    shadcn_nav_menu_demo_components_panel_impl(cx, model, Some(Px(275.94)), 1)
+    //
+    // In upstream shadcn/ui, the viewport element width is driven by measured content, while the
+    // content itself uses `p-2 pr-2.5` (8px left + 10px right). We approximate that by fixing the
+    // grid width so that (grid + padding) matches the ~296px viewport rect from the web golden.
+    shadcn_nav_menu_demo_components_panel_impl(cx, model, Some(Px(277.99)), 1)
 }
 
 fn build_context_menu_demo<H: UiHost>(
@@ -6578,8 +6581,12 @@ fn assert_dropdown_menu_demo_constrained_scroll_state_matches(web_name: &str) {
     let _ = app.models_mut().update(&open, |v| *v = true);
 
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
-    for tick in 0..settle_frames {
-        let request_semantics = tick + 1 == settle_frames;
+    // Web goldens capture shortly after hover (`wait=50ms`), so we compare against that same
+    // mid-transition point rather than fully settling the viewport size animation.
+    let hover_settle_frames =
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 / 2 + 1;
+    for tick in 0..hover_settle_frames {
+        let request_semantics = tick + 1 == hover_settle_frames;
         render_frame(
             &mut ui,
             &mut app,
@@ -12370,6 +12377,325 @@ fn web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
     assert_close(&label, fret_content.h, web_content.rect.h, 2.0);
 }
 
+fn web_vs_fret_navigation_menu_demo_hover_switch_overlay_placement_matches(
+    web_name: &str,
+    initial_open_value: &str,
+    hover_open_value: &str,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_trigger =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-trigger", "open")
+            .unwrap_or_else(|| {
+                find_first(&theme.root, &|n| {
+                    n.attrs
+                        .get("data-slot")
+                        .is_some_and(|v| v.as_str() == "navigation-menu-trigger")
+                })
+                .expect("web trigger slot=navigation-menu-trigger")
+            });
+    let web_content =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-content", "open")
+            .expect("web content slot=navigation-menu-content state=open");
+
+    let web_side = infer_side(web_trigger.rect, web_content.rect);
+    let web_align = infer_align(web_side, web_trigger.rect, web_content.rect);
+    let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_content.rect);
+    let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_content.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let items = vec![
+                fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "components",
+                    "Components",
+                    vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
+                ),
+            ];
+
+            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                .viewport(false)
+                .indicator(false)
+                .items(items)
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-initial-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                initial_open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {initial_open_value}"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
+    let click_point = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let items = vec![
+                    fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "components",
+                        "Components",
+                        vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
+                    ),
+                ];
+
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(false)
+                    .indicator(false)
+                    .items(items)
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let hover_trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-hover-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                hover_open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {hover_open_value}"));
+    let hover_bounds = bounds_for_element(&mut app, window, hover_trigger_id)
+        .expect("fret nav menu trigger bounds");
+    let hover_point = Point::new(
+        Px(hover_bounds.origin.x.0 + hover_bounds.size.width.0 * 0.5),
+        Px(hover_bounds.origin.y.0 + hover_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: hover_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(hover_point.x.0 + 1.0), hover_point.y),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let debug = std::env::var("FRET_DEBUG_NAV_MENU_HOVER_SWITCH")
+        .ok()
+        .is_some_and(|v| v == "1");
+    if debug {
+        let selected = app.models_mut().read(&model, |v| v.clone()).ok().flatten();
+        eprintln!(
+            "{web_name} after hover move selected={:?}",
+            selected.as_deref()
+        );
+    }
+
+    // The upstream demo relies on a hover trigger + viewport size transition that is effectively
+    // `duration-300` in the shadcn recipe. Our web golden is captured after a `wait=300`, so we
+    // advance enough frames to reach the same steady state before asserting geometry.
+    let hover_settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+    for tick in 0..hover_settle_frames {
+        let request_semantics = tick + 1 == hover_settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2000 + tick),
+            request_semantics,
+            |cx| {
+                let items = vec![
+                    fret_ui_shadcn::NavigationMenuItem::new("home", "Home", vec![cx.text("Home")]),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "components",
+                        "Components",
+                        vec![shadcn_nav_menu_demo_components_panel(cx, model.clone())],
+                    ),
+                ];
+
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(false)
+                    .indicator(false)
+                    .items(items)
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    if debug {
+        let selected = app.models_mut().read(&model, |v| v.clone()).ok().flatten();
+        eprintln!(
+            "{web_name} after hover settle selected={:?}",
+            selected.as_deref()
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let content_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-content-query-hover-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_content_id(
+                cx,
+                root_id,
+                hover_open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu content id for {hover_open_value}"));
+    let content_bounds =
+        bounds_for_element(&mut app, window, content_id).expect("fret nav menu content bounds");
+
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-final-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                hover_open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {hover_open_value}"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
+
+    let fret_trigger = WebRect {
+        x: trigger_bounds.origin.x.0,
+        y: trigger_bounds.origin.y.0,
+        w: trigger_bounds.size.width.0,
+        h: trigger_bounds.size.height.0,
+    };
+    let fret_content = WebRect {
+        x: content_bounds.origin.x.0,
+        y: content_bounds.origin.y.0,
+        w: content_bounds.size.width.0,
+        h: content_bounds.size.height.0,
+    };
+
+    let actual_gap = rect_main_gap(web_side, fret_trigger, fret_content);
+    let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_content);
+
+    let label = format!("{web_name} main_gap");
+    assert_close(&label, actual_gap, expected_gap, 1.0);
+    let label = format!("{web_name} cross_delta");
+    assert_close(&label, actual_cross, expected_cross, 1.5);
+    let label = format!("{web_name} trigger_height");
+    assert_close(&label, fret_trigger.h, web_trigger.rect.h, 1.0);
+    let label = format!("{web_name} content_width");
+    assert_close(&label, fret_content.w, web_content.rect.w, 2.0);
+    let label = format!("{web_name} content_height");
+    assert_close(&label, fret_content.h, web_content.rect.h, 2.0);
+}
+
 #[test]
 fn web_vs_fret_navigation_menu_demo_components_overlay_placement_matches() {
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
@@ -12431,6 +12757,15 @@ fn web_vs_fret_navigation_menu_demo_with_icon_overlay_placement_matches() {
     web_vs_fret_navigation_menu_demo_variant_overlay_placement_matches(
         "navigation-menu-demo.with-icon",
         "with-icon",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_hover_home_to_components_overlay_placement_matches() {
+    web_vs_fret_navigation_menu_demo_hover_switch_overlay_placement_matches(
+        "navigation-menu-demo.home-then-hover-components",
+        "home",
+        "components",
     );
 }
 
@@ -13118,6 +13453,338 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
     assert_close(&label, fret_trigger.h, web_trigger.rect.h, 1.0);
 }
 
+fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
+    web_name: &str,
+    initial_open_value: &str,
+    hover_open_value: &str,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let web_trigger =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-trigger", "open")
+            .expect("web trigger slot=navigation-menu-trigger state=open");
+    let web_viewport =
+        web_find_by_data_slot_and_state(&theme.root, "navigation-menu-viewport", "open")
+            .expect("web viewport slot=navigation-menu-viewport state=open");
+
+    let web_side = infer_side(web_trigger.rect, web_viewport.rect);
+    let web_align = infer_align(web_side, web_trigger.rect, web_viewport.rect);
+    let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_viewport.rect);
+    let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_viewport.rect);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            let items = vec![
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
+                ),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "components",
+                    "Components",
+                    vec![shadcn_nav_menu_demo_components_mobile_panel(
+                        cx,
+                        model.clone(),
+                    )],
+                ),
+                fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+            ];
+
+            let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(false)
+                .items(items)
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-initial-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                initial_open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {initial_open_value}"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
+    let click_point = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let items = vec![
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "home",
+                        "Home",
+                        vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "components",
+                        "Components",
+                        vec![shadcn_nav_menu_demo_components_mobile_panel(
+                            cx,
+                            model.clone(),
+                        )],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                ];
+
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(true)
+                    .indicator(false)
+                    .items(items)
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let hover_trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-hover-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                hover_open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {hover_open_value}"));
+    let hover_bounds = bounds_for_element(&mut app, window, hover_trigger_id)
+        .expect("fret nav menu trigger bounds");
+    let hover_point = Point::new(
+        Px(hover_bounds.origin.x.0 + hover_bounds.size.width.0 * 0.5),
+        Px(hover_bounds.origin.y.0 + hover_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: hover_point,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(hover_point.x.0 + 1.0), hover_point.y),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    let debug = std::env::var("FRET_DEBUG_NAV_MENU_HOVER_SWITCH")
+        .ok()
+        .is_some_and(|v| v == "1");
+    if debug {
+        let selected = app.models_mut().read(&model, |v| v.clone()).ok().flatten();
+        eprintln!(
+            "{web_name} after hover move selected={:?}",
+            selected.as_deref()
+        );
+    }
+
+    // The upstream demo relies on a hover trigger + viewport size transition that is effectively
+    // `duration-300` in the shadcn recipe. Our web golden is captured after a `wait=300`, so we
+    // advance enough frames to reach the same steady state before asserting geometry.
+    let hover_settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_300 + 2;
+    for tick in 0..hover_settle_frames {
+        let request_semantics = tick + 1 == hover_settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2000 + tick),
+            request_semantics,
+            |cx| {
+                let items = vec![
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "home",
+                        "Home",
+                        vec![shadcn_nav_menu_demo_home_panel(cx, model.clone())],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "components",
+                        "Components",
+                        vec![shadcn_nav_menu_demo_components_mobile_panel(
+                            cx,
+                            model.clone(),
+                        )],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                ];
+
+                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                    .viewport(true)
+                    .indicator(false)
+                    .items(items)
+                    .into_element(cx);
+                root_id_out.set(Some(el.id));
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    if debug {
+        let selected = app.models_mut().read(&model, |v| v.clone()).ok().flatten();
+        eprintln!(
+            "{web_name} after hover settle selected={:?}",
+            selected.as_deref()
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let viewport_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-viewport-query-hover-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(cx, root_id)
+        },
+    )
+    .expect("fret nav menu viewport panel id");
+    let viewport_bounds =
+        bounds_for_element(&mut app, window, viewport_id).expect("fret nav menu viewport bounds");
+
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-trigger-query-final-open",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                root_id,
+                hover_open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {hover_open_value}"));
+    let trigger_bounds =
+        bounds_for_element(&mut app, window, trigger_id).expect("fret nav menu trigger bounds");
+
+    let fret_trigger = WebRect {
+        x: trigger_bounds.origin.x.0,
+        y: trigger_bounds.origin.y.0,
+        w: trigger_bounds.size.width.0,
+        h: trigger_bounds.size.height.0,
+    };
+    let fret_viewport = WebRect {
+        x: viewport_bounds.origin.x.0,
+        y: viewport_bounds.origin.y.0,
+        w: viewport_bounds.size.width.0,
+        h: viewport_bounds.size.height.0,
+    };
+
+    let actual_gap = rect_main_gap(web_side, fret_trigger, fret_viewport);
+    let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_viewport);
+
+    let label = format!("{web_name} main_gap");
+    assert_close(&label, actual_gap, expected_gap, 1.0);
+    let label = format!("{web_name} cross_delta");
+    assert_close(&label, actual_cross, expected_cross, 1.5);
+    let label = format!("{web_name} viewport_height");
+    assert_close(&label, fret_viewport.h, web_viewport.rect.h, 1.5);
+    let label = format!("{web_name} viewport_width");
+    assert_close(&label, fret_viewport.w, web_viewport.rect.w, 1.5);
+    let label = format!("{web_name} trigger_height");
+    assert_close(&label, fret_trigger.h, web_trigger.rect.h, 1.0);
+}
+
 #[test]
 fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_height_matches() {
     let web = read_web_golden_open("navigation-menu-demo.home-mobile-vp375x320");
@@ -13338,6 +14005,15 @@ fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_height_matches() 
 fn web_vs_fret_navigation_menu_demo_components_mobile_small_viewport_height_matches() {
     assert_navigation_menu_demo_mobile_viewport_geometry_matches(
         "navigation-menu-demo.components-mobile-vp375x320",
+        "components",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_home_mobile_hover_to_components_viewport_geometry_matches() {
+    assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
+        "navigation-menu-demo.home-mobile-then-hover-components",
+        "home",
         "components",
     );
 }
