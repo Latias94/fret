@@ -7,6 +7,7 @@ contracts early to avoid large rewrites later.
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
+- Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
