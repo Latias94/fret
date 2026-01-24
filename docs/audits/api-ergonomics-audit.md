@@ -54,6 +54,14 @@ This document is meant to stay “live” while we iterate. Update this section 
     `crates/fret-launch/src/runner/desktop/windows_menu.rs`,
     `crates/fret-launch/src/runner/desktop/macos_menu.rs`,
     `ecosystem/fret-bootstrap/src/ui_app_driver.rs`.
+- [x] Declarative components can participate in dispatch-path availability queries (without new kernel widget types).
+  - Evidence: `crates/fret-ui/src/action.rs` (`OnCommandAvailability`, `CommandAvailabilityActionCx`),
+    `crates/fret-ui/src/declarative/host_widget.rs` (invokes availability hook during queries)
+  - Example surfaces: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs` (`*_virtualized_copyable`)
+- [x] Cross-surface clipboard commands exist beyond text widgets (`edit.copy`) with availability + effects wired.
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`
+  - Tests: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs` (`*_reports_availability_and_emits_clipboard_text`),
+    `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
@@ -316,3 +324,5 @@ Recent ergonomic improvement:
   (publish target id as models + global viewport input filtering + surface panel helper).
 - `interop::embedded_viewport::{EmbeddedViewportUiAppDriverExt, EmbeddedViewportMvuUiAppDriverExt}`
   further reduce wiring boilerplate (install input + frame recording in one call).
+- `fret-ui` exposes a policy hook for command availability (`command_on_command_availability_for`) so ecosystem
+  components can participate in OS menu / command palette gating without introducing new kernel widget types.
