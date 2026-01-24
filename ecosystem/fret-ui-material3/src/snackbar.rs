@@ -23,6 +23,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::elevation::shadow_for_elevation_with_color;
+use crate::motion::ms_to_frames;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SnackbarDuration {
@@ -254,6 +255,19 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
         Some(shadow_color),
         Corners::all(container_shape),
     );
+    let open_ticks = ms_to_frames(
+        theme
+            .duration_ms_by_key("md.sys.motion.duration.short4")
+            .unwrap_or(200),
+    );
+    let close_ticks = ms_to_frames(
+        theme
+            .duration_ms_by_key("md.sys.motion.duration.short2")
+            .unwrap_or(100),
+    );
+    let easing = theme
+        .easing_by_key("md.sys.motion.easing.emphasized")
+        .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"));
     let single_line_height =
         theme.metric_by_key("md.comp.snackbar.with-single-line.container.height");
     let two_line_height = theme.metric_by_key("md.comp.snackbar.with-two-lines.container.height");
@@ -292,6 +306,10 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
     ToastLayerStyle {
         palette,
         shadow,
+        open_ticks,
+        close_ticks,
+        easing,
+        slide_distance: Px(16.0),
         border_color_key: None,
         border_width: Px(0.0),
         description_color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
