@@ -215,14 +215,14 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (measurement gate, content-space bounds + `scroll_child_transform`), `crates/fret-ui/src/virtual_list.rs` (cross-extent measurement reset), `crates/fret-ui/src/declarative/host_widget/paint.rs` (paint applies `children_render_transform`), `crates/fret-ui/src/declarative/host_widget.rs` (scroll-into-view viewport mapping), `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` (wheel `HitTestOnly`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_skips_redundant_measures_for_clean_measured_rows`, `virtual_list_scroll_offsets_apply_in_semantics_snapshot`, `virtual_list_click_focus_does_not_trigger_scroll_jump_under_children_transform`).
   - Evidence: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_row_view_cache_reuses_rows_across_small_scroll_deltas`), `apps/fret-ui-gallery/src/ui.rs` (virtual list torture rows wrapped in `cached_subtree`).
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`set_children_barrier`, `take_pending_barrier_relayouts`), `crates/fret-ui/src/tree/layout.rs` (`layout_pending_barrier_relayouts_if_needed`), `crates/fret-ui/src/declarative/mount.rs` (`VirtualList` uses barrier set-children when axis size is layout-definite).
-  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`; updated after scroll-transform refactor):
+  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`; updated after per-row view-cache roots):
     - Torture (`tools/diag-scripts/ui-gallery-virtual-list-torture.json`):
-      - Baseline: `max.total_time_us=42472` (layout `42077`, prepaint `35`, paint `360`) (run dir: `target/fret-diag-perf-vlist-transform-baseline2`).
-      - ViewCache+Shell: `max.total_time_us=55708` (layout `51830`, prepaint `91`, paint `3787`) (run dir: `target/fret-diag-perf-vlist-transform-cache-shell2`).
-      - Note: timings are noisy; re-run locally to confirm deltas after major layout changes.
+      - Baseline: `max.total_time_us=59110` (layout `56509`, prepaint `81`, paint `2520`) (run dir: `target/fret-diag-perf-vlist-row-cache-baseline`).
+      - ViewCache+Shell: `max.total_time_us=46984` (layout `45334`, prepaint `39`, paint `1611`) (run dir: `target/fret-diag-perf-vlist-row-cache-cache-shell`).
+      - Note: timings are noisy; re-run locally to confirm deltas after major layout changes (wheel frames can spike).
     - Smooth wheel (`tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
-      - Baseline: `max.total_time_us=22721` (layout `22424`, prepaint `22`, paint `275`).
-      - ViewCache+Shell: `max.total_time_us=24991` (layout `24308`, prepaint `23`, paint `660`).
+      - Baseline: `max.total_time_us=38201` (layout `37771`, prepaint `38`, paint `392`) (run dir: `target/fret-diag-perf-vlist-row-cache-smooth-baseline`).
+      - ViewCache+Shell: `max.total_time_us=35733` (layout `34983`, prepaint `99`, paint `651`) (run dir: `target/fret-diag-perf-vlist-row-cache-smooth-cache-shell2`).
   - Commands:
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-baseline --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-cache-shell --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
