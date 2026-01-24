@@ -167,14 +167,21 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness) as the foundation for removing the global stopgap gate.
   - Remaining:
     - The GC sweep still has a conservative global stopgap: if any cache root is in reuse, stale/detached nodes are not swept this frame.
+      Removing this currently regresses `ui-gallery-overlay-torture.json` (fails at step 10 with `click_no_semantics_match` under cache+shell).
       Remove this once parent-pointer repair + reachability + explicit view-cache subtree liveness is proven sufficient under reuse.
       - Anchor: `crates/fret-ui/src/declarative/mount.rs` (`view_cache_has_reuse_roots` guard in the GC retain pass).
+    - Add missing detachment explainability so we can debug the stopgap removal from a single failing bundle:
+      - Export `root_parent_children_last_set_location` for `removed_subtrees` (plumb `UiTree`'s `debug_set_children_writes` into the record).
+      - Export `root_element_path` for `removed_subtrees` (map `root_element` via diagnostics debug identity / element path registry during bundle export).
   - Done when:
     - The `view_cache_has_reuse_roots` stopgap is removed and both overlay regression harnesses remain green under cache+shell reuse.
-  - Diagnostics: `removed_subtrees` now include `root_parent_element`, a `root_path` sample, and `root_parent_children_last_set_location` (when available), plus `root_element_path` when resolvable.
+  - Diagnostics:
+    - Current: `removed_subtrees` include `root_element`, `root_parent`, `root_parent_element`, a `root_path` sample, and `location` (callsite).
+    - TODO: include `root_parent_children_last_set_location` (last `set_children(parent, ..)` site when known) and `root_element_path` (debug identity) to make detachment explainable from a single bundle.
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+    - Re-verified (2026-01-24): PASS on this branch with the stopgap still enabled (`target/fret-diag/1769236670918-*`, `target/fret-diag/1769236719451-*`).
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
   - Touches: `crates/fret-ui/src/tree/layout.rs` (`repair_view_cache_root_bounds_from_engine_if_needed`)
