@@ -414,6 +414,12 @@ topics (if/when we implement them):
         `target/fret-diag-perf-vlist-window-boundary-sticky2/1769177002575-script-step-0027-wheel/bundle.json`.
     - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell/1769174146628-script-step-0027-wheel/bundle.json`
       - Takeaway: the boundary tick remains layout-dominated even without measurement, so the dominant cost is rebuilding/layouting the row subtree, not measuring it.
+    - Rejected (v1.1): per-row nested cache roots inside `VirtualList`.
+      - Attempt: wrap each row in a nested `ViewCache` boundary to reuse row layout/paint across window rebuilds.
+      - Issue: this breaks scripted interactions after `scroll_to_item` because semantics bounds for the target row end up in “content space” (large negative Y), so the injected click misses the button.
+      - Evidence bundle (diag run timeout at step 7):
+        `target/fret-diag-vlist-torture-smoke-rowcached3/1769223442870-script-step-0007-wait_until-timeout/bundle.json`
+      - Takeaway: before we encourage nested cache roots inside VirtualList, we need a stronger contract for scroll-child transforms + semantics bounds under view-cache reuse (fits `GPUI-MVP5-core-000` + ADR 0190 work).
   - Next (v2 direction; ADR 0190):
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
