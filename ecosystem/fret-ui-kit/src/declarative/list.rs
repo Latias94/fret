@@ -115,7 +115,7 @@ pub fn list_virtualized<H: UiHost>(
                             ..Default::default()
                         },
                         |cx, st| {
-                            cx.pressable_dispatch_command_opt(cmd);
+                            cx.pressable_dispatch_command_if_enabled_opt(cmd);
                             let bg = if is_selected || (enabled && st.pressed) {
                                 Some(row_active)
                             } else if enabled && st.hovered {

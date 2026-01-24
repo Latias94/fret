@@ -44,6 +44,11 @@ pub fn wire<H: UiHost>(
     }
 
     if has_submenu {
+        // Submenu open/focus/close timers are emitted from submenu-trigger interactions (hover,
+        // arrow keys). Install a timer handler on the trigger element so timer routing remains
+        // stable even when the overlay root is not the timer event target.
+        sub::install_timer_handler(cx, item_id, models.clone(), cfg);
+
         let models_for_hover = models.clone();
         let value_for_hover = value.clone();
         let cfg_for_hover = cfg;

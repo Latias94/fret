@@ -45,14 +45,18 @@ impl<H: UiHost> UiTree<H> {
     fn command_is_enabled(
         app: &H,
         window: Option<fret_core::AppWindowId>,
+        fallback_input_ctx: &InputContext,
         command: &CommandId,
     ) -> bool {
         let Some(window) = window else {
             return true;
         };
-        app.global::<fret_runtime::WindowCommandEnabledService>()
-            .and_then(|svc| svc.enabled(window, command))
-            != Some(false)
+        fret_runtime::command_is_enabled_for_window_with_input_ctx_fallback(
+            app,
+            window,
+            command,
+            fallback_input_ctx.clone(),
+        )
     }
 
     pub(super) fn sync_pending_shortcut_overlay_state(
@@ -175,14 +179,16 @@ impl<H: UiHost> UiTree<H> {
                         .get(command.clone())
                         .is_some_and(|m| m.repeatable)
                 {
-                    self.suppress_text_input_until_key_up = Some(params.key);
-                    if Self::command_is_enabled(app, self.window, &command) {
+                    if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                        self.suppress_text_input_until_key_up = Some(params.key);
                         app.push_effect(Effect::Command {
                             window: self.window,
                             command,
                         });
+                        return true;
                     }
-                    return true;
+
+                    return false;
                 }
             }
             return false;
@@ -222,14 +228,28 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(Some(command)) = matched.exact {
-                self.clear_pending_shortcut(app);
-                self.suppress_text_input_until_key_up = Some(params.key);
-                if Self::command_is_enabled(app, self.window, &command) {
+                if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                    self.clear_pending_shortcut(app);
+                    self.suppress_text_input_until_key_up = Some(params.key);
                     app.push_effect(Effect::Command {
                         window: self.window,
                         command,
                     });
+                    return true;
                 }
+
+                // Treat disabled commands as "not matched" so the keystrokes are replayed.
+                let pending = std::mem::take(&mut self.pending_shortcut);
+                if let Some(token) = pending.timer {
+                    app.push_effect(Effect::CancelTimer { token });
+                }
+                self.sync_pending_shortcut_overlay_state(app, None);
+                self.replay_captured_keystrokes(
+                    app,
+                    services,
+                    params.input_ctx,
+                    pending.keystrokes,
+                );
                 return true;
             }
 
@@ -260,14 +280,18 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if let Some(command) = service.keymap.resolve(params.input_ctx, chord) {
-            self.suppress_text_input_until_key_up = Some(params.key);
-            if Self::command_is_enabled(app, self.window, &command) {
+            if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                self.suppress_text_input_until_key_up = Some(params.key);
                 app.push_effect(Effect::Command {
                     window: self.window,
                     command,
                 });
+                return true;
             }
-            return true;
+
+            // Treat disabled commands as "not matched" so the event can fall through to the
+            // normal dispatch path (e.g. text inputs).
+            return false;
         }
 
         false
@@ -313,7 +337,7 @@ impl<H: UiHost> UiTree<H> {
             if let Some(service) = app.global::<KeymapService>()
                 && let Some(command) = service.keymap.resolve(ctx, stroke.chord)
             {
-                if Self::command_is_enabled(app, self.window, &command) {
+                if Self::command_is_enabled(app, self.window, ctx, &command) {
                     app.push_effect(Effect::Command {
                         window: self.window,
                         command,

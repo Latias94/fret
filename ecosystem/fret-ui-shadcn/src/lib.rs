@@ -24,6 +24,7 @@ pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
 pub mod command;
+mod command_gating;
 pub mod context_menu;
 mod data_grid;
 pub mod data_grid_canvas;

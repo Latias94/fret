@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use fret_core::{Px, Rect};
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -38,11 +38,28 @@ pub enum PopoverVariant {
     Modal,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct PopoverOptions {
     pub variant: PopoverVariant,
     pub consume_outside_pointer_events: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+}
+
+impl std::fmt::Debug for PopoverOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PopoverOptions")
+            .field("variant", &self.variant)
+            .field(
+                "consume_outside_pointer_events",
+                &self.consume_outside_pointer_events,
+            )
+            .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .finish()
+    }
 }
 
 impl Default for PopoverOptions {
@@ -51,6 +68,8 @@ impl Default for PopoverOptions {
             variant: PopoverVariant::NonModal,
             consume_outside_pointer_events: false,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 }
@@ -72,6 +91,16 @@ impl PopoverOptions {
 
     pub fn initial_focus(mut self, element: GlobalElementId) -> Self {
         self.initial_focus = Some(element);
+        self
+    }
+
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 }
@@ -170,7 +199,7 @@ impl PopoverRoot {
     }
 
     pub fn options(&self) -> PopoverOptions {
-        self.options
+        self.options.clone()
     }
 
     pub fn request_with_dismiss_handler<H: UiHost>(
@@ -187,7 +216,7 @@ impl PopoverRoot {
             trigger,
             self.open_model(cx),
             presence,
-            self.options,
+            self.options.clone(),
             on_dismiss_request,
             children,
         )
@@ -295,6 +324,8 @@ pub fn popover_request(
     });
     request.consume_outside_pointer_events = options.consume_outside_pointer_events;
     request.initial_focus = options.initial_focus;
+    request.on_open_auto_focus = options.on_open_auto_focus.clone();
+    request.on_close_auto_focus = options.on_close_auto_focus.clone();
     request
 }
 
@@ -648,7 +679,8 @@ mod tests {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
 
-        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let handler: OnDismissRequest =
+            Arc::new(|_host, _cx, _req: &mut fret_ui::action::DismissRequestCx| {});
         let req = popover_request_with_dismiss_handler(
             GlobalElementId(0x123),
             GlobalElementId(0x123),
@@ -781,8 +813,9 @@ mod tests {
         let reason_cell: std::sync::Arc<std::sync::Mutex<Option<DismissReason>>> =
             std::sync::Arc::new(std::sync::Mutex::new(None));
         let reason_cell_for_handler = reason_cell.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+            req.prevent_default();
         });
 
         let overlay_children =
@@ -851,6 +884,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 click_count: 1,
                 pointer_id: fret_core::PointerId(0),
                 pointer_type: Default::default(),
@@ -858,9 +892,17 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
-        assert_eq!(
-            *reason_cell.lock().expect("reason lock"),
-            Some(DismissReason::OutsidePress)
-        );
+        let reason = *reason_cell.lock().expect("reason lock");
+        let Some(DismissReason::OutsidePress { pointer }) = reason else {
+            panic!("expected outside-press dismissal, got {reason:?}");
+        };
+        let Some(cx) = pointer else {
+            panic!("expected pointer payload for outside-press dismissal");
+        };
+        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+        assert_eq!(cx.button, fret_core::MouseButton::Left);
+        assert_eq!(cx.modifiers, fret_core::Modifiers::default());
+        assert_eq!(cx.click_count, 1);
     }
 }

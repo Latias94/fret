@@ -10,23 +10,21 @@ Implemented:
 
 - Dispatch phase enum: `crates/fret-runtime/src/input.rs` (`InputDispatchPhase::{Preview,Capture,Bubble}`).
 - `prevent_default` plumbing: `crates/fret-runtime/src/input.rs` (`DefaultAction`, `DefaultActionSet`) and `crates/fret-ui/src/widget.rs` (`EventCx::{prevent_default,default_prevented}`).
+- Observer pass contract: outside-press uses `Widget::event_observer` with `ObserverCx` (Preview phase) so routing state (focus/capture/propagation/default actions) cannot be mutated: `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/tree/dispatch.rs`.
 - Default actions step (v1): `DefaultAction::FocusOnPointerDown` is applied by default during event dispatch and can be suppressed via `prevent_default`: `crates/fret-ui/src/tree/dispatch.rs`.
+- Capture-phase dispatch (root → target): key down/up and pointer interactions (down/up/wheel/pinch/cancel, and move when buttons are pressed or capture is active): `crates/fret-ui/src/tree/dispatch.rs`.
+- Per-layer pointer-move observation: when overlay policies opt in (e.g. Radix menu safe-hover corridors), pointer-move observers still run even when hit-tested pointer dispatch is suppressed by pointer occlusion: `crates/fret-ui/src/tree/dispatch.rs`, `crates/fret-ui/src/declarative/host_widget/event/dismissible.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/prevent_default.rs`.
+- Tests: `crates/fret-ui/src/tree/tests/dispatch_phase.rs`.
+- Dispatch-path action availability query (retained `UiTree`):
+  - `Widget::command_availability` returns `CommandAvailability::{NotHandled,Available,Blocked}`.
+  - `UiTree::{command_availability,is_command_available}` provides a best-effort query suitable for gating UI surfaces.
+  - Data-only runner bridge: `WindowCommandActionAvailabilityService` publishes per-window availability snapshots.
 
 Not implemented yet / known gaps:
 
-- Capture-phase dispatch as a first-class pass (separate from Preview/Bubble), including a
-  dedicated capture hook to avoid double-running normal bubble handlers.
-- Action availability query API (`is_action_available` / dispatch-tree snapshot service).
 - Additional default actions beyond `FocusOnPointerDown` (intentionally deferred to keep v1 low risk).
-
-Prototype / in-progress (see `refactor/input-dispatch-v2` branch):
-
-- Dispatch-path availability query on retained trees:
-  - `Widget::command_availability` returns `CommandAvailability::{NotHandled,Available,Blocked}`.
-  - `UiTree::is_command_available` provides a `bool` query suitable for gating UI surfaces.
-- Data-only runner bridge:
-  - `WindowCommandActionAvailabilityService` holds window-scoped per-command availability snapshots.
+- Capture-phase coverage is still incremental for non-pointer/key event families and may need to be expanded as the contract hardens.
 
 ## Context
 
@@ -77,8 +75,8 @@ These problems tend to cause large rewrites if decided late because they cut acr
 
 - Input dispatch is primarily "hit-test then bubble to root", with pointer capture overriding hit-test.
 - A dedicated observer path exists for outside-press click-through overlay dismissal:
-  - `InputDispatchPhase::{Normal,Observer}` in `crates/fret-runtime/src/input.rs`
-  - invariants: observer dispatch must not mutate focus/capture/propagation (ADR 0069).
+  - `InputDispatchPhase::Preview` is used for observer dispatch, routed through `Widget::event_observer`.
+  - invariants: observer dispatch must not mutate focus/capture/propagation/default actions (ADR 0069).
 - Some default-behavior suppression exists but is *component-specific*:
   - `PressablePointerDownResult::{Continue,SkipDefault,...}` in `crates/fret-ui/src/action.rs`.
 - Command availability exists only as a minimal runner-facing snapshot (undo/redo):
@@ -260,7 +258,7 @@ compose the new mechanisms:
 2) **Implement `DefaultAction::FocusOnPointerDown`**
    - Move "focus-on-mousedown" from component-specific defaults into the runtime default action
      step, and allow suppression via `prevent_default`.
-3) **Add capture + bubble dispatch for pointer down / key down**
+3) **Add capture + bubble dispatch for pointer interactions + key down/up**
    - Start with the smallest set of events that benefit from phase separation.
 4) **Add availability query plumbing**
    - Build and store a dispatch-tree snapshot that supports `is_action_available(CommandId)`.

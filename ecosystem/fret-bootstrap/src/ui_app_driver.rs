@@ -325,7 +325,6 @@ pub struct CommandPaletteModels {
 #[derive(Debug, Default)]
 pub struct CommandPaletteService {
     by_window: HashMap<AppWindowId, CommandPaletteModels>,
-    gating_by_window: HashMap<AppWindowId, fret_runtime::WindowCommandGatingSnapshot>,
 }
 
 #[cfg(feature = "ui-app-command-palette")]
@@ -334,12 +333,6 @@ impl CommandPaletteService {
         self.by_window.get(&window).cloned()
     }
 
-    pub fn gating(
-        &self,
-        window: AppWindowId,
-    ) -> Option<&fret_runtime::WindowCommandGatingSnapshot> {
-        self.gating_by_window.get(&window)
-    }
     fn ensure_window(&mut self, app: &mut App, window: AppWindowId) -> CommandPaletteModels {
         if let Some(existing) = self.by_window.get(&window) {
             return existing.clone();
@@ -1131,33 +1124,42 @@ fn ui_app_handle_command<S>(
             "app.command_palette" | "command_palette.toggle"
         )
     {
-        app.with_global_mut(CommandPaletteService::default, |svc, app| {
+        let next_open = app.with_global_mut(CommandPaletteService::default, |svc, app| {
             let models = svc.ensure_window(app, window);
             let is_open = app.models().get_copied(&models.open).unwrap_or(false);
             let next_open = !is_open;
             let _ = app.models_mut().update(&models.open, |v| *v = next_open);
             let _ = app.models_mut().update(&models.query, |v| v.clear());
-
-            if next_open {
-                let fallback_input_ctx =
-                    fret_ui_shadcn::command::command_palette_input_context(app);
-                let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                    app,
-                    window,
-                    fallback_input_ctx,
-                );
-
-                let mut input_ctx = snapshot.input_ctx().clone();
-                input_ctx.ui_has_modal = true;
-                input_ctx.focus_is_text_input = false;
-                input_ctx.dispatch_phase = fret_runtime::InputDispatchPhase::Bubble;
-
-                svc.gating_by_window
-                    .insert(window, snapshot.with_input_ctx(input_ctx));
-            } else {
-                svc.gating_by_window.remove(&window);
-            }
+            next_open
         });
+
+        if next_open {
+            let fallback_input_ctx = fret_ui_shadcn::command::command_palette_input_context(app);
+            let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                app,
+                window,
+                fallback_input_ctx,
+            );
+
+            let mut input_ctx = snapshot.input_ctx().clone();
+            input_ctx.ui_has_modal = true;
+            input_ctx.focus_is_text_input = false;
+            input_ctx.dispatch_phase = fret_runtime::InputDispatchPhase::Bubble;
+
+            app.with_global_mut(
+                fret_runtime::WindowCommandGatingService::default,
+                |svc, _app| {
+                    svc.set_snapshot(window, snapshot.with_input_ctx(input_ctx));
+                },
+            );
+        } else {
+            app.with_global_mut(
+                fret_runtime::WindowCommandGatingService::default,
+                |svc, _app| {
+                    svc.remove_window(window);
+                },
+            );
+        }
         app.request_redraw(window);
         return;
     }
@@ -1562,12 +1564,10 @@ fn ui_app_render<S>(
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled
-                        && let Some((models, gating)) =
-                            cx.app.global::<CommandPaletteService>().and_then(|svc| {
-                                let models = svc.models(cx.window)?;
-                                let gating = svc.gating(cx.window).cloned();
-                                Some((models, gating))
-                            })
+                        && let Some(models) = cx
+                            .app
+                            .global::<CommandPaletteService>()
+                            .and_then(|svc| svc.models(cx.window))
                     {
                         let open_now = cx
                             .app
@@ -1575,19 +1575,9 @@ fn ui_app_render<S>(
                             .get_copied(&models.open)
                             .unwrap_or(false);
                         let entries = if open_now {
-                            let gating = gating.unwrap_or_else(|| {
-                                let fallback =
-                                    fret_ui_shadcn::command::command_palette_input_context(&*cx.app);
-                                fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                                    &*cx.app,
-                                    cx.window,
-                                    fallback,
-                                )
-                            });
-                            fret_ui_shadcn::command::command_entries_from_host_commands_with_gating_snapshot(
+                            fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
                                 cx,
                                 fret_ui_shadcn::command::CommandCatalogOptions::default(),
-                                &gating,
                             )
                         } else {
                             Vec::new()
@@ -1633,12 +1623,10 @@ fn ui_app_render<S>(
 
                     #[cfg(feature = "ui-app-command-palette")]
                     if driver.command_palette_enabled
-                        && let Some((models, gating)) =
-                            cx.app.global::<CommandPaletteService>().and_then(|svc| {
-                                let models = svc.models(cx.window)?;
-                                let gating = svc.gating(cx.window).cloned();
-                                Some((models, gating))
-                            })
+                        && let Some(models) = cx
+                            .app
+                            .global::<CommandPaletteService>()
+                            .and_then(|svc| svc.models(cx.window))
                     {
                         let open_now = cx
                             .app
@@ -1646,19 +1634,9 @@ fn ui_app_render<S>(
                             .get_copied(&models.open)
                             .unwrap_or(false);
                         let entries = if open_now {
-                            let gating = gating.unwrap_or_else(|| {
-                                let fallback =
-                                    fret_ui_shadcn::command::command_palette_input_context(&*cx.app);
-                                fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                                    &*cx.app,
-                                    cx.window,
-                                    fallback,
-                                )
-                            });
-                            fret_ui_shadcn::command::command_entries_from_host_commands_with_gating_snapshot(
+                            fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
                                 cx,
                                 fret_ui_shadcn::command::CommandCatalogOptions::default(),
-                                &gating,
                             )
                         } else {
                             Vec::new()

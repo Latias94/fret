@@ -15,9 +15,11 @@ pub(super) struct ViewportHit {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct ViewportCaptureState {
+    pub(super) pointer_id: fret_core::PointerId,
     pub(super) hit: ViewportHit,
     pub(super) button: fret_core::MouseButton,
     pub(super) start: Point,
+    pub(super) last: Point,
     pub(super) moved: bool,
 }
 
@@ -25,6 +27,8 @@ pub(super) fn viewport_input_from_hit(
     window: fret_core::AppWindowId,
     hit: ViewportHit,
     pixels_per_point: f32,
+    pointer_id: fret_core::PointerId,
+    pointer_type: fret_core::PointerType,
     position: Point,
     kind: ViewportInputKind,
 ) -> Option<ViewportInputEvent> {
@@ -33,6 +37,8 @@ pub(super) fn viewport_input_from_hit(
         hit.viewport.target,
         &hit.mapping,
         pixels_per_point,
+        pointer_id,
+        pointer_type,
         position,
         kind,
     )
@@ -42,6 +48,8 @@ pub(super) fn viewport_input_from_hit_clamped(
     window: fret_core::AppWindowId,
     hit: ViewportHit,
     pixels_per_point: f32,
+    pointer_id: fret_core::PointerId,
+    pointer_type: fret_core::PointerType,
     position: Point,
     kind: ViewportInputKind,
 ) -> ViewportInputEvent {
@@ -50,6 +58,8 @@ pub(super) fn viewport_input_from_hit_clamped(
         hit.viewport.target,
         &hit.mapping,
         pixels_per_point,
+        pointer_id,
+        pointer_type,
         position,
         kind,
     )

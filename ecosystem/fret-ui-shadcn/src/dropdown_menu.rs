@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
+use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
@@ -521,6 +522,8 @@ fn reserve_leading_slot(entries: &[DropdownMenuEntry]) -> bool {
 }
 
 fn collect_roving_labels_and_disabled(
+    app: &impl UiHost,
+    gating: &WindowCommandGatingSnapshot,
     entries: &[DropdownMenuEntry],
     labels: &mut Vec<Arc<str>>,
     disabled: &mut Vec<bool>,
@@ -529,24 +532,52 @@ fn collect_roving_labels_and_disabled(
         match entry {
             DropdownMenuEntry::Item(item) => {
                 labels.push(item.label.clone());
-                disabled.push(item.disabled);
+                disabled.push(
+                    item.disabled
+                        || crate::command_gating::command_is_disabled_by_gating(
+                            app,
+                            gating,
+                            item.command.as_ref(),
+                        ),
+                );
             }
             DropdownMenuEntry::CheckboxItem(item) => {
                 labels.push(item.label.clone());
-                disabled.push(item.disabled);
+                disabled.push(
+                    item.disabled
+                        || crate::command_gating::command_is_disabled_by_gating(
+                            app,
+                            gating,
+                            item.command.as_ref(),
+                        ),
+                );
             }
             DropdownMenuEntry::RadioItem(item) => {
                 labels.push(item.label.clone());
-                disabled.push(item.disabled);
+                disabled.push(
+                    item.disabled
+                        || crate::command_gating::command_is_disabled_by_gating(
+                            app,
+                            gating,
+                            item.command.as_ref(),
+                        ),
+                );
             }
             DropdownMenuEntry::RadioGroup(group) => {
                 for item in &group.items {
                     labels.push(item.label.clone());
-                    disabled.push(item.disabled);
+                    disabled.push(
+                        item.disabled
+                            || crate::command_gating::command_is_disabled_by_gating(
+                                app,
+                                gating,
+                                item.command.as_ref(),
+                            ),
+                    );
                 }
             }
             DropdownMenuEntry::Group(group) => {
-                collect_roving_labels_and_disabled(&group.entries, labels, disabled);
+                collect_roving_labels_and_disabled(app, gating, &group.entries, labels, disabled);
             }
             DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {}
         }
@@ -1122,8 +1153,8 @@ impl DropdownMenu {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
@@ -1172,9 +1203,20 @@ impl DropdownMenu {
                     .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme))
             });
 
+            let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+
+            let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+            let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
-            menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
+            menu::trigger::wire_open_or_focus_on_arrow_keys(
+                cx,
+                trigger_id,
+                self.open.clone(),
+                first_item_focus_id.clone(),
+                last_item_focus_id.clone(),
+            );
             let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
@@ -1201,10 +1243,11 @@ impl DropdownMenu {
                 let min_width = self.min_width;
                 let submenu_min_width = self.submenu_min_width;
                 let align_leading_icons = self.align_leading_icons;
+                let gating = gating.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
-                let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
-                let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id = first_item_focus_id.clone();
+                let last_item_focus_id = last_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -1222,7 +1265,13 @@ impl DropdownMenu {
                     let item_count = focusable_item_count(&entries);
                     let mut labels: Vec<Arc<str>> = Vec::with_capacity(item_count);
                     let mut disabled_flags: Vec<bool> = Vec::with_capacity(item_count);
-                    collect_roving_labels_and_disabled(&entries, &mut labels, &mut disabled_flags);
+                    collect_roving_labels_and_disabled(
+                        &*cx.app,
+                        &gating,
+                        &entries,
+                        &mut labels,
+                        &mut disabled_flags,
+                    );
 
                     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
@@ -1355,6 +1404,8 @@ impl DropdownMenu {
                         cx,
                         content_layout,
                         move |cx| {
+                            let gating =
+                                crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed_local,
@@ -1470,6 +1521,7 @@ impl DropdownMenu {
                                                     struct RenderEnv {
                                                         reserve_leading_slot_enabled: bool,
                                                         item_count: usize,
+                                                        gating: WindowCommandGatingSnapshot,
                                                         ring: RingStyle,
                                                         border: fret_core::Color,
                                                         radius_sm: Px,
@@ -1508,6 +1560,7 @@ impl DropdownMenu {
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
+                                                        let gating = env.gating.clone();
                                                         let ring = env.ring.clone();
                                                         let border = env.border;
                                                         let radius_sm = env.radius_sm;
@@ -1640,9 +1693,14 @@ impl DropdownMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_menu.clone();
@@ -1679,7 +1737,7 @@ impl DropdownMenu {
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -1767,9 +1825,14 @@ impl DropdownMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_menu.clone();
@@ -1812,7 +1875,7 @@ impl DropdownMenu {
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -1900,9 +1963,14 @@ impl DropdownMenu {
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let test_id = item.test_id.clone();
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
@@ -1970,7 +2038,7 @@ impl DropdownMenu {
                                                                 }
 
                                                                 if !has_submenu && !disabled {
-                                                                    cx.pressable_dispatch_command_opt(command.clone());
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                     if close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2134,6 +2202,7 @@ impl DropdownMenu {
                                                     let env = RenderEnv {
                                                         reserve_leading_slot_enabled,
                                                         item_count,
+                                                        gating: gating.clone(),
                                                         ring,
                                                         border,
                                                         radius_sm,
@@ -2353,7 +2422,13 @@ impl DropdownMenu {
                                                 Vec::with_capacity(item_count);
                                             let mut submenu_disabled_flags: Vec<bool> =
                                                 Vec::with_capacity(item_count);
+                                            let submenu_gating = crate::command_gating::snapshot_for_window(
+                                                &*cx.app,
+                                                cx.window,
+                                            );
                                             collect_roving_labels_and_disabled(
+                                                &*cx.app,
+                                                &submenu_gating,
                                                 &submenu_entries,
                                                 &mut submenu_labels,
                                                 &mut submenu_disabled_flags,
@@ -2394,12 +2469,17 @@ impl DropdownMenu {
                                                     props
                                                 },
                                                 move |cx| {
+                                                    let gating = crate::command_gating::snapshot_for_window(
+                                                        &*cx.app,
+                                                        cx.window,
+                                                    );
                                                     let mut item_ix: usize = 0;
 
                                                     #[derive(Clone)]
                                                     struct RenderEnv {
                                                         reserve_leading_slot_enabled: bool,
                                                         item_count: usize,
+                                                        gating: WindowCommandGatingSnapshot,
                                                         ring: RingStyle,
                                                         border: fret_core::Color,
                                                         radius_sm: Px,
@@ -2435,6 +2515,7 @@ impl DropdownMenu {
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
+                                                        let gating = env.gating.clone();
                                                         let ring = env.ring.clone();
                                                         let border = env.border;
                                                         let radius_sm = env.radius_sm;
@@ -2576,9 +2657,14 @@ impl DropdownMenu {
                                                                     .a11y_label
                                                                     .clone()
                                                                     .or_else(|| Some(label.clone()));
-                                                                let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
+                                                                let disabled = item.disabled
+                                                                    || crate::command_gating::command_is_disabled_by_gating(
+                                                                        &*cx.app,
+                                                                        &gating,
+                                                                        command.as_ref(),
+                                                                    );
                                                                 let leading = item.leading.clone();
                                                                 let trailing = item.trailing.clone();
                                                                 let open = open_for_submenu.clone();
@@ -2606,7 +2692,7 @@ impl DropdownMenu {
                                                                                     checked.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2684,9 +2770,14 @@ impl DropdownMenu {
                                                                     .a11y_label
                                                                     .clone()
                                                                     .or_else(|| Some(label.clone()));
-                                                                let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
+                                                                let disabled = item.disabled
+                                                                    || crate::command_gating::command_is_disabled_by_gating(
+                                                                        &*cx.app,
+                                                                        &gating,
+                                                                        command.as_ref(),
+                                                                    );
                                                                 let leading = item.leading.clone();
                                                                 let trailing = item.trailing.clone();
                                                                 let open = open_for_submenu.clone();
@@ -2719,7 +2810,7 @@ impl DropdownMenu {
                                                                                     value.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2796,9 +2887,14 @@ impl DropdownMenu {
                                                                     .a11y_label
                                                                     .clone()
                                                                     .or_else(|| Some(label.clone()));
-                                                                let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
+                                                                let disabled = item.disabled
+                                                                    || crate::command_gating::command_is_disabled_by_gating(
+                                                                        &*cx.app,
+                                                                        &gating,
+                                                                        command.as_ref(),
+                                                                    );
                                                                 let leading = item.leading.clone();
                                                                 let trailing = item.trailing.clone();
                                                                 let variant = item.variant;
@@ -2818,7 +2914,7 @@ impl DropdownMenu {
                                                                                 disabled,
                                                                                 &submenu_for_key,
                                                                             );
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2952,6 +3048,7 @@ impl DropdownMenu {
                                                     let env = RenderEnv {
                                                         reserve_leading_slot_enabled,
                                                         item_count,
+                                                        gating: gating.clone(),
                                                         ring,
                                                         border,
                                                         radius_sm,
@@ -3814,6 +3911,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -3942,6 +4042,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4005,6 +4108,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4016,8 +4122,9 @@ mod tests {
 
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
         let dismiss_calls_for_handler = dismiss_calls.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, _reason| {
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
             dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
         });
 
         let _ = render_frame_with_dismiss_handler(
@@ -4065,6 +4172,7 @@ mod tests {
                 position: outside,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -4082,7 +4190,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app.models_mut().insert(None);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4404,6 +4514,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -4498,13 +4609,11 @@ mod tests {
             "expected click position to fall inside underlay bounds; pos={position:?} bounds={underlay_bounds:?}"
         );
 
-        let hit = ui.debug_hit_test(position).hit;
-        let hit_path = hit.map(|hit| ui.debug_node_path(hit));
-        assert!(
-            hit_path
-                .as_ref()
-                .is_none_or(|path| !path.contains(&underlay_node)),
-            "expected modal dropdown-menu to block underlay hit-testing; hit={hit:?} hit_path={hit_path:?} underlay={underlay_node:?}"
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+            "expected modal dropdown-menu to install pointer occlusion"
         );
         ui.dispatch_event(
             &mut app,
@@ -4526,6 +4635,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -4563,6 +4673,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4643,14 +4756,15 @@ mod tests {
 
     #[test]
     fn dropdown_menu_submenu_opens_on_hover_and_closes_on_leave() {
-        use std::time::Duration;
-
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4667,27 +4781,40 @@ mod tests {
         ];
 
         // First frame: establish stable trigger bounds.
-        let _ = render_frame(
+        let (_, trigger_id) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
 
         // Second frame: open the menu.
-        let _ = render_frame(
+        let (_, trigger_id_2) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
+        );
+        assert_eq!(
+            trigger_id_2, trigger_id,
+            "expected a stable trigger element id"
+        );
+
+        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        assert!(
+            fret_ui::elements::dismissible_has_pointer_move_handler(&mut app, window, overlay_root),
+            "expected dropdown menu overlay root to install a dismissible pointer-move hook (submenu safe-hover)"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4735,25 +4862,33 @@ mod tests {
         );
 
         let effects = app.flush_effects();
-        let open_timer = effects.iter().find_map(|e| match e {
-            Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(100) => {
-                Some(*token)
-            }
-            _ => None,
-        });
-        let Some(open_timer) = open_timer else {
-            panic!("expected submenu open-delay timer effect");
-        };
+        let open_delay = menu::sub::MenuSubmenuConfig::default().open_delay;
+        let open_timers: Vec<fret_runtime::TimerToken> = effects
+            .iter()
+            .filter_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if *after == open_delay => Some(*token),
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !open_timers.is_empty(),
+            "expected submenu open-delay timer effect"
+        );
 
         // Third frame: hovering does not open the submenu immediately (open-delay timer).
-        let _ = render_frame(
+        let (_, trigger_id_3) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
+        );
+        assert_eq!(
+            trigger_id_3, trigger_id,
+            "expected a stable trigger element id"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4775,17 +4910,24 @@ mod tests {
             "submenu items should not render before the open-delay timer fires"
         );
 
-        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
+        for token in open_timers {
+            ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+        }
 
         // Fourth frame: after open timer fires, the submenu opens.
-        let _ = render_frame(
+        let (_, trigger_id_4) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
+        );
+        assert_eq!(
+            trigger_id_4, trigger_id,
+            "expected a stable trigger element id"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4806,12 +4948,56 @@ mod tests {
             "submenu items should render after the open-delay timer fires"
         );
 
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha menu item")
+            .bounds;
+        let sub_beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Beta"))
+            .expect("Sub Beta menu item")
+            .bounds;
+        let submenu_bounds = Rect::new(
+            Point::new(
+                Px(sub_alpha.origin.x.0.min(sub_beta.origin.x.0)),
+                Px(sub_alpha.origin.y.0.min(sub_beta.origin.y.0)),
+            ),
+            fret_core::Size::new(
+                Px((sub_alpha.origin.x.0 + sub_alpha.size.width.0)
+                    .max(sub_beta.origin.x.0 + sub_beta.size.width.0)
+                    - sub_alpha.origin.x.0.min(sub_beta.origin.x.0)),
+                Px((sub_alpha.origin.y.0 + sub_alpha.size.height.0)
+                    .max(sub_beta.origin.y.0 + sub_beta.size.height.0)
+                    - sub_alpha.origin.y.0.min(sub_beta.origin.y.0)),
+            ),
+        );
+        let more_center = rect_center(more.bounds);
+        let submenu_center = rect_center(submenu_bounds);
+        let dx = submenu_center.x.0 - more_center.x.0;
+        let dy = submenu_center.y.0 - more_center.y.0;
+        // Move away from the submenu direction so the safe-hover corridor is considered unsafe and
+        // the close-delay timer is armed.
+        let probe = if dx.abs() >= dy.abs() {
+            if dx >= 0.0 {
+                Point::new(Px(-100.0), more_center.y)
+            } else {
+                Point::new(Px(bounds.size.width.0 + 100.0), more_center.y)
+            }
+        } else if dy >= 0.0 {
+            Point::new(more_center.x, Px(-100.0))
+        } else {
+            Point::new(more_center.x, Px(bounds.size.height.0 + 100.0))
+        };
+
         ui.dispatch_event(
             &mut app,
             &mut services,
             &Event::Pointer(PointerEvent::Move {
                 pointer_id: fret_core::PointerId(0),
-                position: Point::new(Px(390.0), Px(10.0)),
+                position: probe,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
@@ -4819,23 +5005,33 @@ mod tests {
         );
 
         let effects = app.flush_effects();
+        let close_delay = menu::sub::MenuSubmenuConfig::default().close_delay;
         let timer = effects.iter().find_map(|e| match e {
-            Effect::SetTimer { token, .. } => Some(*token),
+            Effect::SetTimer { token, after, .. } if *after == close_delay => Some(*token),
             _ => None,
         });
         let Some(timer) = timer else {
-            panic!("expected submenu safe-hover close timer effect");
+            let hit = ui.debug_hit_test(probe);
+            panic!(
+                "expected submenu safe-hover close timer effect; effects={effects:?} probe={probe:?} hit={hit:?} submenu_bounds={submenu_bounds:?} layers={:?}",
+                ui.debug_layers_in_paint_order()
+            );
         };
 
         // Fifth frame: leaving the safe corridor arms a short close delay (submenu remains visible).
-        let _ = render_frame(
+        let (_, trigger_id_5) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries,
+        );
+        assert_eq!(
+            trigger_id_5, trigger_id,
+            "expected a stable trigger element id"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4850,13 +5046,14 @@ mod tests {
         ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: timer });
 
         // Sixth frame: after the close timer fires, the submenu begins closing.
-        let _ = render_frame(
+        let (_, trigger_id_6) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             vec![
                 DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
                     DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
@@ -4865,15 +5062,20 @@ mod tests {
                 DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
             ],
         );
+        assert_eq!(
+            trigger_id_6, trigger_id,
+            "expected a stable trigger element id"
+        );
 
         for _ in 0..overlay_motion::SHADCN_MOTION_TICKS_100 {
-            let _ = render_frame(
+            let _ = render_frame_capture_trigger_id(
                 &mut ui,
                 &mut app,
                 &mut services,
                 window,
                 bounds,
                 open.clone(),
+                trigger_id_out.clone(),
                 vec![
                     DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
                         DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
@@ -5542,6 +5744,150 @@ mod tests {
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
             "submenu items should render after ArrowRight opens the submenu"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus() {
+        use std::time::Duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let effects = app.flush_effects();
+        let focus_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after <= Duration::from_millis(250) => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(focus_timer) = focus_timer else {
+            panic!("expected submenu focus timer effect");
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer { token: focus_timer },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha submenu item");
+        assert_eq!(
+            ui.focus(),
+            Some(sub_alpha.id),
+            "expected keyboard-open to transfer focus into the submenu"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowLeft,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more_after_close = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More submenu trigger after close");
+        assert_eq!(
+            ui.focus(),
+            Some(more_after_close.id),
+            "ArrowLeft should restore focus to the submenu trigger"
         );
     }
 }

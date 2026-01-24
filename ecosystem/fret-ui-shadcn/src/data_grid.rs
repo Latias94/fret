@@ -21,6 +21,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::grid_viewport::{
     GridAxisMetrics, compute_grid_viewport_2d, default_range_extractor,
 };
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
@@ -328,7 +329,10 @@ impl DataGrid {
                                             let st = row_state_at(row.index);
                                             let on_click = st.on_click;
                                             let selected = st.selected;
-                                            let enabled = st.enabled;
+                                            let mut enabled = st.enabled;
+                                            if let Some(cmd) = on_click.as_ref() {
+                                                enabled = enabled && cx.command_is_enabled(cmd);
+                                            }
                                             let row_key = row_key_at(row.index);
                                             let is_last = row.index + 1 == rows;
 
@@ -358,7 +362,9 @@ impl DataGrid {
 
                                             out.push(cx.keyed(row_key, move |cx| {
                                                 cx.pressable(pressable, move |cx, state| {
-                                                    cx.pressable_dispatch_command_opt(on_click);
+                                                    cx.pressable_dispatch_command_if_enabled_opt(
+                                                        on_click,
+                                                    );
 
                                                     let mut hover_bg = row_bg;
                                                     hover_bg.a *= 0.5;

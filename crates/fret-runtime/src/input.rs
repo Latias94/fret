@@ -49,6 +49,16 @@ pub struct InputContext {
     pub dispatch_phase: InputDispatchPhase,
 }
 
+impl InputContext {
+    pub fn fallback(platform: Platform, caps: PlatformCapabilities) -> Self {
+        Self {
+            platform,
+            caps,
+            ..Default::default()
+        }
+    }
+}
+
 impl Default for InputContext {
     fn default() -> Self {
         Self {

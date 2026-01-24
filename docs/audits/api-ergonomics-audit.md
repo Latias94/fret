@@ -47,8 +47,10 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [x] Desktop system menus consume the data-only snapshots (Windows/macOS):
   - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs`, `crates/fret-launch/src/runner/desktop/macos_menu.rs`.
 - [x] A consumption-focused per-window gating snapshot aggregates all data-only inputs (P0):
-  - `WindowCommandGatingSnapshot` unifies `InputContext` + overrides.
+  - `WindowCommandGatingSnapshot` unifies `InputContext` + overrides (+ optional dispatch-path availability snapshot).
   - Evidence: `crates/fret-runtime/src/window_command_gating.rs`,
+    `crates/fret-runtime/src/window_command_action_availability.rs`,
+    `crates/fret-ui/src/tree/commands.rs`,
     `crates/fret-launch/src/runner/desktop/windows_menu.rs`,
     `crates/fret-launch/src/runner/desktop/macos_menu.rs`,
     `ecosystem/fret-bootstrap/src/ui_app_driver.rs`.

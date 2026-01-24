@@ -4546,6 +4546,7 @@ fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
         position,
         button,
         modifiers,
+        is_click: true,
         click_count: 1,
         pointer_type,
     });

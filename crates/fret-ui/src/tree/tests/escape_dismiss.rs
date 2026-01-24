@@ -25,8 +25,8 @@ fn escape_dismisses_topmost_overlay_without_focus() {
         crate::action::DismissibleActionHooks::default,
         |hooks| {
             let dismissed = dismissed.clone();
-            hooks.on_dismiss_request = Some(Arc::new(move |host, _cx, reason| {
-                assert_eq!(reason, crate::action::DismissReason::Escape);
+            hooks.on_dismiss_request = Some(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, crate::action::DismissReason::Escape);
                 let _ = host.models_mut().update(&dismissed, |v| *v = true);
             }));
         },

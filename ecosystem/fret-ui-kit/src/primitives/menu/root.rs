@@ -89,8 +89,7 @@ pub fn submenu_pointer_move_handler(
     cfg: sub::MenuSubmenuConfig,
 ) -> OnDismissiblePointerMove {
     dismissable_layer::pointer_move_handler(move |host, acx, mv| {
-        let _ = sub::handle_dismissible_pointer_move(host, acx, mv, &models, cfg);
-        false
+        sub::handle_dismissible_pointer_move(host, acx, mv, &models, cfg)
     })
 }
 
@@ -220,8 +219,10 @@ mod tests {
     use std::sync::Arc;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::action::DismissReason;
+    use fret_core::{
+        AppWindowId, Event, KeyCode, Modifiers, MouseButtons, Point, PointerEvent, PointerId,
+        PointerType, Px, Rect, Size,
+    };
 
     #[test]
     fn menu_modal_controls_underlay_pointer_blocking_and_click_through() {
@@ -258,7 +259,8 @@ mod tests {
 
         let window = AppWindowId::default();
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
-        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let handler: OnDismissRequest =
+            Arc::new(|_host, _cx, _req: &mut fret_ui::action::DismissRequestCx| {});
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let req = dismissible_menu_request_with_modal_and_dismiss_handler(
@@ -275,6 +277,66 @@ mod tests {
                 true,
             );
             assert!(req.dismissible_on_dismiss_request.is_some());
+        });
+    }
+
+    #[test]
+    fn menu_request_initial_focus_is_gated_by_input_modality() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+
+        let content_focus = Some(GlobalElementId(42));
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            fret_ui::input_modality::update_for_event(
+                cx.app,
+                window,
+                &Event::KeyDown {
+                    key: KeyCode::KeyA,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            let req = dismissible_menu_request_with_modal(
+                cx,
+                GlobalElementId(1),
+                GlobalElementId(2),
+                open.clone(),
+                OverlayPresence::hidden(),
+                Vec::new(),
+                "menu".to_string(),
+                content_focus,
+                None,
+                true,
+            );
+            assert_eq!(req.initial_focus, None);
+
+            fret_ui::input_modality::update_for_event(
+                cx.app,
+                window,
+                &Event::Pointer(PointerEvent::Move {
+                    position: Point::new(Px(1.0), Px(2.0)),
+                    buttons: MouseButtons::default(),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            let req = dismissible_menu_request_with_modal(
+                cx,
+                GlobalElementId(1),
+                GlobalElementId(2),
+                open,
+                OverlayPresence::hidden(),
+                Vec::new(),
+                "menu".to_string(),
+                content_focus,
+                None,
+                true,
+            );
+            assert_eq!(req.initial_focus, content_focus);
         });
     }
 }

@@ -5,7 +5,7 @@ mod id;
 mod queries;
 mod runtime;
 
-pub use access::{take_element_state, with_element_state};
+pub use access::{dismissible_has_pointer_move_handler, take_element_state, with_element_state};
 pub use cx::ElementContext;
 pub use hash::global_root;
 pub use id::GlobalElementId;

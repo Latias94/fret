@@ -2,7 +2,9 @@ use fret_core::{Event, KeyCode, SemanticsRole, Size, TextStyle};
 use fret_runtime::{CommandId, Model};
 
 use super::TextInput;
-use crate::widget::{EventCx, LayoutCx, PaintCx, Widget};
+use crate::widget::{
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx, Widget,
+};
 use crate::{Invalidation, TextInputStyle, UiHost};
 
 pub struct BoundTextInput {
@@ -129,6 +131,57 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         true
     }
 
+    fn is_text_input(&self) -> bool {
+        true
+    }
+
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
+        let before = self.input.text().to_string();
+        let handled = <TextInput as Widget<H>>::command(&mut self.input, cx, command);
+        if handled && self.input.text() != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+            cx.invalidate_self(Invalidation::Layout);
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
+        handled
+    }
+
+    fn command_availability(
+        &self,
+        cx: &mut CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> CommandAvailability {
+        if cx.focus != Some(cx.node) {
+            return CommandAvailability::NotHandled;
+        }
+
+        let cmd = command.as_str();
+        if !cmd.starts_with("text.") {
+            return CommandAvailability::NotHandled;
+        }
+
+        let clipboard_text = cx.input_ctx.caps.clipboard.text;
+        match cmd {
+            "text.copy" | "text.cut" => {
+                if !clipboard_text {
+                    return CommandAvailability::Blocked;
+                }
+                self.input
+                    .has_selection()
+                    .then_some(CommandAvailability::Available)
+                    .unwrap_or(CommandAvailability::Blocked)
+            }
+            "text.paste" => {
+                if !clipboard_text {
+                    return CommandAvailability::Blocked;
+                }
+                CommandAvailability::Available
+            }
+            _ => CommandAvailability::Available,
+        }
+    }
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         if cx.focus != Some(cx.node) {
             self.sync_from_model(cx.app, false);

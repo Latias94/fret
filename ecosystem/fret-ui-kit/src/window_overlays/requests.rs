@@ -1,6 +1,8 @@
 use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::action::{OnDismissRequest, OnDismissiblePointerMove};
+use fret_ui::action::{
+    OnCloseAutoFocus, OnDismissRequest, OnDismissiblePointerMove, OnOpenAutoFocus,
+};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 
@@ -23,6 +25,8 @@ pub struct DismissiblePopoverRequest {
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
@@ -51,6 +55,8 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())
             .field("children_len", &self.children.len())
@@ -68,6 +74,8 @@ pub struct ModalRequest {
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub children: Vec<AnyElement>,
 }
@@ -86,6 +94,8 @@ impl std::fmt::Debug for ModalRequest {
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("children_len", &self.children.len())
             .finish()
@@ -96,6 +106,11 @@ impl std::fmt::Debug for ModalRequest {
 pub struct HoverOverlayRequest {
     pub id: GlobalElementId,
     pub root_name: String,
+    /// Whether the overlay should participate in hit-testing and input routing.
+    ///
+    /// When `false`, the overlay may remain mounted for close transitions but must be click-through
+    /// and excluded from any observer passes.
+    pub interactive: bool,
     pub trigger: GlobalElementId,
     pub children: Vec<AnyElement>,
 }
@@ -105,6 +120,7 @@ impl std::fmt::Debug for HoverOverlayRequest {
         f.debug_struct("HoverOverlayRequest")
             .field("id", &self.id)
             .field("root_name", &self.root_name)
+            .field("interactive", &self.interactive)
             .field("trigger", &self.trigger)
             .field("children_len", &self.children.len())
             .finish()
@@ -115,6 +131,11 @@ impl std::fmt::Debug for HoverOverlayRequest {
 pub struct TooltipRequest {
     pub id: GlobalElementId,
     pub root_name: String,
+    /// Whether the tooltip should participate in input observer routing.
+    ///
+    /// When `false`, the tooltip may remain mounted for close transitions but must not observe
+    /// outside-press or pointer-move events.
+    pub interactive: bool,
     pub trigger: Option<GlobalElementId>,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
@@ -126,6 +147,7 @@ impl std::fmt::Debug for TooltipRequest {
         f.debug_struct("TooltipRequest")
             .field("id", &self.id)
             .field("root_name", &self.root_name)
+            .field("interactive", &self.interactive)
             .field("trigger", &self.trigger)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())

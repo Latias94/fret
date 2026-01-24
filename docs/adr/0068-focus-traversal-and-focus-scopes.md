@@ -29,9 +29,11 @@ Known gaps / follow-ups:
      - `primitives::focus_scope::{focus_trap, focus_trap_with_id}` for trap/loop composition, and
      - reusable “initial focus” / “restore focus” helpers used by the overlay system
        (`ecosystem/fret-ui-kit/src/window_overlays/render.rs`).
+   - Overlay auto-focus policy is now expressible via Radix-style open/close auto focus hooks
+     (opt-in callbacks that may `preventDefault`) in the overlay controller.
    - Remaining work: extend the primitive to cover non-overlay subtrees (restore semantics when a
-     scope unmounts without being a distinct overlay layer) and expose explicit auto-focus policies
-     (e.g. prevent-scroll, focus guards) as needed.
+     scope unmounts without being a distinct overlay layer) and cover additional FocusScope
+     outcomes (e.g. focus guards) as needed.
 
 2) **Scroll-into-view is implemented, but still needs contract polishing**
    - The runtime now attempts to scroll a newly focused node into view by walking ancestors and

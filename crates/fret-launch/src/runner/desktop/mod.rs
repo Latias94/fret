@@ -896,6 +896,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
+    internal_drag_pointer_id: Option<fret_core::PointerId>,
 
     external_drop: NativeExternalDrop,
 
@@ -1987,6 +1988,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             cursor_screen_pos: None,
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
+            internal_drag_pointer_id: None,
             external_drop: NativeExternalDrop::default(),
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
@@ -2241,7 +2243,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         ));
 
         // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
-        self.app.cancel_drag(fret_core::PointerId(0));
+        {
+            use fret_runtime::DragHost as _;
+            let _ = self.app.cancel_drag_sessions(|_| true);
+        }
 
         {
             let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
@@ -2528,13 +2533,29 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if self.internal_drag_hover_window == Some(window) {
             self.internal_drag_hover_window = None;
             self.internal_drag_hover_pos = None;
+            self.internal_drag_pointer_id = None;
         }
 
-        if let Some(drag) = self.app.drag_mut(fret_core::PointerId(0)) {
-            if drag.source_window == window {
-                self.app.cancel_drag(fret_core::PointerId(0));
-            } else if drag.current_window == window {
-                drag.current_window = drag.source_window;
+        {
+            use fret_runtime::DragHost as _;
+            use std::collections::HashSet;
+
+            let mut visited: HashSet<fret_core::PointerId> = HashSet::new();
+            while let Some(pointer_id) = self.app.find_drag_pointer_id(|d| {
+                !visited.contains(&d.pointer_id) && d.source_window == window
+            }) {
+                visited.insert(pointer_id);
+                self.app.cancel_drag(pointer_id);
+            }
+
+            let mut visited: HashSet<fret_core::PointerId> = HashSet::new();
+            while let Some(pointer_id) = self.app.find_drag_pointer_id(|d| {
+                !visited.contains(&d.pointer_id) && d.current_window == window
+            }) {
+                visited.insert(pointer_id);
+                if let Some(drag) = self.app.drag_mut(pointer_id) {
+                    drag.current_window = drag.source_window;
+                }
             }
         }
 
@@ -2549,6 +2570,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         self.app.with_global_mut(
             fret_runtime::WindowInputContextService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
+        self.app.with_global_mut(
+            fret_runtime::WindowInputArbitrationService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
+        self.app.with_global_mut(
+            fret_runtime::WindowCommandActionAvailabilityService::default,
             |svc, _app| {
                 svc.remove_window(window);
             },
@@ -3878,6 +3911,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
             if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
                 || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
+                || changed.contains(&TypeId::of::<
+                    fret_runtime::WindowCommandActionAvailabilityService,
+                >())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
             {
                 windows_menu::sync_command_gating_from_app(&self.app);
             }
@@ -3891,6 +3928,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
             if changed.contains(&TypeId::of::<fret_runtime::WindowInputContextService>())
                 || changed.contains(&TypeId::of::<fret_runtime::WindowCommandEnabledService>())
+                || changed.contains(&TypeId::of::<
+                    fret_runtime::WindowCommandActionAvailabilityService,
+                >())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
             {
                 macos_menu::sync_command_gating_from_app(&self.app);
             }
@@ -4034,8 +4075,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .min()
     }
 
+    fn dock_drag_pointer_id(&self) -> Option<fret_core::PointerId> {
+        use fret_runtime::DragHost as _;
+        self.app.find_drag_pointer_id(|d| {
+            d.cross_window_hover && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
+        })
+    }
+
     #[cfg(target_os = "macos")]
     fn maybe_finish_dock_drag_released_outside(&mut self) -> bool {
+        if self.dock_drag_pointer_id() != Some(fret_core::PointerId(0)) {
+            return false;
+        }
+
         let (source_window, current_window, dragging) = {
             let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
                 return false;
@@ -4085,6 +4137,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     fn dispatch_internal_drag_event(
         &mut self,
         window: fret_core::AppWindowId,
+        pointer_id: fret_core::PointerId,
         kind: InternalDragKind,
         position: Point,
     ) {
@@ -4101,7 +4154,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 state: &mut state.user,
             },
             &Event::InternalDrag(InternalDragEvent {
-                pointer_id: fret_core::PointerId(0),
+                pointer_id,
                 position,
                 kind,
                 modifiers,
@@ -4113,21 +4166,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(window) = self.internal_drag_hover_window else {
             return false;
         };
-        if self
-            .app
-            .drag(fret_core::PointerId(0))
-            .is_some_and(|d| d.cross_window_hover)
-        {
+        if self.dock_drag_pointer_id().is_some() {
             return false;
         }
+        let pointer_id = self
+            .internal_drag_pointer_id
+            .take()
+            .unwrap_or(fret_core::PointerId(0));
         self.internal_drag_hover_window = None;
         let pos = self.internal_drag_hover_pos.take().unwrap_or_default();
-        self.dispatch_internal_drag_event(window, InternalDragKind::Cancel, pos);
+        self.dispatch_internal_drag_event(window, pointer_id, InternalDragKind::Cancel, pos);
         true
     }
 
     fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
-        let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
+        let Some(pointer_id) = self.dock_drag_pointer_id() else {
+            return self.clear_internal_drag_hover_if_needed();
+        };
+        let Some(drag) = self.app.drag(pointer_id) else {
             return self.clear_internal_drag_hover_if_needed();
         };
         if !drag.cross_window_hover {
@@ -4163,14 +4219,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if hovered != self.internal_drag_hover_window {
             if let Some(prev) = self.internal_drag_hover_window.take() {
                 let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
-                self.dispatch_internal_drag_event(prev, InternalDragKind::Leave, prev_pos);
+                self.dispatch_internal_drag_event(
+                    prev,
+                    pointer_id,
+                    InternalDragKind::Leave,
+                    prev_pos,
+                );
             }
             if let Some(next) = hovered
                 && let Some(pos) = self.local_pos_for_window(next, screen_pos)
             {
-                self.dispatch_internal_drag_event(next, InternalDragKind::Enter, pos);
+                self.dispatch_internal_drag_event(next, pointer_id, InternalDragKind::Enter, pos);
                 self.internal_drag_hover_window = Some(next);
                 self.internal_drag_hover_pos = Some(pos);
+                self.internal_drag_pointer_id = Some(pointer_id);
             }
         }
 
@@ -4181,18 +4243,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        if let Some(d) = self.app.drag_mut(fret_core::PointerId(0)) {
+        if let Some(d) = self.app.drag_mut(pointer_id) {
             d.current_window = current;
             d.position = pos;
         }
 
         self.internal_drag_hover_pos = Some(pos);
-        self.dispatch_internal_drag_event(current, InternalDragKind::Over, pos);
+        self.dispatch_internal_drag_event(current, pointer_id, InternalDragKind::Over, pos);
         true
     }
 
     fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
-        let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
+        let Some(pointer_id) = self.dock_drag_pointer_id() else {
+            return false;
+        };
+        let Some(drag) = self.app.drag(pointer_id) else {
             return false;
         };
         if !drag.cross_window_hover {
@@ -4247,17 +4312,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             && prev != target
         {
             let prev_pos = self.internal_drag_hover_pos.take().unwrap_or_default();
-            self.dispatch_internal_drag_event(prev, InternalDragKind::Leave, prev_pos);
+            self.dispatch_internal_drag_event(prev, pointer_id, InternalDragKind::Leave, prev_pos);
         }
         self.internal_drag_hover_window = Some(target);
         self.internal_drag_hover_pos = Some(pos);
+        self.internal_drag_pointer_id = Some(pointer_id);
 
-        if let Some(d) = self.app.drag_mut(fret_core::PointerId(0)) {
+        if let Some(d) = self.app.drag_mut(pointer_id) {
             d.current_window = target;
             d.position = pos;
         }
 
-        self.dispatch_internal_drag_event(target, InternalDragKind::Drop, pos);
+        self.dispatch_internal_drag_event(target, pointer_id, InternalDragKind::Drop, pos);
         true
     }
 

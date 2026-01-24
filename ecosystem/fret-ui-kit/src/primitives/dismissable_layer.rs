@@ -16,7 +16,9 @@ use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
-pub use fret_ui::action::{ActionCx, DismissReason, OnDismissRequest, UiActionHost};
+pub use fret_ui::action::{
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, UiActionHost,
+};
 pub use fret_ui::action::{OnDismissiblePointerMove, PointerMoveCx};
 
 /// Render a full-window dismissable root that provides Escape + outside-press dismissal hooks.
@@ -57,7 +59,7 @@ pub fn on_pointer_move<H: UiHost>(
 
 /// Convenience builder for an `OnDismissRequest` handler.
 pub fn handler(
-    f: impl Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static,
+    f: impl Fn(&mut dyn UiActionHost, ActionCx, &mut DismissRequestCx) + 'static,
 ) -> OnDismissRequest {
     Arc::new(f)
 }
@@ -90,6 +92,26 @@ pub fn resolve_branch_nodes_for_trigger_and_elements<H: UiHost>(
             .iter()
             .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch)),
     );
+    let mut seen: HashSet<NodeId> = HashSet::with_capacity(out.len());
+    out.retain(|id| seen.insert(*id));
+    out
+}
+
+/// Resolve `DismissableLayerBranch` roots (Radix outcome) into `NodeId`s for the outside-press
+/// observer pass (ADR 0069), without implicitly treating a trigger as a branch.
+///
+/// This is useful for non-click-through overlays that also disable outside pointer interactions
+/// (menu-like `modal=true` outcomes): the trigger should be treated as "outside" so a press on the
+/// trigger can close the overlay without activating the underlay.
+pub fn resolve_branch_nodes_for_elements<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    branches: &[GlobalElementId],
+) -> Vec<NodeId> {
+    let mut out: Vec<NodeId> = branches
+        .iter()
+        .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch))
+        .collect();
     let mut seen: HashSet<NodeId> = HashSet::with_capacity(out.len());
     out.retain(|id| seen.insert(*id));
     out

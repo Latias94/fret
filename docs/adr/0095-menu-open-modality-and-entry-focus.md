@@ -86,3 +86,11 @@ Cons:
 - The modality signal can be reused by other interactive primitives that need similar policy
   splits (e.g. focus-visible-ish behaviors at the component layer).
 
+## Implementation Notes
+
+- Menu triggers in this repo are typically `Pressable`-based and may request pointer capture on
+  `PointerDown` to keep pressed state stable. Menu-like overlays must therefore not “auto-close”
+  solely because there is an active pointer capture in another layer; instead, the overlay system
+  should temporarily suppress pointer occlusion (Radix `disableOutsidePointerEvents`) while capture
+  is active and then re-enable it once capture is released.
+

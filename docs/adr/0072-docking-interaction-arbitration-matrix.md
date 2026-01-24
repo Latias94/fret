@@ -132,6 +132,13 @@ When a dock drag session starts:
 
 This policy is component-owned (overlay policy layer) but the behavior outcome is locked here.
 
+When the drag ends:
+
+- Do not automatically re-open overlays that were closed/suspended for drag hygiene. Re-opening is an explicit
+  application action (e.g. user re-triggers the popover/menu).
+- Focus may be restored safely if it was lost during the drag (runner/platform behavior), but should not be
+  forced to change while the drag is still active.
+
 ### 4) Viewport tool capture start policy
 
 When a viewport tool capture starts:
@@ -170,7 +177,7 @@ Implementation note (current):
 - Starting a dock drag closes/suspends non-modal overlays in the same window.
 - Modal dialogs block docking and viewport input consistently.
 - Viewport tool capture and dock drag capture do not conflict: a single pointer session cannot be owned by both.
-- Escape cancels dock drag and restores the pre-drag overlay/focus state safely.
+- Escape cancels dock drag and restores focus safely (overlays remain closed unless explicitly re-opened).
 
 ## Non-Goals
 
