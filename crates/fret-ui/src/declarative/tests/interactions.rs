@@ -1376,6 +1376,82 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
 }
 
 #[test]
+fn pressable_on_hover_change_hook_ignores_touch_pointer_move() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let hovered = app.models_mut().insert(false);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-on-hover-change-hook-touch",
+        |cx| {
+            vec![
+                cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
+                    let hovered = hovered.clone();
+                    cx.pressable_on_hover_change(Arc::new(move |host, _cx, is_hovered| {
+                        let _ = host
+                            .models_mut()
+                            .update(&hovered, |v: &mut bool| *v = is_hovered);
+                    }));
+                    vec![cx.text("hover me")]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&hovered), Some(false));
+
+    let pressable_node = ui.children(root)[0];
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let inside = Point::new(
+        Px(pressable_bounds.origin.x.0 + 1.0),
+        Px(pressable_bounds.origin.y.0 + 1.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: inside,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&hovered), Some(false));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(pressable_bounds.origin.x.0 + 200.0), Px(2.0)),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&hovered), Some(false));
+}
+
+#[test]
 fn pressable_on_activate_hook_runs_on_keyboard_activation() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

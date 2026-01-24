@@ -190,6 +190,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/button.rs` (`state_layer_target_opacity`),
     `ecosystem/fret-ui-material3/src/interaction/state_layer.rs` (`StateLayerAnimator`),
     `crates/fret-ui/src/paint.rs` (`paint_state_layer`).
+- [x] Hover semantics are precision-pointer only (ignore touch moves).
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs` (gate hovered element updates by `PointerType`),
+    tests in `crates/fret-ui/src/declarative/tests/interactions.rs` (`pressable_on_hover_change_hook_ignores_touch_pointer_move`),
+    `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/PrecisionPointer.kt`.
 - [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.
   - Evidence: `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RippleAnimator`),
     `ecosystem/fret-ui-material3/src/button.rs` (`PointerRegion` → `PointerRegionState.last_down`),

@@ -171,6 +171,11 @@ Rule of thumb:
 
 - Tree-local theme/content defaults overlay only if the provider pattern is insufficient for
   ergonomics or invalidation correctness.
+- Precision-pointer hover semantics (ignore touch for hover tracking) to avoid "sticky" hover and
+  interaction flicker in policy layers.
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs`,
+    tests in `crates/fret-ui/src/declarative/tests/interactions.rs` (`pressable_on_hover_change_hook_ignores_touch_pointer_move`),
+    Compose reference: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/PrecisionPointer.kt`.
 - Unbounded ripple clipping rules / paint support if current primitives are insufficient.
 - Stable structural guidance/helpers if indicator insertion/removal causes flicker.
 
