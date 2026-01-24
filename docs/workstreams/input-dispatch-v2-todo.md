@@ -99,6 +99,9 @@ Keep this list short and evidence-backed:
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/*`, shadcn tests in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 - [ ] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract.
   - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers).
+- [~] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
+  - Active branch: `feat/input-dispatch-capture-pass`
+  - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
 
 ## Open Questions (Keep Short)
 
