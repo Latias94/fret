@@ -825,8 +825,11 @@ impl CommandItem {
         self
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.children = children.into_iter().collect();
         self
     }
 }
