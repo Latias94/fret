@@ -2528,6 +2528,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
+    #[serde(default)]
+    pub layer_visible_writes: Vec<UiLayerVisibleWriteV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -2617,6 +2619,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_layers_in_paint_order()
                 .into_iter()
                 .map(UiLayerInfoV1::from_layer)
+                .collect(),
+            layer_visible_writes: ui
+                .debug_layer_visible_writes()
+                .iter()
+                .map(UiLayerVisibleWriteV1::from_write)
                 .collect(),
             hit_test,
             element_runtime: element_runtime_snapshot,
@@ -2864,6 +2871,8 @@ pub struct UiRemovedSubtreeV1 {
     #[serde(default)]
     pub root_layer: Option<u64>,
     #[serde(default)]
+    pub reachable_from_layer_roots: bool,
+    #[serde(default)]
     pub root_children_len: u32,
     #[serde(default)]
     pub root_parent_children_len: Option<u32>,
@@ -2939,6 +2948,7 @@ impl UiRemovedSubtreeV1 {
             root_parent: r.root_parent.map(key_to_u64),
             root_root: r.root_root.map(key_to_u64),
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
+            reachable_from_layer_roots: r.reachable_from_layer_roots,
             root_children_len: r.root_children_len,
             root_parent_children_len: r.root_parent_children_len,
             root_path,
@@ -3676,6 +3686,29 @@ impl UiLayerInfoV1 {
             wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
             wants_pointer_move_events: layer.wants_pointer_move_events,
             wants_timer_events: layer.wants_timer_events,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayerVisibleWriteV1 {
+    pub layer: String,
+    pub prev_visible: Option<bool>,
+    pub visible: bool,
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+impl UiLayerVisibleWriteV1 {
+    fn from_write(write: &fret_ui::tree::UiDebugSetLayerVisibleWrite) -> Self {
+        Self {
+            layer: format!("{:?}", write.layer),
+            prev_visible: write.prev_visible,
+            visible: write.visible,
+            file: write.file.to_string(),
+            line: write.line,
+            column: write.column,
         }
     }
 }

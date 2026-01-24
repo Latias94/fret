@@ -481,6 +481,18 @@ pub struct UiDebugSetChildrenWrite {
 }
 
 #[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugSetLayerVisibleWrite {
+    pub layer: UiLayerId,
+    pub frame_id: FrameId,
+    pub prev_visible: Option<bool>,
+    pub visible: bool,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugRemoveSubtreeOutcome {
     SkippedLayerRoot,
@@ -499,6 +511,7 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub root_parent_element: Option<GlobalElementId>,
     pub root_root: Option<NodeId>,
     pub root_layer: Option<UiLayerId>,
+    pub reachable_from_layer_roots: bool,
     pub root_children_len: u32,
     pub root_parent_children_len: Option<u32>,
     pub root_path_len: u8,
@@ -866,7 +879,11 @@ pub struct UiTree<H: UiHost> {
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
     #[cfg(feature = "diagnostics")]
+    debug_layer_visible_writes: Vec<UiDebugSetLayerVisibleWrite>,
+    #[cfg(feature = "diagnostics")]
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
+    #[cfg(feature = "diagnostics")]
+    debug_reachable_from_layer_roots: Option<(FrameId, HashSet<NodeId>)>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -946,7 +963,11 @@ impl<H: UiHost> Default for UiTree<H> {
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
+            debug_layer_visible_writes: Vec::new(),
+            #[cfg(feature = "diagnostics")]
             debug_removed_subtrees: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_reachable_from_layer_roots: None,
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -1100,7 +1121,13 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         self.debug_set_children_writes.clear();
         #[cfg(feature = "diagnostics")]
+        self.debug_layer_visible_writes.clear();
+        #[cfg(feature = "diagnostics")]
         self.debug_removed_subtrees.clear();
+        #[cfg(feature = "diagnostics")]
+        {
+            self.debug_reachable_from_layer_roots = None;
+        }
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
         for root in dirty_roots {
@@ -1307,6 +1334,14 @@ impl<H: UiHost> UiTree<H> {
             return None;
         }
         self.debug_set_children_writes.get(&parent).copied()
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_layer_visible_writes(&self) -> &[UiDebugSetLayerVisibleWrite] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layer_visible_writes.as_slice()
     }
 
     #[cfg(feature = "diagnostics")]
@@ -2155,6 +2190,39 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[cfg(feature = "diagnostics")]
+    fn debug_is_reachable_from_layer_roots(&mut self, node: NodeId) -> bool {
+        if !self.debug_enabled {
+            return false;
+        }
+
+        if let Some((frame_id, reachable)) = &self.debug_reachable_from_layer_roots
+            && *frame_id == self.debug_stats.frame_id
+        {
+            return reachable.contains(&node);
+        }
+
+        let roots = self.all_layer_roots();
+        let mut reachable: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = roots;
+        while let Some(id) = stack.pop() {
+            if !reachable.insert(id) {
+                continue;
+            }
+            let Some(entry) = self.nodes.get(id) else {
+                continue;
+            };
+            for &child in &entry.children {
+                stack.push(child);
+            }
+        }
+
+        self.debug_reachable_from_layer_roots = Some((self.debug_stats.frame_id, reachable));
+        self.debug_reachable_from_layer_roots
+            .as_ref()
+            .is_some_and(|(_, reachable)| reachable.contains(&node))
+    }
+
     #[track_caller]
     pub fn remove_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) -> Vec<NodeId> {
         #[cfg(feature = "diagnostics")]
@@ -2167,6 +2235,8 @@ impl<H: UiHost> UiTree<H> {
                 root_parent.and_then(|p| self.nodes.get(p).and_then(|n| n.element));
             let root_root = self.node_root(root);
             let root_layer = self.node_layer(root);
+            let reachable_from_layer_roots =
+                pre_exists && self.debug_is_reachable_from_layer_roots(root);
             let root_children_len = self
                 .nodes
                 .get(root)
@@ -2200,6 +2270,7 @@ impl<H: UiHost> UiTree<H> {
                 root_parent_element,
                 root_root,
                 root_layer,
+                reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
                 root_path_len,
@@ -2222,6 +2293,7 @@ impl<H: UiHost> UiTree<H> {
                 root_parent_element,
                 root_root,
                 root_layer,
+                reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
                 root_path_len,
@@ -2239,6 +2311,7 @@ impl<H: UiHost> UiTree<H> {
                         root_parent_element,
                         root_root,
                         root_layer,
+                        reachable_from_layer_roots,
                         root_children_len,
                         root_parent_children_len,
                         root_path_len,
@@ -2270,6 +2343,7 @@ impl<H: UiHost> UiTree<H> {
             root_parent_element,
             root_root,
             root_layer,
+            reachable_from_layer_roots,
             root_children_len,
             root_parent_children_len,
             root_path_len,
@@ -2307,6 +2381,7 @@ impl<H: UiHost> UiTree<H> {
                     root_parent_element,
                     root_root,
                     root_layer,
+                    reachable_from_layer_roots,
                     root_children_len,
                     root_parent_children_len,
                     root_path_len,

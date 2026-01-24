@@ -321,10 +321,12 @@ where
         // Note: `UiTree::node_layer` relies on parent pointers. If a retained subtree becomes
         // inconsistent (children edges still attached, but parent pointers broken), `node_layer`
         // can return `None` even though the node is still reachable from the layer root. In that
-        // case, do not sweep: treat reachability from `root_node` as authoritative for liveness.
+        // case, do not sweep: treat reachability from the layer roots as authoritative for
+        // liveness.
+        let liveness_roots = ui.all_layer_roots();
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         let mut stale_elements: Vec<GlobalElementId> = Vec::new();
-        let mut reachable_from_root: Option<HashSet<NodeId>> = None;
+        let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
@@ -345,12 +347,23 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable =
-                reachable_from_root.get_or_insert_with(|| collect_reachable_nodes(ui, root_node));
-            if reachable.contains(&entry.node) {
+            if view_cache_has_reuse_roots {
                 return true;
             }
-            if view_cache_has_reuse_roots {
+            let reachable = reachable_from_layers.get_or_insert_with(|| {
+                with_window_frame(app, window, |window_frame| {
+                    if liveness_roots.is_empty() {
+                        collect_reachable_nodes_for_gc(ui, window_frame, std::iter::once(root_node))
+                    } else {
+                        collect_reachable_nodes_for_gc(
+                            ui,
+                            window_frame,
+                            liveness_roots.iter().copied(),
+                        )
+                    }
+                })
+            });
+            if reachable.contains(&entry.node) {
                 return true;
             }
             stale_nodes.push(entry.node);
@@ -563,9 +576,10 @@ where
 
         // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
         // only detached nodes that have been stale beyond the configured lag window.
+        let liveness_roots = ui.all_layer_roots();
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         let mut stale_elements: Vec<GlobalElementId> = Vec::new();
-        let mut reachable_from_root: Option<HashSet<NodeId>> = None;
+        let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
@@ -588,12 +602,23 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable =
-                reachable_from_root.get_or_insert_with(|| collect_reachable_nodes(ui, root_node));
-            if reachable.contains(&entry.node) {
+            if view_cache_has_reuse_roots {
                 return true;
             }
-            if view_cache_has_reuse_roots {
+            let reachable = reachable_from_layers.get_or_insert_with(|| {
+                with_window_frame(app, window, |window_frame| {
+                    if liveness_roots.is_empty() {
+                        collect_reachable_nodes_for_gc(ui, window_frame, std::iter::once(root_node))
+                    } else {
+                        collect_reachable_nodes_for_gc(
+                            ui,
+                            window_frame,
+                            liveness_roots.iter().copied(),
+                        )
+                    }
+                })
+            });
+            if reachable.contains(&entry.node) {
                 return true;
             }
             stale_nodes.push(entry.node);
@@ -1187,15 +1212,21 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
     out
 }
 
-fn collect_reachable_nodes<H: UiHost>(ui: &UiTree<H>, root: NodeId) -> HashSet<NodeId> {
+fn collect_reachable_nodes_for_gc<H: UiHost>(
+    ui: &UiTree<H>,
+    window_frame: Option<&WindowFrame>,
+    roots: impl IntoIterator<Item = NodeId>,
+) -> HashSet<NodeId> {
     let mut out: HashSet<NodeId> = HashSet::new();
-    let mut stack: Vec<NodeId> = vec![root];
+    let mut stack: Vec<NodeId> = roots.into_iter().collect();
     while let Some(node) = stack.pop() {
         if !out.insert(node) {
             continue;
         }
-        for child in ui.children(node) {
-            stack.push(child);
+        if let Some(window_frame) = window_frame {
+            push_existing_subtree_children(ui, window_frame, node, &mut stack);
+        } else {
+            stack.extend(ui.children(node));
         }
     }
     out
