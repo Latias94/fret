@@ -81,17 +81,12 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement> {
-    cx.observe_model(&st.todos, Invalidation::Layout);
-    cx.observe_model(&st.draft, Invalidation::Layout);
-    cx.observe_model(&st.filter, Invalidation::Layout);
-
     let theme = Theme::global(&*cx.app).clone();
 
     let filter_value = cx
-        .app
-        .models()
-        .read(&st.filter, |v| v.clone())
-        .ok()
+        .watch_model(&st.filter)
+        .layout()
+        .cloned()
         .unwrap_or_default();
 
     let done_invalidation = if filter_value.as_deref() == Some("all") {
@@ -101,10 +96,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
     };
 
     let draft_value = cx
-        .app
-        .models()
-        .read(&st.draft, |s| s.clone())
-        .ok()
+        .watch_model(&st.draft)
+        .layout()
+        .cloned()
         .unwrap_or_default();
 
     let add_enabled = !draft_value.trim().is_empty();
@@ -114,7 +108,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .variant(shadcn::ButtonVariant::Default)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
-        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
+        .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx);
     let add_btn = cx.semantics(
         SemanticsProps {
@@ -140,20 +134,21 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
     );
 
     let todos = cx
-        .app
-        .models()
-        .read(&st.todos, |v| v.clone())
-        .ok()
+        .watch_model(&st.todos)
+        .layout()
+        .cloned()
         .unwrap_or_default();
-
+    let mut completed = 0usize;
     for it in &todos {
-        cx.observe_model(&it.done, done_invalidation);
+        let is_done = cx
+            .watch_model(&it.done)
+            .invalidation(done_invalidation)
+            .copied()
+            .unwrap_or(false);
+        if is_done {
+            completed += 1;
+        }
     }
-
-    let completed = todos
-        .iter()
-        .filter(|t| cx.app.models().read(&t.done, |v| *v).ok().unwrap_or(false))
-        .count();
     let active = todos.len().saturating_sub(completed);
 
     let header = shadcn::CardHeader::new(vec![stack::hstack(
