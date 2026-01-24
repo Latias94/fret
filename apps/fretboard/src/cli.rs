@@ -49,6 +49,7 @@ Usage:
   fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette]
   fretboard new             # interactive wizard
   fretboard new todo        # non-interactive (template shortcut)
+  fretboard new todo-mvu    # non-interactive (MVU template shortcut)
   fretboard new hello       # non-interactive (template shortcut)
   fretboard new empty       # minimal Cargo-like project
   fretboard init <template> [...]    # alias for `new` (compat)
@@ -75,6 +76,7 @@ Usage:
 
 Examples:
   fretboard new todo --name my-todo
+  fretboard new todo-mvu --name my-todo-mvu
   fretboard new hello --name hello-world
   fretboard new hello --name hello-world --command-palette
   fretboard new todo --name my-todo --icons none
