@@ -89,6 +89,12 @@ Each TODO is labeled:
 
 ## P1 — Ergonomics (Ecosystem Integration)
 
-- [ ] OVERLAY-eco-020 Provide policy-heavy primitives in ecosystem with a strict core boundary.
+- [x] OVERLAY-eco-020 Provide policy-heavy primitives in ecosystem with a strict core boundary.
   - Target: keep “dismissal policies / hover intent / focus restore / modality decisions” in `ecosystem/*`.
-  - Evidence target: `ecosystem/fret-ui-kit/src/primitives/*`, `ecosystem/fret-ui-shadcn/src/*`
+  - Evidence:
+    - Tooltip trigger intent + suppressions moved into `fret-ui-kit`:
+      `ecosystem/fret-ui-kit/src/primitives/tooltip.rs` (`tooltip_trigger_update_gates`, `tooltip_install_default_trigger_dismiss_handlers`, `tooltip_wrap_trigger_with_pointer_move_open_gate`)
+      and wired by `ecosystem/fret-ui-shadcn/src/tooltip.rs` (no per-recipe driver structs).
+    - HoverCard intent driver moved into `fret-ui-kit`:
+      `ecosystem/fret-ui-kit/src/primitives/hover_card.rs` (`hover_card_update_interaction`)
+      and wired by `ecosystem/fret-ui-shadcn/src/hover_card.rs`.
