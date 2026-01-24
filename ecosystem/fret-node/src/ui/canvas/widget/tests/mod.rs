@@ -26,6 +26,7 @@ mod color_mode_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod custom_edge_path_conformance;
+mod edit_command_availability_conformance;
 mod elevate_on_select_conformance;
 mod fit_view_nodes_conformance;
 mod fit_view_on_mount_conformance;
