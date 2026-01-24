@@ -35,9 +35,10 @@ Each TODO is labeled:
 - [ ] OVERLAY-life-001 Define and document overlay lifecycle phases.
   - Target: a small state machine (requested → mounted → interactive → dismissing → unmounted) with explicit ownership.
   - Evidence target: `crates/fret-ui/src/overlay_placement/*`, `ecosystem/fret-ui-kit/src/window_overlays/*`
-- [ ] OVERLAY-in-002 Specify input arbitration ordering across roots.
+- [x] OVERLAY-in-002 Specify input arbitration ordering across roots.
   - Target: consistent rules for: modal barrier, underlay click-through, escape routing, focus restore, pointer capture.
-  - Evidence target: `crates/fret-ui/src/tree/dispatch.rs`, `crates/fret-ui/src/tree/tests/*`
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`active_input_layers`, `topmost_pointer_occlusion_layer`, `enforce_modal_barrier_scope`)
+  - Evidence: `crates/fret-ui/src/tree/tests/window_input_arbitration_snapshot.rs`
 - [ ] OVERLAY-in-003 Specify “outside press” semantics for stacked overlays (menu → submenu → popover).
   - Target: deterministic outside press observers + dismissal propagation rules.
   - Evidence target: `crates/fret-ui/src/tree/tests/outside_press.rs`

@@ -127,3 +127,190 @@ fn dispatch_command_publishes_post_dispatch_input_arbitration_snapshot() {
         "expected modal barrier root to be reflected in the arbitration snapshot",
     );
 }
+
+#[test]
+fn modal_barrier_hides_pointer_occlusion_layers_below_barrier_in_arbitration_snapshot() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let base_root = ui.create_node(TestStack);
+    let base_layer = ui.set_base_root(base_root);
+    ui.set_layer_pointer_occlusion(base_layer, PointerOcclusion::BlockMouse);
+
+    let modal_root = ui.create_node(TestStack);
+    ui.push_overlay_root_ex(modal_root, true, false);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let arbitration = app
+        .global::<fret_runtime::WindowInputArbitrationService>()
+        .and_then(|svc| svc.snapshot(window))
+        .copied()
+        .expect("expected a window input arbitration snapshot");
+
+    assert_eq!(arbitration.modal_barrier_root, Some(modal_root));
+    assert_eq!(
+        arbitration.pointer_occlusion,
+        fret_runtime::WindowPointerOcclusion::None,
+        "expected pointer occlusion layers below the barrier to be ignored",
+    );
+    assert_eq!(
+        arbitration.pointer_occlusion_root, None,
+        "expected no occlusion root when only the underlay is occluding",
+    );
+}
+
+#[test]
+fn pointer_occlusion_above_modal_barrier_is_reported_in_arbitration_snapshot() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let base_root = ui.create_node(TestStack);
+    ui.set_base_root(base_root);
+
+    let modal_root = ui.create_node(TestStack);
+    ui.push_overlay_root_ex(modal_root, true, false);
+
+    let top_root = ui.create_node(TestStack);
+    let top_layer = ui.push_overlay_root_ex(top_root, false, true);
+    ui.set_layer_pointer_occlusion(top_layer, PointerOcclusion::BlockMouseExceptScroll);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let arbitration = app
+        .global::<fret_runtime::WindowInputArbitrationService>()
+        .and_then(|svc| svc.snapshot(window))
+        .copied()
+        .expect("expected a window input arbitration snapshot");
+
+    assert_eq!(arbitration.modal_barrier_root, Some(modal_root));
+    assert_eq!(
+        arbitration.pointer_occlusion,
+        fret_runtime::WindowPointerOcclusion::BlockMouseExceptScroll
+    );
+    assert_eq!(arbitration.pointer_occlusion_root, Some(top_root));
+}
+
+#[test]
+fn modal_barrier_scopes_pointer_capture_to_active_roots() {
+    struct CaptureOnDown;
+
+    impl<H: UiHost> Widget<H> for CaptureOnDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            true
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                cx.capture_pointer(cx.node);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let base_root = ui.create_node(TestStack);
+    let capture = ui.create_node(CaptureOnDown);
+    ui.add_child(base_root, capture);
+    ui.set_root(base_root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.captured_for(fret_core::PointerId(0)), Some(capture));
+
+    let modal_root = ui.create_node(TestStack);
+    ui.push_overlay_root_ex(modal_root, true, false);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let arbitration = app
+        .global::<fret_runtime::WindowInputArbitrationService>()
+        .and_then(|svc| svc.snapshot(window))
+        .copied()
+        .expect("expected a window input arbitration snapshot");
+
+    assert_eq!(arbitration.modal_barrier_root, Some(modal_root));
+    assert_eq!(ui.captured_for(fret_core::PointerId(0)), None);
+    assert!(
+        !arbitration.pointer_capture_active,
+        "expected modal barrier scope enforcement to clear underlay captures"
+    );
+}
