@@ -161,6 +161,7 @@ This is high-risk and likely to bloat kernel contracts. The recommended approach
   - `ModelWatchExt` (observe+read sugar),
   - `stack::{hstack,vstack}` (avoid direct runtime props unless needed).
 - Ensure `fret-kit` templates and `fretboard new` outputs follow this style.
+  - Template shortcuts: `fretboard new todo` and `fretboard new todo-mvu`.
 
 Acceptance: new users can build a non-trivial UI without touching `LayoutStyle` directly.
 
