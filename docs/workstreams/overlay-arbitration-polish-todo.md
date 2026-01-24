@@ -10,10 +10,12 @@ Primary goal: make overlay behavior deterministic and regression-tested before d
 ## Contract Gates (Must Drive Implementation)
 
 - Overlays + multi-root: `docs/adr/0011-overlays-and-multi-root.md`
+- Overlay placement contract: `docs/adr/0064-overlay-placement-contract.md`
 - UI runtime contract surface boundaries: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- Outside press contract: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - Runtime contract matrix (placement + semantics expectations): `docs/runtime-contract-matrix.md`
 - Focus scopes + traversal: `docs/adr/0068-focus-traversal-and-focus-scopes.md`
-- Overlay dismiss policy: `docs/adr/0087-overlay-policy-architecture-dismissal-focus-portal.md`
+- Overlay dismiss policy: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - Modal vs non-modal overlays: `docs/adr/0095-menu-open-modality-and-entry-focus.md`
 
 ## Tracking Format
@@ -32,16 +34,21 @@ Each TODO is labeled:
 
 ## P0 — Lifecycle + Arbitration Correctness
 
-- [ ] OVERLAY-life-001 Define and document overlay lifecycle phases.
-  - Target: a small state machine (requested → mounted → interactive → dismissing → unmounted) with explicit ownership.
-  - Evidence target: `crates/fret-ui/src/overlay_placement/*`, `ecosystem/fret-ui-kit/src/window_overlays/*`
+- [x] OVERLAY-life-001 Define and document overlay lifecycle phases.
+  - Output: `docs/workstreams/overlay-lifecycle-phases.md`
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+  - Notes: documents current authoritative `open/present` (modal + popover) and explicitly calls out hover/tooltip as per-frame-only (tracked separately).
+- [ ] OVERLAY-life-002 Introduce authoritative presence for hover/tooltip overlays.
+  - Target: make hover/tooltip safe under view-cache reuse without creating “ghost overlays” (likely requires open/present + liveness/TTL).
+  - Evidence target: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, new regressions in `tools/diag-scripts/*`
 - [x] OVERLAY-in-002 Specify input arbitration ordering across roots.
   - Target: consistent rules for: modal barrier, underlay click-through, escape routing, focus restore, pointer capture.
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`active_input_layers`, `topmost_pointer_occlusion_layer`, `enforce_modal_barrier_scope`)
   - Evidence: `crates/fret-ui/src/tree/tests/window_input_arbitration_snapshot.rs`
-- [ ] OVERLAY-in-003 Specify “outside press” semantics for stacked overlays (menu → submenu → popover).
+- [x] OVERLAY-in-003 Specify “outside press” semantics for stacked overlays (menu → submenu → popover).
   - Target: deterministic outside press observers + dismissal propagation rules.
-  - Evidence target: `crates/fret-ui/src/tree/tests/outside_press.rs`
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`dispatch_pointer_down_outside`)
+  - Evidence: `crates/fret-ui/src/tree/tests/outside_press.rs`
 
 ## P0 — Regression Scenarios (Executable)
 
@@ -51,8 +58,10 @@ Each TODO is labeled:
 - [x] OVERLAY-reg-011 Add a “nested popover + dialog” scripted scenario (focus trap + escape + underlay).
   - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json`, `apps/fretboard/src/diag.rs`
   - Notes: opens a dialog from inside a popover, asserts modal barrier blocks underlay, then verifies escape focus restore to the popover trigger.
-- [ ] OVERLAY-reg-012 Add a “portal geometry” scenario (floating placement + viewport clamp + scroll/resize).
-  - Touches: `crates/fret-ui/src/overlay_placement/*`, `tools/diag-scripts/*`
+- [x] OVERLAY-reg-012 Add a “portal geometry” scenario (floating placement + viewport clamp + scroll/resize).
+  - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json`
+  - Assertion: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`bounds_within_window` predicate)
+  - Notes: opens a popover inside a scroll viewport and asserts it stays within the window before/after wheel scroll.
 - [x] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
   - Mechanism: record cached+uncached bundles and enforce `diag compare` + `--check-view-cache-reuse-min`.
   - Evidence: `fretboard diag matrix ui-gallery` (runs both variants and compares per-script bundles).
