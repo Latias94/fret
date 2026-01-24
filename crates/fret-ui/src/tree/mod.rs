@@ -494,6 +494,21 @@ pub struct UiDebugSetLayerVisibleWrite {
 
 #[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone, Copy)]
+pub struct UiDebugOverlayPolicyDecisionWrite {
+    pub layer: UiLayerId,
+    pub frame_id: FrameId,
+    pub kind: &'static str,
+    pub present: bool,
+    pub interactive: bool,
+    pub wants_timer_events: bool,
+    pub reason: &'static str,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
 pub struct UiDebugRemoveSubtreeFrameContext {
     pub parent_frame_children_len: Option<u32>,
     pub parent_frame_children_contains_root: Option<bool>,
@@ -895,6 +910,8 @@ pub struct UiTree<H: UiHost> {
     #[cfg(feature = "diagnostics")]
     debug_layer_visible_writes: Vec<UiDebugSetLayerVisibleWrite>,
     #[cfg(feature = "diagnostics")]
+    debug_overlay_policy_decisions: Vec<UiDebugOverlayPolicyDecisionWrite>,
+    #[cfg(feature = "diagnostics")]
     debug_remove_subtree_frame_context: HashMap<NodeId, UiDebugRemoveSubtreeFrameContext>,
     #[cfg(feature = "diagnostics")]
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
@@ -980,6 +997,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
             debug_layer_visible_writes: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_overlay_policy_decisions: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_remove_subtree_frame_context: HashMap::new(),
             #[cfg(feature = "diagnostics")]
@@ -1140,6 +1159,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_set_children_writes.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_layer_visible_writes.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_overlay_policy_decisions.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_remove_subtree_frame_context.clear();
         #[cfg(feature = "diagnostics")]
@@ -1362,6 +1383,60 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_layer_visible_writes.as_slice()
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_overlay_policy_decisions(&self) -> &[UiDebugOverlayPolicyDecisionWrite] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_overlay_policy_decisions.as_slice()
+    }
+
+    #[track_caller]
+    pub fn debug_record_overlay_policy_decision(
+        &mut self,
+        frame_id: FrameId,
+        layer: UiLayerId,
+        kind: &'static str,
+        present: bool,
+        interactive: bool,
+        wants_timer_events: bool,
+        reason: &'static str,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if !self.debug_enabled {
+                return;
+            }
+            let caller = std::panic::Location::caller();
+            self.debug_overlay_policy_decisions
+                .push(UiDebugOverlayPolicyDecisionWrite {
+                    layer,
+                    frame_id,
+                    kind,
+                    present,
+                    interactive,
+                    wants_timer_events,
+                    reason,
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+        }
+
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (
+                frame_id,
+                layer,
+                kind,
+                present,
+                interactive,
+                wants_timer_events,
+                reason,
+            );
+        }
     }
 
     #[cfg(feature = "diagnostics")]

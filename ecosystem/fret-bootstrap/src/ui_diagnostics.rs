@@ -2530,6 +2530,8 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     #[serde(default)]
     pub layer_visible_writes: Vec<UiLayerVisibleWriteV1>,
+    #[serde(default)]
+    pub overlay_policy_decisions: Vec<UiOverlayPolicyDecisionV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -2624,6 +2626,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_layer_visible_writes()
                 .iter()
                 .map(UiLayerVisibleWriteV1::from_write)
+                .collect(),
+            overlay_policy_decisions: ui
+                .debug_overlay_policy_decisions()
+                .iter()
+                .map(UiOverlayPolicyDecisionV1::from_decision)
                 .collect(),
             hit_test,
             element_runtime: element_runtime_snapshot,
@@ -3724,6 +3731,38 @@ impl UiLayerVisibleWriteV1 {
             file: write.file.to_string(),
             line: write.line,
             column: write.column,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiOverlayPolicyDecisionV1 {
+    pub layer: String,
+    pub kind: String,
+    pub present: bool,
+    pub interactive: bool,
+    pub wants_timer_events: bool,
+    pub reason: String,
+    #[serde(default)]
+    pub file: String,
+    #[serde(default)]
+    pub line: u32,
+    #[serde(default)]
+    pub column: u32,
+}
+
+impl UiOverlayPolicyDecisionV1 {
+    fn from_decision(d: &fret_ui::tree::UiDebugOverlayPolicyDecisionWrite) -> Self {
+        Self {
+            layer: format!("{:?}", d.layer),
+            kind: d.kind.to_string(),
+            present: d.present,
+            interactive: d.interactive,
+            wants_timer_events: d.wants_timer_events,
+            reason: d.reason.to_string(),
+            file: d.file.to_string(),
+            line: d.line,
+            column: d.column,
         }
     }
 }

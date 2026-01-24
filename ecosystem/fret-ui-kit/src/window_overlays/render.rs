@@ -406,6 +406,15 @@ pub fn render<H: UiHost>(
 
             // For modal overlays, `present` is the authority for whether the barrier is active.
             OverlayLayer::modal(true, open_now).apply(ui, entry.layer);
+            ui.debug_record_overlay_policy_decision(
+                app.frame_id(),
+                entry.layer,
+                "modal",
+                true,
+                open_now,
+                false,
+                "modal_layer_policy",
+            );
 
             // Radix-style focus restore for close transitions:
             // when a modal overlay closes but remains mounted (`present=true`) for an exit
@@ -686,6 +695,15 @@ pub fn render<H: UiHost>(
                 consume_outside_pointer_events,
                 disable_outside_pointer_events,
             );
+            ui.debug_record_overlay_policy_decision(
+                app.frame_id(),
+                entry.layer,
+                "non_modal_dismissible",
+                true,
+                effective_interactive,
+                false,
+                "popover_layer_policy",
+            );
 
             // Radix-aligned focus restore: when a non-modal overlay closes but remains mounted for
             // a close transition (`present=true`), restore focus deterministically if focus is
@@ -840,6 +858,15 @@ pub fn render<H: UiHost>(
                     && focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer)))
         {
             clear_non_modal_dismissible_layer_policy(ui, layer);
+            ui.debug_record_overlay_policy_decision(
+                app.frame_id(),
+                layer,
+                "non_modal_dismissible",
+                false,
+                false,
+                false,
+                "popover_layer_hide",
+            );
             let mut req = AutoFocusRequestCx::new();
             if let Some(hook) = hook.as_ref() {
                 let mut host = OverlayAutoFocusHost { ui, app, window };
@@ -866,6 +893,15 @@ pub fn render<H: UiHost>(
             }
         } else {
             clear_non_modal_dismissible_layer_policy(ui, layer);
+            ui.debug_record_overlay_policy_decision(
+                app.frame_id(),
+                layer,
+                "non_modal_dismissible",
+                false,
+                false,
+                false,
+                "popover_layer_hide",
+            );
         }
     }
 
@@ -874,6 +910,15 @@ pub fn render<H: UiHost>(
         // changes cannot happen while the barrier is installed, so it's safe to always restore on
         // unmount.
         OverlayLayer::hide_modal().apply(ui, layer);
+        ui.debug_record_overlay_policy_decision(
+            app.frame_id(),
+            layer,
+            "modal",
+            false,
+            false,
+            false,
+            "modal_layer_hide",
+        );
 
         let mut req = AutoFocusRequestCx::new();
         if let Some(hook) = hook.as_ref() {
@@ -929,6 +974,15 @@ pub fn render<H: UiHost>(
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
             apply_hover_layer_policy(ui, entry.layer, true, interactive);
+            ui.debug_record_overlay_policy_decision(
+                _app.frame_id(),
+                entry.layer,
+                "hover",
+                true,
+                interactive,
+                false,
+                "hover_layer_policy",
+            );
         });
     }
 
@@ -952,9 +1006,27 @@ pub fn render<H: UiHost>(
             && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
         {
             apply_hover_layer_policy(ui, layer, false, false);
+            ui.debug_record_overlay_policy_decision(
+                app.frame_id(),
+                layer,
+                "hover",
+                false,
+                false,
+                false,
+                "hover_layer_hide",
+            );
             ui.set_focus(Some(trigger_node));
         } else {
             apply_hover_layer_policy(ui, layer, false, false);
+            ui.debug_record_overlay_policy_decision(
+                app.frame_id(),
+                layer,
+                "hover",
+                false,
+                false,
+                false,
+                "hover_layer_hide",
+            );
         }
     }
 
@@ -1006,6 +1078,15 @@ pub fn render<H: UiHost>(
                 wants_outside_press_observer,
                 wants_pointer_move_events,
             );
+            ui.debug_record_overlay_policy_decision(
+                _app.frame_id(),
+                entry.layer,
+                "tooltip",
+                true,
+                interactive,
+                false,
+                "tooltip_layer_policy",
+            );
 
             if interactive {
                 ui.set_layer_scroll_dismiss_elements(
@@ -1034,6 +1115,15 @@ pub fn render<H: UiHost>(
 
     for layer in to_hide_tooltips {
         apply_tooltip_layer_policy(ui, layer, false, false, false, false);
+        ui.debug_record_overlay_policy_decision(
+            app.frame_id(),
+            layer,
+            "tooltip",
+            false,
+            false,
+            false,
+            "tooltip_layer_hide",
+        );
         ui.set_layer_scroll_dismiss_elements(layer, Vec::new());
     }
 
@@ -1848,6 +1938,15 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             OverlayLayer::toast(has_toasts, has_toasts).apply(ui, entry.layer);
+            ui.debug_record_overlay_policy_decision(
+                _app.frame_id(),
+                entry.layer,
+                "toast",
+                has_toasts,
+                has_toasts,
+                has_toasts,
+                "toast_layer_policy",
+            );
         });
     }
 
@@ -1867,5 +1966,14 @@ pub fn render<H: UiHost>(
 
     for layer in to_hide_toast_layers {
         OverlayLayer::hide_toast().apply(ui, layer);
+        ui.debug_record_overlay_policy_decision(
+            app.frame_id(),
+            layer,
+            "toast",
+            false,
+            false,
+            false,
+            "toast_layer_hide",
+        );
     }
 }
