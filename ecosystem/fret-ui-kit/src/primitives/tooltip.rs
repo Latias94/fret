@@ -1000,4 +1000,94 @@ mod tests {
         let vars = tooltip_popper_vars(outer, anchor, Px(0.0), placement);
         assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 80.0);
     }
+
+    #[test]
+    fn tooltip_trigger_gate_requires_pointer_move_before_hover_open() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let models = tooltip_trigger_event_models(cx);
+
+            let out = tooltip_trigger_update_gates(cx, true, false, &models);
+            assert!(
+                !out.trigger_hovered,
+                "expected hover gated before pointer move"
+            );
+
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&models.has_pointer_move_opened, |v| *v = true);
+            let out = tooltip_trigger_update_gates(cx, true, false, &models);
+            assert!(
+                out.trigger_hovered,
+                "expected hover allowed after pointer move"
+            );
+
+            let _ = tooltip_trigger_update_gates(cx, false, false, &models);
+            let moved = cx
+                .app
+                .models()
+                .read(&models.has_pointer_move_opened, |v| *v)
+                .ok()
+                .unwrap_or(true);
+            assert!(!moved, "expected hover leave to clear pointer-move gate");
+        });
+    }
+
+    #[test]
+    fn tooltip_trigger_suppresses_reopen_after_close_request_until_leave_and_blur() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let models = tooltip_trigger_event_models(cx);
+
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&models.has_pointer_move_opened, |v| *v = true);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&models.close_requested, |v| *v = true);
+
+            let out = tooltip_trigger_update_gates(cx, true, true, &models);
+            assert!(out.force_close);
+
+            let out = tooltip_trigger_update_gates(cx, true, true, &models);
+            assert!(!out.force_close);
+            assert!(!out.trigger_hovered);
+            assert!(!out.trigger_focused);
+
+            // Leaving hover clears the hover suppression and pointer-move gate.
+            let _ = tooltip_trigger_update_gates(cx, false, true, &models);
+            let suppress_hover = cx
+                .app
+                .models()
+                .read(&models.suppress_hover_open, |v| *v)
+                .ok()
+                .unwrap_or(false);
+            assert!(!suppress_hover);
+
+            let moved = cx
+                .app
+                .models()
+                .read(&models.has_pointer_move_opened, |v| *v)
+                .ok()
+                .unwrap_or(true);
+            assert!(!moved);
+
+            // Blurring clears the focus suppression.
+            let _ = tooltip_trigger_update_gates(cx, false, false, &models);
+            let suppress_focus = cx
+                .app
+                .models()
+                .read(&models.suppress_focus_open, |v| *v)
+                .ok()
+                .unwrap_or(false);
+            assert!(!suppress_focus);
+        });
+    }
 }

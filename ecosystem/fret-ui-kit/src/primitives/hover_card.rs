@@ -330,4 +330,55 @@ mod tests {
         let vars = hover_card_popper_vars(outer, anchor, Px(0.0), placement);
         assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 80.0);
     }
+
+    #[test]
+    fn hover_card_close_is_suppressed_after_pointer_down_leave_until_reenter() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let cfg = HoverIntentConfig::new(0, 0);
+            let mut open_now = true;
+
+            open_now = hover_card_update_interaction(cx, open_now, true, true, false, cfg).open;
+            assert!(open_now);
+
+            // Pointer leaves while holding the button down.
+            open_now = hover_card_update_interaction(cx, open_now, false, true, false, cfg).open;
+            assert!(open_now);
+
+            // Release outside: close is suppressed until the next active -> inactive edge.
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(open_now);
+
+            // Re-enter clears suppression.
+            open_now = hover_card_update_interaction(cx, open_now, true, false, false, cfg).open;
+            assert!(open_now);
+
+            // Leave closes immediately (close_delay=0).
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(!open_now);
+        });
+    }
+
+    #[test]
+    fn hover_card_default_open_does_not_close_until_active_then_leave() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let cfg = HoverIntentConfig::new(0, 0);
+            let mut open_now = true;
+
+            // `defaultOpen=true` should remain open until at least one active period is observed.
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(open_now);
+
+            open_now = hover_card_update_interaction(cx, open_now, true, false, false, cfg).open;
+            assert!(open_now);
+
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(!open_now);
+        });
+    }
 }
