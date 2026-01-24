@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::Arc;
 
 #[test]
 fn virtual_list_computes_visible_range_after_first_layout() {
@@ -704,6 +705,261 @@ fn virtual_list_scroll_to_item_triggers_layout_even_without_other_invalidations(
         |s| s.offset_y,
     );
     assert!(offset_y.0 > 0.01, "expected state offset to change");
+}
+
+#[test]
+fn virtual_list_scroll_offsets_apply_in_semantics_snapshot() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let mut layout = crate::element::LayoutStyle::default();
+        layout.size.width = crate::element::Length::Fill;
+        layout.size.height = crate::element::Length::Fill;
+        layout.overflow = crate::element::Overflow::Clip;
+
+        cx.virtual_list_with_layout(
+            layout,
+            10_000,
+            crate::element::VirtualListOptions::new(Px(28.0), 10),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| {
+                        cx.semantics(
+                            crate::element::SemanticsProps {
+                                role: fret_core::SemanticsRole::Button,
+                                test_id: Some(Arc::<str>::from(format!(
+                                    "virtual-list-row-{}",
+                                    item.index
+                                ))),
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.text("row")],
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            },
+        )
+    }
+
+    // Frame 0: establish viewport.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-semantics-scroll-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 1: request a scroll-to-item and allow final layout to consume it.
+    let target = 9000usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Start);
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-semantics-scroll-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 2: rerender the visible range and validate semantics bounds are in viewport space.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-semantics-scroll-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let needle = format!("virtual-list-row-{target}");
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(needle.as_str()))
+        .expect("expected scrolled-to row to appear in semantics snapshot");
+    assert!(
+        node.bounds.origin.y.0 >= bounds.origin.y.0
+            && node.bounds.origin.y.0 <= bounds.origin.y.0 + bounds.size.height.0,
+        "expected semantics bounds to be in viewport space after scroll; got {:?}",
+        node.bounds
+    );
+}
+
+#[test]
+fn virtual_list_click_focus_does_not_trigger_scroll_jump_under_children_transform() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let mut layout = crate::element::LayoutStyle::default();
+        layout.size.width = crate::element::Length::Fill;
+        layout.size.height = crate::element::Length::Fill;
+        layout.overflow = crate::element::Overflow::Clip;
+
+        cx.virtual_list_with_layout(
+            layout,
+            10_000,
+            crate::element::VirtualListOptions::new(Px(28.0), 10),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| {
+                        cx.keyed(item.key, |cx| {
+                            let mut props = crate::element::PressableProps::default();
+                            props.layout.size.width = crate::element::Length::Fill;
+                            props.layout.size.height = crate::element::Length::Px(Px(28.0));
+                            props.focusable = true;
+                            props.a11y.role = Some(fret_core::SemanticsRole::Button);
+                            props.a11y.test_id =
+                                Some(Arc::<str>::from(format!("virtual-list-row-{}", item.index)));
+                            cx.pressable(props, |cx, _state| vec![cx.text("row")])
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            },
+        )
+    }
+
+    // Frame 0: establish viewport.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-focus-click-no-scroll-jump",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 1: request a scroll-to-item and allow final layout to consume it.
+    let target = 9000usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Start);
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-focus-click-no-scroll-jump",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 2: rerender the visible range and click a focusable row; it must not trigger an
+    // erroneous scroll-into-view jump.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-focus-click-no-scroll-jump",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let needle = format!("virtual-list-row-{target}");
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(needle.as_str()))
+        .expect("expected scrolled-to row to appear in semantics snapshot");
+
+    let pos = Point::new(
+        Px(node.bounds.origin.x.0 + 2.0),
+        Px(node.bounds.origin.y.0 + 2.0),
+    );
+
+    let before = scroll_handle.offset().y;
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let after = scroll_handle.offset().y;
+    assert!(
+        (after.0 - before.0).abs() <= 0.01,
+        "clicking a visible focusable row must not cause a scroll jump: before={:?} after={:?}",
+        before,
+        after
+    );
 }
 
 #[test]
