@@ -56,3 +56,4 @@ The viewer is a static Vite app (no server required for production hosting).
 ## Dev notes
 
 - UI text is fully localizable (English/Chinese) via `tools/fret-bundle-viewer/lib/i18n.ts`.
+- The Details panel includes an `Overlay` tab that visualizes semantics bounds and debug signals (hit chain, layer roots, barrier root, pointer).

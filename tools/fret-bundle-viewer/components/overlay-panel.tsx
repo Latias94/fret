@@ -19,6 +19,7 @@ type DrawNode = {
   role?: string
   testId?: string
   parentId?: string
+  children: string[]
 }
 
 type Viewport = {
@@ -58,6 +59,22 @@ function fitViewport(containerW: number, containerH: number, worldW: number, wor
   return { scale, tx, ty }
 }
 
+function fitToRect(
+  containerW: number,
+  containerH: number,
+  rect: { x: number; y: number; w: number; h: number }
+): Viewport {
+  const padding = 24
+  const cw = Math.max(1, containerW - padding * 2)
+  const ch = Math.max(1, containerH - padding * 2)
+  const scale = clamp(Math.min(cw / Math.max(1, rect.w), ch / Math.max(1, rect.h)), 0.02, 80)
+  const cx = rect.x + rect.w / 2
+  const cy = rect.y + rect.h / 2
+  const tx = containerW / 2 - cx * scale
+  const ty = containerH / 2 - cy * scale
+  return { scale, tx, ty }
+}
+
 function pointToWorld(view: Viewport, px: number, py: number): { x: number; y: number } {
   return { x: (px - view.tx) / view.scale, y: (py - view.ty) / view.scale }
 }
@@ -89,6 +106,26 @@ function collectSelectedPath(semantics: Record<string, DrawNode>, selectedId: st
   return out
 }
 
+function collectSubtree(nodesById: Record<string, DrawNode>, rootId: string | null): Set<string> {
+  const out = new Set<string>()
+  if (!rootId) return out
+  if (!nodesById[rootId]) return out
+
+  const stack: string[] = [rootId]
+  while (stack.length) {
+    const id = stack.pop()!
+    if (out.has(id)) continue
+    out.add(id)
+    const n = nodesById[id]
+    if (!n) continue
+    for (const child of n.children) {
+      if (!child) continue
+      if (nodesById[child] && !out.has(child)) stack.push(child)
+    }
+  }
+  return out
+}
+
 export function OverlayPanel() {
   const snapshot = useBundleStore((s) => s.getSelectedSnapshotA())
   const selectedNodeId = useBundleStore((s) => s.selectedNodeId)
@@ -98,8 +135,11 @@ export function OverlayPanel() {
   const [showSemantics, setShowSemantics] = useState(true)
   const [showSelectedPath, setShowSelectedPath] = useState(true)
   const [showHitChain, setShowHitChain] = useState(true)
+  const [showPointer, setShowPointer] = useState(true)
+  const [showHitChainPath, setShowHitChainPath] = useState(true)
   const [showLayerRoots, setShowLayerRoots] = useState(true)
   const [showBlocksUnderlay, setShowBlocksUnderlay] = useState(true)
+  const [onlySelectedSubtree, setOnlySelectedSubtree] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -126,6 +166,7 @@ export function OverlayPanel() {
         role: n.role,
         testId: n.testId,
         parentId: n.parentId,
+        children: n.children ?? [],
       })
     }
     return out
@@ -141,6 +182,18 @@ export function OverlayPanel() {
     if (!showSelectedPath) return new Set<string>()
     return collectSelectedPath(nodesById, selectedNodeId)
   }, [nodesById, selectedNodeId, showSelectedPath])
+
+  const selectedSubtree = useMemo(() => {
+    if (!onlySelectedSubtree) return new Set<string>()
+    return collectSubtree(nodesById, selectedNodeId)
+  }, [nodesById, onlySelectedSubtree, selectedNodeId])
+
+  const nodesForDraw = useMemo(() => {
+    if (!onlySelectedSubtree) return drawNodes
+    if (!selectedNodeId) return drawNodes
+    if (selectedSubtree.size === 0) return drawNodes
+    return drawNodes.filter((n) => selectedSubtree.has(n.id))
+  }, [drawNodes, onlySelectedSubtree, selectedNodeId, selectedSubtree])
 
   const hitChainIds = useMemo(() => {
     if (!showHitChain) return new Set<string>()
@@ -169,6 +222,30 @@ export function OverlayPanel() {
     }
     return { layerRootIds, blocksUnderlayIds }
   }, [showLayerRoots, showBlocksUnderlay, snapshot?.overlay?.layerRoots])
+
+  const barrierRootId = snapshot?.overlay?.barrierRootId
+
+  const pointer = snapshot?.hitTest?.pointer
+  const pointerWorld = useMemo(() => {
+    if (!pointer || pointer.x === undefined || pointer.y === undefined) return null
+    if (typeof pointer.x !== 'number' || typeof pointer.y !== 'number') return null
+    if (!Number.isFinite(pointer.x) || !Number.isFinite(pointer.y)) return null
+    return { x: pointer.x, y: pointer.y }
+  }, [pointer?.x, pointer?.y])
+
+  const hitChainPath = useMemo(() => {
+    if (!showHitChainPath) return []
+    const chain = snapshot?.hitTest?.chain ?? []
+    const pts: Array<{ x: number; y: number; id: string }> = []
+    for (const e of chain) {
+      if (!e.nodeId) continue
+      const n = nodesById[e.nodeId]
+      if (!n) continue
+      const b = n.bounds
+      pts.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, id: n.id })
+    }
+    return pts
+  }, [nodesById, showHitChainPath, snapshot?.hitTest?.chain])
 
   const worldSize = useMemo(() => {
     return worldSizeFromSnapshot(drawNodes, snapshot?.windowSizeLogical)
@@ -208,6 +285,7 @@ export function OverlayPanel() {
     ctx.scale(v.scale, v.scale)
 
     const strokePx = 1 / Math.max(0.0001, v.scale)
+    const fontPx = 11 / Math.max(0.0001, v.scale)
 
     // Background bounds (world)
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)' // slate-400
@@ -216,16 +294,19 @@ export function OverlayPanel() {
 
     // Semantics boxes
     if (showSemantics) {
-      for (const n of drawNodes) {
+      for (const n of nodesForDraw) {
         const b = n.bounds
         const isSelected = n.id === selectedNodeId
         const isInSelectedPath = selectedPath.has(n.id)
         const isHitChain = hitChainIds.has(n.id)
+        const isBarrierRoot = barrierRootId === n.id
         const isLayerRoot = layerRoots.layerRootIds.has(n.id)
         const isBlocksUnderlay = layerRoots.blocksUnderlayIds.has(n.id)
 
         if (isBlocksUnderlay && showBlocksUnderlay) {
           ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)' // red-500
+        } else if (isBarrierRoot) {
+          ctx.strokeStyle = 'rgba(236, 72, 153, 0.75)' // pink-500
         } else if (isLayerRoot && showLayerRoots) {
           ctx.strokeStyle = 'rgba(245, 158, 11, 0.70)' // amber-500
         } else if (isHitChain) {
@@ -241,6 +322,63 @@ export function OverlayPanel() {
       }
     }
 
+    // Pointer + hit chain path
+    if (showPointer && pointerWorld) {
+      const r = 6 / Math.max(0.0001, v.scale)
+      ctx.strokeStyle = 'rgba(14, 165, 233, 0.85)' // sky-500
+      ctx.lineWidth = strokePx * 1.5
+      ctx.beginPath()
+      ctx.moveTo(pointerWorld.x - r, pointerWorld.y)
+      ctx.lineTo(pointerWorld.x + r, pointerWorld.y)
+      ctx.moveTo(pointerWorld.x, pointerWorld.y - r)
+      ctx.lineTo(pointerWorld.x, pointerWorld.y + r)
+      ctx.stroke()
+
+      ctx.fillStyle = 'rgba(14, 165, 233, 0.35)'
+      ctx.beginPath()
+      ctx.arc(pointerWorld.x, pointerWorld.y, r * 0.9, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    if (showHitChain && showHitChainPath && hitChainPath.length > 0) {
+      ctx.strokeStyle = 'rgba(34, 197, 94, 0.55)' // green-500
+      ctx.lineWidth = strokePx * 1.5
+      ctx.beginPath()
+
+      if (showPointer && pointerWorld) {
+        ctx.moveTo(pointerWorld.x, pointerWorld.y)
+        ctx.lineTo(hitChainPath[0]!.x, hitChainPath[0]!.y)
+      }
+
+      for (let i = 0; i < hitChainPath.length; i++) {
+        const p = hitChainPath[i]!
+        if (i === 0 && !(showPointer && pointerWorld)) {
+          ctx.moveTo(p.x, p.y)
+        } else if (i > 0) {
+          const prev = hitChainPath[i - 1]!
+          ctx.moveTo(prev.x, prev.y)
+          ctx.lineTo(p.x, p.y)
+        }
+      }
+      ctx.stroke()
+
+      // Markers + order indices
+      ctx.font = `${fontPx}px ui-sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      for (let i = 0; i < hitChainPath.length; i++) {
+        const p = hitChainPath[i]!
+        const rr = 7 / Math.max(0.0001, v.scale)
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.85)'
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, rr, 0, Math.PI * 2)
+        ctx.fill()
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+        ctx.fillText(String(i + 1), p.x, p.y)
+      }
+    }
+
     // Hover highlight (screen-constant thickness)
     if (hoveredNodeId && nodesById[hoveredNodeId]) {
       const b = nodesById[hoveredNodeId]!.bounds
@@ -251,17 +389,22 @@ export function OverlayPanel() {
 
     ctx.restore()
   }, [
-    drawNodes,
+    barrierRootId,
     hitChainIds,
+    hitChainPath,
     hoveredNodeId,
     layerRoots.blocksUnderlayIds,
     layerRoots.layerRootIds,
     nodesById,
+    nodesForDraw,
+    pointerWorld,
     selectedNodeId,
     selectedPath,
     showBlocksUnderlay,
     showHitChain,
+    showHitChainPath,
     showLayerRoots,
+    showPointer,
     showSemantics,
     worldSize.h,
     worldSize.w,
@@ -271,6 +414,15 @@ export function OverlayPanel() {
   useEffect(() => {
     scheduleDraw()
   }, [scheduleDraw, viewport])
+
+  useEffect(() => {
+    return () => {
+      if (rafHoverRef.current != null) {
+        window.cancelAnimationFrame(rafHoverRef.current)
+        rafHoverRef.current = null
+      }
+    }
+  }, [])
 
   // Auto-fit when snapshot changes or when container size changes.
   useEffect(() => {
@@ -305,6 +457,16 @@ export function OverlayPanel() {
     const r = container.getBoundingClientRect()
     setViewport(fitViewport(r.width, r.height, worldSize.w, worldSize.h))
   }, [worldSize.h, worldSize.w])
+
+  const handleFitSelected = useCallback(() => {
+    if (!selectedNodeId) return
+    const n = nodesById[selectedNodeId]
+    if (!n) return
+    const container = containerRef.current
+    if (!container) return
+    const r = container.getBoundingClientRect()
+    setViewport(fitToRect(r.width, r.height, n.bounds))
+  }, [nodesById, selectedNodeId])
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault()
@@ -413,7 +575,7 @@ export function OverlayPanel() {
         <div className="flex items-center gap-2 min-w-0">
           <h3 className="text-sm font-medium text-foreground shrink-0">{t('overlay.title')}</h3>
           <Badge variant="secondary" className="text-[10px] shrink-0">
-            {drawNodes.length}
+            {nodesForDraw.length}
           </Badge>
         </div>
 
@@ -421,6 +583,15 @@ export function OverlayPanel() {
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleFit}>
             <Maximize2 className="mr-1 h-3.5 w-3.5" />
             {t('overlay.fit')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={handleFitSelected}
+            disabled={!selectedNodeId || !nodesById[selectedNodeId]}
+          >
+            {t('overlay.fitSelected')}
           </Button>
         </div>
       </div>
@@ -446,12 +617,24 @@ export function OverlayPanel() {
               <span className="text-xs">{t('overlay.showHitChain')}</span>
             </label>
             <label className="flex items-center gap-2">
+              <Checkbox checked={showPointer} onCheckedChange={(v) => setShowPointer(Boolean(v))} />
+              <span className="text-xs">{t('overlay.showPointer')}</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <Checkbox checked={showHitChainPath} onCheckedChange={(v) => setShowHitChainPath(Boolean(v))} />
+              <span className="text-xs">{t('overlay.showHitChainPath')}</span>
+            </label>
+            <label className="flex items-center gap-2">
               <Checkbox checked={showLayerRoots} onCheckedChange={(v) => setShowLayerRoots(Boolean(v))} />
               <span className="text-xs">{t('overlay.showLayerRoots')}</span>
             </label>
             <label className="flex items-center gap-2">
               <Checkbox checked={showBlocksUnderlay} onCheckedChange={(v) => setShowBlocksUnderlay(Boolean(v))} />
               <span className="text-xs">{t('overlay.showBlocksUnderlay')}</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <Checkbox checked={onlySelectedSubtree} onCheckedChange={(v) => setOnlySelectedSubtree(Boolean(v))} />
+              <span className="text-xs">{t('overlay.onlySelectedSubtree')}</span>
             </label>
           </div>
 
