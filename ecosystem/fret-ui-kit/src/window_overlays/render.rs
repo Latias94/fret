@@ -10,7 +10,7 @@ use fret_ui::action::{
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
-use fret_ui::tree::UiLayerId;
+use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{Invalidation, UiHost, UiTree};
 
 use crate::primitives::dismissable_layer as dismissable_layer_prim;
@@ -899,7 +899,7 @@ pub fn render<H: UiHost>(
     }
 
     for req in hover_overlay_requests {
-        if dock_drag_affects_window {
+        if dock_drag_affects_window || arbitration.pointer_capture_active {
             continue;
         }
 
@@ -959,6 +959,9 @@ pub fn render<H: UiHost>(
     }
 
     for req in tooltip_requests {
+        if arbitration.pointer_capture_active {
+            continue;
+        }
         seen_tooltips.insert(req.id);
 
         let interactive = req.interactive;
