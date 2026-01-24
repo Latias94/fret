@@ -39,6 +39,24 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
     })
 }
 
+/// Returns `true` if the given element currently has an `on_pointer_move` hook installed for
+/// `DismissibleLayer`.
+///
+/// This is intended for diagnostics and cross-crate UI policy tests.
+pub fn dismissible_has_pointer_move_handler<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_element_state(
+        app,
+        window,
+        element,
+        crate::action::DismissibleActionHooks::default,
+        |hooks| hooks.on_pointer_move.is_some(),
+    )
+}
+
 pub(crate) fn observed_models_for_element<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
