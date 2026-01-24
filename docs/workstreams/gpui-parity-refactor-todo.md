@@ -135,13 +135,13 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `crates/fret-ui/src/declarative/mount.rs` (drains animation-frame notify requests and invalidates with `UiDebugInvalidationDetail::AnimationFrameRequest`)
     - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`request_animation_frame_marks_view_cache_root_dirty`)
     - `crates/fret-ui/src/tree/tests/view_cache.rs` (`widget_request_animation_frame_marks_nearest_view_cache_root_dirty`)
-- [~] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
+- [x] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`, `crates/fret-ui/src/elements/runtime.rs`
   - Done when: a notified view never reuses cached ranges; a clean view reliably reuses them.
   - Progress: `notify` marks the nearest cache root as `view_cache_needs_rerender`, which disables view-cache reuse for that root.
   - Progress: model/global observation invalidation also marks cache roots dirty (`view_cache_needs_rerender`) so reuse is disabled on data changes.
   - Progress: cache-hit frames still uplift element-recorded observations to cache roots (prevents stale cache-hit when an input event changes model state but the subtree is reused).
-  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/elements/runtime.rs`,
+  - Evidence: `crates/fret-core/src/ids.rs` (`ViewId`), `crates/fret-ui/src/tree/dispatch.rs` (`notify_target_for_node`), `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/elements/runtime.rs`,
     `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots`).
 
 - [x] GPUI-MVP2-cache-004 Stabilize overlay interactions under `ViewCache` shell reuse.
@@ -157,7 +157,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
   - Follow-up: reintroduce declarative GC under cache-root reuse with explicit, GPUI-aligned liveness (dirty views + notify + cache key gates) rather than the global "skip sweep when reuse exists" stopgap.
 
-- [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
+- [x] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
   - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Root cause: `node_layer` (and cache-root discovery) relies on parent pointers; a reachable subtree can retain correct child edges but have a broken parent chain,
@@ -169,6 +169,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+  - Evidence (unit): `crates/fret-ui/src/declarative/tests/core.rs` (`stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse`)
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
   - Touches: `crates/fret-ui/src/tree/layout.rs` (`repair_view_cache_root_bounds_from_engine_if_needed`)
@@ -250,8 +251,9 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
 
 Goal: make the new contracts “default obvious” by migrating a small set of representative components and demos.
 
-- [ ] GPUI-MVP4-eco-001 Add an ecosystem-facing “cached subtree” helper API (policy-free).
-  - Touches: `ecosystem/fret-ui-kit/src/*`
+- [x] GPUI-MVP4-eco-001 Add an ecosystem-facing “cached subtree” helper API (policy-free).
+  - Touches: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`, `CachedSubtreeProps`)
 - [ ] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
   - Touches: `apps/fret-ui-gallery/src/*`, selected `ecosystem/*` components
 

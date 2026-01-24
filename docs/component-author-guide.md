@@ -227,6 +227,20 @@ Contract references:
 - ADR 0181: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
 - View-cache semantics: `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
 
+## 10) View-cache boundaries: make caching explicit, keep render pure
+
+If a subtree is expensive (panels, inspectors, code views, large lists), consider adding an explicit cache boundary.
+
+Recommended helper (ecosystem sugar over the `fret-ui` mechanism):
+
+- `fret_ui_kit::declarative::CachedSubtreeExt::{cached_subtree,cached_subtree_with}`
+
+Rules of thumb:
+
+- Keep the cached subtree's render closure as pure as possible: avoid hidden side effects that must run every frame.
+- If the subtree emits per-frame requests/registries (overlays, observers, frame-local caches), ensure the contract
+  is closed under cache-hit frames (either by cached synthesis or by moving the side effect outside the cached region).
+
 ## References
 
 - Component ecosystem conventions: `docs/adr/0163-component-ecosystem-authoring-conventions-v1.md`
