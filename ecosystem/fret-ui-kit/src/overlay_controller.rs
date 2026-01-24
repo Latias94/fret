@@ -577,6 +577,22 @@ impl OverlayController {
         )
     }
 
+    pub fn transition_with_durations_and_cubic_bezier<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+        bezier: fret_ui::theme::CubicBezier,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+            bezier,
+        )
+    }
+
     pub fn toast_store<H: UiHost>(app: &mut H) -> Model<window_overlays::ToastStore> {
         window_overlays::toast_store(app)
     }
