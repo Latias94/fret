@@ -71,6 +71,17 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
     - `BoundTextInput` / `BoundTextArea`
       - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
     - `SelectableText`
+  - Notes:
+    - Prefer returning `Blocked` (not `NotHandled`) when the focused widget owns the command but has
+      no selectable content (e.g. empty text), so command palette / menus can disable deterministically.
+
+### Edit / Clear
+
+- `text.clear`
+  - Availability should be `Available` when the focused widget has any text to clear.
+  - Expected providers:
+    - `BoundTextInput` / `BoundTextArea`
+      - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
 
 ## Known Gaps / Next Targets
 

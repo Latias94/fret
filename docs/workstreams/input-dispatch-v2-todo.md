@@ -82,9 +82,10 @@ Keep this list short and evidence-backed:
 
 ## MVP4 — Coverage Targets (Keep Expanding Incrementally)
 
-- [~] IDV2-avail-040 Core text commands availability is selection/editability/capability-sensitive.
+- [x] IDV2-avail-040 Core text commands availability is selection/editability/capability-sensitive.
   - Tracker: `docs/audits/action-availability-coverage.md`
-  - Evidence anchors: `crates/fret-ui/src/text_input/*`, `crates/fret-ui/src/text_area/*`, `crates/fret-ui/src/declarative/host_widget.rs`
+  - Evidence anchors: `crates/fret-ui/src/text_input/bound.rs`, `crates/fret-ui/src/text_area/bound.rs`, `crates/fret-ui/src/declarative/host_widget.rs`
+  - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`text_input_select_all_is_blocked_when_empty`, `text_area_select_all_is_blocked_when_empty`)
 - [ ] IDV2-avail-041 Define a general “copy-like” command family outside text widgets (tables/lists/node graphs).
   - Notes: decide whether to reuse `text.copy` vs introduce `edit.copy` (audit-driven).
 - [ ] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
