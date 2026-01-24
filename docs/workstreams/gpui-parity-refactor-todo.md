@@ -191,6 +191,10 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Observation (2026-01-24): the largest `removed_subtrees` entry at `frame_id=34` has `root_layer=None` and a `root_root` that is *not* a registered layer root,
       while the layer root (`4294967718` in the overlay torture bundles) flips `visible=false`. This points to a broken parent-chain / layer-root attachment problem
       (not just a missing `last_seen_frame` touch).
+    - Unblock checklist (to move from `[!]` -> `[~]`):
+      - Export enough layer-root registry state in `bundle.json` to explain *why* a layer root flips `visible=false` on the failing frame.
+      - Add a debug-only counter/record for the GC classification: “reachable from `root_node` but `node_layer(..)=None`”, and include it in `removed_subtrees`.
+      - Confirm whether parent-pointer repair is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the repair seed set if needed.
     - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
