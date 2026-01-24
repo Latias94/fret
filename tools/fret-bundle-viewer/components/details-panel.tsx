@@ -329,19 +329,30 @@ function NodeTab() {
 
 function EventsTab() {
   const snapshot = useBundleStore((s) => s.getSelectedSnapshotA())
+  const window = useBundleStore((s) => s.getSelectedWindow())
   const eventsSearchQuery = useBundleStore((s) => s.eventsSearchQuery)
   const setEventsSearchQuery = useBundleStore((s) => s.setEventsSearchQuery)
   const { t } = useTranslation()
 
-  const events = snapshot?.events ?? []
+  const events = window?.events ?? snapshot?.events ?? []
 
   const filteredEvents = useMemo(() => {
-    if (!eventsSearchQuery) return events
+    let out = events
+
+    // Best-effort: filter to events at/before the selected snapshot if ids are available.
+    if (snapshot?.tickId) {
+      const maxTick = Number(snapshot.tickId)
+      if (!Number.isNaN(maxTick)) {
+        out = out.filter((e) => (e.tickId ? Number(e.tickId) <= maxTick : true))
+      }
+    }
+
+    if (!eventsSearchQuery) return out
     const query = eventsSearchQuery.toLowerCase()
-    return events.filter(
+    return out.filter(
       (e) => e.kind.toLowerCase().includes(query) || e.summary.toLowerCase().includes(query)
     )
-  }, [events, eventsSearchQuery])
+  }, [events, eventsSearchQuery, snapshot?.tickId])
 
   if (events.length === 0) {
     return (

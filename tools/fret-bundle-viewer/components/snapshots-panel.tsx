@@ -159,6 +159,19 @@ function SnapshotRow({
 function formatTimestamp(ns: string): string {
   try {
     const num = BigInt(ns)
+
+    // Heuristic:
+    // - Fret bundles commonly store `timestamp_unix_ms` (~1e12..1e13).
+    // - Some other schemas may store monotonic/epoch nanoseconds (~1e15+).
+    if (num < BigInt(1_000_000_000_000_000)) {
+      const msEpoch = Number(num)
+      if (!Number.isFinite(msEpoch)) return ns
+      const d = new Date(msEpoch)
+      const iso = d.toISOString()
+      // 2026-01-24T12:34:56.789Z -> 12:34:56.789
+      return iso.slice(11, 23)
+    }
+
     const us = num / BigInt(1_000)
     const ms = Number(us) / 1000
     if (ms < 1000) return `${ms.toFixed(1)}ms`
