@@ -208,12 +208,13 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Progress: measured-mode virtual lists skip redundant per-frame `measure_in` passes for already-measured, clean visible rows.
   - Progress: re-measure is forced when the cross-axis viewport extent changes or when a row is layout-invalidated.
   - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (measurement gate), `crates/fret-ui/src/virtual_list.rs` (cross-extent measurement reset), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_skips_redundant_measures_for_clean_measured_rows`).
-  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`):
-    - Baseline: `sum.total_time_us=225911` / 10 frames; `max.total_time_us=30585` (layout `29252`).
-    - ViewCache+Shell: `sum.total_time_us=214260` / 10 frames; `max.total_time_us=28999` (layout `27545`).
-    - Smooth wheel (new harness: `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
-      - Baseline: `max.total_time_us=27219` (layout `26948`, prepaint `23`, paint `248`).
-      - ViewCache+Shell: `max.total_time_us=26890` (layout `26205`, prepaint `19`, paint `666`).
+  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`; updated after `ff621ba`):
+    - Torture (`tools/diag-scripts/ui-gallery-virtual-list-torture.json`):
+      - Baseline: `max.total_time_us=28209` (layout `26854`, prepaint `26`, paint `1329`).
+      - ViewCache+Shell: `max.total_time_us=28606` (layout `27069`, prepaint `22`, paint `1515`).
+    - Smooth wheel (`tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
+      - Baseline: `max.total_time_us=22721` (layout `22424`, prepaint `22`, paint `275`).
+      - ViewCache+Shell: `max.total_time_us=24991` (layout `24308`, prepaint `23`, paint `660`).
   - Commands:
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-baseline --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-cache-shell --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
