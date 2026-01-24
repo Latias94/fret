@@ -1468,12 +1468,26 @@ pub fn render<H: UiHost>(
                                     Px(drag_offset.y.0 + settle_offset.y.0),
                                 );
 
-                                let presence =
+                                let opacity = if let Some(bezier) = toast_style.easing {
+                                    crate::OverlayController::transition_with_durations_and_cubic_bezier(
+                                        cx,
+                                        open,
+                                        toast_style.open_ticks,
+                                        toast_style.close_ticks,
+                                        bezier,
+                                    )
+                                    .progress
+                                } else {
                                     crate::OverlayController::fade_presence_with_durations(
-                                        cx, open, 12, 12,
-                                    );
-                                let opacity = presence.opacity;
-                                let slide_px = Px(16.0 * (1.0 - opacity));
+                                        cx,
+                                        open,
+                                        toast_style.open_ticks,
+                                        toast_style.close_ticks,
+                                    )
+                                    .opacity
+                                };
+                                let slide_px =
+                                    Px(toast_style.slide_distance.0 * (1.0 - opacity));
                                 let dx = match position {
                                     ToastPosition::TopLeft | ToastPosition::BottomLeft => {
                                         Px(-slide_px.0)

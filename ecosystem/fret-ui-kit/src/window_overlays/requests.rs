@@ -156,6 +156,13 @@ pub struct ToastLayerStyle {
     pub palette: ToastVariantPalette,
     /// Optional shadow for the toast container.
     pub shadow: Option<fret_ui::element::ShadowStyle>,
+    /// Motion timing for enter/exit presence.
+    ///
+    /// Defaults keep the existing shadcn-aligned behavior.
+    pub open_ticks: u64,
+    pub close_ticks: u64,
+    pub easing: Option<fret_ui::theme::CubicBezier>,
+    pub slide_distance: Px,
     /// Optional border color. When omitted, no border is drawn.
     pub border_color_key: Option<String>,
     pub border_width: Px,
@@ -177,6 +184,10 @@ impl Default for ToastLayerStyle {
         Self {
             palette: ToastVariantPalette::default(),
             shadow: None,
+            open_ticks: 12,
+            close_ticks: 12,
+            easing: None,
+            slide_distance: Px(16.0),
             border_color_key: Some("border".to_string()),
             border_width: Px(1.0),
             description_color_key: Some("muted-foreground".to_string()),
