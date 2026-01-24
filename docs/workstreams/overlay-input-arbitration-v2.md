@@ -115,6 +115,8 @@ Related ADRs:
     `pointer_capture_hides_tooltips_in_same_window`)
 - Policy-level Radix outcome regression:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_can_disable_outside_pointer_events_while_open`)
+- Shadcn parity regression:
+  - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_outside_press_click_through_closes_without_overriding_underlay_focus`)
 
 ## Next (P0 follow-ups)
 
@@ -127,4 +129,3 @@ Related ADRs:
 - Policy normalization: continue consolidating overlay "menu-like" invariants (visibility,
   hit-testability, observer flags, and occlusion) beyond dismissible popovers (tooltips, hover
   overlays, and future menu surfaces).
-
