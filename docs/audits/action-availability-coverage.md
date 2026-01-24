@@ -68,6 +68,9 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
     - `fret-ui-kit` list surfaces (non-text selection)
       - Evidence: `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable`)
       - Tests: `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
+    - `fret-ui-kit` table surfaces (non-text selection)
+      - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable`)
+      - Tests: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
   - Notes:
     - `text.copy` remains as a legacy alias for text-focused surfaces.
 - `edit.cut`

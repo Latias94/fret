@@ -90,10 +90,12 @@ Keep this list short and evidence-backed:
   - Evidence: `crates/fret-app/src/core_commands.rs` (`edit.{copy,cut,paste,select_all}`),
     `crates/fret-ui/src/text_input/widget.rs` + `crates/fret-ui/src/text_area/widget.rs` (text alias),
     `ecosystem/fret-node/src/ui/canvas/widget.rs` (node graph availability + command routing),
-    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable`)
+    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable`),
+    `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable`)
   - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`text_input_supports_edit_select_all_and_copy`),
     `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`,
-    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
+    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable_reports_availability_and_emits_clipboard_text`),
+    `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
 - [x] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
   - Evidence: `crates/fret-runtime/src/window_menu_bar_focus.rs`, `crates/fret-ui/src/tree/commands.rs`, `ecosystem/fret-kit/src/workspace_shell.rs`
   - Tests: `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs` (`action_availability_snapshot_publishes_focus_menu_bar_gating`)
