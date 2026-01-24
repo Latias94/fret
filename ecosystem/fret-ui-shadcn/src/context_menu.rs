@@ -4022,6 +4022,295 @@ mod tests {
     }
 
     #[test]
+    fn context_menu_submenu_safe_hover_corridor_cancels_close_timer_under_pointer_occlusion() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(500.0), Px(280.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![
+            ContextMenuEntry::Item(ContextMenuItem::new("More").submenu(vec![
+                ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
+                ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
+            ])),
+            ContextMenuEntry::Item(ContextMenuItem::new("Other")),
+        ];
+
+        // Frame 1: build the tree and establish stable trigger bounds.
+        let root = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let trigger_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        // Right-click to open the context menu (modal=true by default).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 2: open, ensure occlusion is active.
+        let _root = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+            "expected modal context menu to install pointer occlusion"
+        );
+
+        // Hover "More" to arm the submenu open-delay timer.
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        let more_bounds = more.bounds;
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(
+                    Px(more_bounds.origin.x.0 + more_bounds.size.width.0 / 2.0),
+                    Px(more_bounds.origin.y.0 + more_bounds.size.height.0 / 2.0),
+                ),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let open_delay = menu::sub::MenuSubmenuConfig::default().open_delay;
+        let open_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == open_delay => Some(*token),
+            _ => None,
+        });
+        let Some(open_timer) = open_timer else {
+            panic!("expected submenu open-delay timer effect; effects={effects:?}");
+        };
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
+
+        // Frame 3: after open timer fires, the submenu opens.
+        let _root = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha menu item");
+        let sub_beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Beta"))
+            .expect("Sub Beta menu item");
+
+        let submenu_bounds = Rect::new(
+            Point::new(
+                Px(sub_alpha.bounds.origin.x.0.min(sub_beta.bounds.origin.x.0)),
+                Px(sub_alpha.bounds.origin.y.0.min(sub_beta.bounds.origin.y.0)),
+            ),
+            Size::new(
+                Px(
+                    (sub_alpha.bounds.origin.x.0 + sub_alpha.bounds.size.width.0)
+                        .max(sub_beta.bounds.origin.x.0 + sub_beta.bounds.size.width.0)
+                        - sub_alpha.bounds.origin.x.0.min(sub_beta.bounds.origin.x.0),
+                ),
+                Px(
+                    (sub_alpha.bounds.origin.y.0 + sub_alpha.bounds.size.height.0)
+                        .max(sub_beta.bounds.origin.y.0 + sub_beta.bounds.size.height.0)
+                        - sub_alpha.bounds.origin.y.0.min(sub_beta.bounds.origin.y.0),
+                ),
+            ),
+        );
+
+        let cfg = menu::sub::MenuSubmenuConfig::default();
+        let close_delay = cfg.close_delay;
+        let grace_geometry = menu::pointer_grace_intent::PointerGraceIntentGeometry {
+            reference: more_bounds,
+            floating: submenu_bounds,
+        };
+
+        // Pick a safe corridor point on the submenu side (to the right) so moving towards it can
+        // cancel a pending close timer (Radix pointer-grace intent).
+        let reference_right = more_bounds.origin.x.0 + more_bounds.size.width.0;
+        let mut safe_point: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(2) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(2) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                if pos.x.0 <= reference_right {
+                    continue;
+                }
+                if more_bounds.contains(pos) || submenu_bounds.contains(pos) {
+                    continue;
+                }
+                if !menu::pointer_grace_intent::last_pointer_is_safe(
+                    pos,
+                    grace_geometry,
+                    cfg.safe_hover_buffer,
+                ) {
+                    continue;
+                }
+                safe_point = Some(pos);
+                break;
+            }
+            if safe_point.is_some() {
+                break;
+            }
+        }
+        let safe_point = safe_point.unwrap_or_else(|| {
+            panic!(
+                "failed to find safe corridor point; more={more_bounds:?} submenu={submenu_bounds:?} geometry={grace_geometry:?}"
+            )
+        });
+
+        // Pick an unsafe point to the left of the safe point, so moving to `safe_point` is
+        // directionally towards the submenu (x increases).
+        let mut unsafe_point: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(4) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(4) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                if pos.x.0 >= safe_point.x.0 {
+                    continue;
+                }
+                if more_bounds.contains(pos) || submenu_bounds.contains(pos) {
+                    continue;
+                }
+                if menu::pointer_grace_intent::last_pointer_is_safe(
+                    pos,
+                    grace_geometry,
+                    cfg.safe_hover_buffer,
+                ) {
+                    continue;
+                }
+                unsafe_point = Some(pos);
+                break;
+            }
+            if unsafe_point.is_some() {
+                break;
+            }
+        }
+        let unsafe_point = unsafe_point.unwrap_or_else(|| {
+            panic!(
+                "failed to find unsafe point; safe_point={safe_point:?} more={more_bounds:?} submenu={submenu_bounds:?} geometry={grace_geometry:?}",
+            )
+        });
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: unsafe_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        let close_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == close_delay => Some(*token),
+            _ => None,
+        });
+        let Some(close_timer) = close_timer else {
+            panic!(
+                "expected unsafe pointer move to arm close-delay timer; effects={effects:?} unsafe_point={unsafe_point:?} close_delay={close_delay:?}"
+            );
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: safe_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::CancelTimer { token } if *token == close_timer)),
+            "expected safe corridor pointer move to cancel close-delay timer; effects={effects:?} safe_point={safe_point:?} close_timer={close_timer:?}"
+        );
+
+        // Sanity: no new close timer should be armed when safe.
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::SetTimer { after, .. } if *after == close_delay)),
+            "expected safe corridor pointer move to not arm a new close-delay timer; effects={effects:?} safe_point={safe_point:?} close_delay={close_delay:?}"
+        );
+    }
+
+    #[test]
     fn context_menu_items_have_collection_position_metadata_excluding_separators() {
         let window = AppWindowId::default();
         let mut app = App::new();
