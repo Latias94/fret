@@ -375,14 +375,18 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
     assert_eq!(list_a_id, prev_list_a_id);
     assert_eq!(list_b_id, prev_list_b_id);
 
-    let before = crate::elements::with_element_state(
-        &mut app,
-        window,
-        list_b_id.unwrap(),
-        crate::element::VirtualListState::default,
-        |s| s.offset_x,
+    // Before scroll, there is no scroll transform applied (offset=0).
+    let mut scene_before = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene_before, 1.0);
+    let before_push_transforms = scene_before
+        .ops()
+        .iter()
+        .filter(|op| matches!(op, SceneOp::PushTransform { .. }))
+        .count();
+    assert_eq!(
+        before_push_transforms, 0,
+        "expected no children scroll transforms before wheel scroll"
     );
-    assert_eq!(before, Px(0.0));
 
     // Scroll the first list; the second list should also be invalidated and updated because it
     // shares the same `VirtualListScrollHandle`.
@@ -400,18 +404,30 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
 
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
-    let after = crate::elements::with_element_state(
-        &mut app,
-        window,
-        list_b_id.unwrap(),
-        crate::element::VirtualListState::default,
-        |s| s.offset_x,
+    let mut scene_after = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene_after, 1.0);
+    let after_push_transforms: Vec<String> = scene_after
+        .ops()
+        .iter()
+        .filter(|op| matches!(op, SceneOp::PushTransform { .. }))
+        .map(|op| format!("{op:?}"))
+        .collect();
+
+    // Both lists apply the same scroll handle offset via a children-only render transform, so we
+    // expect two identical translation transforms (one per list).
+    assert_eq!(
+        after_push_transforms.len(),
+        2,
+        "expected both bound virtual lists to apply a scroll transform"
+    );
+    assert_eq!(
+        after_push_transforms[0], after_push_transforms[1],
+        "expected both bound virtual lists to apply the same scroll transform"
     );
     assert!(
-        after.0 > before.0,
-        "expected shared scroll to update second list offset: before={:?} after={:?}",
-        before,
-        after
+        after_push_transforms[0].contains("-20"),
+        "expected scroll transform to include the wheel delta (-20px): {:?}",
+        after_push_transforms[0]
     );
 }
 
