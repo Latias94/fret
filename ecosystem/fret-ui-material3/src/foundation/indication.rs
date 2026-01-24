@@ -96,6 +96,7 @@ pub fn advance_indication_for_pressable<H: UiHost>(
     last_down: Option<fret_ui::action::PointerDownCx>,
     pressed: bool,
     state_layer_target: f32,
+    ripple_fallback_color: Color,
     ripple_base_opacity: f32,
     config: IndicationConfig,
 ) -> IndicationFrame {
@@ -104,6 +105,7 @@ pub fn advance_indication_for_pressable<H: UiHost>(
     let ripple_config = inherited_ripple_configuration(cx);
     let mut ripple_enabled = true;
     let mut ripple_base_opacity = ripple_base_opacity;
+    let mut ripple_color_override: Option<Color> = None;
     match ripple_config {
         Some(MaterialRippleConfiguration::Disabled) => ripple_enabled = false,
         Some(MaterialRippleConfiguration::Custom {
@@ -112,6 +114,11 @@ pub fn advance_indication_for_pressable<H: UiHost>(
         }) => {
             ripple_base_opacity = base_opacity;
             ripple_enabled = base_opacity > 0.0;
+        }
+        Some(MaterialRippleConfiguration::Custom {
+            color: Some(color), ..
+        }) => {
+            ripple_color_override = Some(color);
         }
         Some(MaterialRippleConfiguration::UseDefault)
         | Some(MaterialRippleConfiguration::Custom {
@@ -137,6 +144,7 @@ pub fn advance_indication_for_pressable<H: UiHost>(
         }
 
         let pressed_rising = pressed && !rt.prev_pressed;
+        let pressed_falling = !pressed && rt.prev_pressed;
         rt.prev_pressed = pressed;
         if pressed_rising && ripple_enabled {
             let origin = down_origin_local(bounds, last_down);
@@ -144,14 +152,19 @@ pub fn advance_indication_for_pressable<H: UiHost>(
                 .ripple_radius
                 .filter(|r| r.0.is_finite() && r.0 > 0.0)
                 .unwrap_or_else(|| ripple_max_radius(bounds, origin));
+            let ripple_color = ripple_color_override.unwrap_or(ripple_fallback_color);
             rt.ripple.start(
                 now_frame,
                 origin,
                 max_radius,
+                ripple_color,
                 config.ripple_expand_ms,
                 config.ripple_fade_ms,
                 config.easing,
             );
+        }
+        if pressed_falling && ripple_enabled {
+            rt.ripple.release(now_frame);
         }
 
         let ripple_frame = ripple_enabled
@@ -195,6 +208,7 @@ pub fn material_ink_layer_for_pressable<H: UiHost>(
         last_down,
         pressed,
         state_layer_target,
+        state_layer_color,
         ripple_base_opacity,
         config,
     );
@@ -219,6 +233,7 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
     last_down: Option<fret_ui::action::PointerDownCx>,
     pressed: bool,
     state_layer_target: f32,
+    ripple_fallback_color: Color,
     ripple_base_opacity: f32,
     config: IndicationConfig,
 ) -> IndicationFrame {
@@ -227,6 +242,7 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
     let ripple_config = inherited_ripple_configuration(cx);
     let mut ripple_enabled = true;
     let mut ripple_base_opacity = ripple_base_opacity;
+    let mut ripple_color_override: Option<Color> = None;
     match ripple_config {
         Some(MaterialRippleConfiguration::Disabled) => ripple_enabled = false,
         Some(MaterialRippleConfiguration::Custom {
@@ -235,6 +251,11 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
         }) => {
             ripple_base_opacity = base_opacity;
             ripple_enabled = base_opacity > 0.0;
+        }
+        Some(MaterialRippleConfiguration::Custom {
+            color: Some(color), ..
+        }) => {
+            ripple_color_override = Some(color);
         }
         Some(MaterialRippleConfiguration::UseDefault)
         | Some(MaterialRippleConfiguration::Custom {
@@ -260,6 +281,7 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
         }
 
         let pressed_rising = pressed && !rt.prev_pressed;
+        let pressed_falling = !pressed && rt.prev_pressed;
         rt.prev_pressed = pressed;
         if pressed_rising && ripple_enabled {
             let origin = down_origin_local(bounds, last_down);
@@ -276,14 +298,19 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
                         origin_in_ripple,
                     )
                 });
+            let ripple_color = ripple_color_override.unwrap_or(ripple_fallback_color);
             rt.ripple.start(
                 now_frame,
                 origin,
                 max_radius,
+                ripple_color,
                 config.ripple_expand_ms,
                 config.ripple_fade_ms,
                 config.easing,
             );
+        }
+        if pressed_falling && ripple_enabled {
+            rt.ripple.release(now_frame);
         }
 
         let ripple_frame = ripple_enabled
@@ -330,6 +357,7 @@ pub fn material_ink_layer_for_pressable_with_ripple_bounds<H: UiHost>(
         last_down,
         pressed,
         state_layer_target,
+        state_layer_color,
         ripple_base_opacity,
         config,
     );
@@ -387,7 +415,7 @@ pub fn material_ink_layer<H: UiHost>(
                 bounds,
                 r.origin,
                 r.radius,
-                color,
+                r.color,
                 r.opacity,
                 clip,
             );
@@ -439,7 +467,7 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
                 paint_bounds,
                 r.origin,
                 r.radius,
-                color,
+                r.color,
                 r.opacity,
                 clip,
             );

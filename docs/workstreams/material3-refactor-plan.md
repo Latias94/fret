@@ -37,6 +37,8 @@ mechanisms (measurement/rounding), not “a single wrong token”:
   `LocalContentColor`) and implicit fallbacks into non-Material token namespaces.
 - **Ink bounds inconsistencies**: ripple/state-layer bounds should follow Material “touch target /
   state layer” rules and stay stable across states (pressed/hover/focus).
+- **Ripple drift / flicker**: ripple visuals should not “inherit” hover/focus colors mid-flight; the
+  pressed ripple color should be latched at press time, and fade should start on release.
 
 References in this repo:
 

@@ -216,7 +216,14 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/button.rs` (`PointerRegion` → `PointerRegionState.last_down`),
     `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin_local`),
     `crates/fret-ui/src/paint.rs` (`paint_ripple`).
-- [ ] Ripple parity improvements (unbounded clip, token radius, spec fade rules).
+- [ ] Ripple parity improvements (unbounded clip, token radius, fade rules, color latching).
+  - [x] Fade starts on release (no fade while held).
+    - Evidence: `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RippleAnimator::release`),
+      tests in `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`ripple_does_not_fade_until_release`).
+  - [x] Ripple color is latched at press start (avoids hover/focus color drift during fade).
+    - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (passes color into `RippleAnimator::start`),
+      `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RipplePaintFrame.color`).
+  - [ ] Clip + bounds parity for unbounded ripples (may require core paint/transform guidance).
   - Evidence (partial): `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleClip`, `IndicationConfig.ripple_radius`),
     `ecosystem/fret-ui-material3/src/checkbox.rs` (unbounded ripple),
     `ecosystem/fret-ui-material3/src/radio.rs` (unbounded ripple),

@@ -12,6 +12,7 @@ use crate::motion::{cubic_bezier_ease, ms_to_frames};
 pub struct RipplePaintFrame {
     pub origin: Point,
     pub radius: Px,
+    pub color: fret_core::Color,
     pub opacity: f32,
 }
 
@@ -19,9 +20,10 @@ pub struct RipplePaintFrame {
 struct RipplePulse {
     origin: Point,
     max_radius: Px,
+    color: fret_core::Color,
     start_frame: u64,
     expand_frames: u64,
-    fade_start_frame: u64,
+    release_frame: Option<u64>,
     fade_frames: u64,
     easing: CubicBezier,
 }
@@ -41,6 +43,7 @@ impl RippleAnimator {
         now_frame: u64,
         origin: Point,
         max_radius: Px,
+        color: fret_core::Color,
         expand_duration_ms: u32,
         fade_duration_ms: u32,
         easing: CubicBezier,
@@ -50,12 +53,24 @@ impl RippleAnimator {
         self.active = Some(RipplePulse {
             origin,
             max_radius,
+            color,
             start_frame: now_frame,
             expand_frames,
-            fade_start_frame: now_frame.saturating_add(expand_frames),
+            release_frame: None,
             fade_frames,
             easing,
         });
+    }
+
+    pub fn release(&mut self, now_frame: u64) {
+        let Some(mut pulse) = self.active else {
+            return;
+        };
+        if pulse.release_frame.is_some() {
+            return;
+        }
+        pulse.release_frame = Some(now_frame);
+        self.active = Some(pulse);
     }
 
     pub fn advance(&mut self, now_frame: u64, base_opacity: f32) -> Option<RipplePaintFrame> {
@@ -70,18 +85,24 @@ impl RippleAnimator {
         let expand_e = cubic_bezier_ease(pulse.easing, expand_t);
         let radius = Px(pulse.max_radius.0 * expand_e);
 
-        let fade_elapsed = now_frame.saturating_sub(pulse.fade_start_frame);
-        let fade_t = (fade_elapsed as f32 / pulse.fade_frames as f32).clamp(0.0, 1.0);
-        let opacity = (base_opacity * (1.0 - fade_t)).clamp(0.0, 1.0);
-
-        if fade_t >= 1.0 {
-            self.active = None;
-            return None;
-        }
+        let opacity = match pulse.release_frame {
+            None => base_opacity,
+            Some(release_frame) => {
+                let fade_elapsed = now_frame.saturating_sub(release_frame).saturating_add(1);
+                let fade_t = (fade_elapsed as f32 / pulse.fade_frames as f32).clamp(0.0, 1.0);
+                let opacity = (base_opacity * (1.0 - fade_t)).clamp(0.0, 1.0);
+                if fade_t >= 1.0 {
+                    self.active = None;
+                    return None;
+                }
+                opacity
+            }
+        };
 
         Some(RipplePaintFrame {
             origin: pulse.origin,
             radius,
+            color: pulse.color,
             opacity,
         })
     }
@@ -100,6 +121,12 @@ mod tests {
             0,
             Point::new(Px(0.0), Px(0.0)),
             Px(10.0),
+            fret_core::Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            },
             100,
             100,
             CubicBezier {
@@ -111,12 +138,55 @@ mod tests {
         );
         assert!(a.is_active());
         let mut last = None;
-        for f in 0..200 {
+        for f in 0..20 {
+            last = a.advance(f, 0.12);
+        }
+        a.release(20);
+        for f in 20..200 {
             last = a.advance(f, 0.12);
         }
         // After enough frames, it should be inactive.
         let _ = last;
         let _ = a.advance(10_000, 0.12);
         assert!(!a.is_active());
+    }
+
+    #[test]
+    fn ripple_does_not_fade_until_release() {
+        let mut a = RippleAnimator::default();
+        a.start(
+            0,
+            Point::new(Px(0.0), Px(0.0)),
+            Px(10.0),
+            fret_core::Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            },
+            100,
+            100,
+            CubicBezier {
+                x1: 0.0,
+                y1: 0.0,
+                x2: 1.0,
+                y2: 1.0,
+            },
+        );
+
+        for f in 0..40 {
+            let frame = a.advance(f, 0.12).expect("expected active ripple");
+            assert!(
+                (frame.opacity - 0.12).abs() < 1e-6,
+                "ripple should not fade while held"
+            );
+        }
+
+        a.release(40);
+        let f41 = a.advance(41, 0.12).expect("expected active ripple");
+        assert!(
+            f41.opacity < 0.12,
+            "ripple should start fading after release"
+        );
     }
 }
