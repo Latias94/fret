@@ -3312,6 +3312,15 @@ fn hover_overlay_is_click_through_while_closing() {
     assert!(info.visible);
     assert!(!info.blocks_underlay_input);
     assert!(!info.hit_testable);
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
+
+    let arbitration = crate::OverlayController::arbitration_snapshot(&ui);
+    assert_eq!(
+        arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None,
+        "expected hover overlay close transition to be click-through"
+    );
 }
 
 #[test]
