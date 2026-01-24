@@ -20,6 +20,9 @@ use crate::foundation::focus_ring::material_focus_ring;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::motion::{SpringAnimator, SpringSpec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum IconButtonVariant {
@@ -130,7 +133,10 @@ impl IconButton {
                 }
 
                 let size_tokens = icon_button_size_tokens(&theme, self.size);
-                let corner_radii = Corners::all(Px(9999.0));
+                let now_frame = cx.frame_id.0;
+                let pressed = enabled && st.pressed;
+                let (corner_radii, corner_want_frames) =
+                    animated_icon_button_corner_radii(cx, &theme, pressable_id, now_frame, pressed);
 
                 let pressable_props = PressableProps {
                     enabled,
@@ -158,7 +164,6 @@ impl IconButton {
                     cx.pointer_region(props, |cx| {
                         cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                        let now_frame = cx.frame_id.0;
                         let focus_visible =
                             fret_ui::focus_visible::is_focus_visible(&mut *cx.app, Some(cx.window));
 
@@ -244,7 +249,7 @@ impl IconButton {
                             colors.state_layer_color,
                             indication.state_layer_opacity,
                             indication.ripple_frame,
-                            indication.want_frames,
+                            indication.want_frames || corner_want_frames,
                         );
 
                         let icon =
@@ -267,6 +272,68 @@ impl IconButton {
             })
         })
     }
+}
+
+#[derive(Debug, Default, Clone)]
+struct IconButtonCornerRuntime {
+    spring: SpringAnimator,
+}
+
+fn icon_button_shape_radius(theme: &Theme) -> f32 {
+    theme
+        .metric_by_key("md.comp.icon-button.container.shape.round")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
+        .unwrap_or(Px(9999.0))
+        .0
+}
+
+fn icon_button_pressed_shape_radius(theme: &Theme) -> f32 {
+    theme
+        .metric_by_key("md.comp.icon-button.pressed.container.shape")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.small"))
+        .unwrap_or(Px(8.0))
+        .0
+}
+
+fn icon_button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec) -> SpringSpec {
+    let tokens = MaterialTokenResolver::new(theme);
+    SpringSpec {
+        damping: tokens.number_comp_or_sys(
+            "md.comp.icon-button.pressed.container.corner-size.motion.spring.damping",
+            "md.sys.motion.spring.fast.spatial.damping",
+            scheme_fallback.damping,
+        ),
+        stiffness: tokens.number_comp_or_sys(
+            "md.comp.icon-button.pressed.container.corner-size.motion.spring.stiffness",
+            "md.sys.motion.spring.fast.spatial.stiffness",
+            scheme_fallback.stiffness,
+        ),
+    }
+}
+
+fn animated_icon_button_corner_radii<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    pressable_id: fret_ui::elements::GlobalElementId,
+    now_frame: u64,
+    pressed: bool,
+) -> (Corners, bool) {
+    let base = icon_button_shape_radius(theme);
+    let pressed_radius = icon_button_pressed_shape_radius(theme);
+    let target = if pressed { pressed_radius } else { base };
+
+    let scheme_spring = sys_spring_in_scope(cx, theme, MotionSchemeKey::FastSpatial);
+    let spring = icon_button_pressed_corner_spring(theme, scheme_spring);
+
+    cx.with_state_for(pressable_id, IconButtonCornerRuntime::default, |rt| {
+        if !rt.spring.is_initialized() {
+            rt.spring.reset(now_frame, base);
+        }
+
+        rt.spring.set_target(now_frame, target, spring);
+        rt.spring.advance(now_frame);
+        (Corners::all(Px(rt.spring.value())), rt.spring.is_active())
+    })
 }
 
 #[derive(Debug, Clone, Copy)]

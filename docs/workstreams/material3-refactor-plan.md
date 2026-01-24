@@ -131,6 +131,8 @@ Current progress:
 - Material Web v30 `md.sys.motion.spring.*` tokens are imported into `ThemeConfig.numbers`.
 - `fret-ui-material3` provides a small `SpringAnimator` in `crate::motion` and a `foundation::motion_scheme`
   token reader for the 6 canonical specs.
+- `Button` and `IconButton` pressed shape now uses the spring path (corner radius morph), which acts as a
+  conformance probe for MotionScheme plumbing.
 
 ### Tokens (typed access vs string keys)
 
