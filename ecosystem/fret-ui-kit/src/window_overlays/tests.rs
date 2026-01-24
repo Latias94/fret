@@ -106,6 +106,21 @@ fn render_base_with_trigger(
     trigger_id.expect("trigger id")
 }
 
+fn render_empty_base(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+) {
+    begin_frame(app, window);
+    let root =
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "empty", |_| {
+            Vec::new()
+        });
+    ui.set_root(root);
+}
+
 #[test]
 fn window_resize_closes_modal_overlays_that_opt_in() {
     let mut app = App::new();
@@ -365,6 +380,232 @@ fn cached_popover_request_is_synthesized_when_open_without_rerender() {
     });
     let layer = layer.expect("popover layer");
     assert!(ui.is_layer_visible(layer));
+}
+
+#[test]
+fn cached_hover_overlay_request_is_synthesized_when_open_without_rerender() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let open = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    app.set_frame_id(FrameId(1));
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: GlobalElementId(0x3),
+            root_name: "hover_overlay".into(),
+            trigger,
+            open: open.clone(),
+            present: false,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    app.set_frame_id(FrameId(2));
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let trigger_b = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    assert_eq!(trigger_b, trigger);
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .hover_overlays
+            .get(&(window, GlobalElementId(0x3)))
+            .map(|h| h.layer)
+    });
+    let layer = layer.expect("hover overlay layer");
+    assert!(ui.is_layer_visible(layer));
+}
+
+#[test]
+fn cached_tooltip_request_is_synthesized_when_open_without_rerender() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let open = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    app.set_frame_id(FrameId(1));
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: GlobalElementId(0x4),
+            root_name: "tooltip".into(),
+            trigger: Some(trigger),
+            open: open.clone(),
+            present: false,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    app.set_frame_id(FrameId(2));
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let trigger_b = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    assert_eq!(trigger_b, trigger);
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .tooltips
+            .get(&(window, GlobalElementId(0x4)))
+            .map(|t| t.layer)
+    });
+    let layer = layer.expect("tooltip layer");
+    assert!(ui.is_layer_visible(layer));
+}
+
+#[test]
+fn cached_hover_overlay_is_not_synthesized_when_trigger_unmounted() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    app.set_frame_id(FrameId(1));
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: GlobalElementId(0x5),
+            root_name: "hover_overlay".into(),
+            trigger,
+            open: open.clone(),
+            present: true,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .hover_overlays
+            .get(&(window, GlobalElementId(0x5)))
+            .map(|h| h.layer)
+    });
+    let layer = layer.expect("hover overlay layer");
+
+    app.set_frame_id(FrameId(2));
+    render_empty_base(&mut ui, &mut app, &mut services, window, bounds);
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    assert!(!ui.is_layer_visible(layer));
+}
+
+#[test]
+fn cached_tooltip_is_not_synthesized_when_trigger_unmounted() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    app.set_frame_id(FrameId(1));
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: GlobalElementId(0x6),
+            root_name: "tooltip".into(),
+            trigger: Some(trigger),
+            open: open.clone(),
+            present: true,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .tooltips
+            .get(&(window, GlobalElementId(0x6)))
+            .map(|t| t.layer)
+    });
+    let layer = layer.expect("tooltip layer");
+
+    app.set_frame_id(FrameId(2));
+    render_empty_base(&mut ui, &mut app, &mut services, window, bounds);
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    assert!(!ui.is_layer_visible(layer));
 }
 
 fn render_base_with_trigger_and_underlay(
@@ -2991,6 +3232,137 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
     assert!(!info.blocks_underlay_input);
     assert!(!info.hit_testable);
     assert!(!info.wants_pointer_down_outside_events);
+}
+
+#[test]
+fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_| Vec::new(),
+    );
+    ui.set_root(base);
+
+    begin_frame(&mut app, window);
+    let trigger = GlobalElementId(0xbeef);
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            trigger: Some(trigger),
+            open,
+            present: true,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays.tooltips.get(&(window, trigger)).map(|t| t.layer)
+        })
+        .expect("tooltip layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("tooltip debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
+}
+
+#[test]
+fn hover_overlay_is_pointer_transparent_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_| Vec::new(),
+    );
+    ui.set_root(base);
+
+    begin_frame(&mut app, window);
+    let trigger = GlobalElementId(0xf00d);
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            trigger,
+            open,
+            present: true,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .hover_overlays
+                .get(&(window, trigger))
+                .map(|h| h.layer)
+        })
+        .expect("hover overlay layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("hover overlay debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
 }
 
 #[test]
