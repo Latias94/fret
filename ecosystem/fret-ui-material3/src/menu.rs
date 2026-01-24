@@ -434,6 +434,7 @@ fn material_menu_item<H: UiHost>(
                     state_layer_target,
                     ripple_base_opacity,
                     config,
+                    false,
                 );
 
                 let label_el = menu_item_label(cx, theme, &item.label, label_color);

@@ -485,6 +485,7 @@ fn material_primary_tab<H: UiHost>(
                     state_layer_target,
                     ripple_base_opacity,
                     config,
+                    false,
                 );
                 let label_el = primary_tab_label(cx, theme, &label, label_color);
 

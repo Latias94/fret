@@ -413,6 +413,7 @@ fn list_item<H: UiHost>(
                     state_layer_target,
                     ripple_base_opacity,
                     config,
+                    false,
                 );
 
                 let selected_bg = if selected {

@@ -151,6 +151,7 @@ pub fn material_ink_layer_for_pressable<H: UiHost>(
     state_layer_target: f32,
     ripple_base_opacity: f32,
     config: IndicationConfig,
+    extra_want_frames: bool,
 ) -> AnyElement {
     let bounds = cx
         .last_bounds_for_element(cx.root_id())
@@ -178,7 +179,7 @@ pub fn material_ink_layer_for_pressable<H: UiHost>(
         state_layer_color,
         indication.state_layer_opacity,
         indication.ripple_frame,
-        indication.want_frames,
+        indication.want_frames || extra_want_frames,
     )
 }
 
@@ -284,6 +285,7 @@ pub fn material_ink_layer_for_pressable_with_ripple_bounds<H: UiHost>(
     state_layer_target: f32,
     ripple_base_opacity: f32,
     config: IndicationConfig,
+    extra_want_frames: bool,
 ) -> AnyElement {
     let bounds = cx
         .last_bounds_for_element(cx.root_id())
@@ -313,7 +315,7 @@ pub fn material_ink_layer_for_pressable_with_ripple_bounds<H: UiHost>(
         state_layer_color,
         indication.state_layer_opacity,
         indication.ripple_frame,
-        indication.want_frames,
+        indication.want_frames || extra_want_frames,
     )
 }
 

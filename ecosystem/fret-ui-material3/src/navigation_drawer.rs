@@ -482,6 +482,7 @@ fn navigation_drawer_item<H: UiHost>(
                     state_layer_target,
                     ripple_base_opacity,
                     config,
+                    false,
                 );
 
                 let tokens = MaterialTokenResolver::new(theme);

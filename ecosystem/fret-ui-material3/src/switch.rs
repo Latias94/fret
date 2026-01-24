@@ -17,8 +17,7 @@ use fret_ui::{Invalidation, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, advance_indication_for_pressable_with_ripple_bounds,
-    material_ink_layer_with_bounds,
+    IndicationConfig, RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
 };
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
@@ -181,11 +180,6 @@ impl Switch {
                             pressed: SpringAnimator,
                         }
 
-                        let last_down = cx
-                            .with_state(fret_ui::element::PointerRegionState::default, |st| {
-                                st.last_down
-                            });
-
                         let spring =
                             sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::FastSpatial);
                         let (thumb_t, pressed_t, thumb_active) =
@@ -215,9 +209,6 @@ impl Switch {
                         let track =
                             switch_track(cx, &theme, size, selected, enabled, interaction, geom);
 
-                        let bounds = cx
-                            .last_bounds_for_element(cx.root_id())
-                            .unwrap_or(cx.bounds);
                         let ripple_base_opacity = switch_ripple_base_opacity(&theme, selected);
                         let config = IndicationConfig {
                             state_duration_ms,
@@ -226,28 +217,20 @@ impl Switch {
                             ripple_radius: Some(Px(size.state_layer.0 * 0.5)),
                             easing,
                         };
-                        let indication = advance_indication_for_pressable_with_ripple_bounds(
+                        let overlay = material_ink_layer_for_pressable_with_ripple_bounds(
                             cx,
                             pressable_id,
                             now_frame,
-                            bounds,
                             geom.ink_bounds,
-                            last_down,
-                            is_pressed,
-                            state_layer_target,
-                            ripple_base_opacity,
-                            config,
-                        );
-
-                        let overlay = material_ink_layer_with_bounds(
-                            cx,
                             geom.ink_bounds,
                             Corners::all(Px(9999.0)),
                             RippleClip::Unbounded,
                             state_layer_color,
-                            indication.state_layer_opacity,
-                            indication.ripple_frame,
-                            indication.want_frames || thumb_active,
+                            is_pressed,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                            thumb_active,
                         );
 
                         let mut outer = ContainerProps::default();

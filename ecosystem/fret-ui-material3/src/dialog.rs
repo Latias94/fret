@@ -26,7 +26,7 @@ use crate::foundation::elevation::{
     apply_surface_tint_if_surface, shadow_for_elevation_with_color,
 };
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, material_ink_layer_for_pressable,
 };
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
@@ -217,23 +217,16 @@ impl DialogAction {
                         .duration_ms_by_key("md.sys.motion.duration.short2")
                         .unwrap_or(100);
 
-                    let bounds = cx
-                        .last_bounds_for_element(cx.root_id())
-                        .unwrap_or(cx.bounds);
-                    let last_down = cx
-                        .with_state(fret_ui::element::PointerRegionState::default, |st| {
-                            st.last_down
-                        });
-
                     let ripple_base_opacity = theme
                         .number_by_key("md.comp.dialog.action.pressed.state-layer.opacity")
                         .unwrap_or(0.1);
-                    let indication = advance_indication_for_pressable(
+                    let ink = material_ink_layer_for_pressable(
                         cx,
                         pressable_id,
                         cx.frame_id.0,
-                        bounds,
-                        last_down,
+                        config.corner_radii,
+                        RippleClip::Bounded,
+                        state_layer_color,
                         is_pressed,
                         state_layer_target,
                         ripple_base_opacity,
@@ -244,16 +237,7 @@ impl DialogAction {
                             ripple_radius: None,
                             easing,
                         },
-                    );
-
-                    let ink = material_ink_layer(
-                        cx,
-                        config.corner_radii,
-                        RippleClip::Bounded,
-                        state_layer_color,
-                        indication.state_layer_opacity,
-                        indication.ripple_frame,
-                        indication.want_frames,
+                        false,
                     );
 
                     let label_style = theme

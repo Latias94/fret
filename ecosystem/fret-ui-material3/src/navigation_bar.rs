@@ -491,6 +491,7 @@ fn navigation_bar_item<H: UiHost>(
                     state_layer_target,
                     ripple_base_opacity,
                     config,
+                    false,
                 );
 
                 let indicator_w = theme

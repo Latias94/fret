@@ -22,7 +22,7 @@ use fret_ui::{Invalidation, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, material_ink_layer_for_pressable,
 };
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::interaction::state_layer::StateLayerAnimator;
@@ -758,14 +758,6 @@ impl Radio {
                             dot: StateLayerAnimator,
                         }
 
-                        let bounds = cx
-                            .last_bounds_for_element(cx.root_id())
-                            .unwrap_or(cx.bounds);
-                        let last_down = cx
-                            .with_state(fret_ui::element::PointerRegionState::default, |st| {
-                                st.last_down
-                            });
-
                         let (dot_scale, dot_active) =
                             cx.with_state_for(pressable_id, RadioDotRuntime::default, |rt| {
                                 let desired_dot = if checked { 1.0 } else { 0.0 };
@@ -790,26 +782,18 @@ impl Radio {
                             ripple_radius: Some(Px(size.state_layer.0 * 0.5)),
                             easing,
                         };
-                        let indication = advance_indication_for_pressable(
+                        let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
                             now_frame,
-                            bounds,
-                            last_down,
+                            Corners::all(Px(9999.0)),
+                            RippleClip::Unbounded,
+                            state_layer_color,
                             is_pressed,
                             state_layer_target,
                             ripple_base_opacity,
                             config,
-                        );
-
-                        let overlay = material_ink_layer(
-                            cx,
-                            Corners::all(Px(9999.0)),
-                            RippleClip::Unbounded,
-                            state_layer_color,
-                            indication.state_layer_opacity,
-                            indication.ripple_frame,
-                            indication.want_frames || dot_active,
+                            dot_active,
                         );
 
                         let icon_color = radio_icon_color(&theme, checked, enabled, interaction);

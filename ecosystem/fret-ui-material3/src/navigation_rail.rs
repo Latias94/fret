@@ -516,6 +516,7 @@ fn navigation_rail_item<H: UiHost>(
                     state_layer_target,
                     ripple_base_opacity,
                     config,
+                    false,
                 );
 
                 let icon_slot = cx.named("icon_slot", |cx| {

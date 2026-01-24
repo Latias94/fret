@@ -18,7 +18,7 @@ use fret_ui::{SvgSource, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, material_ink_layer_for_pressable,
 };
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
@@ -219,14 +219,6 @@ impl IconButton {
                             .duration_ms_by_key("md.sys.motion.duration.short2")
                             .unwrap_or(100);
 
-                        let bounds = cx
-                            .last_bounds_for_element(cx.root_id())
-                            .unwrap_or(cx.bounds);
-                        let last_down = cx
-                            .with_state(fret_ui::element::PointerRegionState::default, |st| {
-                                st.last_down
-                            });
-
                         let ripple_base_opacity = theme
                             .number_by_key(&format!(
                                 "md.comp.icon-button.{}.pressed.state-layer.opacity",
@@ -240,26 +232,18 @@ impl IconButton {
                             ripple_radius: None,
                             easing,
                         };
-                        let indication = advance_indication_for_pressable(
+                        let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
                             now_frame,
-                            bounds,
-                            last_down,
+                            corner_radii,
+                            RippleClip::Bounded,
+                            colors.state_layer_color,
                             is_pressed,
                             state_layer_target,
                             ripple_base_opacity,
                             config,
-                        );
-
-                        let overlay = material_ink_layer(
-                            cx,
-                            corner_radii,
-                            RippleClip::Bounded,
-                            colors.state_layer_color,
-                            indication.state_layer_opacity,
-                            indication.ripple_frame,
-                            indication.want_frames || corner_want_frames,
+                            corner_want_frames,
                         );
 
                         let icon =
