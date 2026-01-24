@@ -220,6 +220,7 @@ pub(crate) fn content_view(
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_navigation_bar_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -355,6 +356,7 @@ pub(crate) fn content_view(
         material3_switch,
         material3_radio_value,
         material3_tabs_value,
+        material3_navigation_bar_value,
         material3_text_field_value,
         material3_text_field_disabled,
         material3_text_field_error,
@@ -465,6 +467,7 @@ fn page_preview(
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_navigation_bar_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -550,6 +553,7 @@ fn page_preview(
             material3_switch,
             material3_radio_value,
             material3_tabs_value,
+            material3_navigation_bar_value,
             material3_text_field_value,
             material3_text_field_disabled,
             material3_text_field_error,
@@ -568,6 +572,9 @@ fn page_preview(
             material3_text_field_error,
         ),
         PAGE_MATERIAL3_TABS => preview_material3_tabs(cx, material3_tabs_value),
+        PAGE_MATERIAL3_NAVIGATION_BAR => {
+            preview_material3_navigation_bar(cx, material3_navigation_bar_value)
+        }
         PAGE_MATERIAL3_MENU => preview_material3_menu(cx, material3_menu_open, last_action.clone()),
         _ => preview_intro(cx, theme),
     };
@@ -1282,6 +1289,7 @@ fn preview_material3_state_matrix(
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_navigation_bar_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -1322,6 +1330,12 @@ fn preview_material3_state_matrix(
 
     out.push(cx.text("— Tabs —"));
     out.extend(preview_material3_tabs(cx, material3_tabs_value));
+
+    out.push(cx.text("— Navigation Bar —"));
+    out.extend(preview_material3_navigation_bar(
+        cx,
+        material3_navigation_bar_value,
+    ));
 
     out.push(cx.text("— Menu —"));
     out.extend(preview_material3_menu(cx, material3_menu_open, last_action));
@@ -1646,6 +1660,39 @@ fn preview_material3_tabs(
         fixed_tabs,
         cx.text("Scrollable/variable width preview (measurement-driven indicator)."),
         scrollable_tabs,
+        cx.text(format!("value={}", current.as_ref())),
+    ]
+}
+
+fn preview_material3_navigation_bar(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+
+    let current = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let bar = material3::NavigationBar::new(value)
+        .a11y_label("Material 3 Navigation Bar")
+        .test_id("ui-gallery-material3-navigation-bar")
+        .items(vec![
+            material3::NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                .a11y_label("Destination Search")
+                .test_id("ui-gallery-material3-nav-search"),
+            material3::NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS)
+                .a11y_label("Destination Settings")
+                .test_id("ui-gallery-material3-nav-settings"),
+            material3::NavigationBarItem::new("more", "More", ids::ui::MORE_HORIZONTAL)
+                .a11y_label("Destination More")
+                .test_id("ui-gallery-material3-nav-more"),
+        ])
+        .into_element(cx);
+
+    vec![
+        cx.text("Material 3 Navigation Bar: roving focus + state layer + bounded ripple."),
+        bar,
         cx.text(format!("value={}", current.as_ref())),
     ]
 }

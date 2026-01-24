@@ -309,6 +309,34 @@ let tabs = m3::Tabs::new(value)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_NAVIGATION_BAR: &str = r#"
+## Material 3 Navigation Bar (MVP)
+
+This page validates a Material 3 bottom navigation bar surface:
+
+- roving focus + automatic activation (selection follows focus)
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
+- active indicator that tracks the selected icon slot
+"#;
+
+pub(crate) const USAGE_MATERIAL3_NAVIGATION_BAR: &str = r#"
+```rust
+use fret_icons::ids;
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let value = app.models_mut().insert(Arc::<str>::from("search"));
+let bar = m3::NavigationBar::new(value)
+    .a11y_label("Demo navigation bar")
+    .items(vec![
+        m3::NavigationBarItem::new("search", "Search", ids::ui::SEARCH),
+        m3::NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS),
+    ])
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_MENU: &str = r#"
 ## Material 3 Menu (MVP)
 

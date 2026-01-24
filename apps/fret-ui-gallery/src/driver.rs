@@ -131,6 +131,7 @@ struct UiGalleryWindowState {
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_navigation_bar_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -406,6 +407,7 @@ impl UiGalleryDriver {
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
         let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
+        let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
         let material3_text_field_value = app.models_mut().insert(String::new());
         let material3_text_field_disabled = app.models_mut().insert(false);
         let material3_text_field_error = app.models_mut().insert(false);
@@ -517,6 +519,7 @@ impl UiGalleryDriver {
             material3_switch,
             material3_radio_value,
             material3_tabs_value,
+            material3_navigation_bar_value,
             material3_text_field_value,
             material3_text_field_disabled,
             material3_text_field_error,
@@ -963,6 +966,7 @@ impl UiGalleryDriver {
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
         let material3_tabs_value = state.material3_tabs_value.clone();
+        let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
         let material3_text_field_value = state.material3_text_field_value.clone();
         let material3_text_field_disabled = state.material3_text_field_disabled.clone();
         let material3_text_field_error = state.material3_text_field_error.clone();
@@ -1332,6 +1336,7 @@ impl UiGalleryDriver {
                                             material3_switch.clone(),
                                             material3_radio_value.clone(),
                                             material3_tabs_value.clone(),
+                                            material3_navigation_bar_value.clone(),
                                             material3_text_field_value.clone(),
                                             material3_text_field_disabled.clone(),
                                             material3_text_field_error.clone(),
@@ -1412,6 +1417,7 @@ impl UiGalleryDriver {
                                         material3_switch.clone(),
                                         material3_radio_value.clone(),
                                         material3_tabs_value.clone(),
+                                        material3_navigation_bar_value.clone(),
                                         material3_text_field_value.clone(),
                                         material3_text_field_disabled.clone(),
                                         material3_text_field_error.clone(),
