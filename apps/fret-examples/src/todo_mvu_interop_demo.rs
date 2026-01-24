@@ -175,37 +175,31 @@ impl MvuProgram for TodoMvuInteropProgram {
         st: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
     ) -> Vec<AnyElement> {
-        cx.observe_model(&st.todos, Invalidation::Layout);
-        cx.observe_model(&st.draft, Invalidation::Layout);
-
         let Some(models) = embedded::models(&*cx.app, cx.window) else {
             return vec![cx.text("Embedded viewport models are not installed.")];
         };
-        cx.observe_model(&models.clicks, Invalidation::Paint);
-        cx.observe_model(&models.last_input, Invalidation::Paint);
-        cx.observe_model(&models.target, Invalidation::Paint);
 
         let theme = Theme::global(&*cx.app).clone();
 
         let todos = cx
-            .app
-            .models()
-            .read(&st.todos, |v| v.clone())
+            .watch_model(&st.todos)
+            .layout()
+            .cloned()
             .unwrap_or_default();
         for t in &todos {
-            cx.observe_model(&t.done, Invalidation::Layout);
+            cx.watch_model(&t.done).layout().observe();
         }
 
-        let clicks = cx.app.models().read(&models.clicks, |v| *v).unwrap_or(0);
+        let clicks = cx.watch_model(&models.clicks).paint().copied().unwrap_or(0);
         let last_input = cx
-            .app
-            .models()
-            .read(&models.last_input, |v| v.clone())
-            .unwrap_or_else(|_| Arc::<str>::from("<error>"));
+            .watch_model(&models.last_input)
+            .paint()
+            .cloned()
+            .unwrap_or_else(|| Arc::<str>::from("<error>"));
         let target = cx
-            .app
-            .models()
-            .read(&models.target, |v| *v)
+            .watch_model(&models.target)
+            .paint()
+            .copied()
             .unwrap_or_default();
 
         let mut root_layout = fret_ui::element::LayoutStyle::default();

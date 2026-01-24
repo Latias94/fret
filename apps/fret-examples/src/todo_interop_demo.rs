@@ -158,8 +158,6 @@ impl TodoInteropDriver {
         let ui = &mut state.ui;
         let root = declarative::RenderRootContext::new(ui, app, services, window, bounds)
             .render_root("todo-interop", |cx| {
-                cx.observe_model(&draft, Invalidation::Layout);
-                cx.observe_model(&todos_model, Invalidation::Layout);
                 cx.observe_global::<ExternalViewportStubState>(Invalidation::Paint);
 
                 let theme = Theme::global(&*cx.app).clone();
@@ -169,13 +167,14 @@ impl TodoInteropDriver {
                     .cloned()
                     .unwrap_or_default();
 
+                cx.watch_model(&draft).layout().observe();
                 let todos = cx
-                    .app
-                    .models()
-                    .read(&todos_model, |v| v.clone())
+                    .watch_model(&todos_model)
+                    .layout()
+                    .cloned()
                     .unwrap_or_default();
                 for t in &todos {
-                    cx.observe_model(&t.done, Invalidation::Layout);
+                    cx.watch_model(&t.done).layout().observe();
                 }
 
                 let mut root_layout = LayoutStyle::default();

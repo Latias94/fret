@@ -187,30 +187,25 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoForeignIcedStyleState) ->
     let Some(models) = embedded::models(&*cx.app, cx.window) else {
         return vec![cx.text("Embedded viewport models are not installed.")];
     };
-    cx.observe_model(&models.clicks, Invalidation::Paint);
-    cx.observe_model(&models.last_input, Invalidation::Paint);
-    cx.observe_model(&models.target, Invalidation::Paint);
-
-    cx.observe_model(&st.foreign.items, Invalidation::Layout);
-    cx.observe_model(&st.foreign.hint, Invalidation::Paint);
+    cx.watch_model(&models.target).paint().observe();
 
     let items = cx
-        .app
-        .models()
-        .read(&st.foreign.items, |v| v.clone())
+        .watch_model(&st.foreign.items)
+        .layout()
+        .cloned()
         .unwrap_or_default();
     let hint = cx
-        .app
-        .models()
-        .read(&st.foreign.hint, |v| v.clone())
-        .unwrap_or_else(|_| Arc::from("<error>"));
+        .watch_model(&st.foreign.hint)
+        .paint()
+        .cloned()
+        .unwrap_or_else(|| Arc::from("<error>"));
 
-    let clicks = cx.app.models().read(&models.clicks, |v| *v).unwrap_or(0);
+    let clicks = cx.watch_model(&models.clicks).paint().copied().unwrap_or(0);
     let last_input = cx
-        .app
-        .models()
-        .read(&models.last_input, |v| v.clone())
-        .unwrap_or_else(|_| Arc::from("<error>"));
+        .watch_model(&models.last_input)
+        .paint()
+        .cloned()
+        .unwrap_or_else(|| Arc::from("<error>"));
 
     let mut root_layout = fret_ui::element::LayoutStyle::default();
     root_layout.size.width = Length::Fill;
