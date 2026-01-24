@@ -1,5 +1,5 @@
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
-use fret_runtime::{CommandId, Effect, Model};
+use fret_runtime::{CommandId, Effect, Model, ModelStore};
 use fret_ui::element::{AnyElement, ContainerProps, PressableA11y, PressableProps, SpacerProps};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -99,7 +99,7 @@ pub fn list_virtualized_copyable<H: UiHost>(
     scroll_handle: &VirtualListScrollHandle,
     items_revision: u64,
     key_at: impl FnMut(usize) -> u64,
-    copy_text_at: Arc<dyn Fn(usize) -> Option<String> + Send + Sync>,
+    copy_text_at: Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>,
     on_select: impl Fn(usize) -> Option<CommandId>,
     row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
 ) -> AnyElement {
@@ -130,7 +130,7 @@ fn list_virtualized_impl<H: UiHost>(
     scroll_handle: &VirtualListScrollHandle,
     items_revision: u64,
     key_at: impl FnMut(usize) -> u64,
-    copy_text_at: Option<Arc<dyn Fn(usize) -> Option<String> + Send + Sync>>,
+    copy_text_at: Option<Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>>,
     on_select: impl Fn(usize) -> Option<CommandId>,
     mut row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
 ) -> AnyElement {
@@ -170,25 +170,23 @@ fn list_virtualized_impl<H: UiHost>(
                 let selection_for_command = selection.clone();
                 let selection_for_availability = selection;
                 let copy_text_for_command = copy_text_at.clone();
-                cx.command_add_on_command_for(
+                cx.command_on_command_for(
                     list_root,
                     Arc::new(move |host, _acx, command| {
                         if command.as_str() != "edit.copy" {
                             return false;
                         }
-                        let selected = host
-                            .models_mut()
-                            .get_copied(&selection_for_command)
-                            .unwrap_or(None);
+                        let models = host.models_mut();
+                        let selected = models.get_copied(&selection_for_command).unwrap_or(None);
                         if let Some(selected) = selected {
-                            if let Some(text) = (copy_text_for_command)(selected) {
+                            if let Some(text) = (copy_text_for_command)(&*models, selected) {
                                 host.push_effect(Effect::ClipboardSetText { text });
                             }
                         }
                         true
                     }),
                 );
-                cx.command_add_on_command_availability_for(
+                cx.command_on_command_availability_for(
                     list_root,
                     Arc::new(move |host, acx, command| {
                         if command.as_str() != "edit.copy" {
@@ -200,11 +198,11 @@ fn list_virtualized_impl<H: UiHost>(
                         if !acx.input_ctx.caps.clipboard.text {
                             return fret_ui::CommandAvailability::Blocked;
                         }
-                        let selected = host
-                            .models_mut()
+                        let models = host.models_mut();
+                        let selected = models
                             .get_copied(&selection_for_availability)
                             .unwrap_or(None);
-                        if selected.is_some() {
+                        if selected.is_some_and(|selected| selected < len) {
                             fret_ui::CommandAvailability::Available
                         } else {
                             fret_ui::CommandAvailability::Blocked
@@ -215,7 +213,7 @@ fn list_virtualized_impl<H: UiHost>(
             vec![
                 cx.virtual_list_keyed(len, options, scroll_handle, key_at, |cx, i| {
                     let cmd = on_select(i);
-                    let enabled = cmd.is_some();
+                    let enabled = cmd.is_some() || selection.is_some();
                     let is_selected = selected == Some(i);
 
                     cx.pressable(
@@ -231,6 +229,9 @@ fn list_virtualized_impl<H: UiHost>(
                         },
                         |cx, st| {
                             cx.pressable_dispatch_command_if_enabled_opt(cmd);
+                            if let Some(selection) = selection.clone() {
+                                cx.pressable_set_model(&selection, Some(i));
+                            }
                             let bg = if is_selected || (enabled && st.pressed) {
                                 Some(row_active)
                             } else if enabled && st.hovered {
@@ -291,7 +292,7 @@ pub fn list_from_strings<H: UiHost>(
             |i| i as u64,
             {
                 let values = values.clone();
-                Arc::new(move |i| values.get(i).cloned())
+                Arc::new(move |_models, i| values.get(i).cloned())
             },
             on_select,
             |cx, i| {
@@ -519,7 +520,7 @@ mod tests {
                         &scroll_handle,
                         0,
                         |i| i as u64,
-                        Arc::new(|i| Some(format!("Item {i}"))),
+                        Arc::new(|_models, i| Some(format!("Item {i}"))),
                         |_i| Some(CommandId::new("noop")),
                         |cx, i| vec![cx.text(format!("Item {i}"))],
                     )]
