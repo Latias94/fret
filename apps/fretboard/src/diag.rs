@@ -1467,11 +1467,12 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 10] {
+fn ui_gallery_suite_scripts() -> [&'static str; 11] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
         "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
+        "tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json",
         "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
         "tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json",
         "tools/diag-scripts/ui-gallery-context-menu-right-click.json",

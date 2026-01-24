@@ -197,6 +197,7 @@ pub(crate) fn content_view(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
     combobox_value: Model<Option<Arc<str>>>,
@@ -324,6 +325,7 @@ pub(crate) fn content_view(
         dialog_open,
         alert_dialog_open,
         sheet_open,
+        portal_geometry_popover_open,
         select_value,
         select_open,
         combobox_value,
@@ -426,6 +428,7 @@ fn page_preview(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
     combobox_value: Model<Option<Arc<str>>>,
@@ -494,6 +497,7 @@ fn page_preview(
             dialog_open,
             alert_dialog_open,
             sheet_open,
+            portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
             last_action.clone(),
@@ -2320,6 +2324,7 @@ fn preview_overlay(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
@@ -2353,6 +2358,7 @@ fn preview_overlay(
                 let dialog_open = dialog_open.clone();
                 let alert_dialog_open = alert_dialog_open.clone();
                 let sheet_open = sheet_open.clone();
+                let portal_geometry_popover_open = portal_geometry_popover_open.clone();
                 let last_action = last_action.clone();
 
                 let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
@@ -2362,6 +2368,9 @@ fn preview_overlay(
                     let _ = host.models_mut().update(&dialog_open, |v| *v = false);
                     let _ = host.models_mut().update(&alert_dialog_open, |v| *v = false);
                     let _ = host.models_mut().update(&sheet_open, |v| *v = false);
+                    let _ = host
+                        .models_mut()
+                        .update(&portal_geometry_popover_open, |v| *v = false);
                     let _ = host.models_mut().update(&last_action, |v| {
                         *v = Arc::<str>::from("overlay:reset");
                     });
@@ -2643,6 +2652,97 @@ fn preview_overlay(
                     },
                 );
 
+            let portal_geometry = {
+                let popover = shadcn::Popover::new(portal_geometry_popover_open.clone())
+                    .side(shadcn::PopoverSide::Right)
+                    .align(shadcn::PopoverAlign::Start)
+                    .side_offset(Px(8.0))
+                    .window_margin(Px(8.0))
+                    .arrow(true)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new("Portal geometry (scroll + clamp)")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .test_id("ui-gallery-portal-geometry-trigger")
+                                .toggle_model(portal_geometry_popover_open.clone())
+                                .into_element(cx)
+                        },
+                        |cx| {
+                            let close = shadcn::Button::new("Close")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .test_id("ui-gallery-portal-geometry-popover-close")
+                                .toggle_model(portal_geometry_popover_open.clone())
+                                .into_element(cx);
+
+                            cx.semantics(
+                                fret_ui::element::SemanticsProps {
+                                    test_id: Some(Arc::from(
+                                        "ui-gallery-portal-geometry-popover-content",
+                                    )),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        shadcn::PopoverContent::new(vec![
+                                            cx.text("Popover content (placement + clamp)"),
+                                            cx.text("Wheel-scroll the viewport while open."),
+                                            close,
+                                        ])
+                                        .refine_layout(
+                                            LayoutRefinement::default()
+                                                .w_px(MetricRef::Px(Px(360.0)))
+                                                .h_px(MetricRef::Px(Px(220.0))),
+                                        )
+                                        .into_element(cx),
+                                    ]
+                                },
+                            )
+                        },
+                    );
+
+                let items = (1..=48)
+                    .map(|i| cx.text(format!("Scroll item {i:02}")))
+                    .collect::<Vec<_>>();
+
+                let body = stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
+                    let mut out: Vec<AnyElement> = Vec::with_capacity(items.len() + 2);
+                    out.push(popover);
+                    out.extend(items);
+                    out
+                });
+
+                let scroll = shadcn::ScrollArea::new(vec![body])
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_px(MetricRef::Px(Px(240.0)))
+                            .h_px(MetricRef::Px(Px(160.0))),
+                    )
+                    .into_element(cx);
+
+                let scroll = cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        test_id: Some(Arc::from("ui-gallery-portal-geometry-scroll-area")),
+                        ..Default::default()
+                    },
+                    |_cx| vec![scroll],
+                );
+
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("Portal geometry").into_element(cx),
+                        shadcn::CardDescription::new(
+                            "Validates floating placement under scroll + window clamp.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new(vec![scroll]).into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+            };
+
             let body = stack::vstack(
                 cx,
                 stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
@@ -2663,6 +2763,7 @@ fn preview_overlay(
                             stack::HStackProps::default().gap(Space::N2).items_center(),
                             |_cx| vec![alert_dialog, sheet],
                         ),
+                        portal_geometry,
                     ]
                 },
             );
