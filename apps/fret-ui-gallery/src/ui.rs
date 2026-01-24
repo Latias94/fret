@@ -580,6 +580,7 @@ fn page_preview(
             material3_checkbox,
             material3_switch,
             material3_radio_value,
+            material3_tabs_value,
         ),
         PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
         PAGE_MATERIAL3_ICON_BUTTON => preview_material3_icon_button(cx),
@@ -1385,6 +1386,7 @@ fn preview_material3_touch_targets(
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_icons::ids;
 
@@ -1393,84 +1395,89 @@ fn preview_material3_touch_targets(
         .metric_by_key("md.sys.layout.minimum-touch-target.size")
         .unwrap_or(Px(48.0));
 
-    let target_overlay =
-        |cx: &mut ElementContext<'_, App>, label: &'static str, chrome: Size, child: AnyElement| {
-            let min = min;
+    let target_overlay = |cx: &mut ElementContext<'_, App>,
+                          label: &'static str,
+                          chrome: Option<Size>,
+                          child: AnyElement| {
+        let min = min;
 
-            let stack = cx.stack_props(
-                StackProps {
-                    layout: {
-                        let mut l = fret_ui::element::LayoutStyle::default();
-                        l.overflow = fret_ui::element::Overflow::Visible;
-                        l
-                    },
+        let stack = cx.stack_props(
+            StackProps {
+                layout: {
+                    let mut l = fret_ui::element::LayoutStyle::default();
+                    l.overflow = fret_ui::element::Overflow::Visible;
+                    l
                 },
-                move |cx| {
-                    let mut canvas = CanvasProps::default();
-                    canvas.layout.position = fret_ui::element::PositionStyle::Absolute;
-                    canvas.layout.inset.top = Some(Px(0.0));
-                    canvas.layout.inset.right = Some(Px(0.0));
-                    canvas.layout.inset.bottom = Some(Px(0.0));
-                    canvas.layout.inset.left = Some(Px(0.0));
+            },
+            move |cx| {
+                let mut canvas = CanvasProps::default();
+                canvas.layout.position = fret_ui::element::PositionStyle::Absolute;
+                canvas.layout.inset.top = Some(Px(0.0));
+                canvas.layout.inset.right = Some(Px(0.0));
+                canvas.layout.inset.bottom = Some(Px(0.0));
+                canvas.layout.inset.left = Some(Px(0.0));
 
-                    let overlay = cx.canvas(canvas, move |p| {
-                        let bounds = p.bounds();
-                        let center = Point::new(
-                            Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
-                            Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
-                        );
+                let overlay = cx.canvas(canvas, move |p| {
+                    let bounds = p.bounds();
+                    let center = Point::new(
+                        Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                        Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+                    );
 
-                        let min_rect = Rect::new(
-                            Point::new(Px(center.x.0 - min.0 * 0.5), Px(center.y.0 - min.0 * 0.5)),
-                            Size::new(min, min),
-                        );
+                    let min_rect = Rect::new(
+                        Point::new(Px(center.x.0 - min.0 * 0.5), Px(center.y.0 - min.0 * 0.5)),
+                        Size::new(min, min),
+                    );
 
-                        let chrome_rect = Rect::new(
+                    let chrome_rect = chrome.map(|chrome| {
+                        Rect::new(
                             Point::new(
                                 Px(center.x.0 - chrome.width.0 * 0.5),
                                 Px(center.y.0 - chrome.height.0 * 0.5),
                             ),
                             chrome,
-                        );
+                        )
+                    });
 
-                        fn outline(
-                            p: &mut fret_ui::canvas::CanvasPainter<'_>,
-                            order: u32,
-                            rect: Rect,
-                            color: CoreColor,
-                        ) {
-                            p.scene().push(SceneOp::Quad {
-                                order: DrawOrder(order),
-                                rect,
-                                background: CoreColor::TRANSPARENT,
-                                border: Edges::all(Px(1.0)),
-                                border_color: color,
-                                corner_radii: Corners::all(Px(0.0)),
-                            });
-                        }
+                    fn outline(
+                        p: &mut fret_ui::canvas::CanvasPainter<'_>,
+                        order: u32,
+                        rect: Rect,
+                        color: CoreColor,
+                    ) {
+                        p.scene().push(SceneOp::Quad {
+                            order: DrawOrder(order),
+                            rect,
+                            background: CoreColor::TRANSPARENT,
+                            border: Edges::all(Px(1.0)),
+                            border_color: color,
+                            corner_radii: Corners::all(Px(0.0)),
+                        });
+                    }
 
-                        outline(
-                            p,
-                            0,
-                            bounds,
-                            CoreColor {
-                                r: 0.1,
-                                g: 0.8,
-                                b: 0.2,
-                                a: 0.8,
-                            },
-                        );
-                        outline(
-                            p,
-                            1,
-                            min_rect,
-                            CoreColor {
-                                r: 0.95,
-                                g: 0.75,
-                                b: 0.2,
-                                a: 0.9,
-                            },
-                        );
+                    outline(
+                        p,
+                        0,
+                        bounds,
+                        CoreColor {
+                            r: 0.1,
+                            g: 0.8,
+                            b: 0.2,
+                            a: 0.8,
+                        },
+                    );
+                    outline(
+                        p,
+                        1,
+                        min_rect,
+                        CoreColor {
+                            r: 0.95,
+                            g: 0.75,
+                            b: 0.2,
+                            a: 0.9,
+                        },
+                    );
+                    if let Some(chrome_rect) = chrome_rect {
                         outline(
                             p,
                             2,
@@ -1482,31 +1489,35 @@ fn preview_material3_touch_targets(
                                 a: 0.9,
                             },
                         );
-                    });
+                    }
+                });
 
-                    vec![child, overlay]
-                },
-            );
+                vec![child, overlay]
+            },
+        );
 
-            shadcn::Card::new(vec![
-                shadcn::CardHeader::new(vec![
-                    shadcn::CardTitle::new(label).into_element(cx),
-                    shadcn::CardDescription::new(format!(
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new(label).into_element(cx),
+                shadcn::CardDescription::new(match chrome {
+                    Some(chrome) => format!(
                         "min={}px, chrome={}x{}px",
                         min.0, chrome.width.0, chrome.height.0
-                    ))
-                    .into_element(cx),
-                ])
+                    ),
+                    None => format!("min={}px", min.0),
+                })
                 .into_element(cx),
-                shadcn::CardContent::new(vec![stack]).into_element(cx),
             ])
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_px(MetricRef::Px(Px(280.0)))
-                    .min_w_0(),
-            )
-            .into_element(cx)
-        };
+            .into_element(cx),
+            shadcn::CardContent::new(vec![stack]).into_element(cx),
+        ])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(280.0)))
+                .min_w_0(),
+        )
+        .into_element(cx)
+    };
 
     let checkbox_chrome = {
         let size = theme
@@ -1563,18 +1574,29 @@ fn preview_material3_touch_targets(
                 .a11y_label("Material3 icon button")
                 .test_id("ui-gallery-material3-touch-target-icon-button")
                 .into_element(cx);
+            let tabs = material3::Tabs::new(material3_tabs_value.clone())
+                .a11y_label("Material3 tabs (touch targets)")
+                .test_id("ui-gallery-material3-touch-target-tabs")
+                .scrollable(true)
+                .items(vec![
+                    material3::TabItem::new("overview", "A")
+                        .a11y_label("Material3 tab")
+                        .test_id("ui-gallery-material3-touch-target-tab"),
+                ])
+                .into_element(cx);
 
             vec![
-                target_overlay(cx, "Checkbox", checkbox_chrome, checkbox),
-                target_overlay(cx, "Radio", radio_chrome, radio),
-                target_overlay(cx, "Switch", switch_chrome, switch),
-                target_overlay(cx, "Icon Button", icon_button_chrome, icon_button),
+                target_overlay(cx, "Checkbox", Some(checkbox_chrome), checkbox),
+                target_overlay(cx, "Radio", Some(radio_chrome), radio),
+                target_overlay(cx, "Switch", Some(switch_chrome), switch),
+                target_overlay(cx, "Icon Button", Some(icon_button_chrome), icon_button),
+                target_overlay(cx, "Tabs (scrollable, 1 item)", None, tabs),
             ]
         })
     };
 
     vec![
-        cx.text("Touch target overlay legend: green=bounds, yellow=min 48x48, cyan=token chrome."),
+        cx.text("Touch target overlay legend: green=bounds, yellow=min 48x48, cyan=token chrome (if shown)."),
         grid,
     ]
 }

@@ -30,6 +30,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
 #[derive(Debug, Clone)]
@@ -412,6 +413,7 @@ fn navigation_drawer_item<H: UiHost>(
                 l.size.height = Length::Px(height);
                 l.size.width = Length::Fill;
                 l.overflow = Overflow::Visible;
+                enforce_minimum_interactive_size(&mut l, theme);
                 l
             },
             focus_ring: Some(focus_ring),
@@ -421,6 +423,8 @@ fn navigation_drawer_item<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 

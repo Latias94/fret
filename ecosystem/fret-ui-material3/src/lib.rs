@@ -105,4 +105,42 @@ mod tests {
             assert_material_only_tokens(src);
         }
     }
+
+    fn assert_minimum_touch_target_policy(file: &str, src: &str) {
+        assert!(
+            src.contains("enforce_minimum_interactive_size"),
+            "{file}: missing minimum touch target policy enforcement"
+        );
+
+        let pointer_region_start = src
+            .find("PointerRegionProps::default()")
+            .unwrap_or_else(|| panic!("{file}: missing PointerRegionProps usage"));
+
+        let window_end = (pointer_region_start + 800).min(src.len());
+        let window = &src[pointer_region_start..window_end];
+
+        assert!(
+            window.contains("props.layout.size.width = Length::Fill"),
+            "{file}: missing PointerRegion fill width"
+        );
+        assert!(
+            window.contains("props.layout.size.height = Length::Fill"),
+            "{file}: missing PointerRegion fill height"
+        );
+    }
+
+    #[test]
+    fn material3_components_apply_minimum_touch_target_policy() {
+        let sources = [
+            ("tabs.rs", include_str!("tabs.rs")),
+            ("navigation_bar.rs", include_str!("navigation_bar.rs")),
+            ("navigation_rail.rs", include_str!("navigation_rail.rs")),
+            ("navigation_drawer.rs", include_str!("navigation_drawer.rs")),
+            ("menu.rs", include_str!("menu.rs")),
+        ];
+
+        for (file, src) in sources {
+            assert_minimum_touch_target_policy(file, src);
+        }
+    }
 }

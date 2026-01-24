@@ -201,6 +201,12 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/radio.rs`,
     `ecosystem/fret-ui-material3/src/switch.rs`,
     `ecosystem/fret-ui-material3/src/icon_button.rs`,
+    `ecosystem/fret-ui-material3/src/tabs.rs`,
+    `ecosystem/fret-ui-material3/src/menu.rs`,
+    `ecosystem/fret-ui-material3/src/navigation_bar.rs`,
+    `ecosystem/fret-ui-material3/src/navigation_rail.rs`,
+    `ecosystem/fret-ui-material3/src/navigation_drawer.rs`,
+    tests in `ecosystem/fret-ui-material3/src/lib.rs` (`material3_components_apply_minimum_touch_target_policy`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_touch_targets`),
     Compose reference: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/InteractiveComponentSize.kt`.
 - [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.

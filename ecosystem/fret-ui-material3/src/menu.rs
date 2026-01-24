@@ -26,6 +26,7 @@ use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
@@ -367,6 +368,7 @@ fn material_menu_item<H: UiHost>(
                 l.size.width = Length::Fill;
                 l.size.height = Length::Px(height);
                 l.overflow = Overflow::Visible;
+                enforce_minimum_interactive_size(&mut l, theme);
                 l
             },
             focus_ring: None,
@@ -376,6 +378,8 @@ fn material_menu_item<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 

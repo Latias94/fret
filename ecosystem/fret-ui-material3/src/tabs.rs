@@ -24,6 +24,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
@@ -407,6 +408,7 @@ fn material_primary_tab<H: UiHost>(
                     l.flex.grow = 1.0;
                 }
                 l.overflow = Overflow::Visible;
+                enforce_minimum_interactive_size(&mut l, theme);
                 l
             },
             focus_ring: Some(material_focus_ring_for_component(
@@ -420,6 +422,8 @@ fn material_primary_tab<H: UiHost>(
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
             props.enabled = enabled;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
             cx.pointer_region(props, |cx| {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
@@ -509,6 +513,7 @@ fn material_primary_tab<H: UiHost>(
                 };
                 row.layout.size.height = Length::Px(height);
                 row.layout.overflow = Overflow::Clip;
+                enforce_minimum_interactive_size(&mut row.layout, theme);
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Center;
                 row.align = CrossAlign::Center;
