@@ -421,6 +421,30 @@ let root = m3::ModalNavigationDrawer::new(open).into_element(
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_DIALOG: &str = r#"
+## Material 3 Dialog (MVP)
+
+This page validates a Material 3 dialog surface:
+
+- modal barrier (no click-through)
+- scrim opacity (default policy) + deterministic motion timeline
+- focus trap while open + focus restore on close
+- dialog actions use `md.comp.dialog.action.*` tokens for label/state-layer outcomes
+"#;
+
+pub(crate) const USAGE_MATERIAL3_DIALOG: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+let open = app.models_mut().insert(false);
+let dialog = m3::Dialog::new(open)
+    .headline("Title")
+    .supporting_text("Supporting text")
+    .actions(vec![m3::DialogAction::new("OK")])
+    .into_element(cx, |cx| cx.text("Underlay"), |_cx| vec![]);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_MENU: &str = r#"
 ## Material 3 Menu (MVP)
 

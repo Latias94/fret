@@ -138,6 +138,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - [x] Import `md.comp.menu.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_menu_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_menu_scalars`).
+    - [x] Import `md.comp.(full-screen-)?dialog.*` scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_dialog_scalars`,
+        `inject_comp_full_screen_dialog_scalars`), `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_dialog_scalars`,
+        `inject_comp_full_screen_dialog_scalars`).
     - [x] Import `md.comp.(outlined|filled)-text-field.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_outlined_text_field_scalars`,
         `inject_comp_filled_text_field_scalars`),
@@ -265,7 +269,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_menu`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_MENU`).
 - [ ] List (standalone primitive; icons/selection density; shared with menu)
-- [ ] Dialog / Snackbar / Tooltip (pick order based on demos)
+- [x] Dialog (MVP: modal overlay + scrim + focus trap/restore + dialog actions)
+  - Evidence: `ecosystem/fret-ui-material3/src/dialog.rs` (`Dialog`, `DialogAction`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_dialog`),
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_DIALOG`).
+- [ ] Snackbar / Tooltip (pick order based on demos)
 
 ### Conformance / Regression
 

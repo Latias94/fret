@@ -7,6 +7,7 @@
 
 pub mod button;
 pub mod checkbox;
+pub mod dialog;
 pub mod dropdown_menu;
 mod foundation;
 pub mod icon_button;
@@ -26,6 +27,7 @@ pub mod tokens;
 
 pub use button::{Button, ButtonVariant};
 pub use checkbox::Checkbox;
+pub use dialog::{Dialog, DialogAction};
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
 pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
 pub use menu::{Menu, MenuEntry, MenuItem};
@@ -75,6 +77,7 @@ mod tests {
         let sources = [
             include_str!("button.rs"),
             include_str!("checkbox.rs"),
+            include_str!("dialog.rs"),
             include_str!("dropdown_menu.rs"),
             include_str!("icon_button.rs"),
             include_str!("menu.rs"),

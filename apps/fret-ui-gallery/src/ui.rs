@@ -224,6 +224,7 @@ pub(crate) fn content_view(
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
     material3_modal_navigation_drawer_open: Model<bool>,
+    material3_dialog_open: Model<bool>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -363,6 +364,7 @@ pub(crate) fn content_view(
         material3_navigation_rail_value,
         material3_navigation_drawer_value,
         material3_modal_navigation_drawer_open,
+        material3_dialog_open,
         material3_text_field_value,
         material3_text_field_disabled,
         material3_text_field_error,
@@ -477,6 +479,7 @@ fn page_preview(
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
     material3_modal_navigation_drawer_open: Model<bool>,
+    material3_dialog_open: Model<bool>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -595,6 +598,9 @@ fn page_preview(
             material3_modal_navigation_drawer_open,
             material3_navigation_drawer_value,
         ),
+        PAGE_MATERIAL3_DIALOG => {
+            preview_material3_dialog(cx, material3_dialog_open, last_action.clone())
+        }
         PAGE_MATERIAL3_MENU => preview_material3_menu(cx, material3_menu_open, last_action.clone()),
         _ => preview_intro(cx, theme),
     };
@@ -1912,6 +1918,113 @@ fn preview_material3_modal_navigation_drawer(
             "open={} value={}",
             is_open as u8,
             current.as_ref()
+        )),
+    ]
+}
+
+fn preview_material3_dialog(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+
+    let is_open = cx
+        .get_model_copied(&open, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let open_dialog: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let close_dialog: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let confirm_action: OnActivate = {
+        let open = open.clone();
+        let last_action = last_action.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&last_action, |v| {
+                *v = Arc::<str>::from("material3.dialog.confirm")
+            });
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let dialog = material3::Dialog::new(open.clone())
+        .headline("Discard draft?")
+        .supporting_text("This action cannot be undone.")
+        .actions(vec![
+            material3::DialogAction::new("Cancel")
+                .test_id("ui-gallery-material3-dialog-action-cancel")
+                .on_activate(close_dialog.clone()),
+            material3::DialogAction::new("Discard")
+                .test_id("ui-gallery-material3-dialog-action-discard")
+                .on_activate(confirm_action.clone()),
+        ])
+        .test_id("ui-gallery-material3-dialog")
+        .into_element(
+            cx,
+            move |cx| {
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N4),
+                    move |cx| {
+                        vec![
+                            material3::Button::new("Open dialog")
+                                .variant(material3::ButtonVariant::Filled)
+                                .on_activate(open_dialog.clone())
+                                .test_id("ui-gallery-material3-dialog-open")
+                                .into_element(cx),
+                            material3::Button::new("Underlay focus probe")
+                                .variant(material3::ButtonVariant::Outlined)
+                                .test_id("ui-gallery-material3-dialog-underlay-probe")
+                                .into_element(cx),
+                            cx.text("Tip: press Esc or click the scrim to close; Tab should stay inside the dialog while open."),
+                        ]
+                    },
+                )
+            },
+            |_cx| vec![],
+        );
+
+    let last = cx
+        .app
+        .models()
+        .get_cloned(&last_action)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = fret_ui::element::Length::Fill;
+    layout.size.height = fret_ui::element::Length::Px(Px(360.0));
+
+    let container = cx.container(
+        fret_ui::element::ContainerProps {
+            layout,
+            ..Default::default()
+        },
+        move |_cx| vec![dialog],
+    );
+
+    vec![
+        cx.text(
+            "Material 3 Dialog: modal barrier + focus trap/restore + token-shaped dialog actions.",
+        ),
+        container,
+        cx.text(format!(
+            "open={} last_action={}",
+            is_open as u8,
+            last.as_ref()
         )),
     ]
 }

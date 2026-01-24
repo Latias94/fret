@@ -135,6 +135,7 @@ struct UiGalleryWindowState {
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
     material3_modal_navigation_drawer_open: Model<bool>,
+    material3_dialog_open: Model<bool>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -414,6 +415,7 @@ impl UiGalleryDriver {
         let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
         let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
         let material3_modal_navigation_drawer_open = app.models_mut().insert(false);
+        let material3_dialog_open = app.models_mut().insert(false);
         let material3_text_field_value = app.models_mut().insert(String::new());
         let material3_text_field_disabled = app.models_mut().insert(false);
         let material3_text_field_error = app.models_mut().insert(false);
@@ -529,6 +531,7 @@ impl UiGalleryDriver {
             material3_navigation_rail_value,
             material3_navigation_drawer_value,
             material3_modal_navigation_drawer_open,
+            material3_dialog_open,
             material3_text_field_value,
             material3_text_field_disabled,
             material3_text_field_error,
@@ -980,6 +983,7 @@ impl UiGalleryDriver {
         let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
         let material3_modal_navigation_drawer_open =
             state.material3_modal_navigation_drawer_open.clone();
+        let material3_dialog_open = state.material3_dialog_open.clone();
         let material3_text_field_value = state.material3_text_field_value.clone();
         let material3_text_field_disabled = state.material3_text_field_disabled.clone();
         let material3_text_field_error = state.material3_text_field_error.clone();
@@ -1353,6 +1357,7 @@ impl UiGalleryDriver {
                                             material3_navigation_rail_value.clone(),
                                             material3_navigation_drawer_value.clone(),
                                             material3_modal_navigation_drawer_open.clone(),
+                                            material3_dialog_open.clone(),
                                             material3_text_field_value.clone(),
                                             material3_text_field_disabled.clone(),
                                             material3_text_field_error.clone(),
@@ -1437,6 +1442,7 @@ impl UiGalleryDriver {
                                             material3_navigation_rail_value.clone(),
                                             material3_navigation_drawer_value.clone(),
                                             material3_modal_navigation_drawer_open.clone(),
+                                            material3_dialog_open.clone(),
                                             material3_text_field_value.clone(),
                                             material3_text_field_disabled.clone(),
                                             material3_text_field_error.clone(),
