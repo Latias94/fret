@@ -43,6 +43,7 @@ The viewer is a static Vite app (no server required for production hosting).
 - `bundle.json`: a diagnostics export produced by `fretboard diag pack`.
 - `bundle.zip`: zipped bundle export (optionally includes `_root/*.json` artifacts).
 - Screenshots: if the zip contains `*/_root/screenshots/*.png` (recommended) or `*/screenshots/*.png`, the `Overlay` tab can show them as a background under semantics bounds.
+- If a screenshots `manifest.json` is present, the viewer can auto-select the matching screenshot for the currently selected snapshot.
 
 ## Exports
 

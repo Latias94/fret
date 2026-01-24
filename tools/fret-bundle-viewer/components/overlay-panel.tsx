@@ -129,6 +129,9 @@ function collectSubtree(nodesById: Record<string, DrawNode>, rootId: string | nu
 export function OverlayPanel() {
   const screenshots = useBundleStore((s) => s.bundle?.meta.zip?.screenshots ?? [])
   const snapshot = useBundleStore((s) => s.getSelectedSnapshotA())
+  const selectedWindowId = useBundleStore(
+    (s) => s.bundle?.windows[s.selectedWindowIndex]?.windowId ?? null
+  )
   const selectedNodeId = useBundleStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useBundleStore((s) => s.setSelectedNodeId)
   const { t } = useTranslation()
@@ -148,6 +151,7 @@ export function OverlayPanel() {
   const [backgroundScale, setBackgroundScale] = useState(1)
   const [backgroundOffsetX, setBackgroundOffsetX] = useState(0)
   const [backgroundOffsetY, setBackgroundOffsetY] = useState(0)
+  const [backgroundFollowSnapshot, setBackgroundFollowSnapshot] = useState(true)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -259,13 +263,18 @@ export function OverlayPanel() {
     return worldSizeFromSnapshot(drawNodes, snapshot?.windowSizeLogical)
   }, [drawNodes, snapshot?.windowSizeLogical])
 
+  const backgroundMetaScaleFactor = useMemo(() => {
+    if (!backgroundPath) return undefined
+    return screenshots.find((s) => s.path === backgroundPath)?.meta?.scaleFactor
+  }, [backgroundPath, screenshots])
+
   const defaultBackgroundScale = useMemo(() => {
-    const sf = snapshot?.scaleFactor
+    const sf = backgroundMetaScaleFactor ?? snapshot?.scaleFactor
     if (typeof sf === 'number' && Number.isFinite(sf) && sf > 0) {
       return 1 / sf
     }
     return 1
-  }, [snapshot?.scaleFactor])
+  }, [backgroundMetaScaleFactor, snapshot?.scaleFactor])
 
   useEffect(() => {
     if (screenshots.length === 0) {
@@ -278,6 +287,33 @@ export function OverlayPanel() {
       setShowBackground(true)
     }
   }, [backgroundPath, screenshots])
+
+  useEffect(() => {
+    if (!backgroundFollowSnapshot) return
+    if (!snapshot) return
+    if (!selectedWindowId) return
+    const tickId = snapshot.tickId
+    const frameId = snapshot.frameId
+    if (!tickId || !frameId) return
+
+    const match = screenshots.find(
+      (s) =>
+        s.meta?.windowId === selectedWindowId &&
+        s.meta?.tickId === tickId &&
+        s.meta?.frameId === frameId
+    )
+    if (match && match.path !== backgroundPath) {
+      setBackgroundPath(match.path)
+      setShowBackground(true)
+    }
+  }, [
+    backgroundFollowSnapshot,
+    backgroundPath,
+    screenshots,
+    selectedWindowId,
+    snapshot?.frameId,
+    snapshot?.tickId,
+  ])
 
   useEffect(() => {
     if (!backgroundPath) return
@@ -707,6 +743,15 @@ export function OverlayPanel() {
                   ))}
                 </select>
               </div>
+
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={backgroundFollowSnapshot}
+                  disabled={!showBackground}
+                  onCheckedChange={(v) => setBackgroundFollowSnapshot(Boolean(v))}
+                />
+                <span className="text-xs">{t('overlay.bgFollow')}</span>
+              </label>
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">{t('overlay.bgOpacity')}</span>

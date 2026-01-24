@@ -140,6 +140,7 @@ export const translations = {
     'overlay.bgScale': 'Scale',
     'overlay.bgOffset': 'Offset',
     'overlay.bgReset': 'Reset',
+    'overlay.bgFollow': 'Follow snapshot',
 
     // Summary Tab
     'summary.noSnapshot': 'No snapshot selected',
@@ -462,6 +463,7 @@ export const translations = {
     'overlay.bgScale': '缩放',
     'overlay.bgOffset': '偏移',
     'overlay.bgReset': '重置',
+    'overlay.bgFollow': '跟随快照',
 
     // Summary Tab
     'summary.noSnapshot': '未选择快照',
