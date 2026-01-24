@@ -4,6 +4,7 @@ use fret_kit::fret::core::{ImageColorSpace, SvgId};
 use fret_kit::fret::ui::element::{ImageProps, Overflow, SvgIconProps};
 use fret_kit::prelude::*;
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
+use fret_ui_kit::declarative::GlobalWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -122,7 +123,7 @@ fn on_event(
 }
 
 fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {
-    cx.observe_global::<Theme>(Invalidation::Layout);
+    cx.watch_global::<Theme>().layout().observe();
 
     let theme = Theme::global(&*cx.app).clone();
 
@@ -147,14 +148,13 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {
         _ => None,
     };
 
-    cx.observe_global::<AssetsDemoSvg>(Invalidation::Layout);
-    let svg = cx.app.global::<AssetsDemoSvg>().map(|v| v.svg);
+    let svg = cx.watch_global::<AssetsDemoSvg>().layout().map(|v| v.svg);
 
-    cx.observe_global::<AssetsDemoImageEvents>(Invalidation::Layout);
-    let image_events = *cx
-        .app
-        .global::<AssetsDemoImageEvents>()
-        .unwrap_or(&AssetsDemoImageEvents::default());
+    let image_events = cx
+        .watch_global::<AssetsDemoImageEvents>()
+        .layout()
+        .copied()
+        .unwrap_or_default();
 
     let image_stats = UiAssets::image_stats(cx.app);
     let svg_stats = UiAssets::svg_stats(cx.app);

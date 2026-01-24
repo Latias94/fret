@@ -75,6 +75,8 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [x] Globals can be observed/read ergonomically (`GlobalWatchExt`).
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/global_watch.rs`
   - Example: `apps/fret-examples/src/todo_interop_demo.rs`
+  - Example: `apps/fret-examples/src/assets_demo.rs`
+  - Example: `apps/fret-examples/src/markdown_demo.rs`
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)

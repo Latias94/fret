@@ -14,6 +14,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
+use fret_ui_kit::declarative::GlobalWatchExt as _;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::{LayoutRefinement, MetricRef};
 use fret_ui_shadcn as shadcn;
@@ -538,7 +539,7 @@ $$
             declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
                 "markdown-demo",
                 |cx| {
-                    cx.observe_global::<Theme>(Invalidation::Layout);
+                    cx.watch_global::<Theme>().layout().observe();
 
                     let theme = Theme::global(&*cx.app).clone();
 
