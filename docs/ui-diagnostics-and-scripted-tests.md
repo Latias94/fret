@@ -107,6 +107,7 @@ Workflow tip:
    Or run it and wait for a pass/fail result (CI-friendly):
 
    - `cargo run -p fretboard -- diag run .\\script.json`
+   - To also pack the most recent bundle (plus optional artifacts) into a shareable `.zip`: `cargo run -p fretboard -- diag run .\\script.json --pack --include-all`
 
    Or run a pre-defined suite (the app must be running):
 

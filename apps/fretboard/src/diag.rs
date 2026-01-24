@@ -37,6 +37,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_include_root_artifacts: bool = false;
     let mut pack_include_triage: bool = false;
     let mut pack_include_screenshots: bool = false;
+    let mut pack_after_run: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
@@ -111,6 +112,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--include-screenshots" => {
                 pack_include_screenshots = true;
+                i += 1;
+            }
+            "--pack" => {
+                pack_after_run = true;
                 i += 1;
             }
             "--script-path" => {
@@ -505,6 +510,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
     match sub.as_str() {
         "path" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -512,6 +520,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "poke" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -520,6 +531,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "latest" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -583,6 +597,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "triage" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
@@ -624,6 +641,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "script" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing script path (try: fretboard diag script ./script.json)".to_string(),
@@ -649,6 +669,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
             }
 
+            let wants_pack = pack_after_run
+                || pack_out.is_some()
+                || pack_include_root_artifacts
+                || pack_include_triage
+                || pack_include_screenshots;
+
+            let mut pack_defaults = (
+                pack_include_root_artifacts,
+                pack_include_triage,
+                pack_include_screenshots,
+            );
+            if pack_after_run && !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
+                pack_defaults = (true, true, true);
+            }
+
             let src = resolve_path(&workspace_root, PathBuf::from(src));
             let mut child = maybe_launch_demo(
                 &launch,
@@ -657,6 +692,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
+                pack_defaults.2,
                 timeout_ms,
                 poll_ms,
             )?;
@@ -709,10 +745,69 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     )?;
                 }
             }
+
+            if wants_pack {
+                let mut bundle_path = wait_for_bundle_json_from_script_result(
+                    &resolved_out_dir,
+                    &result,
+                    timeout_ms,
+                    poll_ms,
+                );
+                if bundle_path.is_none() {
+                    let _ = touch(&resolved_trigger_path);
+                    bundle_path = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    );
+                }
+
+                if let Some(bundle_path) = bundle_path {
+                    let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+                    let out = pack_out
+                        .clone()
+                        .map(|p| resolve_path(&workspace_root, p))
+                        .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
+
+                    let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                        resolved_out_dir.clone()
+                    } else {
+                        bundle_dir
+                            .parent()
+                            .unwrap_or(&resolved_out_dir)
+                            .to_path_buf()
+                    };
+
+                    if let Err(err) = pack_bundle_dir_to_zip(
+                        &bundle_dir,
+                        &out,
+                        pack_defaults.0,
+                        pack_defaults.1,
+                        pack_defaults.2,
+                        &artifacts_root,
+                        stats_top,
+                        sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                        warmup_frames,
+                    ) {
+                        eprintln!("PACK-ERROR {err}");
+                    } else {
+                        println!("PACK {}", out.display());
+                    }
+                } else {
+                    eprintln!(
+                        "PACK-ERROR no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
+                    );
+                }
+            }
+
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             report_result_and_exit(&result);
         }
         "suite" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if rest.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag suite ui-gallery)"
@@ -748,6 +843,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    false,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -763,6 +859,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &resolved_out_dir,
                         &resolved_ready_path,
                         &resolved_exit_path,
+                        false,
                         timeout_ms,
                         poll_ms,
                     )?;
@@ -863,6 +960,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             std::process::exit(0);
         }
         "perf" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if rest.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag perf ui-gallery)"
@@ -898,6 +998,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    false,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -918,6 +1019,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &resolved_out_dir,
                         &resolved_ready_path,
                         &resolved_exit_path,
+                        false,
                         timeout_ms,
                         poll_ms,
                     )?;
@@ -1797,6 +1899,7 @@ fn maybe_launch_demo(
     out_dir: &Path,
     ready_path: &Path,
     exit_path: &Path,
+    wants_screenshots: bool,
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<Option<Child>, String> {
@@ -1819,6 +1922,9 @@ fn maybe_launch_demo(
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
     cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
+    if wants_screenshots {
+        cmd.env("FRET_DIAG_SCREENSHOTS", "1");
+    }
     for (key, value) in launch_env {
         match key.as_str() {
             "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" | "FRET_DIAG_EXIT_PATH" => {
