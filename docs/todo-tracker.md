@@ -190,6 +190,18 @@ It complements (but does not replace) ADRs:
 
 ## P0 - Radix/shadcn Overlay Conformance (Goldens + Downshift)
 
+- **Core overlay correctness anchors (occlusion + focus restore)**
+  - Current: pointer occlusion for Radix `disableOutsidePointerEvents` suppresses hit-tested pointer
+    dispatch (including mouse move) to underlay layers while keeping wheel routing and overlay
+    pointer-move observers active.
+  - Regressions: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+    (`non_modal_overlay_can_disable_outside_pointer_events_while_open`).
+  - Current: non-modal focus restoration on close/unmount is gated so it cannot override a new
+    underlay focus (outside press can legitimately move focus under the pointer).
+  - Regressions: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+    (`popover_outside_press_closes_without_overriding_new_focus`,
+    `non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmount`).
+
 - **Downshift hover-overlay intent drivers into `fret-ui-kit::headless`**
   - Problem: hover-driven overlays (Tooltip/HoverCard) currently contain substantial state/intent logic in shadcn recipes, which makes long-term 1:1 Radix matching harder (logic drift is easy when it is not shared/reused).
   - ADRs: `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`, `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
@@ -281,6 +293,15 @@ It complements (but does not replace) ADRs:
   - Fret gates to add:
     - behavior/semantics sequence parity: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (new scenarios).
     - placement/chrome parity: extend `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_*` to cover submenu content and multi-layer placement.
+
+- **Dismiss-cause-aware focus restore for menu-like overlays** (done)
+  - Problem: Radix menus differ in how they restore focus on dismissal (e.g. DropdownMenu restores focus to the trigger on outside click; Menubar clears focus; ContextMenu clears focus on Escape/outside click). A one-size-fits-all "restore focus to trigger" policy breaks 1:1 parity.
+  - Current: `OverlayRequest` carries per-overlay policy (`restore_focus_on_escape`, `restore_focus_on_outside_press`) and the window overlay policy layer records the dismissal cause and applies the corresponding restore/clear behavior on close/unmount.
+  - Evidence:
+    - Policy wiring: `ecosystem/fret-ui-kit/src/overlay_controller.rs`, `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`.
+    - Runtime policy: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (records `DismissCause` and applies per-cause focus restore/clear).
+    - Menubar/ContextMenu policy: `ecosystem/fret-ui-shadcn/src/menubar.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`.
+    - Parity gates: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (outside click + Escape focus expectations).
 
 ## P0 - Docking / Overlays / Viewport Capture
 

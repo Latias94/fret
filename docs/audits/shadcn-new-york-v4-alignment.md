@@ -18,6 +18,20 @@ For coverage status (what is gated vs only has goldens), see:
 - Validate controls at multiple DPIs and with a “weird metrics” UI font (e.g. a Nerd Font) to catch
   baseline/centering issues.
 
+## Viewport strategy (golden gates)
+
+We prioritize **breadth of component coverage** first (one canonical desktop viewport per example),
+then layer in a small set of “stress” viewports to catch responsive and clamping behavior.
+
+Recommended minimal viewport matrix:
+
+- **Desktop baseline**: large enough to avoid incidental clamping (the default web goldens).
+- **Mobile width** (`375px` wide): catches truncation, wrap, and `justify-between` slot behavior.
+- **Constrained height** (`375x320`-ish): catches overlay max-height, scroll buttons, and “menu height”
+  regressions that are styling outcomes (padding/border/row heights).
+
+This keeps the test suite tractable while still guarding the highest-risk geometry behaviors early.
+
 ## Infra notes (golden + scroll + paint cache)
 
 - Scroll offsets are applied as a children-only render transform. `PaintCx::paint()` must see the
@@ -30,6 +44,25 @@ For coverage status (what is gated vs only has goldens), see:
 - Web golden extractor notes:
   - `goldens/shadcn-web/scripts/extract-golden.mts` exports `aria-invalid` and supports scripted
     attribute injection steps for variant snapshots (e.g. `*.invalid.json`).
+
+## Radix primitives: occlusion + focus restore
+
+These are core correctness behaviors that many shadcn components depend on (menus, popovers,
+navigation-menu, tooltip/hover-card, etc.). They should be treated as “must stay aligned” contracts
+and guarded by focused regression tests.
+
+- Pointer occlusion (`disableOutsidePointerEvents`): suppress hit-tested pointer dispatch (including
+  mouse move) to underlay layers while the overlay is open, but still allow wheel routing and keep
+  pointer-move observers active for overlay policies (e.g. menu safe corridor).
+  - Implementation: `crates/fret-ui/src/tree/dispatch.rs`
+  - Regression: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+    (`non_modal_overlay_can_disable_outside_pointer_events_while_open`)
+- Focus restore (non-modal overlays): closing/unmounting must not override a new underlay focus
+  (outside press can legitimately move focus under the pointer).
+  - Implementation: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+  - Regressions: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+    (`popover_outside_press_closes_without_overriding_new_focus`,
+    `non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmount`)
 
 ## Global baseline rules (new-york-v4)
 
@@ -83,6 +116,32 @@ Conformance gates:
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`, `web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches`).
 - Scroll buttons + viewport inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_listbox_option_insets_match`, `web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match`).
 
+### `Calendar`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/calendar.rs`, `ecosystem/fret-ui-shadcn/src/calendar_range.rs`
+- Gaps to check:
+  - Grid row count (4/5/6 weeks) under different months/week-start values.
+  - Cell sizing: `--cell-size` drives nav buttons, caption height/padding, and day cell min width.
+  - `showOutsideDays=false`: outside-month slots are `invisible` but still occupy grid space (do not
+    collapse columns).
+  - `showWeekNumber=true`: week number column shifts the weekday + day grid by one cell.
+  - ARIA label strings for day buttons (including `Today, ` prefix + `, selected` suffix).
+
+Recent fixes:
+
+- Calendar month grid now matches `react-day-picker`'s compact row behavior via `month_grid_compact`.
+- Day buttons support `--cell-size` variants (per-golden) via `Calendar::{cell_size, show_week_number}` and
+  nav button sizing.
+- `showOutsideDays=false` now keeps invisible outside-day placeholders (a11y-hidden) so x/y geometry matches.
+- Day button `aria-label` now matches shadcn-web goldens including `Today, ` prefix and `, selected` suffix.
+- Week numbers use `fret-ui-headless::calendar::week_number` (DayPicker-like `getWeek` defaults).
+
+Conformance gates:
+
+- Layout + a11y labels: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web`).
+- Variant geometry (single-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_*_geometry_matches`).
+
 ### `DropdownMenu`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx`
@@ -99,6 +158,7 @@ Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
 - Menu panel width now grows beyond the `8rem` floor when labels are longer (using a longest-label estimate for popper sizing).
+- Submenu hover-corridor stability now matches Radix pointer-grace behavior: the submenu trigger element is keyed by overlay id and the last-known trigger anchor is cached so close-delay transitions do not transiently drop the anchor (which would collapse the submenu portal).
 
 Conformance gates:
 
@@ -196,6 +256,14 @@ Recent fixes:
 Note: for menu-like overlays (DropdownMenu / ContextMenu / Menubar), the placement gate also asserts
 the portal panel `w/h` against the shadcn-web portal wrapper geometry (so “menu height” regressions
 are caught as layout/style outcomes, not just placement drift).
+
+Radix focus restore semantics are also gated (radix-web timelines):
+
+- DropdownMenu: OutsidePress + Escape restore focus to the trigger.
+- Menubar: OutsidePress clears focus; Escape restores focus to the trigger.
+- ContextMenu: OutsidePress + Escape clear focus.
+
+Implementation anchors: dismiss-cause-aware focus restore in `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, with per-wrapper policy in `ecosystem/fret-ui-shadcn/src/menubar.rs` and `ecosystem/fret-ui-shadcn/src/context_menu.rs`.
 
 ### `NavigationMenu`
 
@@ -373,6 +441,25 @@ Conformance gates:
     (`web_vs_fret_button_group_select_geometry_and_chrome_match`).
   - Input group: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
     (`web_vs_fret_button_group_input_group_geometry_matches`).
+
+### `Toggle` / `ToggleGroup`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle-group.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/toggle.rs`, `ecosystem/fret-ui-shadcn/src/toggle_group.rs`
+- Gaps to check:
+  - Size variants: `h-8` (sm), `h-9` (default), `h-10` (lg) and padding/icon centering.
+  - Variant mapping: outline border behavior and focus ring thickness.
+  - ToggleGroup semantics:
+    - `Single`: items expose radio semantics (`role=radio`, `aria-checked`) and should be discoverable by `aria-label`.
+    - `Multiple`: items expose pressed semantics (`aria-pressed`) and should be discoverable by `aria-label`.
+- Conformance gates:
+  - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    (`web_vs_fret_layout_toggle_sm_geometry_matches`, `web_vs_fret_layout_toggle_lg_geometry_matches`,
+    `web_vs_fret_layout_toggle_outline_geometry_matches`, `web_vs_fret_layout_toggle_disabled_geometry_matches`,
+    `web_vs_fret_layout_toggle_with_text_height_matches`,
+    `web_vs_fret_layout_toggle_group_sm_heights_match`, `web_vs_fret_layout_toggle_group_lg_heights_match`,
+    `web_vs_fret_layout_toggle_group_outline_heights_match`, `web_vs_fret_layout_toggle_group_disabled_heights_match`,
+    `web_vs_fret_layout_toggle_group_single_heights_match`, `web_vs_fret_layout_toggle_group_spacing_heights_match`).
 
 ### `Tabs`
 
