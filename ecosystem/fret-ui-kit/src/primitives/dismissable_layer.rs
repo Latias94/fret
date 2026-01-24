@@ -16,7 +16,9 @@ use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
-pub use fret_ui::action::{ActionCx, DismissReason, OnDismissRequest, UiActionHost};
+pub use fret_ui::action::{
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, UiActionHost,
+};
 pub use fret_ui::action::{OnDismissiblePointerMove, PointerMoveCx};
 
 /// Render a full-window dismissable root that provides Escape + outside-press dismissal hooks.
@@ -57,7 +59,7 @@ pub fn on_pointer_move<H: UiHost>(
 
 /// Convenience builder for an `OnDismissRequest` handler.
 pub fn handler(
-    f: impl Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static,
+    f: impl Fn(&mut dyn UiActionHost, ActionCx, &mut DismissRequestCx) + 'static,
 ) -> OnDismissRequest {
     Arc::new(f)
 }

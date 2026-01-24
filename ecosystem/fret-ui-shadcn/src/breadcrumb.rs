@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_icons::{IconId, ids};
-use fret_runtime::CommandId;
+use fret_runtime::{CommandId, WindowCommandGatingSnapshot};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -115,6 +115,8 @@ fn breadcrumb_with_patch<H: UiHost>(
     let fg = theme.color_required("foreground");
     let muted = theme.color_required("muted-foreground");
 
+    let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+
     let style = TextStyle {
         font: FontId::default(),
         size: text_px,
@@ -134,7 +136,7 @@ fn breadcrumb_with_patch<H: UiHost>(
             _ => BreadcrumbItemKind::Link,
         };
 
-        children.push(item.render(cx, &style, muted, fg));
+        children.push(item.render(cx, &gating, &style, muted, fg));
         if !is_last {
             children.push(breadcrumb_separator(cx, &style, muted, &separator));
         }
@@ -199,6 +201,7 @@ impl BreadcrumbItem {
     fn render<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
+        gating: &WindowCommandGatingSnapshot,
         base_style: &TextStyle,
         muted: Color,
         fg: Color,
@@ -207,7 +210,14 @@ impl BreadcrumbItem {
             BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted),
             BreadcrumbItemKind::Page => breadcrumb_text(cx, self.label, base_style, fg),
             BreadcrumbItemKind::Link => {
-                if self.disabled {
+                let disabled = self.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        gating,
+                        self.command.as_ref(),
+                    );
+
+                if disabled {
                     return breadcrumb_text(cx, self.label, base_style, muted);
                 }
 
@@ -217,7 +227,7 @@ impl BreadcrumbItem {
                 };
 
                 cx.pressable(PressableProps::default(), move |cx, st| {
-                    cx.pressable_dispatch_command(command.clone());
+                    cx.pressable_dispatch_command_if_enabled(command.clone());
                     vec![breadcrumb_link_text(
                         cx, self.label, base_style, muted, fg, st.hovered,
                     )]
@@ -556,6 +566,7 @@ pub mod primitives {
             let theme = Theme::global(&*cx.app).clone();
             let style = text_style(&theme);
             let (fg, muted) = colors(&theme);
+            let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
             let label = self.label.clone();
             let text_px = style.size;
             let font_weight = style.weight;
@@ -567,9 +578,17 @@ pub mod primitives {
                 (TextWrap::Word, TextOverflow::Clip)
             };
 
-            if let Some(command) = self.command {
+            let disabled_by_gating = crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &gating,
+                self.command.as_ref(),
+            );
+
+            if let Some(command) = self.command
+                && !disabled_by_gating
+            {
                 cx.pressable(PressableProps::default(), move |cx, st| {
-                    cx.pressable_dispatch_command(command.clone());
+                    cx.pressable_dispatch_command_if_enabled(command.clone());
                     let color = if st.hovered { fg } else { muted };
                     vec![cx.container(
                         decl_style::container_props(

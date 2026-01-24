@@ -1625,9 +1625,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 None => Some(handler),
                 Some(prev) => {
                     let next = handler.clone();
-                    Some(Arc::new(move |host, cx, reason| {
-                        prev(host, cx, reason);
-                        next(host, cx, reason);
+                    Some(Arc::new(move |host, cx, req| {
+                        prev(host, cx, req);
+                        next(host, cx, req);
                     }))
                 }
             };

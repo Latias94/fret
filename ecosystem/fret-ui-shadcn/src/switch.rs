@@ -7,6 +7,7 @@ use fret_ui::element::{
     SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -199,17 +200,14 @@ impl Switch {
             let test_id = self.test_id.clone();
             let disabled_explicit = self.disabled;
             let on_click = self.on_click.clone();
-            let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
             let disabled = disabled_explicit
-                || crate::command_gating::command_is_disabled_by_gating(
-                    &*cx.app,
-                    &gating,
-                    on_click.as_ref(),
-                );
+                || on_click
+                    .as_ref()
+                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let chrome = self.chrome.clone();
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-                cx.pressable_dispatch_command_opt(on_click);
+                cx.pressable_dispatch_command_if_enabled_opt(on_click);
                 match &model {
                     SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
                     SwitchModel::Optional(model) => {

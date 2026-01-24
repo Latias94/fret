@@ -4,7 +4,7 @@ use std::{cell::Cell, rc::Rc};
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Px, SemanticsRole, Size};
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, Length,
     OpacityProps, Overflow, SemanticsProps, VisualTransformProps,
@@ -95,6 +95,8 @@ pub struct Popover {
     initial_focus_from_cell: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for Popover {
@@ -114,6 +116,8 @@ impl std::fmt::Debug for Popover {
                 &self.initial_focus_from_cell.is_some(),
             )
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -138,6 +142,8 @@ impl Popover {
             initial_focus_from_cell: None,
             anchor_override: None,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -267,10 +273,22 @@ impl Popover {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -542,7 +560,9 @@ impl Popover {
 
                 let mut options = radix_popover::PopoverOptions::default()
                     .modal(self.modal)
-                    .consume_outside_pointer_events(self.consume_outside_pointer_events);
+                    .consume_outside_pointer_events(self.consume_outside_pointer_events)
+                    .on_open_auto_focus(self.on_open_auto_focus.clone())
+                    .on_close_auto_focus(self.on_close_auto_focus.clone());
                 if let Some(initial_focus) = initial_focus {
                     options = options.initial_focus(initial_focus);
                 }
@@ -1091,8 +1111,9 @@ mod tests {
         let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
             Rc::new(Cell::new(None));
         let dismiss_reason_cell = dismiss_reason.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            dismiss_reason_cell.set(Some(reason));
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            dismiss_reason_cell.set(Some(req.reason));
+            req.prevent_default();
         });
 
         let mut services = FakeServices;
@@ -2286,8 +2307,9 @@ mod tests {
         let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
             Rc::new(Cell::new(None));
         let dismiss_reason_cell = dismiss_reason.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            dismiss_reason_cell.set(Some(reason));
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            dismiss_reason_cell.set(Some(req.reason));
+            req.prevent_default();
         });
 
         let mut services = FakeServices;

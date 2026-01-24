@@ -279,13 +279,15 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 element: root_element,
             };
+            let mut req =
+                crate::action::DismissRequestCx::new(crate::action::DismissReason::Escape);
             hook(
                 &mut host,
                 crate::action::ActionCx {
                     window,
                     target: root_element,
                 },
-                crate::action::DismissReason::Escape,
+                &mut req,
             );
             return true;
         }
@@ -1434,6 +1436,72 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
+            // Pointer occlusion blocks underlay pointer interaction. However, some overlays (e.g.
+            // Radix menus) still need global pointer movement to drive safe-hover corridors.
+            //
+            // When occlusion suppresses hit-tested pointer routing, deliver pointer-move observer
+            // events to interested overlay layers (DismissibleLayer observer pass), then return
+            // early to prevent any underlay dispatch.
+            if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+                let mut hit_barrier = false;
+                let captured_layer_for_pointer_move = event_pointer_id_for_capture
+                    .and_then(|pointer_id| self.captured.get(&pointer_id).copied())
+                    .and_then(|n| self.node_layer(n));
+                let pointer_move_occlusion_layer = captured_layer_for_pointer_move
+                    .is_none()
+                    .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
+                    .flatten()
+                    .map(|(layer, _)| layer);
+
+                for layer_id in layers.into_iter().rev() {
+                    let Some((layer_root, visible, wants_pointer_move_events)) = self
+                        .layers
+                        .get(layer_id)
+                        .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
+                    else {
+                        continue;
+                    };
+                    if !visible {
+                        continue;
+                    }
+                    if barrier_root.is_some() && hit_barrier {
+                        break;
+                    }
+                    if !wants_pointer_move_events {
+                        if barrier_root == Some(layer_root) {
+                            hit_barrier = true;
+                        }
+                        if pointer_move_occlusion_layer == Some(layer_id) {
+                            break;
+                        }
+                        continue;
+                    }
+                    if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
+                        if barrier_root == Some(layer_root) {
+                            hit_barrier = true;
+                        }
+                        continue;
+                    }
+
+                    self.dispatch_event_to_node_chain_observer(
+                        app,
+                        services,
+                        &input_ctx,
+                        layer_root,
+                        event,
+                        &mut invalidation_visited,
+                    );
+
+                    if barrier_root == Some(layer_root) {
+                        hit_barrier = true;
+                    }
+                    if pointer_move_occlusion_layer == Some(layer_id) {
+                        break;
+                    }
+                }
+            }
+
             if needs_redraw {
                 self.request_redraw_coalesced(app);
             }
@@ -2192,13 +2260,15 @@ impl<H: UiHost> UiTree<H> {
                         window,
                         element: root_element,
                     };
+                    let mut req =
+                        crate::action::DismissRequestCx::new(crate::action::DismissReason::Scroll);
                     hook(
                         &mut host,
                         crate::action::ActionCx {
                             window,
                             target: root_element,
                         },
-                        crate::action::DismissReason::Scroll,
+                        &mut req,
                     );
                     dismissed_any = true;
                 }
@@ -2470,6 +2540,13 @@ impl<H: UiHost> UiTree<H> {
                     },
                 );
             });
+
+            // Keep "is action available?" snapshots up to date for menu/command-palette gating.
+            //
+            // This publishes the retained-runtime baseline (all widget-scoped commands) so
+            // consumers that only have access to data-only services can still render disabled
+            // states without depending on `fret-ui` internals.
+            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
 

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model, ModelId};
+use fret_runtime::{CommandId, Model, ModelId, WindowCommandGatingSnapshot};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -545,6 +545,7 @@ fn menu_structural_group<H: UiHost>(
 #[derive(Clone)]
 struct ContextMenuRenderEnv {
     open: Model<bool>,
+    gating: WindowCommandGatingSnapshot,
     reserve_leading_slot: bool,
     item_count: usize,
     ring: RingStyle,
@@ -695,9 +696,14 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let variant = item.variant;
@@ -730,7 +736,7 @@ impl ContextMenuRenderEnv {
                 menu::sub_content::wire_item(cx, item_id, disabled, &submenu_for_item);
 
                 if !disabled {
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if close_on_select {
                         cx.pressable_set_bool(&open_for_item, false);
                     }
@@ -816,9 +822,14 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let checked = item.checked.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
 
@@ -846,7 +857,7 @@ impl ContextMenuRenderEnv {
                 if !disabled {
                     menu::checkbox_item::wire_toggle_on_activate(cx, checked.clone());
                 }
-                cx.pressable_dispatch_command_opt(command.clone());
+                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                 if !disabled && close_on_select {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
@@ -919,9 +930,14 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let group_value = item.group_value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
 
@@ -955,7 +971,7 @@ impl ContextMenuRenderEnv {
                         value.clone(),
                     );
                 }
-                cx.pressable_dispatch_command_opt(command.clone());
+                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                 if !disabled && close_on_select {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
@@ -1019,6 +1035,7 @@ impl ContextMenuRenderEnv {
 #[derive(Clone)]
 struct ContextMenuContentRenderEnv {
     open: Model<bool>,
+    gating: WindowCommandGatingSnapshot,
     reserve_leading_slot: bool,
     item_count: usize,
     ring: RingStyle,
@@ -1173,9 +1190,14 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let has_submenu = item.submenu.is_some();
@@ -1242,7 +1264,7 @@ impl ContextMenuContentRenderEnv {
                 .unwrap_or(false);
 
                 if !has_submenu && !disabled {
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
@@ -1341,9 +1363,14 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let checked = item.checked.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let open = self.open.clone();
@@ -1385,7 +1412,7 @@ impl ContextMenuContentRenderEnv {
                     if !disabled {
                         menu::checkbox_item::wire_toggle_on_activate(cx, checked.clone());
                     }
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if !disabled && close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
@@ -1442,9 +1469,14 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let group_value = item.group_value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let open = self.open.clone();
@@ -1492,7 +1524,7 @@ impl ContextMenuContentRenderEnv {
                             value.clone(),
                         );
                     }
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if !disabled && close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
@@ -1757,6 +1789,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     submenu_models: menu::sub::MenuSubmenuModels,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
 
     let entries_tree = entries;
     let mut flat: Vec<ContextMenuEntry> = Vec::new();
@@ -1789,9 +1822,33 @@ fn context_menu_submenu_panel<H: UiHost>(
     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries_flat
         .iter()
         .filter_map(|e| match e {
-            ContextMenuEntry::Item(item) => Some((item.label.clone(), item.disabled)),
-            ContextMenuEntry::CheckboxItem(item) => Some((item.label.clone(), item.disabled)),
-            ContextMenuEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
+            ContextMenuEntry::Item(item) => Some((
+                item.label.clone(),
+                item.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        &gating,
+                        item.command.as_ref(),
+                    ),
+            )),
+            ContextMenuEntry::CheckboxItem(item) => Some((
+                item.label.clone(),
+                item.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        &gating,
+                        item.command.as_ref(),
+                    ),
+            )),
+            ContextMenuEntry::RadioItem(item) => Some((
+                item.label.clone(),
+                item.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        &gating,
+                        item.command.as_ref(),
+                    ),
+            )),
             ContextMenuEntry::Label(_)
             | ContextMenuEntry::Separator
             | ContextMenuEntry::Group(_)
@@ -1851,6 +1908,7 @@ fn context_menu_submenu_panel<H: UiHost>(
         move |cx| {
             let render_env = ContextMenuRenderEnv {
                 open: open.clone(),
+                gating: gating.clone(),
                 reserve_leading_slot,
                 item_count,
                 ring,
@@ -2034,8 +2092,8 @@ impl ContextMenu {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
@@ -2166,6 +2224,7 @@ impl ContextMenu {
                     };
 
                     let entries_tree = entries(cx);
+                    let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
                     let mut flat: Vec<ContextMenuEntry> = Vec::new();
                     flatten_entries(&mut flat, entries_tree.clone());
                     let entries_flat = flat;
@@ -2194,11 +2253,35 @@ impl ContextMenu {
                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries_flat
                         .iter()
                         .filter_map(|e| match e {
-                            ContextMenuEntry::Item(item) => Some((item.label.clone(), item.disabled)),
+                            ContextMenuEntry::Item(item) => Some((
+                                item.label.clone(),
+                                item.disabled
+                                    || crate::command_gating::command_is_disabled_by_gating(
+                                        &*cx.app,
+                                        &gating,
+                                        item.command.as_ref(),
+                                    ),
+                            )),
                             ContextMenuEntry::CheckboxItem(item) => {
-                                Some((item.label.clone(), item.disabled))
+                                Some((
+                                    item.label.clone(),
+                                    item.disabled
+                                        || crate::command_gating::command_is_disabled_by_gating(
+                                            &*cx.app,
+                                            &gating,
+                                            item.command.as_ref(),
+                                        ),
+                                ))
                             }
-                            ContextMenuEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
+                            ContextMenuEntry::RadioItem(item) => Some((
+                                item.label.clone(),
+                                item.disabled
+                                    || crate::command_gating::command_is_disabled_by_gating(
+                                        &*cx.app,
+                                        &gating,
+                                        item.command.as_ref(),
+                                    ),
+                            )),
                             ContextMenuEntry::Label(_)
                             | ContextMenuEntry::Separator
                             | ContextMenuEntry::Group(_)
@@ -2391,6 +2474,7 @@ impl ContextMenu {
                                                 move |cx| {
                                                     let render_env = ContextMenuContentRenderEnv {
                                                         open: open_for_overlay.clone(),
+                                                        gating: gating.clone(),
                                                         reserve_leading_slot,
                                                         item_count,
                                                         ring,
@@ -2516,9 +2600,14 @@ impl ContextMenu {
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let test_id = item.test_id.clone();
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let has_submenu = item.submenu.is_some();
@@ -2589,7 +2678,7 @@ impl ContextMenu {
                                                                     .unwrap_or(false);
 
                                                                     if !has_submenu && !disabled {
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open, false,
@@ -2703,9 +2792,14 @@ impl ContextMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
@@ -2752,7 +2846,7 @@ impl ContextMenu {
                                                                             checked.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_opt(command.clone());
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2810,9 +2904,14 @@ impl ContextMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
@@ -2868,7 +2967,7 @@ impl ContextMenu {
                                                                             value.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_opt(command.clone());
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }

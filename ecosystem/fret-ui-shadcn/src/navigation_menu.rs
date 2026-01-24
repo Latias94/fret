@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_core::Transform2D;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_runtime::{
-    CommandId, InputContext, InputDispatchPhase, Model, Platform, PlatformCapabilities,
-    WindowCommandGatingService, WindowCommandGatingSnapshot,
+    CommandId, InputContext, Model, Platform, PlatformCapabilities, WindowCommandGatingService,
+    WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
@@ -30,15 +30,7 @@ fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
         .global::<PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    InputContext {
-        platform: Platform::current(),
-        caps,
-        ui_has_modal: false,
-        focus_is_text_input: false,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Bubble,
-    }
+    InputContext::fallback(Platform::current(), caps)
 }
 
 fn command_is_disabled_by_gating<H: UiHost>(

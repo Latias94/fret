@@ -4,6 +4,7 @@ use fret_core::{Color, Edges, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -233,13 +234,10 @@ impl Toggle {
         let disabled_explicit = self.disabled;
         let a11y_label = self.a11y_label.clone();
         let on_click = self.on_click;
-        let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
         let disabled = disabled_explicit
-            || crate::command_gating::command_is_disabled_by_gating(
-                &*cx.app,
-                &gating,
-                on_click.as_ref(),
-            );
+            || on_click
+                .as_ref()
+                .is_some_and(|cmd| !cx.command_is_enabled(cmd));
         let variant = self.variant;
         let size_token = self.size;
         let chrome = self.chrome;
@@ -292,7 +290,7 @@ impl Toggle {
         .merge(chrome);
 
         control_chrome_pressable_with_id_props(cx, move |cx, state, _id| {
-            cx.pressable_dispatch_command_opt(on_click);
+            cx.pressable_dispatch_command_if_enabled_opt(on_click);
             cx.pressable_toggle_bool(&model);
 
             let on = cx.watch_model(&model).copied().unwrap_or(false);

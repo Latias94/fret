@@ -645,8 +645,8 @@ impl Select {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
@@ -3618,8 +3618,9 @@ mod tests {
 
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
         let dismiss_calls_for_handler = dismiss_calls.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, _reason| {
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
             dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
         });
 
         let _ = render_frame_with_dismiss_handler(

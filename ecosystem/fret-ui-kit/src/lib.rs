@@ -7,6 +7,7 @@
 //! Note: This crate is declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface.
 
+pub mod command;
 mod corners4;
 pub mod declarative;
 #[cfg(feature = "dnd")]
@@ -60,6 +61,7 @@ pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
 ///
 /// Recommended: `use fret_ui_kit::prelude::*;`
 pub mod prelude {
+    pub use crate::command::ElementCommandGatingExt as _;
     pub use crate::declarative::prelude::*;
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
     pub use crate::declarative::{stack, style};

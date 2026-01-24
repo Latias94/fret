@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, SpacerProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::scroll as decl_scroll;
@@ -422,8 +423,13 @@ impl SidebarMenuButton {
         let radius = decl_style::radius(&theme, Radius::Md);
         let ring = sidebar_ring(&theme, radius);
 
+        let on_click = self.on_click.clone();
+        let disabled = self.disabled
+            || on_click
+                .as_ref()
+                .is_some_and(|cmd| !cx.command_is_enabled(cmd));
         let pressable = PressableProps {
-            enabled: !self.disabled,
+            enabled: !disabled,
             focus_ring: Some(ring),
             layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
             ..Default::default()
@@ -432,12 +438,11 @@ impl SidebarMenuButton {
         let label = self.label.clone();
         let icon = self.icon.clone();
         let active = self.active;
-        let disabled = self.disabled;
+        let disabled = disabled;
         let collapsed = self.collapsed;
-        let on_click = self.on_click.clone();
 
         cx.pressable(pressable, move |cx, st| {
-            cx.pressable_dispatch_command_opt(on_click);
+            cx.pressable_dispatch_command_if_enabled_opt(on_click);
             let theme = Theme::global(&*cx.app).clone();
 
             let bg = if active || st.hovered || st.pressed {

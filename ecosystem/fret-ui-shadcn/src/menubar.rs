@@ -6,7 +6,7 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, Rect, SemanticsRole, Size, TextStyle,
 };
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -801,8 +801,8 @@ impl Menubar {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the open model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
@@ -1276,16 +1276,51 @@ impl MenubarMenuEntries {
                             })
                             .count();
 
+                        let gating: WindowCommandGatingSnapshot =
+                            crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+
                         let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                             .iter()
                             .filter_map(|e| match e {
-                                MenubarEntry::Item(item) => Some((item.label.clone(), item.disabled)),
+                                MenubarEntry::Item(item) => Some((
+                                    item.label.clone(),
+                                    item.disabled
+                                        || crate::command_gating::command_is_disabled_by_gating(
+                                            &*cx.app,
+                                            &gating,
+                                            item.command.as_ref(),
+                                        ),
+                                )),
                                 MenubarEntry::CheckboxItem(item) => {
-                                    Some((item.label.clone(), item.disabled))
+                                    Some((
+                                        item.label.clone(),
+                                        item.disabled
+                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                &*cx.app,
+                                                &gating,
+                                                item.command.as_ref(),
+                                            ),
+                                    ))
                                 }
-                                MenubarEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
+                                MenubarEntry::RadioItem(item) => Some((
+                                    item.label.clone(),
+                                    item.disabled
+                                        || crate::command_gating::command_is_disabled_by_gating(
+                                            &*cx.app,
+                                            &gating,
+                                            item.command.as_ref(),
+                                        ),
+                                )),
                                 MenubarEntry::Submenu(submenu) => {
-                                    Some((submenu.trigger.label.clone(), submenu.trigger.disabled))
+                                    Some((
+                                        submenu.trigger.label.clone(),
+                                        submenu.trigger.disabled
+                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                &*cx.app,
+                                                &gating,
+                                                submenu.trigger.command.as_ref(),
+                                            ),
+                                    ))
                                 }
                                 MenubarEntry::Label(_)
                                 | MenubarEntry::Separator
@@ -1460,8 +1495,6 @@ impl MenubarMenuEntries {
                                                             let collection_index = item_ix;
                                                             item_ix = item_ix.saturating_add(1);
 
-                                                            let item_enabled =
-                                                                !item.disabled && enabled;
                                                             let focusable =
                                                                 active.is_some_and(|a| a == idx);
                                                             let label = item.label.clone();
@@ -1469,6 +1502,13 @@ impl MenubarMenuEntries {
                                                             let checked = item.checked.clone();
                                                             let a11y_label = item.a11y_label.clone();
                                                             let command = item.command.clone();
+                                                            let item_enabled = !item.disabled
+                                                                && enabled
+                                                                && !crate::command_gating::command_is_disabled_by_gating(
+                                                                    &*cx.app,
+                                                                    &gating,
+                                                                    command.as_ref(),
+                                                                );
                                                             let trailing = item.trailing.clone();
                                                             let leading = item.leading.clone();
                                                             let close_on_select = item.close_on_select;
@@ -1513,7 +1553,7 @@ impl MenubarMenuEntries {
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
 
@@ -1604,8 +1644,6 @@ impl MenubarMenuEntries {
                                                             let collection_index = item_ix;
                                                             item_ix = item_ix.saturating_add(1);
 
-                                                            let item_enabled =
-                                                                !item.disabled && enabled;
                                                             let focusable =
                                                                 active.is_some_and(|a| a == idx);
                                                             let label = item.label.clone();
@@ -1613,6 +1651,13 @@ impl MenubarMenuEntries {
                                                             let group_value = item.group_value.clone();
                                                             let a11y_label = item.a11y_label.clone();
                                                             let command = item.command.clone();
+                                                            let item_enabled = !item.disabled
+                                                                && enabled
+                                                                && !crate::command_gating::command_is_disabled_by_gating(
+                                                                    &*cx.app,
+                                                                    &gating,
+                                                                    command.as_ref(),
+                                                                );
                                                             let trailing = item.trailing.clone();
                                                             let leading = item.leading.clone();
                                                             let close_on_select = item.close_on_select;
@@ -1662,7 +1707,7 @@ impl MenubarMenuEntries {
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
 
@@ -1761,14 +1806,19 @@ impl MenubarMenuEntries {
                                                             let collection_index = item_ix;
                                                             item_ix = item_ix.saturating_add(1);
 
-                                                            let item_enabled =
-                                                                !item.disabled && enabled;
                                                              let focusable =
                                                                  active.is_some_and(|a| a == idx);
                                                              let label = item.label.clone();
                                                                let a11y_label =
                                                                     item.a11y_label.clone();
                                                                 let command = item.command.clone();
+                                                            let item_enabled = !item.disabled
+                                                                && enabled
+                                                                && !crate::command_gating::command_is_disabled_by_gating(
+                                                                    &*cx.app,
+                                                                    &gating,
+                                                                    command.as_ref(),
+                                                                );
                                                                let trailing = item.trailing.clone();
                                                                let leading = item.leading.clone();
                                                                let close_on_select = item.close_on_select;
@@ -1860,7 +1910,7 @@ impl MenubarMenuEntries {
                                                                     );
 
                                                                      if !has_submenu {
-                                                                         cx.pressable_dispatch_command_opt(command.clone());
+                                                                         cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if item_enabled && close_on_select {
                                                                             cx.pressable_set_bool(&open, false);
 
@@ -2011,7 +2061,7 @@ impl MenubarMenuEntries {
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx, st| {
-                                                                    cx.pressable_dispatch_command_opt(command);
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(command);
                                                                     cx.pressable_set_bool(&open, false);
                                                                     let group_active_for_activate =
                                                                         group_active.clone();
@@ -2231,43 +2281,75 @@ impl MenubarMenuEntries {
                                     );
                                     let submenu_entries: Arc<[MenubarEntry]> =
                                         Arc::from(flat.into_boxed_slice());
-                                    let reserve_leading_slot = align_leading_icons
-                                        && submenu_entries.iter().any(|e| match e {
-                                            MenubarEntry::Item(item) => item.leading.is_some(),
-                                            MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
-                                            MenubarEntry::RadioItem(item) => item.leading.is_some(),
-                                            MenubarEntry::Submenu(submenu) => {
-                                                submenu.trigger.leading.is_some()
-                                            }
-                                            MenubarEntry::Label(_)
-                                            | MenubarEntry::Group(_)
-                                            | MenubarEntry::RadioGroup(_)
-                                            | MenubarEntry::Separator => false,
-                                        });
+                                     let reserve_leading_slot = align_leading_icons
+                                         && submenu_entries.iter().any(|e| match e {
+                                             MenubarEntry::Item(item) => item.leading.is_some(),
+                                             MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
+                                             MenubarEntry::RadioItem(item) => item.leading.is_some(),
+                                             MenubarEntry::Submenu(submenu) => {
+                                                 submenu.trigger.leading.is_some()
+                                             }
+                                             MenubarEntry::Label(_)
+                                             | MenubarEntry::Group(_)
+                                             | MenubarEntry::RadioGroup(_)
+                                             | MenubarEntry::Separator => false,
+                                         });
 
-                                    let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
-                                        submenu_entries
-                                            .iter()
-                                            .filter_map(|e| match e {
-                                                MenubarEntry::Item(item) => {
-                                                    Some((item.label.clone(), item.disabled))
-                                                }
-                                                MenubarEntry::CheckboxItem(item) => {
-                                                    Some((item.label.clone(), item.disabled))
-                                                }
-                                                MenubarEntry::RadioItem(item) => {
-                                                    Some((item.label.clone(), item.disabled))
-                                                }
-                                                MenubarEntry::Submenu(submenu) => Some((
-                                                    submenu.trigger.label.clone(),
-                                                    submenu.trigger.disabled,
-                                                )),
-                                                MenubarEntry::Label(_)
-                                                | MenubarEntry::Separator
-                                                | MenubarEntry::Group(_)
-                                                | MenubarEntry::RadioGroup(_) => None,
-                                            })
-                                            .unzip();
+                                    let gating: WindowCommandGatingSnapshot =
+                                        crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+
+                                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
+                                         submenu_entries
+                                             .iter()
+                                             .filter_map(|e| match e {
+                                                 MenubarEntry::Item(item) => {
+                                                     Some((
+                                                         item.label.clone(),
+                                                         item.disabled
+                                                             || crate::command_gating::command_is_disabled_by_gating(
+                                                                 &*cx.app,
+                                                                 &gating,
+                                                                 item.command.as_ref(),
+                                                             ),
+                                                     ))
+                                                 }
+                                                 MenubarEntry::CheckboxItem(item) => {
+                                                     Some((
+                                                         item.label.clone(),
+                                                         item.disabled
+                                                             || crate::command_gating::command_is_disabled_by_gating(
+                                                                 &*cx.app,
+                                                                 &gating,
+                                                                 item.command.as_ref(),
+                                                             ),
+                                                     ))
+                                                 }
+                                                 MenubarEntry::RadioItem(item) => {
+                                                     Some((
+                                                         item.label.clone(),
+                                                         item.disabled
+                                                             || crate::command_gating::command_is_disabled_by_gating(
+                                                                 &*cx.app,
+                                                                 &gating,
+                                                                 item.command.as_ref(),
+                                                             ),
+                                                     ))
+                                                 }
+                                                 MenubarEntry::Submenu(submenu) => Some((
+                                                     submenu.trigger.label.clone(),
+                                                     submenu.trigger.disabled
+                                                         || crate::command_gating::command_is_disabled_by_gating(
+                                                             &*cx.app,
+                                                             &gating,
+                                                             submenu.trigger.command.as_ref(),
+                                                         ),
+                                                 )),
+                                                 MenubarEntry::Label(_)
+                                                 | MenubarEntry::Separator
+                                                 | MenubarEntry::Group(_)
+                                                 | MenubarEntry::RadioGroup(_) => None,
+                                             })
+                                             .unzip();
 
                                     let labels_arc: Arc<[Arc<str>]> =
                                         Arc::from(labels.into_boxed_slice());
@@ -2348,12 +2430,17 @@ impl MenubarMenuEntries {
                                                             },
                                                             roving,
                                                         },
-                                                        labels_arc.clone(),
-                                                        typeahead_timeout_ticks,
-                                                        move |cx| {
-                                                            let mut out: Vec<AnyElement> =
-                                                                Vec::with_capacity(submenu_entries_for_panel.len());
-                                                            let mut item_ix: usize = 0;
+                                                         labels_arc.clone(),
+                                                         typeahead_timeout_ticks,
+                                                         move |cx| {
+                                                             let gating: WindowCommandGatingSnapshot =
+                                                                 crate::command_gating::snapshot_for_window(
+                                                                     &*cx.app,
+                                                                     cx.window,
+                                                                 );
+                                                             let mut out: Vec<AnyElement> =
+                                                                 Vec::with_capacity(submenu_entries_for_panel.len());
+                                                             let mut item_ix: usize = 0;
 
                                                             for (idx, entry) in
                                                                 submenu_entries_for_panel.iter().enumerate()
@@ -2416,11 +2503,16 @@ impl MenubarMenuEntries {
                                                                         let collection_index = item_ix;
                                                                         item_ix = item_ix.saturating_add(1);
 
-                                                                        let item_enabled = !item.disabled;
                                                                         let focusable = active.is_some_and(|a| a == idx);
                                                                         let label = item.label.clone();
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let command = item.command.clone();
+                                                                        let item_enabled = !item.disabled
+                                                                            && !crate::command_gating::command_is_disabled_by_gating(
+                                                                                &*cx.app,
+                                                                                &gating,
+                                                                                command.as_ref(),
+                                                                            );
                                                                         let trailing = item.trailing.clone();
                                                                         let leading = item.leading.clone();
                                                                         let close_on_select = item.close_on_select;
@@ -2459,7 +2551,7 @@ impl MenubarMenuEntries {
                                                                                         checked.clone(),
                                                                                     );
                                                                                 }
-                                                                                cx.pressable_dispatch_command_opt(command.clone());
+                                                                                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                                 if item_enabled && close_on_select {
                                                                                     cx.pressable_set_bool(&open, false);
                                                                                     let group_active_for_activate = group_active.clone();
@@ -2547,11 +2639,16 @@ impl MenubarMenuEntries {
                                                                         let collection_index = item_ix;
                                                                         item_ix = item_ix.saturating_add(1);
 
-                                                                        let item_enabled = !item.disabled;
                                                                         let focusable = active.is_some_and(|a| a == idx);
                                                                         let label = item.label.clone();
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let command = item.command.clone();
+                                                                        let item_enabled = !item.disabled
+                                                                            && !crate::command_gating::command_is_disabled_by_gating(
+                                                                                &*cx.app,
+                                                                                &gating,
+                                                                                command.as_ref(),
+                                                                            );
                                                                         let trailing = item.trailing.clone();
                                                                         let leading = item.leading.clone();
                                                                         let close_on_select = item.close_on_select;
@@ -2595,7 +2692,7 @@ impl MenubarMenuEntries {
                                                                                         value.clone(),
                                                                                     );
                                                                                 }
-                                                                                cx.pressable_dispatch_command_opt(command.clone());
+                                                                                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                                 if item_enabled && close_on_select {
                                                                                     cx.pressable_set_bool(&open, false);
                                                                                     let group_active_for_activate = group_active.clone();
@@ -2683,12 +2780,17 @@ impl MenubarMenuEntries {
                                                                         let collection_index = item_ix;
                                                                         item_ix = item_ix.saturating_add(1);
 
-                                                                        let item_enabled = !item.disabled;
                                                                         let focusable = active.is_some_and(|a| a == idx);
                                                                         let label = item.label.clone();
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let test_id = item.test_id.clone();
                                                                         let command = item.command.clone();
+                                                                        let item_enabled = !item.disabled
+                                                                            && !crate::command_gating::command_is_disabled_by_gating(
+                                                                                &*cx.app,
+                                                                                &gating,
+                                                                                command.as_ref(),
+                                                                            );
                                                                         let trailing = item.trailing.clone();
                                                                         let leading = item.leading.clone();
                                                                         let close_on_select = item.close_on_select;
@@ -2719,7 +2821,7 @@ impl MenubarMenuEntries {
                                                                                     trigger_registry.clone(),
                                                                                 );
 
-                                                                                cx.pressable_dispatch_command_opt(command.clone());
+                                                                                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                                 if item_enabled && close_on_select {
                                                                                     cx.pressable_set_bool(&open, false);
 
@@ -3146,6 +3248,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 is_click: true,
                 click_count: 1,
@@ -3318,6 +3421,7 @@ mod tests {
                 position: file_pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 is_click: true,
                 click_count: 1,
@@ -3385,6 +3489,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 is_click: true,
                 click_count: 1,
@@ -3451,6 +3556,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 is_click: true,
                 click_count: 1,

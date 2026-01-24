@@ -13,6 +13,7 @@ Implemented:
 - Observer pass contract: outside-press uses `Widget::event_observer` with `ObserverCx` (Preview phase) so routing state (focus/capture/propagation/default actions) cannot be mutated: `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/tree/dispatch.rs`.
 - Default actions step (v1): `DefaultAction::FocusOnPointerDown` is applied by default during event dispatch and can be suppressed via `prevent_default`: `crates/fret-ui/src/tree/dispatch.rs`.
 - Capture-phase dispatch (root → target): key down/up and pointer interactions (down/up/wheel/pinch/cancel, and move when buttons are pressed or capture is active): `crates/fret-ui/src/tree/dispatch.rs`.
+- Per-layer pointer-move observation: when overlay policies opt in (e.g. Radix menu safe-hover corridors), pointer-move observers still run even when hit-tested pointer dispatch is suppressed by pointer occlusion: `crates/fret-ui/src/tree/dispatch.rs`, `crates/fret-ui/src/declarative/host_widget/event/dismissible.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/prevent_default.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/dispatch_phase.rs`.
 - Dispatch-path action availability query (retained `UiTree`):

@@ -6,10 +6,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
+    AppWindowId, Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole,
+    TextStyle,
 };
 use fret_icons::ids;
-use fret_runtime::WindowCommandGatingService;
 use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
@@ -53,17 +53,33 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         .global::<PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    InputContext {
-        platform: Platform::current(),
-        caps,
-        // Best-effort: the command palette itself is typically presented in a modal dialog.
-        ui_has_modal: true,
-        // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
-        focus_is_text_input: false,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Bubble,
-    }
+    let mut ctx = InputContext::fallback(Platform::current(), caps);
+    // Best-effort: the command palette itself is typically presented in a modal dialog.
+    ctx.ui_has_modal = true;
+    // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
+    ctx.focus_is_text_input = false;
+    ctx.dispatch_phase = InputDispatchPhase::Bubble;
+    ctx
+}
+
+fn command_palette_gating_snapshot<H: UiHost>(
+    app: &H,
+    window: AppWindowId,
+) -> WindowCommandGatingSnapshot {
+    let fallback_input_ctx = command_palette_input_context(app);
+    let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+        app,
+        window,
+        fallback_input_ctx,
+    );
+
+    // Best-effort: treat the command palette as a global discovery surface, even when the window
+    // input context reflects focus in the palette input itself.
+    let mut input_ctx = snapshot.input_ctx().clone();
+    input_ctx.ui_has_modal = true;
+    input_ctx.focus_is_text_input = false;
+    input_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+    snapshot.with_input_ctx(input_ctx)
 }
 
 fn command_item_from_meta_with_gating<H: UiHost>(
@@ -115,28 +131,7 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     options: CommandCatalogOptions,
 ) -> Vec<CommandEntry> {
-    let fallback_input_ctx = command_palette_input_context(&*cx.app);
-    let snapshot = cx
-        .app
-        .global::<WindowCommandGatingService>()
-        .and_then(|svc| svc.snapshot(cx.window))
-        .cloned()
-        .unwrap_or_else(|| {
-            fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                &*cx.app,
-                cx.window,
-                fallback_input_ctx,
-            )
-        });
-
-    // Best-effort: treat the command palette as a global discovery surface, even when the window
-    // input context reflects focus in the palette input itself.
-    let mut input_ctx = snapshot.input_ctx().clone();
-    input_ctx.ui_has_modal = true;
-    input_ctx.focus_is_text_input = false;
-    input_ctx.dispatch_phase = InputDispatchPhase::Bubble;
-
-    let gating = snapshot.with_input_ctx(input_ctx);
+    let gating = command_palette_gating_snapshot(&*cx.app, cx.window);
     command_entries_from_host_commands_with_gating_snapshot(cx, options, &gating)
 }
 
@@ -1156,7 +1151,9 @@ impl CommandList {
                                                 ..Default::default()
                                             },
                                             move |cx, st| {
-                                                cx.pressable_dispatch_command_opt(command);
+                                                cx.pressable_dispatch_command_if_enabled_opt(
+                                                    command,
+                                                );
                                                 if let Some(on_select) = on_select.clone() {
                                                     cx.pressable_add_on_activate(on_select);
                                                 }
@@ -1612,6 +1609,8 @@ impl CommandPalette {
             let (render_rows, items) =
                 command_palette_render_rows_for_query(self.entries, query.as_str());
 
+            let gating = command_palette_gating_snapshot(&*cx.app, cx.window);
+
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
                 query.as_str().hash(&mut hasher);
@@ -1643,6 +1642,13 @@ impl CommandPalette {
                                     .unwrap_or("")
                                     .hash(&mut hasher);
                                 item.disabled.hash(&mut hasher);
+                                if let Some(command) = item.command.as_ref() {
+                                    let disabled_by_gating =
+                                        cx.app.commands().get(command.clone()).is_some_and(
+                                            |meta| !gating.is_enabled_for_command(command, meta),
+                                        );
+                                    disabled_by_gating.hash(&mut hasher);
+                                }
                                 item.command
                                     .as_ref()
                                     .map(|c| c.as_str())
@@ -1658,8 +1664,16 @@ impl CommandPalette {
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
                 .map(|i| {
-                    let disabled =
-                        disabled || i.disabled || (i.command.is_none() && i.on_select.is_none());
+                    let disabled_by_gating = i.command.as_ref().is_some_and(|command| {
+                        cx.app
+                            .commands()
+                            .get(command.clone())
+                            .is_some_and(|meta| !gating.is_enabled_for_command(command, meta))
+                    });
+                    let disabled = disabled
+                        || i.disabled
+                        || disabled_by_gating
+                        || (i.command.is_none() && i.on_select.is_none());
                     (
                         PaletteEntry {
                             value: i.value.clone(),
@@ -1882,7 +1896,7 @@ impl CommandPalette {
                                     ..Default::default()
                                 },
                                 move |cx, st| {
-                                    cx.pressable_dispatch_command_opt(command);
+                                    cx.pressable_dispatch_command_if_enabled_opt(command);
                                     if let Some(on_select) = on_select.clone() {
                                         cx.pressable_add_on_activate(on_select);
                                     }
@@ -2746,6 +2760,83 @@ mod tests {
             *disabled.borrow(),
             Some(true),
             "expected the command entry to be disabled via WindowCommandActionAvailabilityService"
+        );
+    }
+
+    #[test]
+    fn command_palette_items_respect_widget_action_availability_snapshot() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let called = app.models_mut().insert(false);
+        let on_select_action: fret_ui::action::OnActivate = Arc::new({
+            let called = called.clone();
+            move |host, cx, _reason| {
+                let _ = host.models_mut().update(&called, |v| *v = true);
+                host.request_redraw(cx.window);
+            }
+        });
+
+        let model = app.models_mut().insert(String::new());
+        let items = vec![
+            CommandItem::new("Widget Action")
+                .on_select(cmd)
+                .on_select_action(on_select_action),
+        ];
+        let mut services = FakeServices::default();
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            model,
+            items,
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, fret_runtime::Effect::Command { .. })),
+            "expected disabled command palette item to not dispatch Effect::Command; effects={effects:?}"
+        );
+        assert!(
+            !called.read_ref(&app, |v| *v).expect("read called"),
+            "expected disabled command palette item to not fire on_select_action"
         );
     }
 

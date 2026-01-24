@@ -3914,6 +3914,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 || changed.contains(&TypeId::of::<
                     fret_runtime::WindowCommandActionAvailabilityService,
                 >())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
             {
                 windows_menu::sync_command_gating_from_app(&self.app);
             }
@@ -3930,6 +3931,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 || changed.contains(&TypeId::of::<
                     fret_runtime::WindowCommandActionAvailabilityService,
                 >())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
             {
                 macos_menu::sync_command_gating_from_app(&self.app);
             }

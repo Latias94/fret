@@ -4,6 +4,7 @@ use fret_core::{Corners, FontId, NodeId, Px, SemanticsRole, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size};
@@ -211,6 +212,8 @@ fn input_with_style<H: UiHost>(
     corner_radii_override: Option<Corners>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let submit_command = submit_command.filter(|cmd| cx.command_is_enabled(cmd));
+    let cancel_command = cancel_command.filter(|cmd| cx.command_is_enabled(cmd));
 
     let resolved = resolve_input_chrome(
         &theme,

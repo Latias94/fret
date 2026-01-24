@@ -475,6 +475,9 @@ impl<H: UiHost> UiTree<H> {
                     );
                 },
             );
+
+            // Keep "is action available?" snapshots up to date for menu/command-palette gating.
+            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
 
         handled

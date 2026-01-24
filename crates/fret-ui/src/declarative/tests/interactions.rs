@@ -1888,8 +1888,8 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
         "dismissible-hook-escape",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
-                assert_eq!(reason, DismissReason::Escape);
+            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, DismissReason::Escape);
                 let _ = host
                     .models_mut()
                     .update(&dismissed, |v: &mut bool| *v = true);
@@ -1950,8 +1950,8 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
         "dismissible-hook-outside-press",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
-                match reason {
+            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, req| {
+                match req.reason {
                     DismissReason::OutsidePress { pointer: Some(cx) } => {
                         assert_eq!(cx.pointer_id, fret_core::PointerId(0));
                         assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);

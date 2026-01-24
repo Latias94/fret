@@ -17,7 +17,9 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::action::{DismissReason, OnDismissRequest};
+use fret_ui::action::{
+    DismissReason, DismissRequestCx, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
     SizeStyle,
@@ -29,10 +31,23 @@ use crate::declarative::ModelWatchExt;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct DialogOptions {
     pub dismiss_on_overlay_press: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+}
+
+impl std::fmt::Debug for DialogOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialogOptions")
+            .field("dismiss_on_overlay_press", &self.dismiss_on_overlay_press)
+            .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .finish()
+    }
 }
 
 impl Default for DialogOptions {
@@ -40,6 +55,8 @@ impl Default for DialogOptions {
         Self {
             dismiss_on_overlay_press: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 }
@@ -52,6 +69,16 @@ impl DialogOptions {
 
     pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
         self.initial_focus = initial_focus;
+        self
+    }
+
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 }
@@ -117,7 +144,7 @@ impl DialogRoot {
     }
 
     pub fn options(&self) -> DialogOptions {
-        self.options
+        self.options.clone()
     }
 
     pub fn modal_request_with_dismiss_handler<H: UiHost>(
@@ -134,7 +161,7 @@ impl DialogRoot {
             trigger,
             self.open_model(cx),
             presence,
-            self.options,
+            self.options.clone(),
             on_dismiss_request,
             children,
         )
@@ -174,7 +201,7 @@ impl DialogRoot {
             trigger,
             self.open_model(cx),
             presence,
-            self.options,
+            self.options.clone(),
             children,
         )
     }
@@ -221,6 +248,8 @@ pub fn modal_dialog_request_with_options(
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.root_name = Some(dialog_root_name(id));
     request.initial_focus = options.initial_focus;
+    request.on_open_auto_focus = options.on_open_auto_focus.clone();
+    request.on_close_auto_focus = options.on_close_auto_focus.clone();
     request
 }
 
@@ -299,20 +328,21 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
             },
             move |cx, _st| {
                 if let Some(on_dismiss_request) = on_dismiss_request.clone() {
+                    let open_for_dismiss = open.clone();
                     cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
-                        on_dismiss_request(
-                            host,
-                            action_cx,
-                            DismissReason::OutsidePress {
-                                pointer: Some(fret_ui::action::OutsidePressCx {
-                                    pointer_id: up.pointer_id,
-                                    pointer_type: up.pointer_type,
-                                    button: up.button,
-                                    modifiers: up.modifiers,
-                                    click_count: up.click_count,
-                                }),
-                            },
-                        );
+                        let mut req = DismissRequestCx::new(DismissReason::OutsidePress {
+                            pointer: Some(fret_ui::action::OutsidePressCx {
+                                pointer_id: up.pointer_id,
+                                pointer_type: up.pointer_type,
+                                button: up.button,
+                                modifiers: up.modifiers,
+                                click_count: up.click_count,
+                            }),
+                        });
+                        on_dismiss_request(host, action_cx, &mut req);
+                        if !req.default_prevented() {
+                            let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                        }
                         fret_ui::action::PressablePointerUpResult::SkipActivate
                     }));
                 } else {
@@ -478,7 +508,7 @@ mod tests {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
 
-        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let handler: OnDismissRequest = Arc::new(|_host, _cx, _req: &mut DismissRequestCx| {});
         let req = modal_dialog_request_with_options_and_dismiss_handler(
             GlobalElementId(0x123),
             GlobalElementId(0x123),
@@ -732,8 +762,9 @@ mod tests {
         let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
             Arc::new(std::sync::Mutex::new(None));
         let reason_cell_for_handler = reason_cell.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+            req.prevent_default();
         });
 
         let overlay_children =

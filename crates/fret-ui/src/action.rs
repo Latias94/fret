@@ -59,6 +59,58 @@ pub enum DismissReason {
     Scroll,
 }
 
+/// Context passed to overlay dismissal handlers.
+///
+/// This mirrors the DOM/Radix contract where `onInteractOutside` / `onPointerDownOutside` /
+/// `onFocusOutside` may "prevent default" to keep the overlay open.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DismissRequestCx {
+    pub reason: DismissReason,
+    default_prevented: bool,
+}
+
+impl DismissRequestCx {
+    pub fn new(reason: DismissReason) -> Self {
+        Self {
+            reason,
+            default_prevented: false,
+        }
+    }
+
+    pub fn prevent_default(&mut self) {
+        self.default_prevented = true;
+    }
+
+    pub fn default_prevented(&self) -> bool {
+        self.default_prevented
+    }
+}
+
+/// Context passed to auto-focus handlers.
+///
+/// This mirrors the DOM/Radix contract where `onOpenAutoFocus` / `onCloseAutoFocus` may "prevent
+/// default" to take full control of focus movement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AutoFocusRequestCx {
+    default_prevented: bool,
+}
+
+impl AutoFocusRequestCx {
+    pub fn new() -> Self {
+        Self {
+            default_prevented: false,
+        }
+    }
+
+    pub fn prevent_default(&mut self) {
+        self.default_prevented = true;
+    }
+
+    pub fn default_prevented(&self) -> bool {
+        self.default_prevented
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OutsidePressCx {
     pub pointer_id: PointerId,
@@ -369,7 +421,14 @@ pub(crate) struct PressableHoverActionHooks {
     pub on_hover_change: Option<OnHoverChange>,
 }
 
-pub type OnDismissRequest = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static>;
+pub type OnDismissRequest =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &mut DismissRequestCx) + 'static>;
+
+pub type OnOpenAutoFocus =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
+
+pub type OnCloseAutoFocus =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
 
 /// Pointer move observer hook for `DismissibleLayer`.
 ///

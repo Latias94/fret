@@ -5,6 +5,7 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
@@ -360,13 +361,10 @@ impl Button {
             let toggle_model = self.toggle_model;
             let a11y_label = self.label.clone();
             let disabled_explicit = self.disabled;
-            let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
             let disabled = disabled_explicit
-                || crate::command_gating::command_is_disabled_by_gating(
-                    &*cx.app,
-                    &gating,
-                    command.as_ref(),
-                );
+                || command
+                    .as_ref()
+                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
@@ -386,7 +384,7 @@ impl Button {
             let children = self.children;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-                cx.pressable_dispatch_command_opt(command);
+                cx.pressable_dispatch_command_if_enabled_opt(command);
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate(on_activate);
                 }

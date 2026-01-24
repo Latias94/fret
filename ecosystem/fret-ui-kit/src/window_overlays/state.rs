@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::FrameId;
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::tree::UiLayerId;
 use fret_ui::{UiHost, UiTree};
 
@@ -30,6 +31,8 @@ pub(super) struct ActivePopover {
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
     pub(super) initial_focus: Option<GlobalElementId>,
+    pub(super) on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub(super) on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub(super) consume_outside_pointer_events: bool,
     pub(super) disable_outside_pointer_events: bool,
     pub(super) open: bool,
@@ -42,6 +45,8 @@ pub(super) struct ActiveModal {
     pub(super) root_name: String,
     pub(super) trigger: Option<GlobalElementId>,
     pub(super) initial_focus: Option<GlobalElementId>,
+    pub(super) on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub(super) on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) pending_initial_focus: bool,

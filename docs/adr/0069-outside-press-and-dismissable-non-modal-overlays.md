@@ -47,6 +47,11 @@ Additionally, some **non-modal** overlays (notably Radix-style menus) need an ex
   - this is **not** a full modal barrier (no focus trap requirement; no a11y "hide others" in this
     ADR), but it does require a runtime input-scoping mechanism beyond the pointer-down observer
     pass.
+  - importantly, menus still need *global pointer movement* outside the overlay subtree for
+    policies like Radix Menu “safe hover corridor” between a submenu trigger and its submenu. In
+    Fret this is modeled as an opt-in **pointer-move observer** on the dismissible root (see
+    `DismissibleActionHooks::on_pointer_move`) and a per-layer `wants_pointer_move_events` flag,
+    and it must continue to run even when hit-tested pointer dispatch is suppressed by occlusion.
 
 ### Outside press observer pass
 
@@ -91,6 +96,17 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.
+
+### Dismiss handlers and "prevent default" (Radix outcome)
+
+Radix allows dismissal callbacks (e.g. `onPointerDownOutside`, `onInteractOutside`,
+`onEscapeKeyDown`) to "prevent default" and keep the overlay open.
+
+In Fret, the overlay substrate expresses this outcome via an optional dismiss handler:
+
+- `OnDismissRequest` receives a mutable `DismissRequestCx { reason, ... }`.
+- Handlers may call `req.prevent_default()` to keep the overlay open.
+- When default is not prevented, overlay orchestration closes the `open` model automatically.
 
 ### Disable outside pointer events (Radix `disableOutsidePointerEvents`)
 

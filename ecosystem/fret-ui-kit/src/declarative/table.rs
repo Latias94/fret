@@ -2477,7 +2477,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         active_element.set(Some(cx.root_id()));
                                                         *active_command.borrow_mut() = cmd.clone();
                                                     }
-                                                    cx.pressable_dispatch_command_opt(cmd.clone());
+                                                    cx.pressable_dispatch_command_if_enabled_opt(cmd.clone());
                                                     if props.enable_row_selection {
                                                         let state_model = state.clone();
                                                         let row_key = data_row.key;

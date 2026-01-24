@@ -146,16 +146,8 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
 
     let mut by_window: HashMap<AppWindowId, WindowCommandGatingSnapshot> = HashMap::new();
     for window in windows {
-        let fallback_input_ctx = InputContext {
-            platform: Platform::Macos,
-            caps: caps.clone(),
-            ui_has_modal: false,
-            focus_is_text_input: false,
-            edit_can_undo: true,
-            edit_can_redo: true,
-            dispatch_phase: InputDispatchPhase::Bubble,
-        };
-        let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+        let fallback_input_ctx = InputContext::fallback(Platform::Macos, caps.clone());
+        let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
             app,
             window,
             fallback_input_ctx,
@@ -190,15 +182,7 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         (commands, keymap, caps)
     };
 
-    let base_ctx = InputContext {
-        platform: Platform::Macos,
-        caps: caps.clone(),
-        ui_has_modal: false,
-        focus_is_text_input: false,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Bubble,
-    };
+    let base_ctx = InputContext::fallback(Platform::Macos, caps.clone());
 
     let Ok(mut state) = state.lock() else {
         return;
@@ -673,15 +657,7 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
     let active_window = active_app_window_id(&state);
 
     let caps = state.cached_caps.clone();
-    let fallback = InputContext {
-        platform: Platform::Macos,
-        caps,
-        ui_has_modal: false,
-        focus_is_text_input: false,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Bubble,
-    };
+    let fallback = InputContext::fallback(Platform::Macos, caps);
 
     let gating = active_window
         .and_then(|w| state.cached_gating_by_window.get(&w).cloned())
