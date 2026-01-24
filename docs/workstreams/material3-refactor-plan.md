@@ -134,6 +134,7 @@ Current progress:
 - `Button` and `IconButton` pressed shape now uses the spring path (corner radius morph), which acts as a
   conformance probe for MotionScheme plumbing.
 - `Tabs` active indicator height now animates via the same spring substrate (instead of snapping 0↔height).
+- `Switch` thumb motion now uses the spring substrate (selected + pressed), replacing duration-based tweens.
 
 ### Tokens (typed access vs string keys)
 

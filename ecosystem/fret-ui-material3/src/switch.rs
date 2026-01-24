@@ -19,7 +19,8 @@ use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable_with_ripple_bounds,
     material_ink_layer_with_bounds,
 };
-use crate::interaction::state_layer::StateLayerAnimator;
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::motion::SpringAnimator;
 
 #[derive(Clone)]
 pub struct Switch {
@@ -165,14 +166,10 @@ impl Switch {
                             .duration_ms_by_key("md.sys.motion.duration.short2")
                             .unwrap_or(100);
 
-                        let switch_duration_ms = theme
-                            .duration_ms_by_key("md.sys.motion.duration.short3")
-                            .unwrap_or(150);
-
                         #[derive(Default)]
                         struct SwitchThumbRuntime {
-                            thumb_target: f32,
-                            thumb: StateLayerAnimator,
+                            selected: SpringAnimator,
+                            pressed: SpringAnimator,
                         }
 
                         let last_down = cx
@@ -180,23 +177,32 @@ impl Switch {
                                 st.last_down
                             });
 
-                        let (thumb_t, thumb_active) =
+                        let spring =
+                            sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::FastSpatial);
+                        let (thumb_t, pressed_t, thumb_active) =
                             cx.with_state_for(pressable_id, SwitchThumbRuntime::default, |rt| {
-                                let desired_thumb = if selected { 1.0 } else { 0.0 };
-                                if (desired_thumb - rt.thumb_target).abs() > 1e-6 {
-                                    rt.thumb_target = desired_thumb;
-                                    rt.thumb.set_target(
-                                        now_frame,
-                                        desired_thumb,
-                                        switch_duration_ms,
-                                        easing,
-                                    );
+                                let desired_selected = if selected { 1.0 } else { 0.0 };
+                                let desired_pressed = if is_pressed { 1.0 } else { 0.0 };
+
+                                if !rt.selected.is_initialized() {
+                                    rt.selected.reset(now_frame, desired_selected);
                                 }
-                                rt.thumb.advance(now_frame);
-                                (rt.thumb.value(), rt.thumb.is_active())
+                                if !rt.pressed.is_initialized() {
+                                    rt.pressed.reset(now_frame, desired_pressed);
+                                }
+
+                                rt.selected.set_target(now_frame, desired_selected, spring);
+                                rt.pressed.set_target(now_frame, desired_pressed, spring);
+                                rt.selected.advance(now_frame);
+                                rt.pressed.advance(now_frame);
+                                (
+                                    rt.selected.value(),
+                                    rt.pressed.value(),
+                                    rt.selected.is_active() || rt.pressed.is_active(),
+                                )
                             });
 
-                        let geom = switch_geometry(size, thumb_t, is_pressed);
+                        let geom = switch_geometry(size, thumb_t, pressed_t);
                         let track =
                             switch_track(cx, &theme, size, selected, enabled, interaction, geom);
 
@@ -424,19 +430,18 @@ struct SwitchGeometry {
     ink_bounds: Rect,
 }
 
-fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: bool) -> SwitchGeometry {
+fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: f32) -> SwitchGeometry {
     let thumb_t = thumb_t.clamp(0.0, 1.0);
 
-    let (handle_width, handle_height) = if pressed {
-        (size.pressed_handle_width, size.pressed_handle_height)
-    } else {
-        (
-            Px(size.unselected_handle_width.0
-                + (size.selected_handle_width.0 - size.unselected_handle_width.0) * thumb_t),
-            Px(size.unselected_handle_height.0
-                + (size.selected_handle_height.0 - size.unselected_handle_height.0) * thumb_t),
-        )
-    };
+    let pressed_t = pressed.clamp(0.0, 1.0);
+    let base_width = Px(size.unselected_handle_width.0
+        + (size.selected_handle_width.0 - size.unselected_handle_width.0) * thumb_t);
+    let base_height = Px(size.unselected_handle_height.0
+        + (size.selected_handle_height.0 - size.unselected_handle_height.0) * thumb_t);
+
+    let handle_width = Px(base_width.0 + (size.pressed_handle_width.0 - base_width.0) * pressed_t);
+    let handle_height =
+        Px(base_height.0 + (size.pressed_handle_height.0 - base_height.0) * pressed_t);
 
     // Material Web switch uses a circular handle; keep symmetric padding behavior and derive it
     // from the handle height (the primary axis for vertical centering).
