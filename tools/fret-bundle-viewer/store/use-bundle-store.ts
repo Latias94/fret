@@ -37,7 +37,7 @@ interface BundleState {
   getSelectedNode: () => SemanticsNodeModel | null
 
   // Actions
-  loadBundle: (text: string, fileName?: string) => void
+  loadBundle: (text: string, fileNameOrOptions?: string | { fileName?: string; fileSize?: number; recordRecent?: boolean }) => void
   loadSampleBundle: (type: 'simple' | 'multi-window') => void
   clearBundle: () => void
 
@@ -105,9 +105,35 @@ export const useBundleStore = create<BundleState>((set, get) => ({
   },
 
   // Actions
-  loadBundle: (text, fileName) => {
+  loadBundle: (text, fileNameOrOptions) => {
+    const options =
+      typeof fileNameOrOptions === 'string'
+        ? { fileName: fileNameOrOptions }
+        : fileNameOrOptions ?? {}
+    const fileName = options.fileName
+    const recordRecent = options.recordRecent ?? true
     try {
       const bundle = parseBundle(text, fileName)
+
+      // Treat "can't parse JSON" as a fatal error (show the error UI), but keep other warnings non-fatal.
+      const fatalWarning =
+        bundle.windows.length === 0
+          ? bundle.warnings.find(
+              (w) => w.startsWith('JSON parse error:') || w === 'Bundle root is not an object'
+            )
+          : undefined
+      if (fatalWarning) {
+        set({
+          bundle: null,
+          rawText: text,
+          parseError: fatalWarning,
+        })
+        return
+      }
+
+      if (typeof options.fileSize === 'number') {
+        bundle.meta.fileSize = options.fileSize
+      }
       
       // Auto-expand root nodes
       const expandedNodes = new Set<string>()
@@ -133,8 +159,8 @@ export const useBundleStore = create<BundleState>((set, get) => ({
       })
 
       // Notify callback for recent files tracking (only for user-loaded files, not samples)
-      if (onFileLoadedCallback && fileName && !fileName.startsWith('sample-')) {
-        onFileLoadedCallback(fileName, text.length, text)
+      if (onFileLoadedCallback && recordRecent && fileName && !fileName.startsWith('sample-')) {
+        onFileLoadedCallback(fileName, typeof options.fileSize === 'number' ? options.fileSize : text.length, text)
       }
     } catch (error) {
       set({

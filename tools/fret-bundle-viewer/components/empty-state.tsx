@@ -15,6 +15,7 @@ import {
 import { FileJson, FolderOpen, ChevronDown, AlertCircle, Clock, X, Trash2 } from 'lucide-react'
 import { useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from '@/hooks/use-i18n'
+import { extractBundleJsonFromZipFile } from '@/lib/zip'
 
 export function EmptyState() {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -41,13 +42,21 @@ export function EmptyState() {
       const file = event.target.files?.[0]
       if (!file) return
 
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const text = e.target?.result as string
-        loadBundle(text, file.name)
-      }
-      reader.readAsText(file)
-      event.target.value = ''
+      const isZip = /\.zip$/i.test(file.name)
+      void (async () => {
+        try {
+          if (isZip) {
+            const { text, bundlePath } = await extractBundleJsonFromZipFile(file)
+            const derivedName = `${file.name.replace(/\.zip$/i, '')}-${bundlePath.split('/').pop() ?? 'bundle.json'}`
+            loadBundle(text, { fileName: derivedName, fileSize: text.length, recordRecent: true })
+          } else {
+            const text = await file.text()
+            loadBundle(text, { fileName: file.name, fileSize: file.size, recordRecent: true })
+          }
+        } finally {
+          event.target.value = ''
+        }
+      })()
     },
     [loadBundle]
   )
@@ -75,7 +84,7 @@ export function EmptyState() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,.zip"
             className="hidden"
             onChange={handleFileChange}
           />
@@ -119,7 +128,7 @@ export function EmptyState() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json"
+          accept=".json,.zip"
           className="hidden"
           onChange={handleFileChange}
         />

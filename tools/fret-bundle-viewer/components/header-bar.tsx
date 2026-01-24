@@ -26,8 +26,12 @@ import { CommandPalette } from '@/components/command-palette'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { useTranslation } from '@/hooks/use-i18n'
+import { extractBundleJsonFromZipFile } from '@/lib/zip'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import {
   FolderOpen,
+  ClipboardPaste,
   Download,
   FileJson,
   AlertTriangle,
@@ -38,6 +42,8 @@ import {
 export function HeaderBar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [commandOpen, setCommandOpen] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
   const { t } = useTranslation()
 
   const {
@@ -63,15 +69,22 @@ export function HeaderBar() {
       const file = event.target.files?.[0]
       if (!file) return
 
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const text = e.target?.result as string
-        loadBundle(text, file.name)
-      }
-      reader.readAsText(file)
-
-      // Reset input so same file can be reloaded
-      event.target.value = ''
+      const isZip = /\.zip$/i.test(file.name)
+      void (async () => {
+        try {
+          if (isZip) {
+            const { text, bundlePath } = await extractBundleJsonFromZipFile(file)
+            const derivedName = `${file.name.replace(/\.zip$/i, '')}-${bundlePath.split('/').pop() ?? 'bundle.json'}`
+            loadBundle(text, { fileName: derivedName, fileSize: text.length, recordRecent: true })
+          } else {
+            const text = await file.text()
+            loadBundle(text, { fileName: file.name, fileSize: file.size, recordRecent: true })
+          }
+        } finally {
+          // Reset input so same file can be reloaded
+          event.target.value = ''
+        }
+      })()
     },
     [loadBundle]
   )
@@ -144,7 +157,7 @@ export function HeaderBar() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,.zip"
             className="hidden"
             onChange={handleFileChange}
           />
@@ -158,6 +171,23 @@ export function HeaderBar() {
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('header.openTooltip')}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 bg-transparent px-2 lg:px-3"
+                onClick={() => setPasteOpen(true)}
+              >
+                <ClipboardPaste className="h-4 w-4" />
+                <span className="ml-1.5 hidden lg:inline">{t('header.paste')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('header.pasteTooltip')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -323,6 +353,46 @@ export function HeaderBar() {
         onOpenChange={setCommandOpen}
         onOpenFile={handleFileOpen}
       />
+
+      <Dialog
+        open={pasteOpen}
+        onOpenChange={(open) => {
+          setPasteOpen(open)
+          if (!open) setPasteText('')
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('paste.title')}</DialogTitle>
+            <DialogDescription>{t('paste.description')}</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder={t('paste.placeholder')}
+            className="min-h-56 font-mono text-xs"
+          />
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setPasteOpen(false)}
+            >
+              {t('paste.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                const text = pasteText.trim()
+                if (!text) return
+                loadBundle(text, { fileName: 'pasted.json', fileSize: text.length, recordRecent: false })
+                setPasteOpen(false)
+              }}
+              disabled={!pasteText.trim()}
+            >
+              {t('paste.load')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

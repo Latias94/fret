@@ -332,6 +332,7 @@ export function exportTriageJson(
   const snapshotB = selectedSnapshotB !== null ? window?.snapshots[selectedSnapshotB] : null
 
   const triage: Array<{ level: 'info' | 'warn'; kind: string; message: string; evidence?: unknown }> = []
+  const artifacts: Record<string, unknown> = {}
 
   if (snapshotA?.perf?.totalUs !== undefined) {
     const us = snapshotA.perf.totalUs
@@ -423,6 +424,111 @@ export function exportTriageJson(
 
   const outDirContext = parseOutDirContext(bundle.meta.outDir)
 
+  // Debug-derived evidence (bounded).
+  if (snapshotA) {
+    const debug = asObject(asObject(snapshotA.raw)?.debug)
+
+    const topInvalidationWalks = (() => {
+      const inv = asArray(debug?.invalidation_walks)
+      if (!inv || inv.length === 0) return null
+      const rows: Array<{
+        walked_nodes: number
+        kind?: string
+        source?: string
+        detail?: string
+        truncated_at?: number
+        root_node?: string
+        root_element?: string
+      }> = []
+      for (const r of inv) {
+        const o = asObject(r)
+        if (!o) continue
+        rows.push({
+          walked_nodes: typeof o.walked_nodes === 'number' ? o.walked_nodes : 0,
+          kind: typeof o.kind === 'string' ? o.kind : undefined,
+          source: typeof o.source === 'string' ? o.source : undefined,
+          detail: typeof o.detail === 'string' ? o.detail : undefined,
+          truncated_at: typeof o.truncated_at === 'number' ? o.truncated_at : undefined,
+          root_node: o.root_node != null ? String(o.root_node) : undefined,
+          root_element: o.root_element != null ? String(o.root_element) : undefined,
+        })
+      }
+      rows.sort((a, b) => b.walked_nodes - a.walked_nodes)
+      return rows.slice(0, 30)
+    })()
+
+    const layoutSolves = (() => {
+      const solves = asArray(debug?.layout_engine_solves)
+      if (!solves || solves.length === 0) return null
+      const out: unknown[] = []
+      for (const s of solves.slice(0, 4)) {
+        const o = asObject(s)
+        if (!o) continue
+        const topMeasuresRaw = asArray(o.top_measures) ?? []
+        const topMeasures = topMeasuresRaw.slice(0, 20).map((tm) => {
+          const tmo = asObject(tm)
+          if (!tmo) return null
+          return {
+            node: tmo.node != null ? String(tmo.node) : undefined,
+            element_kind: typeof tmo.element_kind === 'string' ? tmo.element_kind : undefined,
+            measure_time_us: typeof tmo.measure_time_us === 'number' ? tmo.measure_time_us : undefined,
+            calls: typeof tmo.calls === 'number' ? tmo.calls : undefined,
+            cache_hits: typeof tmo.cache_hits === 'number' ? tmo.cache_hits : undefined,
+          }
+        }).filter(Boolean)
+        out.push({
+          root_node: o.root_node != null ? String(o.root_node) : undefined,
+          solve_time_us: typeof o.solve_time_us === 'number' ? o.solve_time_us : undefined,
+          measure_time_us: typeof o.measure_time_us === 'number' ? o.measure_time_us : undefined,
+          measure_calls: typeof o.measure_calls === 'number' ? o.measure_calls : undefined,
+          measure_cache_hits: typeof o.measure_cache_hits === 'number' ? o.measure_cache_hits : undefined,
+          top_measures: topMeasures,
+        })
+      }
+      return out
+    })()
+
+    const cacheRoots = (() => {
+      const roots = asArray(debug?.cache_roots)
+      if (!roots || roots.length === 0) return null
+      const out: unknown[] = []
+      for (const r of roots.slice(0, 30)) {
+        const o = asObject(r)
+        if (!o) continue
+        out.push({
+          root: o.root != null ? String(o.root) : undefined,
+          reused: typeof o.reused === 'boolean' ? o.reused : undefined,
+          reuse_reason: typeof o.reuse_reason === 'string' ? o.reuse_reason : undefined,
+          paint_replayed_ops: typeof o.paint_replayed_ops === 'number' ? o.paint_replayed_ops : undefined,
+          subtree_nodes: typeof o.subtree_nodes === 'number' ? o.subtree_nodes : undefined,
+          direct_child_nodes: typeof o.direct_child_nodes === 'number' ? o.direct_child_nodes : undefined,
+          contained_layout: typeof o.contained_layout === 'boolean' ? o.contained_layout : undefined,
+          element_kind: typeof o.element_kind === 'string' ? o.element_kind : undefined,
+          element_path: typeof o.element_path === 'string' ? o.element_path : undefined,
+        })
+      }
+      return out
+    })()
+
+    if (topInvalidationWalks) artifacts.top_invalidation_walks = topInvalidationWalks
+    if (layoutSolves) artifacts.layout_engine_solves = layoutSolves
+    if (cacheRoots) artifacts.cache_roots = cacheRoots
+  }
+
+  // Recent events (bounded).
+  if (window?.events && window.events.length > 0) {
+    const maxTick = snapshotA?.tickId ? Number(snapshotA.tickId) : NaN
+    const filtered = Number.isFinite(maxTick)
+      ? window.events.filter((e) => (e.tickId ? Number(e.tickId) <= maxTick : true))
+      : window.events
+    artifacts.recent_events = filtered.slice(-20).map((e) => ({
+      tick_id: e.tickId,
+      frame_id: e.frameId,
+      kind: e.kind,
+      summary: e.summary,
+    }))
+  }
+
   const payload = {
     schema_version: 1,
     generated_at: new Date().toISOString(),
@@ -449,6 +555,7 @@ export function exportTriageJson(
       selected_node_id: selectedNodeId,
     },
     triage,
+    artifacts,
   }
 
   const baseName = bundle.meta.fileName ? bundle.meta.fileName.replace(/\\.json$/i, '') : 'bundle'
