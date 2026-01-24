@@ -65,7 +65,7 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
-  - Evidence: `ecosystem/fret-ui-shadcn/src/{breadcrumb,card,command,field,item,scroll_area,toggle,tooltip}.rs`,
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{breadcrumb,card,command,field,input_group,item,scroll_area,toggle,tooltip}.rs`,
     `ecosystem/fret-ui-shadcn/src/ui_builder_ext/breadcrumb.rs`
 - [x] Consolidate third-party “component integration contract” guidance (P2) with a short checklist.
   - Evidence: `docs/component-authoring-contracts.md`
