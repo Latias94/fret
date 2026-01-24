@@ -48,9 +48,17 @@ Keep this list short and evidence-backed:
 
 ## MVP0.1 — Default Actions Expansion (Keep Mechanism/Policy Boundary Clean)
 
-- [ ] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
-  - Notes: keep v1 minimal to avoid smuggling Radix/shadcn policies into `crates/fret-ui`.
-- [ ] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+- [x] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
+  - Decision: keep the mechanism-owned default action catalog minimal for now.
+  - Current v1 catalog:
+    - `DefaultAction::FocusOnPointerDown` (stable, widely needed, hard-to-change)
+  - Non-goals (stay widget-/policy-owned until a concrete need shows up):
+    - text selection start / drag selection
+    - scroll routing heuristics beyond normal dispatch + scroll widgets
+    - "activate on pointer up", press/capture semantics, and other Radix/shadcn interaction policies
+- [x] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+  - Status: deferred. New defaults must be motivated by a cross-surface, hard-to-change behavior and come with
+    focused tests that prove we are not leaking ecosystem policy into `crates/fret-ui`.
 
 ## MVP1 — Action Availability (GPUI `is_action_available` Parity)
 
