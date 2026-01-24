@@ -52,7 +52,7 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
 
 ### Edit / Clipboard
 
-- `text.copy`
+- `edit.copy`
   - Availability should be `Available` when the focused widget exposes a non-empty selection or a
     copyable value.
   - Expected providers:
@@ -60,22 +60,31 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
       - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
       - Declarative wiring: `crates/fret-ui/src/declarative/host_widget.rs` (forwards command/availability)
     - `SelectableText` (read-only selection)
-- `text.cut`
+    - `NodeGraphCanvas` (non-text selection)
+      - Evidence: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+      - Tests: `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`
+  - Notes:
+    - `text.copy` remains as a legacy alias for text-focused surfaces.
+- `edit.cut`
   - Availability should be `Blocked` when the focused widget is read-only.
   - Expected providers:
     - `BoundTextInput` / `BoundTextArea`
       - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
-- `text.paste`
+    - `NodeGraphCanvas`
+      - Evidence: `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `edit.paste`
   - Availability depends on editability and clipboard capabilities.
   - Expected providers:
     - `BoundTextInput` / `BoundTextArea`
       - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
-- `text.select_all`
+- `edit.select_all`
   - Availability should be `Available` when the focused widget can select content.
   - Expected providers:
     - `BoundTextInput` / `BoundTextArea`
       - Evidence: `crates/fret-ui/src/text_input/bound.rs` and `crates/fret-ui/src/text_area/bound.rs`
     - `SelectableText`
+    - `NodeGraphCanvas`
+      - Evidence: `ecosystem/fret-node/src/ui/canvas/widget.rs`
   - Notes:
     - Prefer returning `Blocked` (not `NotHandled`) when the focused widget owns the command but has
       no selectable content (e.g. empty text), so command palette / menus can disable deterministically.
@@ -90,8 +99,5 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
 
 ## Known Gaps / Next Targets
 
-1) Broader "copy-like" semantics outside of text widgets (node graph, listbox item, table row)
-   should decide whether to:
-   - reuse `text.copy`, or
-   - introduce a more general `edit.copy` command family.
-2) `focus.menu_bar` availability needs an explicit contract between runner shells and UI-kit.
+1) Broader "copy-like" semantics outside of text widgets (listbox item, table row)
+   should implement `edit.copy` and provide availability evidence anchors.
