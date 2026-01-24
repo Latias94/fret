@@ -23,6 +23,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
+use crate::foundation::elevation::{apply_surface_tint, shadow_for_elevation_with_color};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
@@ -172,6 +173,28 @@ impl NavigationBar {
                 "md.comp.navigation-bar.container.color",
                 "md.sys.color.surface-container",
             );
+            let elevation = theme
+                .metric_by_key("md.comp.navigation-bar.container.elevation")
+                .unwrap_or(Px(0.0));
+            let surface_tint = tokens.color_comp_or_sys(
+                "md.comp.navigation-bar.container.surface-tint-layer.color",
+                "md.sys.color.surface-tint",
+            );
+            let container_bg = apply_surface_tint(container_bg, surface_tint, elevation);
+            let shadow_color = tokens.color_comp_or_sys(
+                "md.comp.navigation-bar.container.shadow-color",
+                "md.sys.color.shadow",
+            );
+            let radius = theme
+                .metric_by_key("md.comp.navigation-bar.container.shape")
+                .unwrap_or(Px(0.0));
+            let corner_radii = Corners::all(radius);
+            let shadow = shadow_for_elevation_with_color(
+                &theme,
+                elevation,
+                Some(shadow_color),
+                corner_radii,
+            );
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
@@ -188,6 +211,8 @@ impl NavigationBar {
                 vec![cx.container(
                     ContainerProps {
                         background: Some(container_bg),
+                        shadow,
+                        corner_radii,
                         layout: {
                             let mut layout = fret_ui::element::LayoutStyle::default();
                             layout.size.width = Length::Fill;

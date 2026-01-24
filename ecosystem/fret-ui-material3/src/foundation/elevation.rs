@@ -4,6 +4,32 @@ use fret_ui::element::{ShadowLayerStyle, ShadowStyle};
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
+/// Compute the Material 3 surface tint overlay alpha for a given elevation.
+///
+/// This matches Compose Material 3:
+/// `alpha = ((4.5 * ln(elevation + 1)) + 2) / 100` (and alpha is 0 when elevation is 0).
+pub fn surface_tint_alpha_for_elevation(elevation: Px) -> f32 {
+    let v = elevation.0;
+    if !v.is_finite() || v <= 0.0 {
+        return 0.0;
+    }
+
+    // `ln(elevation + 1)` is well-defined for v > 0.
+    (((4.5f32 * (v + 1.0).ln()) + 2.0) / 100.0).clamp(0.0, 1.0)
+}
+
+/// Apply a Material 3 tonal elevation overlay (surface tint) on top of `background`.
+pub fn apply_surface_tint(background: Color, surface_tint: Color, elevation: Px) -> Color {
+    let alpha = surface_tint_alpha_for_elevation(elevation);
+    if alpha <= 0.0 {
+        return background;
+    }
+
+    let mut overlay = surface_tint;
+    overlay.a = (overlay.a * alpha).clamp(0.0, 1.0);
+    composite_over(overlay, background)
+}
+
 /// Convert a Material elevation token (dp-like px values or web "level" numbers) into a Fret shadow.
 ///
 /// Source of truth (web box-shadow mapping):
@@ -106,4 +132,39 @@ fn material_web_shadow_layers(
     };
 
     (key, ambient)
+}
+
+fn composite_over(overlay: Color, base: Color) -> Color {
+    // Standard "source over" alpha compositing for non-premultiplied colors.
+    let oa = overlay.a.clamp(0.0, 1.0);
+    let ba = base.a.clamp(0.0, 1.0);
+
+    let out_a = oa + ba * (1.0 - oa);
+    if out_a <= 0.0 {
+        return Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        };
+    }
+
+    let o_pr = overlay.r * oa;
+    let o_pg = overlay.g * oa;
+    let o_pb = overlay.b * oa;
+
+    let b_pr = base.r * ba;
+    let b_pg = base.g * ba;
+    let b_pb = base.b * ba;
+
+    let out_pr = o_pr + b_pr * (1.0 - oa);
+    let out_pg = o_pg + b_pg * (1.0 - oa);
+    let out_pb = o_pb + b_pb * (1.0 - oa);
+
+    Color {
+        r: (out_pr / out_a).clamp(0.0, 1.0),
+        g: (out_pg / out_a).clamp(0.0, 1.0),
+        b: (out_pb / out_a).clamp(0.0, 1.0),
+        a: out_a,
+    }
 }
