@@ -126,6 +126,12 @@ Implication for Fret:
 - If “spring” is required for parity, decide whether to implement it in `fret-ui-material3`
   (policy-heavy) or extend `crates/fret-ui` with a small, renderer-agnostic spring primitive.
 
+Current progress:
+
+- Material Web v30 `md.sys.motion.spring.*` tokens are imported into `ThemeConfig.numbers`.
+- `fret-ui-material3` provides a small `SpringAnimator` in `crate::motion` and a `foundation::motion_scheme`
+  token reader for the 6 canonical specs.
+
 ### Tokens (typed access vs string keys)
 
 Compose:

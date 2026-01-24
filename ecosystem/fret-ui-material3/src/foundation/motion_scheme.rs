@@ -8,7 +8,9 @@
 
 use fret_ui::Theme;
 
+use crate::foundation::context::{MaterialMotionScheme, resolved_motion_scheme};
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::motion::SpringSpec;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MotionSchemeKey {
@@ -18,18 +20,6 @@ pub enum MotionSchemeKey {
     DefaultEffects,
     FastEffects,
     SlowEffects,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct SpringSpec {
-    pub damping: f32,
-    pub stiffness: f32,
-}
-
-impl SpringSpec {
-    pub const fn new(damping: f32, stiffness: f32) -> Self {
-        Self { damping, stiffness }
-    }
 }
 
 pub fn sys_spring(theme: &Theme, key: MotionSchemeKey) -> SpringSpec {
@@ -72,6 +62,18 @@ pub fn sys_spring(theme: &Theme, key: MotionSchemeKey) -> SpringSpec {
         damping: tokens.number_sys(damping_key, fallback.damping),
         stiffness: tokens.number_sys(stiffness_key, fallback.stiffness),
     }
+}
+
+pub fn sys_spring_in_scope<H: fret_ui::UiHost>(
+    cx: &fret_ui::elements::ElementContext<'_, H>,
+    theme: &Theme,
+    key: MotionSchemeKey,
+) -> SpringSpec {
+    // Material Web v30 currently ships a single `md.sys.motion.spring.*` set. We still surface the
+    // scheme concept so the component layer can converge on a stable API, and we can swap in
+    // expressive tokens later without per-component refactors.
+    let _scheme = resolved_motion_scheme(cx, MaterialMotionScheme::Standard);
+    sys_spring(theme, key)
 }
 
 #[cfg(test)]

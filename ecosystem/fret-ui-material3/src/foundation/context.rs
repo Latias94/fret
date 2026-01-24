@@ -32,10 +32,25 @@ pub enum MaterialRippleConfiguration {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaterialMotionScheme {
+    Standard,
+    Expressive,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MaterialMotionSchemeOverride {
+    /// Mask any inherited scheme and fall back to component defaults.
+    UseDefault,
+    /// Override the motion scheme for the subtree.
+    Custom(MaterialMotionScheme),
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct MaterialContextState {
     content_color: Option<MaterialContentColor>,
     ripple: Option<MaterialRippleConfiguration>,
+    motion_scheme: Option<MaterialMotionSchemeOverride>,
 }
 
 pub fn inherited_content_color_policy<H: UiHost>(
@@ -57,6 +72,23 @@ pub fn inherited_ripple_configuration<H: UiHost>(
 ) -> Option<MaterialRippleConfiguration> {
     cx.inherited_state_where::<MaterialContextState>(|st| st.ripple.is_some())
         .and_then(|st| st.ripple)
+}
+
+pub fn inherited_motion_scheme_override<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<MaterialMotionSchemeOverride> {
+    cx.inherited_state_where::<MaterialContextState>(|st| st.motion_scheme.is_some())
+        .and_then(|st| st.motion_scheme)
+}
+
+pub fn resolved_motion_scheme<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    fallback: MaterialMotionScheme,
+) -> MaterialMotionScheme {
+    match inherited_motion_scheme_override(cx) {
+        Some(MaterialMotionSchemeOverride::Custom(scheme)) => scheme,
+        Some(MaterialMotionSchemeOverride::UseDefault) | None => fallback,
+    }
 }
 
 #[track_caller]
@@ -108,6 +140,41 @@ pub fn with_material_ripple_configuration<H: UiHost, R>(
     let out = f(cx);
     cx.with_state(MaterialContextState::default, |st| {
         st.ripple = prev;
+    });
+    out
+}
+
+#[track_caller]
+pub fn with_material_motion_scheme<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    scheme: MaterialMotionScheme,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_motion_scheme_override(cx, MaterialMotionSchemeOverride::Custom(scheme), f)
+}
+
+#[track_caller]
+pub fn with_default_material_motion_scheme<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_motion_scheme_override(cx, MaterialMotionSchemeOverride::UseDefault, f)
+}
+
+#[track_caller]
+pub fn with_material_motion_scheme_override<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    override_policy: MaterialMotionSchemeOverride,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MaterialContextState::default, |st| {
+        let prev = st.motion_scheme;
+        st.motion_scheme = Some(override_policy);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MaterialContextState::default, |st| {
+        st.motion_scheme = prev;
     });
     out
 }
@@ -212,5 +279,56 @@ mod tests {
 
             assert_eq!(inherited_ripple_configuration(cx), None);
         });
+    }
+
+    #[test]
+    fn motion_scheme_inherits_masks_and_restores() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-context-motion-scheme",
+            |cx| {
+                assert_eq!(inherited_motion_scheme_override(cx), None);
+                assert_eq!(
+                    resolved_motion_scheme(cx, MaterialMotionScheme::Standard),
+                    MaterialMotionScheme::Standard
+                );
+
+                with_material_motion_scheme(cx, MaterialMotionScheme::Expressive, |cx| {
+                    assert_eq!(
+                        inherited_motion_scheme_override(cx),
+                        Some(MaterialMotionSchemeOverride::Custom(
+                            MaterialMotionScheme::Expressive
+                        ))
+                    );
+                    assert_eq!(
+                        resolved_motion_scheme(cx, MaterialMotionScheme::Standard),
+                        MaterialMotionScheme::Expressive
+                    );
+
+                    with_default_material_motion_scheme(cx, |cx| {
+                        assert_eq!(
+                            inherited_motion_scheme_override(cx),
+                            Some(MaterialMotionSchemeOverride::UseDefault)
+                        );
+                        assert_eq!(
+                            resolved_motion_scheme(cx, MaterialMotionScheme::Expressive),
+                            MaterialMotionScheme::Expressive
+                        );
+                    });
+
+                    assert_eq!(
+                        resolved_motion_scheme(cx, MaterialMotionScheme::Standard),
+                        MaterialMotionScheme::Expressive
+                    );
+                });
+
+                assert_eq!(inherited_motion_scheme_override(cx), None);
+            },
+        );
     }
 }
