@@ -5849,12 +5849,37 @@ mod tests {
             Effect::SetTimer { token, after, .. } if *after == close_delay => Some(*token),
             _ => None,
         });
-        let Some(_close_timer) = close_timer else {
+        let Some(close_timer) = close_timer else {
             panic!(
                 "expected unsafe pointer move to arm the submenu close-delay timer; effects={effects:?} unsafe_point={unsafe_outside_hit:?} geometry={geometry:?} hit={:?}",
                 ui.debug_hit_test(unsafe_outside_hit)
             );
         };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: safe_outside_hit,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::CancelTimer { token } if *token == close_timer)),
+            "expected safe-hover corridor pointer move to cancel close-delay timer; effects={effects:?} safe_point={safe_outside_hit:?} close_timer={close_timer:?} geometry={geometry:?}"
+        );
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::SetTimer { after, .. } if *after == close_delay)),
+            "expected safe-hover corridor pointer move to not arm a new close-delay timer; effects={effects:?} safe_point={safe_outside_hit:?} close_delay={close_delay:?} geometry={geometry:?}"
+        );
     }
 
     #[test]
