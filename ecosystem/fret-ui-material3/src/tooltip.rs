@@ -633,9 +633,14 @@ impl PlainTooltip {
                     .duration_ms_by_key("md.sys.motion.duration.short2")
                     .unwrap_or(100),
             );
-            let close_ticks = open_ticks;
+            let close_ticks = ms_to_frames(
+                theme
+                    .duration_ms_by_key("md.sys.motion.duration.short1")
+                    .unwrap_or(50),
+            );
             let easing = theme
-                .easing_by_key("md.sys.motion.easing.standard")
+                .easing_by_key("md.sys.motion.easing.emphasized")
+                .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"))
                 .unwrap_or(CubicBezier {
                     x1: 0.0,
                     y1: 0.0,

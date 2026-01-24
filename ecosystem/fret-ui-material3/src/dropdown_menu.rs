@@ -24,6 +24,7 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::menu::{Menu, MenuEntry};
+use crate::motion::ms_to_frames;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DropdownMenuAlign {
@@ -152,7 +153,34 @@ impl DropdownMenu {
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let overlay_presence = OverlayPresence::instant(is_open);
+            let open_ticks = ms_to_frames(
+                theme.duration_ms_by_key("md.sys.motion.duration.short4")
+                    .unwrap_or(200),
+            );
+            let close_ticks = ms_to_frames(
+                theme.duration_ms_by_key("md.sys.motion.duration.short2")
+                    .unwrap_or(100),
+            );
+            let easing = theme
+                .easing_by_key("md.sys.motion.easing.emphasized")
+                .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"))
+                .unwrap_or(fret_ui::theme::CubicBezier {
+                    x1: 0.0,
+                    y1: 0.0,
+                    x2: 1.0,
+                    y2: 1.0,
+                });
+            let motion = OverlayController::transition_with_durations_and_cubic_bezier(
+                cx,
+                is_open,
+                open_ticks,
+                close_ticks,
+                easing,
+            );
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
 
@@ -231,6 +259,22 @@ impl DropdownMenu {
                         ]
                     },
                 );
+
+                let opacity = motion.progress;
+                let scale = 0.95 + 0.05 * motion.progress;
+                let origin = popper::popper_content_transform_origin(&layout, anchor, None);
+                let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
+                let transform = fret_core::Transform2D::translation(origin)
+                    * fret_core::Transform2D::scale_uniform(scale)
+                    * fret_core::Transform2D::translation(origin_inv);
+                let overlay_root =
+                    fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
+                        cx,
+                        opacity,
+                        transform,
+                        overlay_presence.interactive,
+                        vec![overlay_root],
+                    );
 
                 let mut request = overlay_controller::OverlayRequest::dismissible_menu(
                     trigger_id,

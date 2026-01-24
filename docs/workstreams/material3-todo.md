@@ -201,7 +201,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Transition timelines support theme cubic-bezier easing (overlay motion parity).
   - Evidence: `ecosystem/fret-ui-headless/src/transition.rs` (`update_with_cubic_bezier`),
     `ecosystem/fret-ui-kit/src/declarative/transition.rs` (`drive_transition_with_durations_and_cubic_bezier`),
-    `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`transition_with_durations_and_cubic_bezier`).
+    `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`transition_with_durations_and_cubic_bezier`),
+    `ecosystem/fret-ui-material3/src/dialog.rs` (overlay transition),
+    `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (menu transition),
+    `ecosystem/fret-ui-material3/src/tooltip.rs` (tooltip transition),
+    `ecosystem/fret-ui-material3/src/snackbar.rs` (toast-layer motion tokens).
 - [ ] Overlay outcomes (menu, dialog, tooltip):
   - [x] Escape dismissal (menu dropdown)
     - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu)
