@@ -117,11 +117,13 @@ Related ADRs:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_can_disable_outside_pointer_events_while_open`)
 - Shadcn parity regression:
   - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_outside_press_click_through_closes_without_overriding_underlay_focus`)
+  - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_remains_click_through`)
   - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_click_through_outside_press_closes_and_focuses_underlay`)
   - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_modal_outside_press_closes_without_activating_underlay`)
   - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_submenu_safe_hover_corridor_observes_pointer_move_under_pointer_occlusion`)
   - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_close_transition_is_click_through_and_drops_pointer_occlusion`)
   - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_modal_outside_press_closes_without_activating_underlay`)
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_is_click_through_and_drops_pointer_occlusion`)
 
 ## Next (P0 follow-ups)
 

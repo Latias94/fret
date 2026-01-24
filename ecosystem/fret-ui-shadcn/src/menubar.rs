@@ -3678,6 +3678,168 @@ mod tests {
     }
 
     #[test]
+    fn menubar_close_transition_remains_click_through() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        let underlay_clicked = app.models_mut().insert(false);
+
+        // Frame 0: render and open the File menu.
+        render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file_node = menu_trigger_node_id(&snap0, "File");
+        let file_pos = center(menu_trigger_bounds(&snap0, "File"));
+        let underlay_node = snap0
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("underlay"))
+            .map(|n| n.id)
+            .expect("underlay node");
+
+        ui.set_focus(Some(file_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 1: menu should be interactive.
+        render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+
+        // Click the underlay to close the menu (click-through dismissal).
+        let underlay_pos = Point::new(Px(10.0), Px(230.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 2: close transition. The menu should no longer be interactive, but the menu content
+        // may remain present during motion. Underlay must remain interactive (click-through).
+        render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+        );
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(!menu_trigger_expanded(snap2, "File"));
+        assert!(
+            snap2
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New")),
+            "expected menu content to remain present during close transition"
+        );
+        assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
+        assert_eq!(ui.focus(), Some(underlay_node));
+
+        // Click again while the menu is still present: must continue to be click-through.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_clicked),
+            Some(false),
+            "expected underlay click to remain interactive during close transition"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected focus to remain on underlay"
+        );
+    }
+
+    #[test]
     fn menubar_items_have_collection_position_metadata_excluding_separators() {
         let window = AppWindowId::default();
         let mut app = App::new();
