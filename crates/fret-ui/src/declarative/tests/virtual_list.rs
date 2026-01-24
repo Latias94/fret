@@ -1,5 +1,6 @@
 use super::*;
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 #[test]
 fn virtual_list_computes_visible_range_after_first_layout() {
@@ -1208,6 +1209,131 @@ fn virtual_list_skips_redundant_measures_for_clean_measured_rows() {
 
     // Note: `items_revision` bumps are handled by the normal invalidation path (layout-dirty rows
     // should re-measure as needed). This test focuses on the steady-state scroll hot path.
+}
+
+#[test]
+fn virtual_list_row_view_cache_reuses_rows_across_small_scroll_deltas() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(30.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let render_counts: Arc<Mutex<HashMap<u64, usize>>> = Arc::new(Mutex::new(HashMap::new()));
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        render_counts: Arc<Mutex<HashMap<u64, usize>>>,
+    ) -> AnyElement {
+        let options = crate::element::VirtualListOptions::new(Px(10.0), 0);
+        cx.virtual_list_keyed_with_layout(
+            crate::element::LayoutStyle::default(),
+            20,
+            options,
+            scroll_handle,
+            |i| i as crate::ItemKey,
+            move |cx, index| {
+                let key = index as u64;
+                let render_counts = Arc::clone(&render_counts);
+
+                let mut view_cache = crate::element::ViewCacheProps::default();
+                view_cache.cache_key = key;
+                cx.view_cache(view_cache, move |cx| {
+                    render_counts
+                        .lock()
+                        .expect("render_counts lock")
+                        .entry(key)
+                        .and_modify(|v| *v += 1)
+                        .or_insert(1);
+
+                    let mut style = crate::element::LayoutStyle::default();
+                    style.size.height = crate::element::Length::Px(Px(10.0));
+                    vec![cx.container(
+                        crate::element::ContainerProps {
+                            layout: style,
+                            ..Default::default()
+                        },
+                        |_| Vec::new(),
+                    )]
+                })
+            },
+        )
+    }
+
+    // Frame 0: establish viewport size so the visible range can be computed.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: mount initial visible rows (0..=2).
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 2: scroll by one row; should only render the newly revealed row (3).
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(10.0)));
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 3: scroll by one more row; should only render the newly revealed row (4).
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(20.0)));
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let counts = render_counts.lock().expect("render_counts lock");
+    assert_eq!(
+        counts.len(),
+        5,
+        "expected only the 5 unique rows observed across scroll steps to render"
+    );
+    for (key, count) in counts.iter() {
+        assert_eq!(*count, 1, "row {key} rendered unexpectedly multiple times");
+    }
 }
 
 #[test]
