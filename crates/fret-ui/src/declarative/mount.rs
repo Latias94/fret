@@ -115,6 +115,21 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
     })
 }
 
+#[cfg(all(feature = "diagnostics", not(target_arch = "wasm32")))]
+fn view_cache_gc_stopgap_disabled() -> bool {
+    use std::sync::OnceLock;
+
+    static DISABLED: OnceLock<bool> = OnceLock::new();
+    *DISABLED.get_or_init(|| {
+        std::env::var_os("FRET_UI_DISABLE_VIEW_CACHE_GC_STOPGAP").is_some_and(|v| !v.is_empty())
+    })
+}
+
+#[cfg(not(all(feature = "diagnostics", not(target_arch = "wasm32"))))]
+fn view_cache_gc_stopgap_disabled() -> bool {
+    false
+}
+
 /// Render a declarative element tree into an existing `UiTree` root.
 ///
 /// Call this once per frame *before* `layout_all`/`paint_all`, for the relevant window.
@@ -347,7 +362,7 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            if view_cache_has_reuse_roots {
+            if view_cache_has_reuse_roots && !view_cache_gc_stopgap_disabled() {
                 return true;
             }
             let reachable = reachable_from_layers.get_or_insert_with(|| {
@@ -622,7 +637,7 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            if view_cache_has_reuse_roots {
+            if view_cache_has_reuse_roots && !view_cache_gc_stopgap_disabled() {
                 return true;
             }
             let reachable = reachable_from_layers.get_or_insert_with(|| {
