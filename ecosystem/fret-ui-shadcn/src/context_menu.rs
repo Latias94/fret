@@ -3237,6 +3237,8 @@ impl ContextMenu {
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
@@ -3245,6 +3247,7 @@ mod tests {
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_core::{TextStyle, UiServices};
     use fret_runtime::FrameId;
+    use fret_ui::element::PressableA11y;
     use fret_ui::tree::UiTree;
 
     #[test]
@@ -3422,6 +3425,91 @@ mod tests {
                     },
                     |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
                 )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_focusable_trigger_with_underlay(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        underlay_clicked: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-underlay",
+            move |cx| {
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.left = Some(Px(0.0));
+                            layout.inset.right = Some(Px(0.0));
+                            layout.inset.top = Some(Px(60.0));
+                            layout.inset.bottom = Some(Px(0.0));
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_toggle_bool(&underlay_clicked);
+                        Vec::new()
+                    },
+                );
+
+                let trigger = ContextMenu::new(open).into_element(
+                    cx,
+                    |cx| {
+                        cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st| {
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        )
+                    },
+                    |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                );
+
+                // Keep the context-menu trigger above the underlay so the right-click open gesture
+                // cannot be intercepted by the "underlay" pressable.
+                vec![trigger, underlay]
             },
         );
         ui.set_root(root);
@@ -3629,6 +3717,130 @@ mod tests {
             focus, trigger,
             "pointer-open should focus menu content/roving container rather than keeping trigger focus"
         );
+    }
+
+    #[test]
+    fn context_menu_modal_outside_press_closes_without_activating_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // Frame 1: build the tree and establish stable trigger bounds.
+        let root = render_frame_focusable_trigger_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let trigger_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        // Right-click to open the context menu (modal=true by default).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 2: open, ensure occlusion is active.
+        let _ = render_frame_focusable_trigger_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+            "expected modal context menu to install pointer occlusion"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let underlay_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("underlay"))
+            .map(|n| n.id)
+            .expect("underlay node");
+
+        // Click the underlay: should close the menu, but must not activate/focus underlay.
+        let underlay_pos = Point::new(Px(10.0), Px(230.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
+        assert_ne!(ui.focus(), Some(underlay_node));
     }
 
     #[test]
