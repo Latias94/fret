@@ -24,8 +24,7 @@ use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, advance_indication_for_pressable_with_ripple_bounds,
-    material_ink_layer_with_bounds,
+    IndicationConfig, RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
@@ -482,10 +481,6 @@ fn navigation_rail_item<H: UiHost>(
                 let bounds = cx
                     .last_bounds_for_element(cx.root_id())
                     .unwrap_or(cx.bounds);
-                let last_down = cx
-                    .with_state(fret_ui::element::PointerRegionState::default, |st| {
-                        st.last_down
-                    });
 
                 let ripple_base_opacity = theme
                     .number_by_key("md.comp.navigation-rail.pressed.state-layer.opacity")
@@ -503,33 +498,24 @@ fn navigation_rail_item<H: UiHost>(
                     fret_core::Size::new(indicator_w, indicator_h),
                 );
 
-                let indication = advance_indication_for_pressable_with_ripple_bounds(
-                    cx,
-                    pressable_id,
-                    now_frame,
-                    bounds,
-                    indicator_bounds,
-                    last_down,
-                    is_pressed,
-                    state_layer_target,
-                    ripple_base_opacity,
-                    config,
-                );
-
                 let radius = theme
                     .metric_by_key("md.comp.navigation-rail.active-indicator.shape")
                     .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
                     .unwrap_or(Px(9999.0));
                 let corner_radii = Corners::all(radius);
-                let overlay = material_ink_layer_with_bounds(
+                let overlay = material_ink_layer_for_pressable_with_ripple_bounds(
                     cx,
+                    pressable_id,
+                    now_frame,
+                    indicator_bounds,
                     indicator_bounds,
                     corner_radii,
                     RippleClip::Bounded,
                     state_layer_color,
-                    indication.state_layer_opacity,
-                    indication.ripple_frame,
-                    indication.want_frames,
+                    is_pressed,
+                    state_layer_target,
+                    ripple_base_opacity,
+                    config,
                 );
 
                 let icon_slot = cx.named("icon_slot", |cx| {

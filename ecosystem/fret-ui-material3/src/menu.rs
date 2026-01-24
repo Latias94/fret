@@ -24,7 +24,7 @@ use fret_ui::{Theme, UiHost};
 use crate::foundation::content::MaterialContentDefaults;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, material_ink_layer_for_pressable,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 
@@ -413,14 +413,6 @@ fn material_menu_item<H: UiHost>(
                     .duration_ms_by_key("md.sys.motion.duration.short2")
                     .unwrap_or(100);
 
-                let bounds = cx
-                    .last_bounds_for_element(cx.root_id())
-                    .unwrap_or(cx.bounds);
-                let last_down = cx
-                    .with_state(fret_ui::element::PointerRegionState::default, |st| {
-                        st.last_down
-                    });
-
                 let ripple_base_opacity = theme
                     .number_by_key("md.comp.menu.list-item.pressed.state-layer.opacity")
                     .unwrap_or(0.1);
@@ -431,26 +423,17 @@ fn material_menu_item<H: UiHost>(
                     ripple_radius: None,
                     easing,
                 };
-                let indication = advance_indication_for_pressable(
+                let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
                     now_frame,
-                    bounds,
-                    last_down,
+                    Corners::all(Px(0.0)),
+                    RippleClip::Bounded,
+                    state_layer_color,
                     is_pressed,
                     state_layer_target,
                     ripple_base_opacity,
                     config,
-                );
-
-                let overlay = material_ink_layer(
-                    cx,
-                    Corners::all(Px(0.0)),
-                    RippleClip::Bounded,
-                    state_layer_color,
-                    indication.state_layer_opacity,
-                    indication.ripple_frame,
-                    indication.want_frames,
                 );
 
                 let label_el = menu_item_label(cx, theme, &item.label, label_color);

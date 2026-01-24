@@ -140,6 +140,48 @@ pub fn advance_indication_for_pressable<H: UiHost>(
     })
 }
 
+pub fn material_ink_layer_for_pressable<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    pressable_id: fret_ui::elements::GlobalElementId,
+    now_frame: u64,
+    corner_radii: Corners,
+    ripple_clip: RippleClip,
+    state_layer_color: Color,
+    pressed: bool,
+    state_layer_target: f32,
+    ripple_base_opacity: f32,
+    config: IndicationConfig,
+) -> AnyElement {
+    let bounds = cx
+        .last_bounds_for_element(cx.root_id())
+        .unwrap_or(cx.bounds);
+    let last_down = cx.with_state(fret_ui::element::PointerRegionState::default, |st| {
+        st.last_down
+    });
+
+    let indication = advance_indication_for_pressable(
+        cx,
+        pressable_id,
+        now_frame,
+        bounds,
+        last_down,
+        pressed,
+        state_layer_target,
+        ripple_base_opacity,
+        config,
+    );
+
+    material_ink_layer(
+        cx,
+        corner_radii,
+        ripple_clip,
+        state_layer_color,
+        indication.state_layer_opacity,
+        indication.ripple_frame,
+        indication.want_frames,
+    )
+}
+
 pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     pressable_id: fret_ui::elements::GlobalElementId,
@@ -227,6 +269,52 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
             want_frames,
         }
     })
+}
+
+pub fn material_ink_layer_for_pressable_with_ripple_bounds<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    pressable_id: fret_ui::elements::GlobalElementId,
+    now_frame: u64,
+    paint_bounds: Rect,
+    ripple_bounds: Rect,
+    corner_radii: Corners,
+    ripple_clip: RippleClip,
+    state_layer_color: Color,
+    pressed: bool,
+    state_layer_target: f32,
+    ripple_base_opacity: f32,
+    config: IndicationConfig,
+) -> AnyElement {
+    let bounds = cx
+        .last_bounds_for_element(cx.root_id())
+        .unwrap_or(cx.bounds);
+    let last_down = cx.with_state(fret_ui::element::PointerRegionState::default, |st| {
+        st.last_down
+    });
+
+    let indication = advance_indication_for_pressable_with_ripple_bounds(
+        cx,
+        pressable_id,
+        now_frame,
+        bounds,
+        ripple_bounds,
+        last_down,
+        pressed,
+        state_layer_target,
+        ripple_base_opacity,
+        config,
+    );
+
+    material_ink_layer_with_bounds(
+        cx,
+        paint_bounds,
+        corner_radii,
+        ripple_clip,
+        state_layer_color,
+        indication.state_layer_opacity,
+        indication.ripple_frame,
+        indication.want_frames,
+    )
 }
 
 pub fn material_ink_layer<H: UiHost>(
