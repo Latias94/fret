@@ -792,6 +792,7 @@ pub struct UiTree<H: UiHost> {
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     viewport_roots: Vec<(NodeId, Rect)>,
+    pending_barrier_relayouts: Vec<NodeId>,
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
@@ -872,6 +873,7 @@ impl<H: UiHost> Default for UiTree<H> {
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             viewport_roots: Vec::new(),
+            pending_barrier_relayouts: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             debug_view_cache_roots: Vec::new(),
@@ -2006,6 +2008,95 @@ impl<H: UiHost> UiTree<H> {
                 UiDebugInvalidationSource::Other,
             );
         }
+    }
+
+    /// Set a node's child list without forcing ancestor relayout.
+    ///
+    /// This is intended for explicit layout barriers (virtualization, scroll, etc.) whose bounds
+    /// are stable and do not depend on the size or presence of their children. In these cases,
+    /// structural changes should not require re-laying out ancestors, but the subtree still needs
+    /// a contained relayout to place newly mounted children.
+    ///
+    /// The tree will schedule a contained relayout for `parent` during the next layout pass.
+    #[track_caller]
+    pub(crate) fn set_children_barrier(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        let Some(_old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
+            return;
+        };
+
+        // Keep parent pointers consistent even when the child list is unchanged.
+        let same_children = self
+            .nodes
+            .get(parent)
+            .is_some_and(|n| n.children.as_slice() == children.as_slice());
+        if same_children {
+            for &child in &children {
+                if let Some(n) = self.nodes.get_mut(child) {
+                    n.parent = Some(parent);
+                }
+            }
+            return;
+        }
+
+        #[cfg(feature = "diagnostics")]
+        if self.debug_enabled {
+            let location = std::panic::Location::caller();
+            self.debug_set_children_writes.insert(
+                parent,
+                UiDebugSetChildrenWrite {
+                    parent,
+                    frame_id: self.debug_stats.frame_id,
+                    old_len: _old_len.min(u32::MAX as usize) as u32,
+                    new_len: children.len().min(u32::MAX as usize) as u32,
+                    file: location.file(),
+                    line: location.line(),
+                    column: location.column(),
+                },
+            );
+        }
+
+        let Some(old_children) = self
+            .nodes
+            .get_mut(parent)
+            .map(|n| std::mem::take(&mut n.children))
+        else {
+            return;
+        };
+
+        for old in old_children {
+            if let Some(n) = self.nodes.get_mut(old)
+                && n.parent == Some(parent)
+            {
+                n.parent = None;
+            }
+        }
+
+        for &child in &children {
+            if let Some(n) = self.nodes.get_mut(child) {
+                n.parent = Some(parent);
+            }
+        }
+
+        if let Some(n) = self.nodes.get_mut(parent) {
+            n.children = children;
+            n.invalidation.hit_test = true;
+            n.invalidation.layout = true;
+            n.invalidation.paint = true;
+        }
+
+        // Structural changes must invalidate paint/hit-testing so routing and rendering see the
+        // updated tree, but we intentionally avoid forcing a full ancestor relayout.
+        self.mark_invalidation_with_source(
+            parent,
+            Invalidation::HitTestOnly,
+            UiDebugInvalidationSource::Other,
+        );
+
+        self.pending_barrier_relayouts.push(parent);
+    }
+
+    pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {
+        std::mem::take(&mut self.pending_barrier_relayouts)
     }
 
     #[track_caller]

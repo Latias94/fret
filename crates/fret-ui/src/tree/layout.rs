@@ -137,6 +137,16 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
+            self.layout_pending_barrier_relayouts_if_needed(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                &mut viewport_cursor,
+            );
+        }
+
+        if pass_kind == LayoutPassKind::Final {
             self.repair_view_cache_root_bounds_from_engine_if_needed(app);
         }
 
@@ -255,6 +265,76 @@ impl<H: UiHost> UiTree<H> {
                 }
                 stack.extend(n.children.iter().copied());
             }
+        }
+    }
+
+    fn layout_pending_barrier_relayouts_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        viewport_cursor: &mut usize,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+
+        let pending = self.take_pending_barrier_relayouts();
+        if pending.is_empty() {
+            return;
+        }
+
+        let mut unique = HashSet::<NodeId>::with_capacity(pending.len());
+        let mut targets: Vec<NodeId> = Vec::with_capacity(pending.len());
+        for node in pending {
+            if unique.insert(node) {
+                targets.push(node);
+            }
+        }
+
+        for root in targets {
+            let Some(node) = self.nodes.get(root) else {
+                continue;
+            };
+            if !node.invalidation.layout {
+                continue;
+            }
+
+            // Barrier relayouts intentionally do not invalidate ancestors. Prefer the retained
+            // bounds (stable barrier viewport), but fall back to resolving bounds from the parent
+            // layout-engine rect when needed (e.g. newly mounted nodes with default bounds).
+            let mut bounds = node.bounds;
+            if (bounds.size == Size::default() || bounds.origin == Point::default())
+                && let Some(parent) = node.parent
+                && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
+                && let Some(local) = self.layout_engine_child_local_rect(parent, root)
+            {
+                let resolved = Rect::new(
+                    Point::new(
+                        Px(parent_bounds.origin.x.0 + local.origin.x.0),
+                        Px(parent_bounds.origin.y.0 + local.origin.y.0),
+                    ),
+                    local.size,
+                );
+                if resolved.size != Size::default() {
+                    bounds = resolved;
+                }
+            }
+
+            if bounds.size == Size::default() {
+                continue;
+            }
+
+            let _ =
+                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                viewport_cursor,
+            );
         }
     }
 
