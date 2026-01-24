@@ -703,7 +703,7 @@ mod tests {
             let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
             let mut availability: HashMap<CommandId, bool> = HashMap::new();
             availability.insert(cmd.clone(), false);
-            svc.set_snapshot(
+            let _token = svc.push_snapshot(
                 window,
                 WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
                     .with_action_availability(Some(Arc::new(availability))),
