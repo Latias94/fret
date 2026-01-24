@@ -2212,6 +2212,9 @@ impl ContextMenu {
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
+                let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id_for_children = first_item_focus_id.clone();
+                let first_item_focus_id_for_request = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -2626,6 +2629,8 @@ impl ContextMenu {
                                                         let submenu_for_item = submenu_for_content.clone();
                                                         let overlay_root_name_for_controls =
                                                             overlay_root_name_for_controls.clone();
+                                                        let first_item_focus_id_for_items =
+                                                            first_item_focus_id_for_children.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(
@@ -2676,6 +2681,13 @@ impl ContextMenu {
                                                                         geometry_hint,
                                                                     )
                                                                     .unwrap_or(false);
+
+                                                                    if !disabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
+                                                                    }
 
                                                                     if !has_submenu && !disabled {
                                                                         cx.pressable_dispatch_command_if_enabled_opt(command.clone());
@@ -2804,49 +2816,34 @@ impl ContextMenu {
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
+                                                        let first_item_focus_id_for_items =
+                                                            first_item_focus_id_for_children.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
-                                                            let checked_now = cx
-                                                                .watch_model(&checked)
-                                                                .copied()
-                                                                .unwrap_or(false);
-                                                            cx.pressable(
-                                                                PressableProps {
-                                                                    layout: {
-                                                                        let mut layout =
-                                                                            LayoutStyle::default();
-                                                                        layout.size.width =
-                                                                            Length::Fill;
-                                                                        layout.size.min_height =
-                                                                            Some(Px(28.0));
-                                                                        layout
-                                                                    },
-                                                                    enabled: !disabled,
-                                                                    focusable: !disabled,
-                                                                    focus_ring: Some(ring),
-                                                                    a11y: menu::item::menu_item_checkbox_a11y(
-                                                                        a11y_label.clone(),
-                                                                        checked_now,
-                                                                    )
-                                                                    .with_collection_position(
-                                                                        collection_index,
-                                                                        item_count,
-                                                                    ),
-                                                                    ..Default::default()
-                                                                },
-                                                                move |cx, st| {
+                                                            cx.pressable_with_id_props(
+                                                                move |cx, st, item_id| {
                                                                     let checked_now = cx
                                                                         .watch_model(&checked)
                                                                         .copied()
                                                                         .unwrap_or(false);
 
                                                                     if !disabled {
+                                                                        if first_item_focus_id_for_items
+                                                                            .get()
+                                                                            .is_none()
+                                                                        {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
                                                                         menu::checkbox_item::wire_toggle_on_activate(
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(
+                                                                        command.clone(),
+                                                                    );
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2861,15 +2858,12 @@ impl ContextMenu {
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
                                                                     let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
+                                                                    if st.hovered || st.pressed || st.focused {
                                                                         row_bg = accent;
                                                                         row_fg = accent_fg;
                                                                     }
 
-                                                                    menu_row_children(
+                                                                    let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
@@ -2879,16 +2873,42 @@ impl ContextMenu {
                                                                         Some(checked_now),
                                                                         disabled,
                                                                         row_bg,
-                                                                    row_fg,
-                                                                    text_style.clone(),
-                                                                    font_size,
-                                                                    font_line_height,
-                                                                    pad_x,
-                                                                    pad_x,
-                                                                    pad_y,
-                                                                    radius_sm,
-                                                                    text_disabled,
-                                                                    )
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        font_size,
+                                                                        font_line_height,
+                                                                        pad_x,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                    );
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.min_height =
+                                                                                Some(Px(28.0));
+                                                                            layout
+                                                                        },
+                                                                        enabled: !disabled,
+                                                                        focusable: !disabled,
+                                                                        focus_ring: Some(ring),
+                                                                        a11y: menu::item::menu_item_checkbox_a11y(
+                                                                            a11y_label.clone(),
+                                                                            checked_now,
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    (props, children)
                                                                 },
                                                             )
                                                         }));
@@ -2916,6 +2936,8 @@ impl ContextMenu {
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
+                                                        let first_item_focus_id_for_items =
+                                                            first_item_focus_id_for_children.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             let selected = cx
@@ -2926,48 +2948,26 @@ impl ContextMenu {
                                                                 selected.as_ref(),
                                                                 &value,
                                                             );
-                                                            cx.pressable(
-                                                                PressableProps {
-                                                                    layout: {
-                                                                        let mut layout =
-                                                                            LayoutStyle::default();
-                                                                        layout.size.width =
-                                                                            Length::Fill;
-                                                                        layout.size.min_height =
-                                                                            Some(Px(28.0));
-                                                                        layout
-                                                                    },
-                                                                    enabled: !disabled,
-                                                                    focusable: !disabled,
-                                                                    focus_ring: Some(ring),
-                                                                    a11y: menu::item::menu_item_radio_a11y(
-                                                                        a11y_label.clone(),
-                                                                        is_selected,
-                                                                    )
-                                                                    .with_collection_position(
-                                                                        collection_index,
-                                                                        item_count,
-                                                                    ),
-                                                                    ..Default::default()
-                                                                },
-                                                                move |cx, st| {
-                                                                    let selected = cx
-                                                                        .watch_model(&group_value)
-                                                                        .cloned()
-                                                                        .flatten();
-                                                                    let is_selected = menu::radio_group::is_selected(
-                                                                        selected.as_ref(),
-                                                                        &value,
-                                                                    );
-
+                                                            cx.pressable_with_id_props(
+                                                                move |cx, st, item_id| {
                                                                     if !disabled {
+                                                                        if first_item_focus_id_for_items
+                                                                            .get()
+                                                                            .is_none()
+                                                                        {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
                                                                         menu::radio_group::wire_select_on_activate(
                                                                             cx,
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(
+                                                                        command.clone(),
+                                                                    );
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2982,15 +2982,12 @@ impl ContextMenu {
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
                                                                     let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
+                                                                    if st.hovered || st.pressed || st.focused {
                                                                         row_bg = accent;
                                                                         row_fg = accent_fg;
                                                                     }
 
-                                                                    menu_row_children(
+                                                                    let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
@@ -3009,7 +3006,33 @@ impl ContextMenu {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
-                                                                    )
+                                                                    );
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.min_height =
+                                                                                Some(Px(28.0));
+                                                                            layout
+                                                                        },
+                                                                        enabled: !disabled,
+                                                                        focusable: !disabled,
+                                                                        focus_ring: Some(ring),
+                                                                        a11y: menu::item::menu_item_radio_a11y(
+                                                                            a11y_label.clone(),
+                                                                            is_selected,
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    (props, children)
                                                                 },
                                                             )
                                                         }));
@@ -3196,7 +3219,8 @@ impl ContextMenu {
                     overlay_children,
                     overlay_root_name,
                     menu::root::MenuInitialFocusTargets::new()
-                        .pointer_content_focus(content_focus_id.get()),
+                        .pointer_content_focus(content_focus_id.get())
+                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
@@ -3514,12 +3538,12 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        assert!(
-            snap.nodes.iter().any(|n| {
-                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")
-            }),
-            "menu items should render after Shift+F10 opens the context menu"
-        );
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+        assert_eq!(ui.focus(), Some(alpha.id));
     }
 
     #[test]
