@@ -1194,6 +1194,12 @@ impl MenubarMenuEntries {
                         content_focus_id_for_children.clone();
                     let content_focus_id_for_children_for_submenu =
                         content_focus_id_for_children.clone();
+                    let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> =
+                        Rc::new(Cell::new(None));
+                    let first_item_focus_id_for_request = first_item_focus_id.clone();
+                    let first_item_focus_id_for_children = first_item_focus_id.clone();
+                    let first_item_focus_id_for_children_for_content =
+                        first_item_focus_id_for_children.clone();
                     let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let (overlay_children, dismissible_on_pointer_move) =
@@ -1521,6 +1527,8 @@ impl MenubarMenuEntries {
                                                                 submenu_for_content.clone();
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay_for_content.clone();
+                                                            let first_item_focus_id_for_items =
+                                                                first_item_focus_id_for_children_for_content.clone();
 
                                                             let theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
@@ -1529,6 +1537,12 @@ impl MenubarMenuEntries {
                                                                         .watch_model(&checked)
                                                                         .copied()
                                                                         .unwrap_or(false);
+                                                                    if item_enabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
+                                                                    }
 
                                                                     let _ = menu::sub_trigger::wire(
                                                                         cx,
@@ -1670,6 +1684,8 @@ impl MenubarMenuEntries {
                                                                 submenu_for_content.clone();
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay_for_content.clone();
+                                                            let first_item_focus_id_for_items =
+                                                                first_item_focus_id_for_children_for_content.clone();
 
                                                             let theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
@@ -1682,6 +1698,12 @@ impl MenubarMenuEntries {
                                                                         selected.as_ref(),
                                                                         &value,
                                                                     );
+                                                                    if item_enabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
+                                                                    }
 
                                                                     let _ = menu::sub_trigger::wire(
                                                                         cx,
@@ -1881,15 +1903,23 @@ impl MenubarMenuEntries {
                                                                let pad_left =
                                                                    if item.inset { pad_x_inset } else { pad_x };
                                                                let theme = theme.clone();
-                                                               let overlay_root_name_for_controls =
-                                                                   overlay_root_name_for_controls.clone();
-                                                              out.push(cx.keyed(value.clone(), move |cx| {
-                                                                  cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                    let geometry_hint = submenu_desired_for_hint.map(|desired| {
-                                                                        menu::sub_trigger::MenuSubTriggerGeometryHint {
-                                                                            outer,
-                                                                            desired,
-                                                                        }
+                                                                let overlay_root_name_for_controls =
+                                                                    overlay_root_name_for_controls.clone();
+                                                                let first_item_focus_id_for_items =
+                                                                    first_item_focus_id_for_children_for_content.clone();
+                                                               out.push(cx.keyed(value.clone(), move |cx| {
+                                                                   cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                     if item_enabled {
+                                                                         if first_item_focus_id_for_items.get().is_none() {
+                                                                             first_item_focus_id_for_items
+                                                                                 .set(Some(item_id));
+                                                                         }
+                                                                     }
+                                                                     let geometry_hint = submenu_desired_for_hint.map(|desired| {
+                                                                         menu::sub_trigger::MenuSubTriggerGeometryHint {
+                                                                             outer,
+                                                                             desired,
+                                                                         }
                                                                     });
                                                                     let expanded = menu::sub_trigger::wire(
                                                                         cx,
@@ -2996,7 +3026,8 @@ impl MenubarMenuEntries {
                         overlay_children,
                         overlay_root_name,
                         menu::root::MenuInitialFocusTargets::new()
-                            .pointer_content_focus(content_focus_id.get()),
+                            .pointer_content_focus(content_focus_id.get())
+                            .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                         on_dismiss_request.clone(),
                         dismissible_on_pointer_move,
                         false,
