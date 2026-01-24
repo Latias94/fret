@@ -5,6 +5,10 @@ param(
   [string]$RepoRoot,
   [bool]$NormalizeOpenSuffix = $true,
   [int]$TopMissing = 50,
+  [switch]$GroupMissingByPrefix,
+  [int]$TopGroups = 25,
+  [string]$GroupSplitPattern = "[\\.-]",
+  [string]$FilterMissingPrefix,
   [switch]$ShowUsed,
   [switch]$ShowMissing,
   [switch]$AsMarkdown
@@ -78,7 +82,7 @@ if ($total -gt 0) {
 }
 
 if ($AsMarkdown) {
-  Write-Output ("- `{0}` goldens: {1} files, {2} keys; {3} keys referenced ({4}%), {5} keys not referenced" -f $Kind, $totalFiles, $total, $usedCount, $coverage, $missingCount)
+  Write-Output ('- `{0}` goldens: {1} files, {2} keys; {3} keys referenced ({4}%), {5} keys not referenced' -f $Kind, $totalFiles, $total, $usedCount, $coverage, $missingCount)
 } else {
   Write-Host ("Golden coverage ({0}/{1})" -f $Kind, $Style)
   Write-Host ("  RepoRoot:  {0}" -f $RepoRoot)
@@ -100,4 +104,43 @@ if ($ShowMissing) {
   Write-Host ""
   Write-Host ("Not referenced (first {0}):" -f $TopMissing)
   $missingNames | Select-Object -First $TopMissing | ForEach-Object { Write-Host ("  {0}" -f $_) }
+}
+
+if ($GroupMissingByPrefix) {
+  $prefixes = $missingNames | ForEach-Object {
+    $parts = $_ -split $GroupSplitPattern
+    if ($parts.Length -gt 0) { $parts[0] } else { $_ }
+  }
+
+  $groups = $prefixes | Group-Object | Sort-Object Count -Descending
+  if ($AsMarkdown) {
+    Write-Output ""
+    Write-Output ("- Missing keys grouped by prefix (Top {0}):" -f $TopGroups)
+    $groups | Select-Object -First $TopGroups | ForEach-Object {
+      Write-Output ('  - `{0}`: {1}' -f $_.Name, $_.Count)
+    }
+  } else {
+    Write-Host ""
+    Write-Host ("Missing keys grouped by prefix (Top {0}):" -f $TopGroups)
+    $groups | Select-Object -First $TopGroups | Format-Table -AutoSize Count, Name
+  }
+}
+
+if ($FilterMissingPrefix) {
+  $prefix = $FilterMissingPrefix.Trim()
+  if ($prefix.Length -eq 0) {
+    throw "FilterMissingPrefix is empty."
+  }
+
+  $filtered = $missingNames | Where-Object { $_ -like ("{0}*" -f $prefix) }
+
+  if ($AsMarkdown) {
+    Write-Output ""
+    Write-Output ('- Missing keys with prefix `{0}`: {1}' -f $prefix, $filtered.Count)
+    $filtered | ForEach-Object { Write-Output ('  - `{0}`' -f $_) }
+  } else {
+    Write-Host ""
+    Write-Host ("Missing keys with prefix {0}: {1}" -f $prefix, $filtered.Count)
+    $filtered | ForEach-Object { Write-Host ("  {0}" -f $_) }
+  }
 }
