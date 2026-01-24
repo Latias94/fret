@@ -82,7 +82,7 @@ Related docs:
    - Support “patch by match” (find first step where selector matches old value).
 
 3. **Sharing**
-   - Bundle compression option (zip) with stable naming. (done: `fretboard diag pack`)
+   - Bundle compression option (zip) with stable naming. (done: `fretboard diag pack`, plus `--include-triage`)
    - Simple bug template: attach `bundle.json` + optional `script.json`.
    - Offline bundle viewer: `tools/fret-bundle-viewer` (supports semantics tree, perf panels, `triage.json` export, and `.zip`/paste import).
 

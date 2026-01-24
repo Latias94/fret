@@ -35,6 +35,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut trigger_path: Option<PathBuf> = None;
     let mut pack_out: Option<PathBuf> = None;
     let mut pack_include_root_artifacts: bool = false;
+    let mut pack_include_triage: bool = false;
+    let mut triage_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -94,6 +96,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--include-root-artifacts" => {
                 pack_include_root_artifacts = true;
+                i += 1;
+            }
+            "--include-triage" => {
+                pack_include_triage = true;
                 i += 1;
             }
             "--script-path" => {
@@ -173,7 +179,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --out".to_string());
                 };
-                pick_apply_out = Some(PathBuf::from(v));
+                let p = PathBuf::from(v);
+                pick_apply_out = Some(p.clone());
+                triage_out = Some(p);
                 i += 1;
             }
             "--inspect-path" => {
@@ -553,9 +561,54 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &bundle_dir,
                 &out,
                 pack_include_root_artifacts,
+                pack_include_triage,
                 &artifacts_root,
+                stats_top,
+                sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                warmup_frames,
             )?;
             println!("{}", out.display());
+            Ok(())
+        }
+        "triage" => {
+            let Some(src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
+                        .to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let bundle_path = resolve_bundle_json_path(&src);
+            let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+
+            let report = bundle_stats_from_path(
+                &bundle_path,
+                stats_top,
+                sort,
+                BundleStatsOptions { warmup_frames },
+            )?;
+            let payload = triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+
+            let out = triage_out
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| default_triage_out_path(&bundle_path));
+
+            if let Some(parent) = out.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+            if stats_json {
+                println!("{pretty}");
+            } else {
+                println!("{}", out.display());
+            }
             Ok(())
         }
         "script" => {
@@ -1234,11 +1287,20 @@ fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
     }
 }
 
+fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    dir.join("triage.json")
+}
+
 fn pack_bundle_dir_to_zip(
     bundle_dir: &Path,
     out_path: &Path,
     include_root_artifacts: bool,
+    include_triage: bool,
     artifacts_root: &Path,
+    stats_top: usize,
+    sort: BundleStatsSort,
+    warmup_frames: u64,
 ) -> Result<(), String> {
     if !bundle_dir.is_dir() {
         return Err(format!(
@@ -1285,8 +1347,123 @@ fn pack_bundle_dir_to_zip(
         zip_add_root_artifacts(&mut zip, artifacts_root, &root_prefix, options)?;
     }
 
+    if include_triage {
+        use std::io::Write;
+
+        let report = bundle_stats_from_path(
+            &bundle_json,
+            stats_top,
+            sort,
+            BundleStatsOptions { warmup_frames },
+        )?;
+        let payload = triage_json_from_stats(&bundle_json, &report, sort, warmup_frames);
+        let bytes = serde_json::to_vec_pretty(&payload).map_err(|e| e.to_string())?;
+        let dst = format!("{bundle_name}/_root/triage.json");
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        zip.write_all(&bytes).map_err(|e| e.to_string())?;
+    }
+
     zip.finish().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn triage_json_from_stats(
+    bundle_path: &Path,
+    report: &BundleStatsReport,
+    sort: BundleStatsSort,
+    warmup_frames: u64,
+) -> serde_json::Value {
+    use serde_json::json;
+
+    let generated_unix_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis() as u64);
+
+    let file_size_bytes = std::fs::metadata(bundle_path).ok().map(|m| m.len());
+
+    let worst = report.top.first().map(|row| {
+        json!({
+            "window": row.window,
+            "tick_id": row.tick_id,
+            "frame_id": row.frame_id,
+            "timestamp_unix_ms": row.timestamp_unix_ms,
+            "total_time_us": row.total_time_us,
+            "layout_time_us": row.layout_time_us,
+            "prepaint_time_us": row.prepaint_time_us,
+            "paint_time_us": row.paint_time_us,
+            "invalidation_walk_calls": row.invalidation_walk_calls,
+            "invalidation_walk_nodes": row.invalidation_walk_nodes,
+            "cache_roots": row.cache_roots,
+            "cache_roots_reused": row.cache_roots_reused,
+            "cache_replayed_ops": row.cache_replayed_ops,
+            "top_invalidation_walks": row.top_invalidation_walks.iter().take(10).map(|w| {
+                json!({
+                    "root_node": w.root_node,
+                    "root_element": w.root_element,
+                    "walked_nodes": w.walked_nodes,
+                    "kind": w.kind,
+                    "source": w.source,
+                    "detail": w.detail,
+                    "truncated_at": w.truncated_at,
+                    "root_role": w.root_role,
+                    "root_test_id": w.root_test_id,
+                })
+            }).collect::<Vec<_>>(),
+            "top_cache_roots": row.top_cache_roots.iter().take(10).map(|r| {
+                json!({
+                    "root_node": r.root_node,
+                    "element": r.element,
+                    "reused": r.reused,
+                    "contained_layout": r.contained_layout,
+                    "paint_replayed_ops": r.paint_replayed_ops,
+                    "reuse_reason": r.reuse_reason,
+                    "root_role": r.root_role,
+                    "root_test_id": r.root_test_id,
+                })
+            }).collect::<Vec<_>>(),
+            "top_layout_engine_solves": row.top_layout_engine_solves.iter().take(4).map(|s| {
+                json!({
+                    "root_node": s.root_node,
+                    "solve_time_us": s.solve_time_us,
+                    "measure_calls": s.measure_calls,
+                    "measure_cache_hits": s.measure_cache_hits,
+                    "measure_time_us": s.measure_time_us,
+                    "root_role": s.root_role,
+                    "root_test_id": s.root_test_id,
+                    "top_measures": s.top_measures.iter().take(10).map(|m| {
+                        json!({
+                            "node": m.node,
+                            "measure_time_us": m.measure_time_us,
+                            "calls": m.calls,
+                            "cache_hits": m.cache_hits,
+                            "element": m.element,
+                            "element_kind": m.element_kind,
+                            "role": m.role,
+                            "test_id": m.test_id,
+                        })
+                    }).collect::<Vec<_>>(),
+                })
+            }).collect::<Vec<_>>(),
+        })
+    });
+
+    json!({
+        "schema_version": 1,
+        "generated_unix_ms": generated_unix_ms,
+        "bundle": {
+            "bundle_path": bundle_path.display().to_string(),
+            "bundle_dir": bundle_path.parent().map(|p| p.display().to_string()),
+            "bundle_file_size_bytes": file_size_bytes,
+        },
+        "params": {
+            "sort": sort.as_str(),
+            "top": report.top.len(),
+            "warmup_frames": warmup_frames,
+        },
+        "stats": report.to_json(),
+        "worst": worst,
+    })
 }
 
 fn zip_add_root_artifacts(
@@ -1299,6 +1476,7 @@ fn zip_add_root_artifacts(
         "script.json",
         "script.result.json",
         "pick.result.json",
+        "triage.json",
         "picked.script.json",
     ];
 
