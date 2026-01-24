@@ -1246,7 +1246,6 @@ impl DropdownMenu {
                 let gating = gating.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
-                let content_focus_id_for_children_for_content = content_focus_id_for_children.clone();
                 let first_item_focus_id = first_item_focus_id.clone();
                 let last_item_focus_id = last_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -1453,8 +1452,6 @@ impl DropdownMenu {
                                         ..Default::default()
                                     };
 
-                                    let content_focus_id_for_panel =
-                                        content_focus_id_for_children_for_content.clone();
                                     vec![cx.keyed("menu-scroll", |cx| {
                                         cx.scroll(
                                         ScrollProps {
@@ -2251,9 +2248,6 @@ impl DropdownMenu {
                                                     )
                                                 },
                                             );
-                                            if content_focus_id_for_panel.get().is_none() {
-                                                content_focus_id_for_panel.set(Some(roving.id));
-                                            }
                                             vec![roving]
                                         },
                                         )

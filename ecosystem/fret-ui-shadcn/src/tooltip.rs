@@ -104,6 +104,7 @@ struct TooltipTriggerEventModels {
     suppress_hover_open: Model<bool>,
     suppress_focus_open: Model<bool>,
     close_requested: Model<bool>,
+    open: Model<bool>,
 }
 
 fn tooltip_trigger_event_models<H: UiHost>(
@@ -125,6 +126,7 @@ fn tooltip_trigger_event_models<H: UiHost>(
         suppress_hover_open: cx.app.models_mut().insert(false),
         suppress_focus_open: cx.app.models_mut().insert(false),
         close_requested: cx.app.models_mut().insert(false),
+        open: cx.app.models_mut().insert(false),
     };
 
     cx.with_state(State::default, |st| st.models = Some(models.clone()));
@@ -506,6 +508,12 @@ impl Tooltip {
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
 
+            let open = event_models.open.clone();
+            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+            if update.open != open_now {
+                let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
+            }
+
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
                 base_trigger.clone(),
                 update.open,
@@ -743,8 +751,12 @@ impl Tooltip {
                 )]
             });
 
-            let mut request =
-                radix_tooltip::tooltip_request(tooltip_id, overlay_presence, overlay_children);
+            let mut request = radix_tooltip::tooltip_request(
+                tooltip_id,
+                open,
+                overlay_presence,
+                overlay_children,
+            );
             request.trigger = Some(trigger_id);
             request.dismissible_on_dismiss_request = Some(radix_dismissable_layer::handler({
                 let close_requested = event_models.close_requested.clone();

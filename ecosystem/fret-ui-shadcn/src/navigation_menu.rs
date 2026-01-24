@@ -1046,7 +1046,7 @@ impl NavigationMenu {
                                             layout: layout_for_layers,
                                         },
                                         move |cx| {
-                                            let mut layer_layout = LayoutStyle::default();
+                                            let layer_layout = LayoutStyle::default();
 
                                             let from_opacity = 1.0 - t;
                                             let to_opacity = t;
@@ -1140,11 +1140,43 @@ impl NavigationMenu {
                         // don't have to provide a fixed `placed.size` up-front (which would
                         // otherwise lock the content to an estimated/previous size during switch
                         // interactions).
-                        let panel = popper_content::popper_wrapper_at_autosize(
-                            cx,
-                            layout.placed.origin,
-                            move |_cx| vec![content],
-                        );
+                        let panel = {
+                            let placed = layout.placed;
+                            let anchor = layout.anchor;
+
+                            let mut wrapper_layout = LayoutStyle::default();
+                            wrapper_layout.position = fret_ui::element::PositionStyle::Absolute;
+                            wrapper_layout.inset = fret_ui::element::InsetStyle {
+                                top: Some(placed.origin.y),
+                                ..Default::default()
+                            };
+                            wrapper_layout.overflow = fret_ui::element::Overflow::Visible;
+
+                            let placed_left = placed.origin.x.0;
+                            let placed_right = placed.origin.x.0 + placed.size.width.0;
+                            let anchor_left = anchor.origin.x.0;
+                            let anchor_right = anchor.origin.x.0 + anchor.size.width.0;
+                            let eps = 1.0;
+
+                            if (placed_right - anchor_right).abs() <= eps
+                                && (placed_left - anchor_left).abs() > eps
+                            {
+                                let window_width = cx.bounds.size.width.0;
+                                wrapper_layout.inset.right = Some(Px(window_width - placed_right));
+                            } else {
+                                wrapper_layout.inset.left = Some(placed.origin.x);
+                            }
+
+                            cx.container(
+                                ContainerProps {
+                                    layout: wrapper_layout,
+                                    ..Default::default()
+                                },
+                                move |_cx| {
+                                vec![content]
+                                },
+                            )
+                        };
 
                         if viewport_enabled {
                             radix_navigation_menu::navigation_menu_register_viewport_panel_id(
@@ -1282,6 +1314,7 @@ mod tests {
         CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
         WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
+    use fret_ui::elements::GlobalElementId;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::primitives::direction as direction_prim;
@@ -1357,41 +1390,26 @@ mod tests {
         }
     }
 
-    fn find_overlay_panel_bounds(ui: &UiTree<App>, window_bounds: Rect, point: Point) -> Rect {
-        let hit = ui.debug_hit_test(point);
-        let Some(hit_node) = hit.hit else {
-            panic!("expected hit at point={point:?} (window={window_bounds:?})");
-        };
+    fn navigation_menu_viewport_panel_bounds(
+        app: &mut App,
+        ui: &UiTree<App>,
+        window: AppWindowId,
+        window_bounds: Rect,
+        root_id: GlobalElementId,
+    ) -> Rect {
+        let panel_id = fret_ui::elements::with_element_cx(
+            app,
+            window,
+            window_bounds,
+            "navigation-menu-viewport-panel-id",
+            |cx| radix_navigation_menu::navigation_menu_viewport_panel_id(cx, root_id),
+        )
+        .expect("viewport panel id");
 
-        let path = ui.debug_node_path(hit_node);
-        for node in path.iter().copied().rev() {
-            let Some(bounds) = ui.debug_node_bounds(node) else {
-                continue;
-            };
-
-            if !bounds.contains(point) {
-                continue;
-            }
-
-            let is_fullscreen =
-                bounds.origin == window_bounds.origin && bounds.size == window_bounds.size;
-            if is_fullscreen {
-                continue;
-            }
-
-            if bounds.size.width.0 >= 100.0
-                && bounds.size.height.0 >= 80.0
-                && bounds.size.width.0 <= window_bounds.size.width.0 - 1.0
-                && bounds.size.height.0 <= window_bounds.size.height.0 - 1.0
-            {
-                return bounds;
-            }
-        }
-
-        panic!(
-            "expected to find an overlay panel bounds in hit path; point={point:?} hit_node={hit_node:?} path_len={}",
-            path.len()
-        );
+        let panel_node = fret_ui::elements::node_for_element(app, window, panel_id)
+            .expect("viewport panel node");
+        ui.debug_node_bounds(panel_node)
+            .expect("viewport panel node bounds")
     }
 
     #[test]
@@ -1878,6 +1896,7 @@ mod tests {
             ui.set_window(window);
 
             let model = app.models_mut().insert(Some(Arc::from("alpha")));
+            let nav_root_id = std::cell::Cell::new(None::<GlobalElementId>);
 
             let bounds = Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
@@ -1891,6 +1910,7 @@ mod tests {
                 bump_frame(app);
                 OverlayController::begin_frame(app, window);
                 let model_for_render = model.clone();
+                let nav_root_id = &nav_root_id;
                 let root = fret_ui::declarative::render_root(
                     ui,
                     app,
@@ -1919,11 +1939,13 @@ mod tests {
                                         ),
                                         NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
                                     ];
-                                    vec![
-                                        NavigationMenu::new(model_for_render.clone())
+                                    vec![{
+                                        let el = NavigationMenu::new(model_for_render.clone())
                                             .items(items)
-                                            .into_element(cx),
-                                    ]
+                                            .into_element(cx);
+                                        nav_root_id.set(Some(el.id));
+                                        el
+                                    }]
                                 },
                             )]
                         })
@@ -1947,11 +1969,9 @@ mod tests {
                 .expect("alpha button semantics");
             let anchor = alpha_btn.bounds;
 
-            let probe = Point::new(
-                Px(anchor.origin.x.0 + anchor.size.width.0 * 0.5),
-                Px(anchor.origin.y.0 + anchor.size.height.0 + 60.0),
-            );
-            let panel = find_overlay_panel_bounds(&ui, bounds, probe);
+            let nav_root_id = nav_root_id.get().expect("nav root id");
+            let panel =
+                navigation_menu_viewport_panel_bounds(&mut app, &ui, window, bounds, nav_root_id);
             (anchor, panel)
         }
 
