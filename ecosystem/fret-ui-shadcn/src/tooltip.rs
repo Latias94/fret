@@ -2576,6 +2576,13 @@ mod tests {
             content_id.clone(),
         );
 
+        let arbitration = OverlayController::arbitration_snapshot(&ui);
+        assert_eq!(
+            arbitration.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None,
+            "expected tooltip close transition to be click-through"
+        );
+
         assert!(
             fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
             "expected tooltip content to remain mounted during close transition"
