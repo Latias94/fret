@@ -1246,6 +1246,7 @@ impl DropdownMenu {
                 let gating = gating.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
+                let first_item_focus_id_for_request = first_item_focus_id.clone();
                 let first_item_focus_id = first_item_focus_id.clone();
                 let last_item_focus_id = last_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -3157,7 +3158,9 @@ impl DropdownMenu {
                     overlay_presence,
                     overlay_children,
                     overlay_root_name,
-                    content_focus_id.get(),
+                    menu::root::MenuInitialFocusTargets::new()
+                        .pointer_content_focus(content_focus_id.get())
+                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
@@ -4095,6 +4098,17 @@ mod tests {
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")),
             "menu items should render after ArrowDown opens the menu"
+        );
+
+        let first_item = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+        let focus = ui.focus().expect("expected focus after keyboard-open");
+        assert!(
+            ui.debug_node_path(focus).contains(&first_item.id),
+            "keyboard-open should move focus into the first menu item (Radix entry focus)"
         );
     }
 

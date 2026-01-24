@@ -3195,7 +3195,8 @@ impl ContextMenu {
                     overlay_presence,
                     overlay_children,
                     overlay_root_name,
-                    content_focus_id.get(),
+                    menu::root::MenuInitialFocusTargets::new()
+                        .pointer_content_focus(content_focus_id.get()),
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,

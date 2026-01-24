@@ -2995,7 +2995,8 @@ impl MenubarMenuEntries {
                         overlay_presence,
                         overlay_children,
                         overlay_root_name,
-                        content_focus_id.get(),
+                        menu::root::MenuInitialFocusTargets::new()
+                            .pointer_content_focus(content_focus_id.get()),
                         on_dismiss_request.clone(),
                         dismissible_on_pointer_move,
                         false,
@@ -3376,6 +3377,17 @@ mod tests {
                 n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New")
             }),
             "menu items should render after ArrowDown opens the menubar menu"
+        );
+
+        let first_item = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New"))
+            .expect("New menu item");
+        let focus = ui.focus().expect("expected focus after keyboard-open");
+        assert!(
+            ui.debug_node_path(focus).contains(&first_item.id),
+            "keyboard-open should move focus into the first menu item (Radix entry focus)"
         );
     }
 
