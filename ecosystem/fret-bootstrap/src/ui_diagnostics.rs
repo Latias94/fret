@@ -702,51 +702,55 @@ impl UiDiagnosticsService {
         let mut stop_script = false;
         let mut failure_reason: Option<String> = None;
 
-        match step {
-            UiActionStepV1::WaitFrames { n } => {
-                active.wait_frames_remaining = n;
-                active.wait_until = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-            }
-            UiActionStepV1::CaptureBundle { label } => {
-                active.wait_until = None;
-                let label = label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture"));
-
-                let dir = self.dump_bundle(Some(&label));
-                let Some(dir) = dir else {
-                    stop_script = true;
-                    failure_reason = Some("capture_bundle_failed".to_string());
+        loop {
+            match step {
+                UiActionStepV1::WaitFrames { n } => {
+                    active.wait_frames_remaining = n;
+                    active.wait_until = None;
+                    active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
-                    break;
-                };
+                }
+                UiActionStepV1::CaptureBundle { label } => {
+                    active.wait_until = None;
+                    let label =
+                        label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture"));
 
-                if self.cfg.capture_screenshots {
-                    let Some(dir_name) = dir.file_name().and_then(|s| s.to_str()) else {
+                    let dir = self.dump_bundle(Some(&label));
+                    let Some(dir) = dir else {
                         stop_script = true;
                         failure_reason = Some("capture_bundle_failed".to_string());
                         output.request_redraw = true;
                         break;
                     };
-                    active.wait_screenshot = Some(WaitScreenshotState {
-                        step_index,
-                        request_id: format!("bundle:{dir_name}"),
-                        remaining_frames: default_script_screenshot_timeout_frames(),
-                    });
-                    output.request_redraw = true;
-                } else {
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                }
-            }
-            UiActionStepV1::CaptureScreenshot {
-                label,
-                timeout_frames,
-            } => {
-                active.wait_until = None;
 
-                let (bundle_dir_name, request_id, needs_request) =
-                    match self.last_dump_dir.as_ref() {
+                    if self.cfg.capture_screenshots {
+                        let Some(dir_name) = dir.file_name().and_then(|s| s.to_str()) else {
+                            stop_script = true;
+                            failure_reason = Some("capture_bundle_failed".to_string());
+                            output.request_redraw = true;
+                            break;
+                        };
+                        active.wait_screenshot = Some(WaitScreenshotState {
+                            step_index,
+                            request_id: format!("bundle:{dir_name}"),
+                            remaining_frames: default_script_screenshot_timeout_frames(),
+                        });
+                        output.request_redraw = true;
+                    } else {
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                    }
+                }
+                UiActionStepV1::CaptureScreenshot {
+                    label,
+                    timeout_frames,
+                } => {
+                    active.wait_until = None;
+
+                    let (bundle_dir_name, request_id, needs_request) = match self
+                        .last_dump_dir
+                        .as_ref()
+                    {
                         Some(dir) => {
                             let Some(dir_name) = dir.file_name().and_then(|s| s.to_str()) else {
                                 stop_script = true;
@@ -787,317 +791,325 @@ impl UiDiagnosticsService {
                         }
                     };
 
-                if self.cfg.capture_screenshots {
-                    if needs_request {
-                        let Some(ring) = self.per_window.get(&window) else {
-                            stop_script = true;
-                            failure_reason = Some("no_window_state".to_string());
-                            output.request_redraw = true;
-                            break;
-                        };
-                        let Some(snapshot) = ring.snapshots.back() else {
-                            stop_script = true;
-                            failure_reason = Some("no_snapshot".to_string());
-                            output.request_redraw = true;
-                            break;
-                        };
+                    if self.cfg.capture_screenshots {
+                        if needs_request {
+                            let Some(ring) = self.per_window.get(&window) else {
+                                stop_script = true;
+                                failure_reason = Some("no_window_state".to_string());
+                                output.request_redraw = true;
+                                break;
+                            };
+                            let Some(snapshot) = ring.snapshots.back() else {
+                                stop_script = true;
+                                failure_reason = Some("no_snapshot".to_string());
+                                output.request_redraw = true;
+                                break;
+                            };
 
-                        let request = UiDiagScreenshotRequestV1 {
-                            schema_version: 1,
-                            requested_unix_ms: unix_ms_now(),
-                            out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
-                            bundle_dir_name,
-                            request_id: Some(request_id.clone()),
-                            windows: vec![UiDiagScreenshotWindowRequestV1 {
-                                window: window.data().as_ffi(),
-                                tick_id: snapshot.tick_id,
-                                frame_id: snapshot.frame_id,
-                                scale_factor: snapshot.scale_factor,
-                                window_bounds: snapshot.window_bounds,
-                            }],
-                        };
-                        let _ = write_json(self.cfg.screenshot_request_path.clone(), &request);
-                        let _ = touch_file(&self.cfg.screenshot_trigger_path);
-                    }
-
-                    active.wait_screenshot = Some(WaitScreenshotState {
-                        step_index,
-                        request_id,
-                        remaining_frames: timeout_frames,
-                    });
-                    output.request_redraw = true;
-                } else {
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                }
-            }
-            UiActionStepV1::PressKey {
-                key,
-                modifiers,
-                repeat,
-            } => {
-                if let Some(key) = parse_key_code(&key) {
-                    output
-                        .events
-                        .extend(press_key_events(key, modifiers, repeat));
-                    active.wait_until = None;
-                    active.next_step = active.next_step.saturating_add(1);
-                    output.request_redraw = true;
-                    if self.cfg.script_auto_dump {
-                        force_dump_label = Some(format!("script-step-{step_index:04}-press_key"));
-                    }
-                } else {
-                    force_dump_label =
-                        Some(format!("script-step-{step_index:04}-press_key-unknown-key"));
-                    stop_script = true;
-                    failure_reason = Some(format!("unknown_key: {key}"));
-                    output.request_redraw = true;
-                }
-            }
-            UiActionStepV1::TypeText { text } => {
-                output.events.push(Event::TextInput(text));
-                active.wait_until = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-                if self.cfg.script_auto_dump {
-                    force_dump_label = Some(format!("script-step-{step_index:04}-type_text"));
-                }
-            }
-            UiActionStepV1::WaitUntil {
-                predicate,
-                timeout_frames,
-            } => {
-                if let Some(snapshot) = semantics_snapshot {
-                    let state = match active.wait_until.take() {
-                        Some(mut state) if state.step_index == step_index => {
-                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
-                            state
+                            let request = UiDiagScreenshotRequestV1 {
+                                schema_version: 1,
+                                requested_unix_ms: unix_ms_now(),
+                                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                                bundle_dir_name,
+                                request_id: Some(request_id.clone()),
+                                windows: vec![UiDiagScreenshotWindowRequestV1 {
+                                    window: window.data().as_ffi(),
+                                    tick_id: snapshot.tick_id,
+                                    frame_id: snapshot.frame_id,
+                                    scale_factor: snapshot.scale_factor,
+                                    window_bounds: snapshot.window_bounds,
+                                }],
+                            };
+                            let _ = write_json(self.cfg.screenshot_request_path.clone(), &request);
+                            let _ = touch_file(&self.cfg.screenshot_trigger_path);
                         }
-                        _ => WaitUntilState {
-                            step_index,
-                            remaining_frames: timeout_frames,
-                        },
-                    };
 
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
-                        active.wait_until = None;
-                        active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
-                    } else if state.remaining_frames == 0 {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-wait_until-timeout"));
-                        stop_script = true;
-                        failure_reason = Some("wait_until_timeout".to_string());
-                        active.wait_until = None;
-                        output.request_redraw = true;
-                    } else {
-                        active.wait_until = Some(WaitUntilState {
-                            step_index: state.step_index,
-                            remaining_frames: state.remaining_frames.saturating_sub(1),
+                        active.wait_screenshot = Some(WaitScreenshotState {
+                            step_index,
+                            request_id,
+                            remaining_frames: timeout_frames,
                         });
                         output.request_redraw = true;
-                    }
-                } else {
-                    force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-wait_until-no-semantics"
-                    ));
-                    stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
-                    output.request_redraw = true;
-                    active.wait_until = None;
-                }
-            }
-            UiActionStepV1::Assert { predicate } => {
-                active.wait_until = None;
-                if let Some(snapshot) = semantics_snapshot {
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                    } else {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
+                    }
+                }
+                UiActionStepV1::PressKey {
+                    key,
+                    modifiers,
+                    repeat,
+                } => {
+                    if let Some(key) = parse_key_code(&key) {
+                        output
+                            .events
+                            .extend(press_key_events(key, modifiers, repeat));
+                        active.wait_until = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-press_key"));
+                        }
                     } else {
                         force_dump_label =
-                            Some(format!("script-step-{step_index:04}-assert-failed"));
+                            Some(format!("script-step-{step_index:04}-press_key-unknown-key"));
                         stop_script = true;
-                        failure_reason = Some("assert_failed".to_string());
+                        failure_reason = Some(format!("unknown_key: {key}"));
                         output.request_redraw = true;
                     }
-                } else {
-                    force_dump_label =
-                        Some(format!("script-step-{step_index:04}-assert-no-semantics"));
-                    stop_script = true;
-                    failure_reason = Some("no_semantics_snapshot".to_string());
+                }
+                UiActionStepV1::TypeText { text } => {
+                    output.events.push(Event::TextInput(text));
+                    active.wait_until = None;
+                    active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label = Some(format!("script-step-{step_index:04}-type_text"));
+                    }
+                }
+                UiActionStepV1::WaitUntil {
+                    predicate,
+                    timeout_frames,
+                } => {
+                    if let Some(snapshot) = semantics_snapshot {
+                        let state = match active.wait_until.take() {
+                            Some(mut state) if state.step_index == step_index => {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => WaitUntilState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                            },
+                        };
+
+                        if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                            active.wait_until = None;
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                        } else if state.remaining_frames == 0 {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-wait_until-timeout"));
+                            stop_script = true;
+                            failure_reason = Some("wait_until_timeout".to_string());
+                            active.wait_until = None;
+                            output.request_redraw = true;
+                        } else {
+                            active.wait_until = Some(WaitUntilState {
+                                step_index: state.step_index,
+                                remaining_frames: state.remaining_frames.saturating_sub(1),
+                            });
+                            output.request_redraw = true;
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-wait_until-no-semantics"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("no_semantics_snapshot".to_string());
+                        output.request_redraw = true;
+                        active.wait_until = None;
+                    }
+                }
+                UiActionStepV1::Assert { predicate } => {
+                    active.wait_until = None;
+                    if let Some(snapshot) = semantics_snapshot {
+                        if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                        } else {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-assert-failed"));
+                            stop_script = true;
+                            failure_reason = Some("assert_failed".to_string());
+                            output.request_redraw = true;
+                        }
+                    } else {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-assert-no-semantics"));
+                        stop_script = true;
+                        failure_reason = Some("no_semantics_snapshot".to_string());
+                        output.request_redraw = true;
+                    }
+                }
+                UiActionStepV1::Click { target, button } => {
+                    let Some(snapshot) = semantics_snapshot else {
+                        output.request_redraw = true;
+                        let label = format!("script-step-{step_index:04}-click-no-semantics");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("no_semantics_snapshot".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+                    let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    else {
+                        output.request_redraw = true;
+                        let label = format!("script-step-{step_index:04}-click-no-semantics-match");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("click_no_semantics_match".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+
+                    let pos = center_of_rect(node.bounds);
+                    output.events.extend(click_events(pos, button));
+
+                    active.wait_until = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label = Some(format!("script-step-{step_index:04}-click"));
+                    }
+                }
+                UiActionStepV1::MovePointer { target } => {
+                    let Some(snapshot) = semantics_snapshot else {
+                        output.request_redraw = true;
+                        let label =
+                            format!("script-step-{step_index:04}-move_pointer-no-semantics");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("no_semantics_snapshot".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+                    let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    else {
+                        output.request_redraw = true;
+                        let label =
+                            format!("script-step-{step_index:04}-move_pointer-no-semantics-match");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("move_pointer_no_semantics_match".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+
+                    let pos = center_of_rect(node.bounds);
+                    output.events.push(move_pointer_event(pos));
+
+                    active.wait_until = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-move_pointer"));
+                    }
+                }
+                UiActionStepV1::Wheel {
+                    target,
+                    delta_x,
+                    delta_y,
+                } => {
+                    let Some(snapshot) = semantics_snapshot else {
+                        output.request_redraw = true;
+                        let label = format!("script-step-{step_index:04}-wheel-no-semantics");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("no_semantics_snapshot".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+                    let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    else {
+                        output.request_redraw = true;
+                        let label = format!("script-step-{step_index:04}-wheel-no-semantics-match");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("wheel_no_semantics_match".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+
+                    let pos = center_of_rect(node.bounds);
+                    output.events.push(wheel_event(pos, delta_x, delta_y));
+
+                    active.wait_until = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label = Some(format!("script-step-{step_index:04}-wheel"));
+                    }
                 }
             }
-            UiActionStepV1::Click { target, button } => {
-                let Some(snapshot) = semantics_snapshot else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-click-no-semantics");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("no_semantics_snapshot".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-click-no-semantics-match");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("click_no_semantics_match".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-
-                let pos = center_of_rect(node.bounds);
-                output.events.extend(click_events(pos, button));
-
-                active.wait_until = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-                if self.cfg.script_auto_dump {
-                    force_dump_label = Some(format!("script-step-{step_index:04}-click"));
-                }
-            }
-            UiActionStepV1::MovePointer { target } => {
-                let Some(snapshot) = semantics_snapshot else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-move_pointer-no-semantics");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("no_semantics_snapshot".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
-                    output.request_redraw = true;
-                    let label =
-                        format!("script-step-{step_index:04}-move_pointer-no-semantics-match");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("move_pointer_no_semantics_match".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-
-                let pos = center_of_rect(node.bounds);
-                output.events.push(move_pointer_event(pos));
-
-                active.wait_until = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-                if self.cfg.script_auto_dump {
-                    force_dump_label = Some(format!("script-step-{step_index:04}-move_pointer"));
-                }
-            }
-            UiActionStepV1::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            } => {
-                let Some(snapshot) = semantics_snapshot else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-wheel-no-semantics");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("no_semantics_snapshot".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-wheel-no-semantics-match");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("wheel_no_semantics_match".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-
-                let pos = center_of_rect(node.bounds);
-                output.events.push(wheel_event(pos, delta_x, delta_y));
-
-                active.wait_until = None;
-                active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
-                if self.cfg.script_auto_dump {
-                    force_dump_label = Some(format!("script-step-{step_index:04}-wheel"));
-                }
-            }
+            break;
         }
 
         if !output.events.is_empty() {
