@@ -21,13 +21,16 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { formatFileSize } from '@/lib/download'
-import { generateMarkdownSummary, downloadMarkdown } from '@/lib/download'
-import { CommandPalette } from '@/components/command-palette'
+import { exportTriageJson, generateMarkdownSummary, downloadMarkdown } from '@/lib/download'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { useTranslation } from '@/hooks/use-i18n'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { isLocalizedErrorLike } from '@/lib/localized-error'
 import {
   FolderOpen,
+  ClipboardPaste,
   Download,
   FileJson,
   AlertTriangle,
@@ -35,15 +38,22 @@ import {
   Command,
 } from 'lucide-react'
 
+const LazyCommandPalette = React.lazy(() =>
+  import('@/components/command-palette').then((m) => ({ default: m.CommandPalette }))
+)
+
 export function HeaderBar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [commandOpen, setCommandOpen] = useState(false)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
   const { t } = useTranslation()
 
   const {
     bundle,
     loadBundle,
     loadSampleBundle,
+    setParseError,
     compareMode,
     setCompareMode,
     redactText,
@@ -63,17 +73,42 @@ export function HeaderBar() {
       const file = event.target.files?.[0]
       if (!file) return
 
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const text = e.target?.result as string
-        loadBundle(text, file.name)
-      }
-      reader.readAsText(file)
-
-      // Reset input so same file can be reloaded
-      event.target.value = ''
+      const isZip = /\.zip$/i.test(file.name)
+      void (async () => {
+        try {
+          if (isZip) {
+            try {
+              const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
+              const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
+              const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
+              loadBundle(bundleText, {
+                fileName: derivedName,
+                fileSize: bundleText.length,
+                recordRecent: true,
+                zip: {
+                  zipFileName: file.name,
+                  bundlePathInZip,
+                  artifacts,
+                },
+              })
+            } catch (err) {
+              if (isLocalizedErrorLike(err)) {
+                setParseError({ key: err.key, params: err.params, detail: err.detail })
+              } else {
+                setParseError({ key: 'error.unknownParse', detail: err instanceof Error ? err.message : String(err) })
+              }
+            }
+          } else {
+            const text = await file.text()
+            loadBundle(text, { fileName: file.name, fileSize: file.size, recordRecent: true })
+          }
+        } finally {
+          // Reset input so same file can be reloaded
+          event.target.value = ''
+        }
+      })()
     },
-    [loadBundle]
+    [loadBundle, setParseError]
   )
 
   const handleExportSummary = useCallback(() => {
@@ -89,6 +124,17 @@ export function HeaderBar() {
       ? bundle.meta.fileName.replace('.json', '-summary.md')
       : 'bundle-summary.md'
     downloadMarkdown(markdown, fileName)
+  }, [bundle, selectedWindowIndex, selectedSnapshotAIndex, selectedSnapshotBIndex, selectedNodeId])
+
+  const handleExportTriage = useCallback(() => {
+    if (!bundle) return
+    exportTriageJson(
+      bundle,
+      selectedWindowIndex,
+      selectedSnapshotAIndex,
+      selectedSnapshotBIndex,
+      selectedNodeId
+    )
   }, [bundle, selectedWindowIndex, selectedSnapshotAIndex, selectedSnapshotBIndex, selectedNodeId])
 
   // Keyboard shortcuts
@@ -133,7 +179,7 @@ export function HeaderBar() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
+            accept=".json,.zip"
             className="hidden"
             onChange={handleFileChange}
           />
@@ -147,6 +193,23 @@ export function HeaderBar() {
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('header.openTooltip')}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 bg-transparent px-2 lg:px-3"
+                onClick={() => setPasteOpen(true)}
+              >
+                <ClipboardPaste className="h-4 w-4" />
+                <span className="ml-1.5 hidden lg:inline">{t('header.paste')}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('header.pasteTooltip')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -185,6 +248,28 @@ export function HeaderBar() {
               <p>{t('header.exportTooltip')}</p>
             </TooltipContent>
           </Tooltip>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 bg-transparent px-2 lg:px-3"
+                disabled={!bundle}
+              >
+                <ChevronDown className="h-4 w-4" />
+                <span className="ml-1.5 hidden lg:inline">{t('header.exportMore')}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportSummary} disabled={!bundle}>
+                {t('header.exportMarkdown')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportTriage} disabled={!bundle}>
+                {t('header.exportTriage')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Divider */}
@@ -245,12 +330,12 @@ export function HeaderBar() {
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <FileJson className="h-3.5 w-3.5" />
                   <span className="max-w-24 truncate font-medium lg:max-w-40">
-                    {bundle.meta.fileName ?? 'Unknown'}
+                    {bundle.meta.fileName ?? t('common.unknown')}
                   </span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{bundle.meta.fileName} ({formatFileSize(bundle.meta.fileSize ?? 0)})</p>
+                <p>{bundle.meta.fileName ?? t('common.unknown')} ({formatFileSize(bundle.meta.fileSize ?? 0)})</p>
               </TooltipContent>
             </Tooltip>
 
@@ -265,10 +350,13 @@ export function HeaderBar() {
                 <TooltipContent className="max-w-sm">
                   <ul className="space-y-1 text-xs">
                     {bundle.warnings.slice(0, 5).map((w, i) => (
-                      <li key={i}>{w}</li>
+                      <li key={i}>
+                        {t(w.key, w.params)}
+                        {w.detail ? `: ${w.detail}` : ''}
+                      </li>
                     ))}
                     {bundle.warnings.length > 5 && (
-                      <li>...and {bundle.warnings.length - 5} more</li>
+                      <li>{t('header.andMore', { count: bundle.warnings.length - 5 })}</li>
                     )}
                   </ul>
                 </TooltipContent>
@@ -285,11 +373,55 @@ export function HeaderBar() {
       </header>
 
       {/* Command Palette */}
-      <CommandPalette
-        open={commandOpen}
-        onOpenChange={setCommandOpen}
-        onOpenFile={handleFileOpen}
-      />
+      {commandOpen && (
+        <React.Suspense fallback={null}>
+          <LazyCommandPalette
+            open={commandOpen}
+            onOpenChange={setCommandOpen}
+            onOpenFile={handleFileOpen}
+          />
+        </React.Suspense>
+      )}
+
+      <Dialog
+        open={pasteOpen}
+        onOpenChange={(open) => {
+          setPasteOpen(open)
+          if (!open) setPasteText('')
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('paste.title')}</DialogTitle>
+            <DialogDescription>{t('paste.description')}</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder={t('paste.placeholder')}
+            className="min-h-56 font-mono text-xs"
+          />
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setPasteOpen(false)}
+            >
+              {t('paste.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                const text = pasteText.trim()
+                if (!text) return
+                loadBundle(text, { fileName: 'pasted.json', fileSize: text.length, recordRecent: false })
+                setPasteOpen(false)
+              }}
+              disabled={!pasteText.trim()}
+            >
+              {t('paste.load')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   )
 }

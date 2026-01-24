@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_runtime::{CommandId, InputContext, MenuBar, Model, Platform};
+use fret_runtime::{CommandId, InputContext, MenuBar, Model, Platform, WindowMenuBarFocusService};
 use fret_ui::element::{AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, StackProps};
 use fret_ui::{ElementContext, GlobalElementId, PendingShortcutOverlayState, UiHost};
 
@@ -36,6 +36,11 @@ where
     FTitle: Fn(&str) -> Arc<str> + Clone,
     FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
 {
+    cx.app
+        .with_global_mut(WindowMenuBarFocusService::default, |svc, _app| {
+            svc.set_present(cx.window, menu_bar.is_some());
+        });
+
     cx.keyed("workspace_shell.command_scope", |cx| {
         let shell_root = cx.root_id();
         let menubar_handle: std::cell::RefCell<Option<InWindowMenubarFocusHandle>> =

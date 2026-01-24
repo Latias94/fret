@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
@@ -646,9 +648,12 @@ fn request_menu_overlay<H: UiHost>(
 
     let (labels, disabled_flags) = roving_labels_and_disabled(entries);
 
-    let content_focus_id: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>> =
-        std::rc::Rc::new(std::cell::Cell::new(None));
+    let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
     let content_focus_id_for_children = content_focus_id.clone();
+
+    let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+    let first_item_focus_id_for_children = first_item_focus_id.clone();
+    let first_item_focus_id_for_request = first_item_focus_id.clone();
 
     let open_for_overlay = open.clone();
     let group_active_for_overlay = group_active.clone();
@@ -758,6 +763,7 @@ fn request_menu_overlay<H: UiHost>(
                                         Some((submenu_for_panel_items.clone(), submenu_cfg)),
                                         pad,
                                         item_text_for_panel_items.clone(),
+                                        Some(first_item_focus_id_for_children.clone()),
                                     )
                                 },
                             )]
@@ -858,6 +864,7 @@ fn request_menu_overlay<H: UiHost>(
                                                 )),
                                                 pad,
                                                 item_text_for_submenu_items.clone(),
+                                                None,
                                             )
                                         },
                                     ),
@@ -888,7 +895,9 @@ fn request_menu_overlay<H: UiHost>(
         overlay_presence,
         overlay_children,
         overlay_root_name,
-        content_focus_id.get(),
+        menu::root::MenuInitialFocusTargets::new()
+            .pointer_content_focus(content_focus_id.get())
+            .keyboard_entry_focus(first_item_focus_id_for_request.get()),
         on_dismiss_request,
         dismissible_on_pointer_move,
         false,
@@ -907,6 +916,7 @@ fn render_menu_entries<H: UiHost>(
     submenu: Option<(menu::sub::MenuSubmenuModels, menu::sub::MenuSubmenuConfig)>,
     pad: Px,
     item_text: TextStyle,
+    first_item_focus_id: Option<Rc<Cell<Option<GlobalElementId>>>>,
 ) -> Vec<AnyElement> {
     let fg = theme.color_required("color.text.primary");
     let fg_muted = theme.color_required("color.text.muted");
@@ -946,6 +956,7 @@ fn render_menu_entries<H: UiHost>(
                     submenu.as_ref(),
                     pad,
                     item_text.clone(),
+                    first_item_focus_id.clone(),
                     fg,
                     fg_muted,
                     fg_disabled,
@@ -964,6 +975,7 @@ fn render_menu_entries<H: UiHost>(
                     submenu.as_ref(),
                     pad,
                     item_text.clone(),
+                    first_item_focus_id.clone(),
                     fg,
                     fg_muted,
                     fg_disabled,
@@ -987,6 +999,7 @@ fn render_menu_item<H: UiHost>(
     submenu: Option<&(menu::sub::MenuSubmenuModels, menu::sub::MenuSubmenuConfig)>,
     pad: Px,
     item_text: TextStyle,
+    first_item_focus_id: Option<Rc<Cell<Option<GlobalElementId>>>>,
     fg: Color,
     fg_muted: Color,
     fg_disabled: Color,
@@ -995,6 +1008,13 @@ fn render_menu_item<H: UiHost>(
     let disabled = item.disabled;
 
     cx.pressable_with_id_props(|cx, st, item_id| {
+        if !disabled
+            && let Some(first_item_focus_id) = first_item_focus_id.as_ref()
+            && first_item_focus_id.get().is_none()
+        {
+            first_item_focus_id.set(Some(item_id));
+        }
+
         menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
             cx,
             item_id,

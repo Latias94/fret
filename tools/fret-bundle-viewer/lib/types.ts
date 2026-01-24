@@ -1,5 +1,13 @@
 // Core types for Fret Bundle Viewer
 
+import type { TranslationKey } from './i18n'
+
+export interface UiMessage {
+  key: TranslationKey
+  params?: Record<string, string | number>
+  detail?: string
+}
+
 export interface SemanticsNodeModel {
   id: string
   role?: string
@@ -9,7 +17,7 @@ export interface SemanticsNodeModel {
   bounds?: { x: number; y: number; w: number; h: number }
   parentId?: string
   children: string[]
-  flags?: Record<string, boolean>
+  flags?: Record<string, boolean | null>
   actions?: Record<string, boolean>
 }
 
@@ -35,6 +43,9 @@ export interface HitChainEntry {
 export interface NormalizedEvent {
   kind: string
   summary: string
+  tickId?: string
+  frameId?: string
+  windowId?: string
   raw?: unknown
 }
 
@@ -73,18 +84,37 @@ export interface SnapshotModel {
 
 export interface WindowModel {
   windowId: string
+  events?: NormalizedEvent[]
   snapshots: SnapshotModel[]
 }
 
 export interface BundleMeta {
   fileName?: string
   fileSize?: number
+  schemaVersion?: number
+  exportedUnixMs?: number
+  outDir?: string
+  zip?: ZipImportMeta
+}
+
+export interface ZipArtifact {
+  path: string
+  fileName: string
+  sizeBytes: number
+  truncated?: boolean
+  text: string
+}
+
+export interface ZipImportMeta {
+  zipFileName?: string
+  bundlePathInZip?: string
+  artifacts?: ZipArtifact[]
 }
 
 export interface BundleModel {
   meta: BundleMeta
   windows: WindowModel[]
-  warnings: string[]
+  warnings: UiMessage[]
 }
 
 export interface Selector {

@@ -45,7 +45,7 @@ export function DiffView() {
     return (
       <div className="flex items-center justify-center h-full p-4">
         <p className="text-sm text-muted-foreground text-center">
-          Unable to compute diff
+          {t('diff.unableCompute')}
         </p>
       </div>
     )
@@ -95,7 +95,7 @@ export function DiffView() {
                     >
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-[10px]">
-                          {node?.role ?? 'Unknown'}
+                          {node?.role ?? t('common.unknown')}
                         </Badge>
                         {node?.testId && (
                           <span className="text-xs text-muted-foreground">{node.testId}</span>
@@ -128,7 +128,7 @@ export function DiffView() {
                     >
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-[10px]">
-                          {node?.role ?? 'Unknown'}
+                          {node?.role ?? t('common.unknown')}
                         </Badge>
                         {node?.testId && (
                           <span className="text-xs text-muted-foreground">{node.testId}</span>
@@ -162,7 +162,7 @@ export function DiffView() {
                     >
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-[10px]">
-                          {nodeB?.role ?? nodeA?.role ?? 'Unknown'}
+                          {nodeB?.role ?? nodeA?.role ?? t('common.unknown')}
                         </Badge>
                         {(nodeB?.testId || nodeA?.testId) && (
                           <span className="text-xs text-muted-foreground">
@@ -180,7 +180,7 @@ export function DiffView() {
 
           {diff.added.length === 0 && diff.removed.length === 0 && diff.changed.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No differences found between snapshots
+              {t('diff.noChanges')}
             </p>
           )}
         </div>

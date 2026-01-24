@@ -1,6 +1,6 @@
 use super::*;
 use crate::widget::{CommandAvailability, CommandAvailabilityCx};
-use fret_runtime::CommandScope;
+use fret_runtime::{CommandScope, WindowMenuBarFocusService};
 
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
@@ -67,6 +67,20 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let availability = self.command_availability_from_node(app, &input_ctx, start, command);
+
+        if availability == CommandAvailability::NotHandled && command.as_str() == "focus.menu_bar" {
+            let Some(window) = self.window else {
+                return CommandAvailability::NotHandled;
+            };
+            let present = app
+                .global::<WindowMenuBarFocusService>()
+                .is_some_and(|svc| svc.present(window));
+            return if present {
+                CommandAvailability::Available
+            } else {
+                CommandAvailability::Blocked
+            };
+        }
 
         if availability == CommandAvailability::NotHandled
             && matches!(command.as_str(), "focus.next" | "focus.previous")
@@ -202,6 +216,14 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         for id in widget_commands {
+            if id.as_str() == "focus.menu_bar" {
+                let present = app
+                    .global::<WindowMenuBarFocusService>()
+                    .is_some_and(|svc| svc.present(window));
+                snapshot.insert(id, present);
+                continue;
+            }
+
             let mut availability = self.command_availability_from_node(app, input_ctx, start, &id);
             if availability == CommandAvailability::NotHandled
                 && matches!(id.as_str(), "focus.next" | "focus.previous")

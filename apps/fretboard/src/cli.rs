@@ -59,6 +59,8 @@ Usage:
   fretboard diag path [--trigger-path <path>] [--dir <dir>]
   fretboard diag poke [--trigger-path <path>] [--dir <dir>]
   fretboard diag latest [--dir <dir>]
+  fretboard diag pack [<bundle_dir|bundle.json>] [--dir <dir>] [--pack-out <path>] [--include-all] [--include-root-artifacts] [--include-triage]
+  fretboard diag triage <bundle_dir|bundle.json> [--top <n>] [--sort <invalidation|time>] [--warmup-frames <n>] [--json] [--out <path>]
   fretboard diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]
   fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
@@ -89,6 +91,8 @@ Examples:
   fretboard hotpatch watch                  # polls workspace sources and auto-pokes on change
   fretboard diag poke                      # touches `target/fret-diag/trigger.touch` (dumps diagnostics when enabled)
   fretboard diag latest                    # prints the most recent diagnostics bundle path
+  fretboard diag pack                      # zips a bundle directory for sharing (default: latest)
+  fretboard diag triage                    # prints a machine-readable triage JSON (built from bundle stats)
   fretboard diag script ./script.json      # writes `target/fret-diag/script.json` and touches `target/fret-diag/script.touch`
   fretboard diag run ./script.json         # pushes script and waits for `script.result.json` (exit 0 on pass, 1 on fail/timeout)
   fretboard diag run tools/diag-scripts/todo-baseline.json --dir target/fret-diag-todo-auto --launch -- cargo run -p fret-demo --bin todo_demo

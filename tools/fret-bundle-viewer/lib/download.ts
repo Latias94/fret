@@ -1,5 +1,30 @@
-import type { BundleModel, SnapshotModel, SemanticsNodeModel, DiffResult } from './types'
+import type { BundleModel, SnapshotModel, SemanticsNodeModel, DiffResult, UiMessage } from './types'
 import { getDiffSummary, diffSnapshots } from './diff'
+import { translations } from './i18n'
+
+type JsonObject = Record<string, unknown>
+
+function formatUiMessageEnglish(msg: UiMessage): string {
+  let text = translations.en[msg.key] ?? msg.key
+  if (msg.params) {
+    for (const [k, v] of Object.entries(msg.params)) {
+      text = text.replaceAll(`{${k}}`, String(v))
+    }
+  }
+  if (msg.detail) {
+    text = `${text}: ${msg.detail}`
+  }
+  return text
+}
+
+function asObject(v: unknown): JsonObject | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null
+  return v as JsonObject
+}
+
+function asArray(v: unknown): unknown[] | null {
+  return Array.isArray(v) ? v : null
+}
 
 export function generateMarkdownSummary(
   bundle: BundleModel,
@@ -22,7 +47,7 @@ export function generateMarkdownSummary(
     lines.push('## Parse Warnings')
     lines.push('')
     for (const warning of bundle.warnings) {
-      lines.push(`- ${warning}`)
+      lines.push(`- ${formatUiMessageEnglish(warning)}`)
     }
     lines.push('')
   }
@@ -48,7 +73,7 @@ export function generateMarkdownSummary(
     if (snapshotA) {
       lines.push('### Snapshot A')
       lines.push('')
-      lines.push(formatSnapshotSummary(snapshotA))
+      lines.push(formatSnapshotSummary(snapshotA, window.events))
       lines.push('')
     }
 
@@ -57,7 +82,7 @@ export function generateMarkdownSummary(
       if (snapshotB && snapshotA) {
         lines.push('### Snapshot B')
         lines.push('')
-        lines.push(formatSnapshotSummary(snapshotB))
+        lines.push(formatSnapshotSummary(snapshotB, window.events))
         lines.push('')
 
         lines.push('### Diff Summary')
@@ -88,7 +113,7 @@ export function generateMarkdownSummary(
   return lines.join('\n')
 }
 
-function formatSnapshotSummary(snapshot: SnapshotModel): string {
+function formatSnapshotSummary(snapshot: SnapshotModel, windowEvents?: Array<{ kind: string; summary: string; tickId?: string; frameId?: string }>): string {
   const lines: string[] = []
 
   if (snapshot.tickId) lines.push(`- **Tick ID:** ${snapshot.tickId}`)
@@ -108,10 +133,120 @@ function formatSnapshotSummary(snapshot: SnapshotModel): string {
     lines.push(`- **Focused Node:** ${snapshot.focus.focusedNodeId}`)
   }
 
+  if (snapshot.overlay?.barrierRootId) {
+    lines.push(`- **Barrier Root:** ${snapshot.overlay.barrierRootId}`)
+  }
+
+  if (snapshot.overlay?.layerRoots && snapshot.overlay.layerRoots.length > 0) {
+    const roots = snapshot.overlay.layerRoots
+      .slice(0, 6)
+      .map((r) => {
+        const flags: string[] = []
+        if (r.blocksUnderlay) flags.push('blocks_underlay')
+        if (r.hitTestable === false) flags.push('no_hit_test')
+        if (r.zIndex !== undefined) flags.push(`z=${r.zIndex}`)
+        return `${r.nodeId ?? '—'}${flags.length > 0 ? ` (${flags.join(', ')})` : ''}`
+      })
+    lines.push(`- **Layer Roots:** ${roots.join('; ')}${snapshot.overlay.layerRoots.length > 6 ? ' …' : ''}`)
+  }
+
   if (snapshot.perf) {
     if (snapshot.perf.totalUs) lines.push(`- **Total Time:** ${snapshot.perf.totalUs}us`)
     if (snapshot.perf.layoutUs) lines.push(`- **Layout Time:** ${snapshot.perf.layoutUs}us`)
+    if (snapshot.perf.prepaintUs) lines.push(`- **Prepaint Time:** ${snapshot.perf.prepaintUs}us`)
     if (snapshot.perf.paintUs) lines.push(`- **Paint Time:** ${snapshot.perf.paintUs}us`)
+    if (snapshot.perf.cache?.hits !== undefined || snapshot.perf.cache?.misses !== undefined) {
+      lines.push(
+        `- **Paint Cache:** hits=${snapshot.perf.cache?.hits ?? 0} misses=${snapshot.perf.cache?.misses ?? 0}`
+      )
+    }
+    if (snapshot.perf.invalidations && typeof snapshot.perf.invalidations === 'object') {
+      const inv = snapshot.perf.invalidations as any
+      const count = typeof inv.count === 'number' ? inv.count : undefined
+      const nodes = typeof inv.nodes === 'number' ? inv.nodes : undefined
+      if (count !== undefined || nodes !== undefined) {
+        lines.push(`- **Invalidation Walks:** calls=${count ?? '—'} nodes=${nodes ?? '—'}`)
+      }
+    }
+  }
+
+  // Deep debug summaries (best-effort from raw snapshot)
+  const debug = asObject(asObject(snapshot.raw)?.debug)
+
+  const inv = asArray(debug?.invalidation_walks)
+  if (inv && inv.length > 0) {
+    const rows: Array<{ walkedNodes: number; kind: string; source: string; detail?: string }> = []
+    for (const r of inv) {
+      const o = asObject(r)
+      if (!o) continue
+      rows.push({
+        walkedNodes: typeof o.walked_nodes === 'number' ? o.walked_nodes : 0,
+        kind: typeof o.kind === 'string' ? o.kind : 'unknown',
+        source: typeof o.source === 'string' ? o.source : 'unknown',
+        detail: typeof o.detail === 'string' ? o.detail : undefined,
+      })
+    }
+    rows.sort((a, b) => b.walkedNodes - a.walkedNodes)
+    const top = rows.slice(0, 8).map((r) => `${r.walkedNodes} ${r.kind}/${r.source}${r.detail ? ` (${r.detail})` : ''}`)
+    lines.push(`- **Top Invalidation Walks:** ${top.join('; ')}${rows.length > 8 ? ' …' : ''}`)
+  }
+
+  const solves = asArray(debug?.layout_engine_solves)
+  if (solves && solves.length > 0) {
+    const s0 = asObject(solves[0])
+    if (s0) {
+      const solveUs = typeof s0.solve_time_us === 'number' ? s0.solve_time_us : undefined
+      const measureUs = typeof s0.measure_time_us === 'number' ? s0.measure_time_us : undefined
+      if (solveUs !== undefined || measureUs !== undefined) {
+        lines.push(`- **Layout Solve:** solve_us=${solveUs ?? '—'} measure_us=${measureUs ?? '—'}`)
+      }
+      const topMeasures = asArray(s0.top_measures)
+      if (topMeasures && topMeasures.length > 0) {
+        const tm = topMeasures
+          .slice(0, 6)
+          .map((m) => {
+            const mo = asObject(m)
+            if (!mo) return null
+            const us = typeof mo.measure_time_us === 'number' ? mo.measure_time_us : undefined
+            const kind = typeof mo.element_kind === 'string' ? mo.element_kind : 'unknown'
+            const calls = typeof mo.calls === 'number' ? mo.calls : undefined
+            return `${us ?? '—'} ${kind}${calls !== undefined ? ` (calls=${calls})` : ''}`
+          })
+          .filter(Boolean)
+        if (tm.length > 0) {
+          lines.push(`- **Top Measures:** ${tm.join('; ')}${topMeasures.length > 6 ? ' …' : ''}`)
+        }
+      }
+    }
+  }
+
+  const cacheRoots = asArray(debug?.cache_roots)
+  if (cacheRoots && cacheRoots.length > 0) {
+    const top = cacheRoots.slice(0, 6).map((r) => {
+      const ro = asObject(r)
+      if (!ro) return null
+      const root = ro.root != null ? String(ro.root) : '—'
+      const reused = typeof ro.reused === 'boolean' ? ro.reused : undefined
+      const reason = typeof ro.reuse_reason === 'string' ? ro.reuse_reason : undefined
+      const ops = typeof ro.paint_replayed_ops === 'number' ? ro.paint_replayed_ops : undefined
+      const nodes = typeof ro.subtree_nodes === 'number' ? ro.subtree_nodes : undefined
+      return `${root}${reused !== undefined ? (reused ? ' reused' : ' new') : ''}${reason ? ` (${reason})` : ''}${ops !== undefined ? ` ops=${ops}` : ''}${nodes !== undefined ? ` nodes=${nodes}` : ''}`
+    }).filter(Boolean)
+    if (top.length > 0) {
+      lines.push(`- **Cache Roots:** ${top.join('; ')}${cacheRoots.length > 6 ? ' …' : ''}`)
+    }
+  }
+
+  // Events (window-level), filtered up to selected tick if possible.
+  if (windowEvents && windowEvents.length > 0) {
+    const maxTick = snapshot.tickId ? Number(snapshot.tickId) : NaN
+    const filtered = Number.isFinite(maxTick)
+      ? windowEvents.filter((e) => (e.tickId ? Number(e.tickId) <= maxTick : true))
+      : windowEvents
+    const tail = filtered.slice(-8)
+    if (tail.length > 0) {
+      lines.push(`- **Recent Events:** ${tail.map((e) => `${e.kind}: ${e.summary}`).join(' | ')}`)
+    }
   }
 
   return lines.join('\n')
@@ -152,4 +287,303 @@ export function downloadMarkdown(content: string, fileName: string): void {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+export function downloadText(content: string, fileName: string, contentType: string = 'text/plain'): void {
+  const blob = new Blob([content], { type: contentType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function downloadJson(content: unknown, fileName: string): void {
+  const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function parseOutDirContext(outDir: string | undefined): {
+  kind: 'script_step' | 'label' | 'unknown'
+  timestampPrefix?: string
+  stepIndex?: number
+  action?: string
+  label?: string
+} {
+  if (!outDir) return { kind: 'unknown' }
+
+  // Examples:
+  // - 1769177393463-script-step-0000-press_key
+  // - 1769177364221-ui-gallery-alert-dialog-open
+  const m = outDir.match(/^(\d+)-(.*)$/)
+  const timestampPrefix = m?.[1]
+  const tail = m?.[2] ?? outDir
+
+  const sm = tail.match(/^script-step-(\d+)-(.+)$/)
+  if (sm) {
+    return {
+      kind: 'script_step',
+      timestampPrefix,
+      stepIndex: Number(sm[1]),
+      action: sm[2],
+    }
+  }
+
+  return {
+    kind: 'label',
+    timestampPrefix,
+    label: tail,
+  }
+}
+
+export function exportTriageJson(
+  bundle: BundleModel,
+  selectedWindow: number,
+  selectedSnapshotA: number,
+  selectedSnapshotB: number | null,
+  selectedNodeId: string | null
+): void {
+  const window = bundle.windows[selectedWindow]
+  const snapshotA = window?.snapshots[selectedSnapshotA]
+  const snapshotB = selectedSnapshotB !== null ? window?.snapshots[selectedSnapshotB] : null
+
+  const triage: Array<{ level: 'info' | 'warn'; kind: string; message: string; evidence?: unknown }> = []
+  const artifacts: Record<string, unknown> = {}
+
+  if (snapshotA?.perf?.totalUs !== undefined) {
+    const us = snapshotA.perf.totalUs
+    if (us >= 1_000_000) {
+      triage.push({ level: 'warn', kind: 'slow_frame', message: `Severe slow frame (${us}us)`, evidence: { total_us: us } })
+    } else if (us >= 33_000) {
+      triage.push({ level: 'warn', kind: 'slow_frame', message: `Slow frame (${us}us)`, evidence: { total_us: us } })
+    } else {
+      triage.push({ level: 'info', kind: 'frame_time', message: `Frame time (${us}us)`, evidence: { total_us: us } })
+    }
+  }
+
+  if (snapshotA?.overlay?.barrierRootId) {
+    triage.push({
+      level: 'info',
+      kind: 'barrier_root',
+      message: `Barrier root active (${snapshotA.overlay.barrierRootId})`,
+      evidence: { barrier_root: snapshotA.overlay.barrierRootId },
+    })
+  }
+
+  const blockingRoots = snapshotA?.overlay?.layerRoots?.filter((r) => r.blocksUnderlay).map((r) => r.nodeId).filter(Boolean)
+  if (blockingRoots && blockingRoots.length > 0) {
+    triage.push({
+      level: 'warn',
+      kind: 'blocks_underlay',
+      message: `Underlay input may be blocked (count=${blockingRoots.length})`,
+      evidence: { blocking_roots: blockingRoots },
+    })
+  }
+
+  const inv = snapshotA?.perf?.invalidations as any
+  const invCalls = typeof inv?.count === 'number' ? inv.count : undefined
+  const invNodes = typeof inv?.nodes === 'number' ? inv.nodes : undefined
+  if (invCalls !== undefined || invNodes !== undefined) {
+    const level: 'info' | 'warn' = (invCalls ?? 0) >= 1000 ? 'warn' : 'info'
+    triage.push({
+      level,
+      kind: 'invalidation_walks',
+      message: `Invalidation walks (calls=${invCalls ?? '—'}, nodes=${invNodes ?? '—'})`,
+      evidence: { calls: invCalls, nodes: invNodes },
+    })
+  }
+
+  if (snapshotA?.perf?.layoutUs !== undefined || snapshotA?.perf?.prepaintUs !== undefined || snapshotA?.perf?.paintUs !== undefined) {
+    triage.push({
+      level: 'info',
+      kind: 'phase_breakdown',
+      message: 'Phase breakdown (layout/prepaint/paint)',
+      evidence: {
+        layout_us: snapshotA?.perf?.layoutUs,
+        prepaint_us: snapshotA?.perf?.prepaintUs,
+        paint_us: snapshotA?.perf?.paintUs,
+      },
+    })
+  }
+
+  // Optional semantics evidence for selected node.
+  if (selectedNodeId && snapshotA?.semantics?.nodesById[selectedNodeId]) {
+    const n = snapshotA.semantics.nodesById[selectedNodeId]
+    triage.push({
+      level: 'info',
+      kind: 'selected_node',
+      message: `Selected node (${selectedNodeId})`,
+      evidence: {
+        id: n.id,
+        role: n.role,
+        test_id: n.testId,
+        label: n.label,
+        name: n.name,
+        parent: n.parentId,
+        children: n.children.slice(0, 20),
+        bounds: n.bounds,
+      },
+    })
+  }
+
+  // Diff summary when comparing.
+  let diff: DiffResult | null = null
+  if (snapshotA && snapshotB) {
+    diff = diffSnapshots(snapshotA, snapshotB)
+    triage.push({
+      level: 'info',
+      kind: 'diff',
+      message: getDiffSummary(diff),
+      evidence: { added: diff.added.length, removed: diff.removed.length, changed: diff.changed.length },
+    })
+  }
+
+  const outDirContext = parseOutDirContext(bundle.meta.outDir)
+
+  // Debug-derived evidence (bounded).
+  if (snapshotA) {
+    const debug = asObject(asObject(snapshotA.raw)?.debug)
+
+    const topInvalidationWalks = (() => {
+      const inv = asArray(debug?.invalidation_walks)
+      if (!inv || inv.length === 0) return null
+      const rows: Array<{
+        walked_nodes: number
+        kind?: string
+        source?: string
+        detail?: string
+        truncated_at?: number
+        root_node?: string
+        root_element?: string
+      }> = []
+      for (const r of inv) {
+        const o = asObject(r)
+        if (!o) continue
+        rows.push({
+          walked_nodes: typeof o.walked_nodes === 'number' ? o.walked_nodes : 0,
+          kind: typeof o.kind === 'string' ? o.kind : undefined,
+          source: typeof o.source === 'string' ? o.source : undefined,
+          detail: typeof o.detail === 'string' ? o.detail : undefined,
+          truncated_at: typeof o.truncated_at === 'number' ? o.truncated_at : undefined,
+          root_node: o.root_node != null ? String(o.root_node) : undefined,
+          root_element: o.root_element != null ? String(o.root_element) : undefined,
+        })
+      }
+      rows.sort((a, b) => b.walked_nodes - a.walked_nodes)
+      return rows.slice(0, 30)
+    })()
+
+    const layoutSolves = (() => {
+      const solves = asArray(debug?.layout_engine_solves)
+      if (!solves || solves.length === 0) return null
+      const out: unknown[] = []
+      for (const s of solves.slice(0, 4)) {
+        const o = asObject(s)
+        if (!o) continue
+        const topMeasuresRaw = asArray(o.top_measures) ?? []
+        const topMeasures = topMeasuresRaw.slice(0, 20).map((tm) => {
+          const tmo = asObject(tm)
+          if (!tmo) return null
+          return {
+            node: tmo.node != null ? String(tmo.node) : undefined,
+            element_kind: typeof tmo.element_kind === 'string' ? tmo.element_kind : undefined,
+            measure_time_us: typeof tmo.measure_time_us === 'number' ? tmo.measure_time_us : undefined,
+            calls: typeof tmo.calls === 'number' ? tmo.calls : undefined,
+            cache_hits: typeof tmo.cache_hits === 'number' ? tmo.cache_hits : undefined,
+          }
+        }).filter(Boolean)
+        out.push({
+          root_node: o.root_node != null ? String(o.root_node) : undefined,
+          solve_time_us: typeof o.solve_time_us === 'number' ? o.solve_time_us : undefined,
+          measure_time_us: typeof o.measure_time_us === 'number' ? o.measure_time_us : undefined,
+          measure_calls: typeof o.measure_calls === 'number' ? o.measure_calls : undefined,
+          measure_cache_hits: typeof o.measure_cache_hits === 'number' ? o.measure_cache_hits : undefined,
+          top_measures: topMeasures,
+        })
+      }
+      return out
+    })()
+
+    const cacheRoots = (() => {
+      const roots = asArray(debug?.cache_roots)
+      if (!roots || roots.length === 0) return null
+      const out: unknown[] = []
+      for (const r of roots.slice(0, 30)) {
+        const o = asObject(r)
+        if (!o) continue
+        out.push({
+          root: o.root != null ? String(o.root) : undefined,
+          reused: typeof o.reused === 'boolean' ? o.reused : undefined,
+          reuse_reason: typeof o.reuse_reason === 'string' ? o.reuse_reason : undefined,
+          paint_replayed_ops: typeof o.paint_replayed_ops === 'number' ? o.paint_replayed_ops : undefined,
+          subtree_nodes: typeof o.subtree_nodes === 'number' ? o.subtree_nodes : undefined,
+          direct_child_nodes: typeof o.direct_child_nodes === 'number' ? o.direct_child_nodes : undefined,
+          contained_layout: typeof o.contained_layout === 'boolean' ? o.contained_layout : undefined,
+          element_kind: typeof o.element_kind === 'string' ? o.element_kind : undefined,
+          element_path: typeof o.element_path === 'string' ? o.element_path : undefined,
+        })
+      }
+      return out
+    })()
+
+    if (topInvalidationWalks) artifacts.top_invalidation_walks = topInvalidationWalks
+    if (layoutSolves) artifacts.layout_engine_solves = layoutSolves
+    if (cacheRoots) artifacts.cache_roots = cacheRoots
+  }
+
+  // Recent events (bounded).
+  if (window?.events && window.events.length > 0) {
+    const maxTick = snapshotA?.tickId ? Number(snapshotA.tickId) : NaN
+    const filtered = Number.isFinite(maxTick)
+      ? window.events.filter((e) => (e.tickId ? Number(e.tickId) <= maxTick : true))
+      : window.events
+    artifacts.recent_events = filtered.slice(-20).map((e) => ({
+      tick_id: e.tickId,
+      frame_id: e.frameId,
+      kind: e.kind,
+      summary: e.summary,
+    }))
+  }
+
+  const payload = {
+    schema_version: 1,
+    generated_at: new Date().toISOString(),
+    bundle: {
+      file_name: bundle.meta.fileName,
+      file_size: bundle.meta.fileSize,
+      schema_version: bundle.meta.schemaVersion,
+      exported_unix_ms: bundle.meta.exportedUnixMs,
+      out_dir: bundle.meta.outDir,
+      out_dir_context: outDirContext,
+    },
+    selection: {
+      window_id: window?.windowId,
+      snapshot_a: {
+        tick_id: snapshotA?.tickId,
+        frame_id: snapshotA?.frameId,
+      },
+      snapshot_b: snapshotB
+        ? {
+            tick_id: snapshotB.tickId,
+            frame_id: snapshotB.frameId,
+          }
+        : null,
+      selected_node_id: selectedNodeId,
+    },
+    triage,
+    artifacts,
+  }
+
+  const baseName = bundle.meta.fileName ? bundle.meta.fileName.replace(/\\.json$/i, '') : 'bundle'
+  downloadJson(payload, `${baseName}.triage.json`)
 }

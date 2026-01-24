@@ -167,7 +167,10 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                 }
                 CommandAvailability::Available
             }
-            _ => CommandAvailability::Available,
+            "text.select_all" | "text.clear" => (!self.area.text().is_empty())
+                .then_some(CommandAvailability::Available)
+                .unwrap_or(CommandAvailability::Blocked),
+            _ => CommandAvailability::NotHandled,
         }
     }
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
