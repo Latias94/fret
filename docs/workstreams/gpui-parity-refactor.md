@@ -528,6 +528,8 @@ Implementation note (current state):
 - Current stopgap: while any cache root is in reuse, stale-node sweeping is conservatively disabled (a global gate)
   to avoid deleting live cached subtrees. MVP2-cache-005 removes this by relying on parent-pointer repair +
   reachability-based detachment checks + explicit view-cache subtree liveness.
+  - Status note: removing the stopgap currently regresses `ui-gallery-overlay-torture.json` under cache+shell reuse
+    (`click_no_semantics_match`); keep this gate until MVP2-cache-005 is green (see the TODO tracker evidence).
 
 Proposed ecosystem-facing API surface (runtime internal may differ):
 
