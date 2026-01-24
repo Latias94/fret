@@ -79,6 +79,8 @@ Keep this list short and evidence-backed:
   - Active branch: `feat/window-command-gating-stack`
   - Notes: `main` is single-snapshot per window; nested menus/palettes will need a stack to avoid clobbering.
   - Candidate: `crates/fret-runtime/src/window_command_gating.rs`
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs` (`push_snapshot`, `remove_pushed_snapshot`),
+    `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette pushes a snapshot and stores a token; closes pop it)
 
 ## MVP4 — Coverage Targets (Keep Expanding Incrementally)
 

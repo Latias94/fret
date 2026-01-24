@@ -319,6 +319,7 @@ impl PendingInvalidationBatch {
 pub struct CommandPaletteModels {
     pub open: fret_app::Model<bool>,
     pub query: fret_app::Model<String>,
+    gating_token: Option<fret_runtime::WindowCommandGatingToken>,
 }
 
 #[cfg(feature = "ui-app-command-palette")]
@@ -333,6 +334,25 @@ impl CommandPaletteService {
         self.by_window.get(&window).cloned()
     }
 
+    fn set_gating_token(
+        &mut self,
+        window: AppWindowId,
+        token: Option<fret_runtime::WindowCommandGatingToken>,
+    ) {
+        if let Some(models) = self.by_window.get_mut(&window) {
+            models.gating_token = token;
+        }
+    }
+
+    fn take_gating_token(
+        &mut self,
+        window: AppWindowId,
+    ) -> Option<fret_runtime::WindowCommandGatingToken> {
+        self.by_window
+            .get_mut(&window)
+            .and_then(|models| models.gating_token.take())
+    }
+
     fn ensure_window(&mut self, app: &mut App, window: AppWindowId) -> CommandPaletteModels {
         if let Some(existing) = self.by_window.get(&window) {
             return existing.clone();
@@ -341,9 +361,154 @@ impl CommandPaletteService {
         let models = CommandPaletteModels {
             open: app.models_mut().insert(false),
             query: app.models_mut().insert(String::new()),
+            gating_token: None,
         };
         self.by_window.insert(window, models.clone());
         models
+    }
+}
+
+#[cfg(feature = "ui-app-command-palette")]
+fn command_palette_toggle(app: &mut App, window: AppWindowId) -> bool {
+    let (next_open, prev_gating_token) =
+        app.with_global_mut(CommandPaletteService::default, |svc, app| {
+            let models = svc.ensure_window(app, window);
+            let is_open = app.models().get_copied(&models.open).unwrap_or(false);
+            let next_open = !is_open;
+            let _ = app.models_mut().update(&models.open, |v| *v = next_open);
+            let _ = app.models_mut().update(&models.query, |v| v.clear());
+            let prev_gating_token = svc.take_gating_token(window);
+            (next_open, prev_gating_token)
+        });
+
+    if let Some(token) = prev_gating_token {
+        app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, _app| {
+                let _ = svc.remove_pushed_snapshot(window, token);
+            },
+        );
+    }
+
+    if next_open {
+        let fallback_input_ctx = fret_ui_shadcn::command::command_palette_input_context(app);
+        let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+            app,
+            window,
+            fallback_input_ctx,
+        );
+
+        let mut input_ctx = snapshot.input_ctx().clone();
+        input_ctx.ui_has_modal = true;
+        input_ctx.focus_is_text_input = false;
+        input_ctx.dispatch_phase = fret_runtime::InputDispatchPhase::Bubble;
+
+        let token = app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, _app| svc.push_snapshot(window, snapshot.with_input_ctx(input_ctx)),
+        );
+
+        app.with_global_mut(CommandPaletteService::default, |svc, _app| {
+            svc.set_gating_token(window, Some(token));
+        });
+    }
+
+    app.request_redraw(window);
+    next_open
+}
+
+#[cfg(feature = "ui-app-command-palette")]
+fn command_palette_cleanup_gating_if_closed(app: &mut App, window: AppWindowId, open_now: bool) {
+    if open_now {
+        return;
+    }
+
+    let token = app.with_global_mut(CommandPaletteService::default, |svc, _app| {
+        svc.take_gating_token(window)
+    });
+    if let Some(token) = token {
+        app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, _app| {
+                let _ = svc.remove_pushed_snapshot(window, token);
+            },
+        );
+    }
+}
+
+#[cfg(all(test, feature = "ui-app-command-palette"))]
+mod command_palette_gating_tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn command_palette_toggle_pushes_snapshot_and_cleanup_pops_when_closed() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        assert_eq!(command_palette_toggle(&mut app, window), true);
+        assert!(
+            app.global::<fret_runtime::WindowCommandGatingService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_some(),
+            "expected command palette open to publish a gating snapshot"
+        );
+
+        let models = app
+            .global::<CommandPaletteService>()
+            .and_then(|svc| svc.models(window))
+            .expect("command palette models");
+        let _ = app.models_mut().update(&models.open, |v| *v = false);
+        command_palette_cleanup_gating_if_closed(&mut app, window, false);
+
+        assert!(
+            app.global::<fret_runtime::WindowCommandGatingService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none(),
+            "expected command palette close to pop its gating snapshot"
+        );
+    }
+
+    #[test]
+    fn command_palette_close_does_not_clear_other_pushed_overrides() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        assert_eq!(command_palette_toggle(&mut app, window), true);
+
+        let other = app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, _app| {
+                svc.push_snapshot(
+                    window,
+                    fret_runtime::WindowCommandGatingSnapshot::new(
+                        fret_runtime::InputContext::default(),
+                        HashMap::new(),
+                    ),
+                )
+            },
+        );
+
+        assert_eq!(command_palette_toggle(&mut app, window), false);
+        assert!(
+            app.global::<fret_runtime::WindowCommandGatingService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_some(),
+            "expected other pushed override to remain after command palette closes"
+        );
+
+        app.with_global_mut(
+            fret_runtime::WindowCommandGatingService::default,
+            |svc, _app| {
+                let _ = svc.remove_pushed_snapshot(window, other);
+            },
+        );
+        assert!(
+            app.global::<fret_runtime::WindowCommandGatingService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none(),
+            "expected window snapshot to be cleared after removing last override"
+        );
     }
 }
 
@@ -1124,43 +1289,7 @@ fn ui_app_handle_command<S>(
             "app.command_palette" | "command_palette.toggle"
         )
     {
-        let next_open = app.with_global_mut(CommandPaletteService::default, |svc, app| {
-            let models = svc.ensure_window(app, window);
-            let is_open = app.models().get_copied(&models.open).unwrap_or(false);
-            let next_open = !is_open;
-            let _ = app.models_mut().update(&models.open, |v| *v = next_open);
-            let _ = app.models_mut().update(&models.query, |v| v.clear());
-            next_open
-        });
-
-        if next_open {
-            let fallback_input_ctx = fret_ui_shadcn::command::command_palette_input_context(app);
-            let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                app,
-                window,
-                fallback_input_ctx,
-            );
-
-            let mut input_ctx = snapshot.input_ctx().clone();
-            input_ctx.ui_has_modal = true;
-            input_ctx.focus_is_text_input = false;
-            input_ctx.dispatch_phase = fret_runtime::InputDispatchPhase::Bubble;
-
-            app.with_global_mut(
-                fret_runtime::WindowCommandGatingService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, snapshot.with_input_ctx(input_ctx));
-                },
-            );
-        } else {
-            app.with_global_mut(
-                fret_runtime::WindowCommandGatingService::default,
-                |svc, _app| {
-                    svc.remove_window(window);
-                },
-            );
-        }
-        app.request_redraw(window);
+        let _ = command_palette_toggle(app, window);
         return;
     }
 
@@ -1574,6 +1703,7 @@ fn ui_app_render<S>(
                             .models()
                             .get_copied(&models.open)
                             .unwrap_or(false);
+                        command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
                         let entries = if open_now {
                             fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
                                 cx,
@@ -1633,6 +1763,7 @@ fn ui_app_render<S>(
                             .models()
                             .get_copied(&models.open)
                             .unwrap_or(false);
+                        command_palette_cleanup_gating_if_closed(cx.app, cx.window, open_now);
                         let entries = if open_now {
                             fret_ui_shadcn::command::command_entries_from_host_commands_with_options(
                                 cx,
