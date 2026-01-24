@@ -3382,7 +3382,6 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
         },
     );
     render(&mut ui, &mut app, &mut services, window, bounds);
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     ui.set_focus(None);
 
@@ -7688,4 +7687,274 @@ fn viewport_capture_cancel_restores_tooltips() {
         ui.is_layer_visible(layer),
         "expected tooltip to become visible again after capture cancel"
     );
+}
+
+#[test]
+fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Frame 1: render base and request overlays so we can track layer visibility.
+    let (trigger, _underlay) = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            interactive: true,
+            trigger: Some(trigger),
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let (hover_layer, tooltip_layer) =
+        app.with_global_mut_untracked(WindowOverlays::default, |o, _| {
+            let hover_layer = o
+                .hover_overlays
+                .get(&(window, trigger))
+                .map(|h| h.layer)
+                .expect("hover overlay layer");
+            let tooltip_layer = o
+                .tooltips
+                .get(&(window, trigger))
+                .map(|t| t.layer)
+                .expect("tooltip layer");
+            (hover_layer, tooltip_layer)
+        });
+    assert!(ui.is_layer_visible(hover_layer));
+    assert!(ui.is_layer_visible(tooltip_layer));
+
+    // Ensure the base underlay can still initiate viewport-like captures while hover/tooltips are
+    // visible: this test is about multi-layer capture arbitration, not overlay hit-testing.
+    ui.set_layer_hit_testable(hover_layer, false);
+    ui.set_layer_hit_testable(tooltip_layer, false);
+
+    // Begin capture in the base layer (viewport-like) and in the foreign overlay layer (second pointer).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    assert!(
+        ui.captured_for(fret_core::PointerId(0)).is_some(),
+        "expected pointer 0 capture to start from the base underlay"
+    );
+
+    // Add a foreign overlay layer that can independently capture a separate pointer id.
+    let foreign_overlay_root = fret_ui::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "foreign-capture-overlay",
+        |cx| {
+            vec![cx.pointer_region(
+                PointerRegionProps {
+                    layout: {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                left: Some(Px(200.0)),
+                                top: Some(Px(0.0)),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(40.0)),
+                                height: Length::Px(Px(40.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    },
+                    enabled: true,
+                },
+                |cx| {
+                    cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {
+                        host.capture_pointer();
+                        true
+                    }));
+                    Vec::new()
+                },
+            )]
+        },
+    );
+    ui.push_overlay_root_ex(foreign_overlay_root, false, true);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(1),
+            position: Point::new(Px(210.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    assert!(
+        ui.captured_for(fret_core::PointerId(0)).is_some(),
+        "expected pointer 0 capture to be active"
+    );
+    assert!(
+        ui.captured_for(fret_core::PointerId(1)).is_some(),
+        "expected pointer 1 capture to be active"
+    );
+
+    let arbitration = ui.input_arbitration_snapshot();
+    assert!(arbitration.pointer_capture_active);
+    assert!(
+        arbitration.pointer_capture_multiple_layers,
+        "expected multiple pointer capture roots across layers"
+    );
+
+    // Next frame: overlays should be hidden while multiple capture roots are active.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            interactive: true,
+            trigger: Some(trigger),
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    assert!(!ui.is_layer_visible(hover_layer));
+    assert!(!ui.is_layer_visible(tooltip_layer));
+
+    // Cancel both pointers; overlays should be able to become visible again when re-requested.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: Some(Point::new(Px(10.0), Px(130.0))),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(1),
+            position: Some(Point::new(Px(210.0), Px(10.0))),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+    assert!(ui.any_captured_node().is_none());
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open,
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            interactive: true,
+            trigger: Some(trigger),
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    assert!(ui.is_layer_visible(hover_layer));
+    assert!(ui.is_layer_visible(tooltip_layer));
 }
