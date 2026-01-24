@@ -5458,6 +5458,276 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_submenu_safe_hover_corridor_observes_pointer_move_under_pointer_occlusion() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(700.0), Px(320.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ])),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+        ];
+
+        // Frame 1: closed, establish stable trigger/underlay bounds.
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open (modal=true should install pointer occlusion).
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries.clone(),
+        );
+
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+            "expected modal dropdown-menu to install pointer occlusion"
+        );
+
+        // Hover "More" to arm the open-delay timer.
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        let more_center = rect_center(more.bounds);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: more_center,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let open_delay = menu::sub::MenuSubmenuConfig::default().open_delay;
+        let open_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == open_delay => Some(*token),
+            _ => None,
+        });
+        let Some(open_timer) = open_timer else {
+            panic!("expected submenu open-delay timer effect; effects={effects:?}");
+        };
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
+
+        // Frame 3: after open timer fires, the submenu opens.
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+        let submenu_models = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            &overlay_root_name,
+            |cx| menu::sub::ensure_models(cx),
+        );
+
+        let geometry = app
+            .models_mut()
+            .read(&submenu_models.geometry, |v| *v)
+            .ok()
+            .flatten();
+        let Some(geometry) = geometry else {
+            panic!("expected submenu geometry to be available after open");
+        };
+        let safe_hover_buffer = menu::sub::MenuSubmenuConfig::default().safe_hover_buffer;
+        let grace_geometry = menu::pointer_grace_intent::PointerGraceIntentGeometry {
+            reference: geometry.reference,
+            floating: geometry.floating,
+        };
+        let underlay_id = underlay_id_out.get().expect("underlay id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
+
+        // Find a point that is:
+        // - inside the submenu safe-hover corridor,
+        // - not routed to the underlay (occlusion blocks it),
+        // - to the right of the trigger center (moving towards a right-side submenu panel).
+        let mut safe_outside_hit: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(2) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(2) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                if pos.x.0 <= more_center.x.0 {
+                    continue;
+                }
+                let hit = ui.debug_hit_test(pos);
+                let Some(hit_node) = hit.hit else {
+                    continue;
+                };
+                let hit_path = ui.debug_node_path(hit_node);
+                if hit_path.contains(&underlay_node) {
+                    continue;
+                }
+                if !menu::pointer_grace_intent::last_pointer_is_safe(
+                    pos,
+                    grace_geometry,
+                    safe_hover_buffer,
+                ) {
+                    continue;
+                }
+                safe_outside_hit = Some(pos);
+                break;
+            }
+            if safe_outside_hit.is_some() {
+                break;
+            }
+        }
+        let safe_outside_hit = safe_outside_hit.unwrap_or_else(|| {
+            panic!(
+                "failed to find a safe-hover point outside hit-testing; geometry={geometry:?} more_center={more_center:?} layers={:?}",
+                ui.debug_layers_in_paint_order()
+            )
+        });
+
+        // Sanity: pointer occlusion should prevent the underlay from being the hit target here.
+        let safe_hit = ui.debug_hit_test(safe_outside_hit);
+        let safe_hit_node = safe_hit.hit.expect("expected a hit node for safe point");
+        let safe_hit_path = ui.debug_node_path(safe_hit_node);
+        assert!(
+            !safe_hit_path.contains(&underlay_node),
+            "expected safe-hover point to not route to the underlay under pointer occlusion; point={safe_outside_hit:?} hit={safe_hit:?} path={safe_hit_path:?} underlay={underlay_node:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: safe_outside_hit,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        let close_delay = menu::sub::MenuSubmenuConfig::default().close_delay;
+        assert!(
+            !effects
+                .iter()
+                .any(|e| { matches!(e, Effect::SetTimer { after, .. } if *after == close_delay) }),
+            "expected safe-hover corridor pointer move to not arm the close-delay timer; effects={effects:?} safe_point={safe_outside_hit:?} geometry={geometry:?}"
+        );
+
+        // Now find an unsafe point outside hit-testing and confirm it arms the close-delay timer.
+        let mut unsafe_outside_hit: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(2) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(2) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                if pos.x.0 <= more_center.x.0 {
+                    continue;
+                }
+                let hit = ui.debug_hit_test(pos);
+                let Some(hit_node) = hit.hit else {
+                    continue;
+                };
+                let hit_path = ui.debug_node_path(hit_node);
+                if hit_path.contains(&underlay_node) {
+                    continue;
+                }
+                if menu::pointer_grace_intent::last_pointer_is_safe(
+                    pos,
+                    grace_geometry,
+                    safe_hover_buffer,
+                ) {
+                    continue;
+                }
+                unsafe_outside_hit = Some(pos);
+                break;
+            }
+            if unsafe_outside_hit.is_some() {
+                break;
+            }
+        }
+        let unsafe_outside_hit = unsafe_outside_hit.unwrap_or_else(|| {
+            panic!(
+                "failed to find an unsafe point outside hit-testing; geometry={geometry:?} more_center={more_center:?} layers={:?}",
+                ui.debug_layers_in_paint_order()
+            )
+        });
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: unsafe_outside_hit,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        let close_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == close_delay => Some(*token),
+            _ => None,
+        });
+        let Some(_close_timer) = close_timer else {
+            panic!(
+                "expected unsafe pointer move to arm the submenu close-delay timer; effects={effects:?} unsafe_point={unsafe_outside_hit:?} geometry={geometry:?} hit={:?}",
+                ui.debug_hit_test(unsafe_outside_hit)
+            );
+        };
+    }
+
+    #[test]
     fn dropdown_menu_submenu_wheel_scroll_brings_late_items_into_view() {
         use std::time::Duration;
 
