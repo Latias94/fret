@@ -519,6 +519,7 @@ pub enum UiDebugCacheRootReuseReason {
     MarkedReuseRoot,
     NotMarkedReuseRoot,
     CacheKeyMismatch,
+    ManualCacheRoot,
 }
 
 impl UiDebugCacheRootReuseReason {
@@ -529,6 +530,7 @@ impl UiDebugCacheRootReuseReason {
             Self::MarkedReuseRoot => "marked_reuse_root",
             Self::NotMarkedReuseRoot => "not_marked_reuse_root",
             Self::CacheKeyMismatch => "cache_key_mismatch",
+            Self::ManualCacheRoot => "manual_cache_root",
         }
     }
 }

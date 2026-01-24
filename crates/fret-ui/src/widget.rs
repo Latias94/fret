@@ -544,6 +544,24 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
         self.app.push_effect(Effect::RequestAnimationFrame(window));
     }
 
+    /// Request the next animation frame for this window without marking the nearest cache root as
+    /// dirty.
+    ///
+    /// This is intended for paint-only chrome (hover fades, drag indicators, caret blink) that
+    /// must repaint every frame but should remain structurally reusable under view caching.
+    pub fn request_animation_frame_paint_only(&mut self) {
+        self.tree.invalidate_with_source_and_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationSource::Other,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
     pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
         (self.observe_model)(model.id(), invalidation);
     }
