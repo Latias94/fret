@@ -145,18 +145,18 @@ impl OverlayLayerState {
         }
     }
 
-    fn tooltip(present: bool) -> Self {
+    fn tooltip(present: bool, interactive: bool) -> Self {
         Self {
             present,
-            interactive: false,
+            interactive,
             wants_timer_events: false,
         }
     }
 
-    fn hover(present: bool) -> Self {
+    fn hover(present: bool, interactive: bool) -> Self {
         Self {
             present,
-            interactive: present,
+            interactive,
             wants_timer_events: false,
         }
     }
@@ -196,8 +196,8 @@ fn apply_overlay_layer_state<H: UiHost>(
         OverlayLayerKind::Tooltip => {
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, false);
-            ui.set_layer_wants_pointer_down_outside_events(layer, st.present);
-            ui.set_layer_wants_pointer_move_events(layer, st.present);
+            ui.set_layer_wants_pointer_down_outside_events(layer, st.interactive);
+            ui.set_layer_wants_pointer_move_events(layer, st.interactive);
         }
         OverlayLayerKind::Hover => {
             ui.set_layer_visible(layer, st.present);
@@ -261,15 +261,18 @@ impl OverlayLayer {
         )
     }
 
-    pub(super) fn tooltip(present: bool) -> Self {
+    pub(super) fn tooltip(present: bool, interactive: bool) -> Self {
         Self::new(
             OverlayLayerKind::Tooltip,
-            OverlayLayerState::tooltip(present),
+            OverlayLayerState::tooltip(present, interactive),
         )
     }
 
-    pub(super) fn hover(present: bool) -> Self {
-        Self::new(OverlayLayerKind::Hover, OverlayLayerState::hover(present))
+    pub(super) fn hover(present: bool, interactive: bool) -> Self {
+        Self::new(
+            OverlayLayerKind::Hover,
+            OverlayLayerState::hover(present, interactive),
+        )
     }
 
     pub(super) fn toast(present: bool, wants_timer_events: bool) -> Self {

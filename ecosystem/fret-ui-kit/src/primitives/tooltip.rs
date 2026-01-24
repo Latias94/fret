@@ -594,10 +594,11 @@ pub fn tooltip_use_open_model<H: UiHost>(
 /// Builds an overlay request for a Radix-style tooltip.
 pub fn tooltip_request(
     id: GlobalElementId,
+    open: Model<bool>,
     presence: OverlayPresence,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
-    let mut request = OverlayRequest::tooltip(id, presence, children);
+    let mut request = OverlayRequest::tooltip(id, open, presence, children);
     request.root_name = Some(tooltip_root_name(id));
     request
 }
@@ -633,14 +634,16 @@ mod tests {
     #[test]
     fn tooltip_request_sets_default_root_name() {
         let mut app = App::new();
+        let open = app.models_mut().insert(true);
         fret_ui::elements::with_element_cx(
             &mut app,
             Default::default(),
             Default::default(),
             "test",
-            |_cx| {
+            move |_cx| {
                 let id = GlobalElementId(0x123);
-                let req = tooltip_request(id, OverlayPresence::instant(true), Vec::new());
+                let req =
+                    tooltip_request(id, open.clone(), OverlayPresence::instant(true), Vec::new());
                 let expected = tooltip_root_name(id);
                 assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
             },

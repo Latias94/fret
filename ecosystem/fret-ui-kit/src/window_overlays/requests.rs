@@ -107,6 +107,8 @@ pub struct HoverOverlayRequest {
     pub id: GlobalElementId,
     pub root_name: String,
     pub trigger: GlobalElementId,
+    pub open: Model<bool>,
+    pub present: bool,
     pub children: Vec<AnyElement>,
 }
 
@@ -116,6 +118,8 @@ impl std::fmt::Debug for HoverOverlayRequest {
             .field("id", &self.id)
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
+            .field("open", &"<model>")
+            .field("present", &self.present)
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -126,6 +130,8 @@ pub struct TooltipRequest {
     pub id: GlobalElementId,
     pub root_name: String,
     pub trigger: Option<GlobalElementId>,
+    pub open: Model<bool>,
+    pub present: bool,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
@@ -137,6 +143,8 @@ impl std::fmt::Debug for TooltipRequest {
             .field("id", &self.id)
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
+            .field("open", &"<model>")
+            .field("present", &self.present)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())
             .field("children_len", &self.children.len())
