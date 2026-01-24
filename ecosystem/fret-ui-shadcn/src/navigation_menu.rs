@@ -20,6 +20,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Radius, Space, ui,
@@ -56,12 +57,18 @@ fn command_is_disabled_by_gating<H: UiHost>(
 fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.navigation_menu.trigger.text_px")
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
+        .or_else(|| theme.metric_by_key("metric.font.size"))
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_PX));
     let line_height = theme
         .metric_by_key("component.navigation_menu.trigger.line_height")
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
+        .or_else(|| theme.metric_by_key("metric.font.line_height"))
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| {
+            theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+        });
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -780,6 +787,78 @@ impl NavigationMenu {
 
                             let trigger_children = item.trigger.clone();
                             let item_label = item.label.clone();
+                            if item.content.is_empty() {
+                                // shadcn/ui demo uses a `NavigationMenuLink` for items with no
+                                // content (e.g. "Docs"), styled via `navigationMenuTriggerStyle()`.
+                                // These should behave like a link (no chevron, no open/close).
+                                let trigger_text_style = trigger_text_style.clone();
+                                let trigger_children = trigger_children.clone();
+
+                                return cx.pressable(pressable, move |cx, st| {
+                                    let hovered = st.hovered && !st.pressed;
+                                    let pressed = st.pressed;
+                                    let fg = if disabled {
+                                        trigger_fg_muted
+                                    } else {
+                                        trigger_fg
+                                    };
+                                    let bg = (hovered || pressed).then_some(trigger_bg_hover);
+
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Auto;
+
+                                    let wrapper = ContainerProps {
+                                        layout,
+                                        padding: Edges {
+                                            top: trigger_pad_y,
+                                            right: trigger_pad_x,
+                                            bottom: trigger_pad_y,
+                                            left: trigger_pad_x,
+                                        },
+                                        background: bg,
+                                        shadow: None,
+                                        border: Edges::all(Px(0.0)),
+                                        border_color: None,
+                                        corner_radii: Corners::all(trigger_radius),
+                                        ..Default::default()
+                                    };
+
+                                    let content_children =
+                                        trigger_children.clone().unwrap_or_else(|| {
+                                            let style = trigger_text_style.clone();
+                                            let mut label = ui::label(cx, item_label.clone())
+                                                .text_size_px(style.size)
+                                                .font_weight(style.weight)
+                                                .text_color(ColorRef::Color(fg))
+                                                .nowrap();
+                                            if let Some(line_height) = style.line_height {
+                                                label = label.line_height_px(line_height);
+                                            }
+                                            if let Some(letter_spacing_em) = style.letter_spacing_em
+                                            {
+                                                label = label
+                                                    .letter_spacing_em(letter_spacing_em);
+                                            }
+                                            vec![label.into_element(cx)]
+                                        });
+
+                                    let row = cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(0.0),
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Center,
+                                            align: fret_ui::element::CrossAlign::Center,
+                                            wrap: false,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| content_children,
+                                    );
+
+                                    vec![cx.container(wrapper, move |_cx| vec![row])]
+                                });
+                            }
                             radix_navigation_menu::NavigationMenuTrigger::new(item_value.clone())
                                 .label(label.clone())
                                 .disabled(disabled)
@@ -991,7 +1070,7 @@ impl NavigationMenu {
                 let content_switch = content_switch.clone();
                 let content_switch_slide_px = content_switch_slide_px;
 
-                let panel_props = if viewport_enabled {
+                let mut panel_props = if viewport_enabled {
                     ContainerProps {
                         layout: LayoutStyle {
                             overflow: fret_ui::element::Overflow::Clip,
@@ -1020,6 +1099,13 @@ impl NavigationMenu {
                         ..Default::default()
                     }
                 };
+                if viewport_enabled && measured.is_some() {
+                    // Match shadcn/ui + Radix: the viewport panel is sized by the measured content
+                    // dimensions (CSS vars). Tailwind preflight uses `box-sizing: border-box`, so
+                    // the viewport border is included in those dimensions.
+                    panel_props.layout.size.width = Length::Px(content_size.width);
+                    panel_props.layout.size.height = Length::Px(content_size.height);
+                }
 
                 let placement = popper::PopperContentPlacement::new(
                     direction_prim::use_direction_in_scope(cx, None),
@@ -1071,12 +1157,14 @@ impl NavigationMenu {
                         let content_padding = content_padding;
                         let indicator_diamond_shadow = indicator_diamond_shadow;
                         let indicator_diamond_corners = indicator_diamond_corners;
+                        let viewport_enabled = viewport_enabled;
+                        let selected_value_for_registry: Arc<str> = Arc::from(selected_value_key);
 
                         let content =
                             radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
                                 cx,
                                 selected_value_key,
-                                move |cx, _st, _content_id| {
+                                move |cx, _st, content_id| {
                                 let root_state_for_hover = root_state_for_hover.clone();
                                 let value_for_hover = value_for_hover.clone();
                                 cx.pressable_on_hover_change(Arc::new(
@@ -1097,18 +1185,40 @@ impl NavigationMenu {
                                     },
                                 ));
 
+                                let root_id_for_registry = root_id;
+                                let value_for_registry = selected_value_for_registry.clone();
+                                let content_id_for_registry = content_id;
+                                let viewport_enabled_for_registry = viewport_enabled;
                                 let children = vec![cx.container(panel_props, move |cx| {
                                     let Some((t, forward, from_children)) = content_switch.clone()
                                     else {
                                         let children = viewport_children.clone();
-                                        return vec![cx.container(
-                                            ContainerProps {
-                                                layout: LayoutStyle::default(),
-                                                padding: content_padding,
-                                                ..Default::default()
-                                            },
-                                            move |_cx| children,
-                                        )];
+                                        let body = cx.keyed("viewport-body", |cx| {
+                                            cx.container(
+                                                ContainerProps {
+                                                    layout: LayoutStyle::default(),
+                                                    padding: content_padding,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| children,
+                                            )
+                                        });
+                                        if viewport_enabled_for_registry {
+                                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                cx,
+                                                root_id_for_registry,
+                                                value_for_registry.clone(),
+                                                body.id,
+                                            );
+                                        } else {
+                                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                cx,
+                                                root_id_for_registry,
+                                                value_for_registry.clone(),
+                                                content_id_for_registry,
+                                            );
+                                        }
+                                        return vec![body];
                                     };
 
                                     let to_children = viewport_children.clone();
@@ -1121,52 +1231,61 @@ impl NavigationMenu {
                                         (slide * t, -slide * (1.0 - t))
                                     };
 
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size = SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    };
-                                    layout.overflow = fret_ui::element::Overflow::Clip;
-                                    let layout_for_layers = layout;
+                                    let value_for_registry_for_layers = value_for_registry.clone();
 
-                                    vec![cx.stack_props(
+                                    // In shadcn/ui (Radix), `NavigationMenuContent` keeps its
+                                    // intrinsic size even during switch animations. In Fret, we
+                                    // must preserve that intrinsic sizing so overlay placement can
+                                    // converge to the same bounds and so viewport sizing can
+                                    // observe the real content size (not the previous panel size).
+                                    let mut layout_for_layers = LayoutStyle::default();
+                                    layout_for_layers.overflow = fret_ui::element::Overflow::Clip;
+
+                                    let stack = cx.stack_props(
                                         StackProps {
                                             layout: layout_for_layers,
                                         },
                                         move |cx| {
-                                            let mut layer_layout = LayoutStyle::default();
-                                            layer_layout.size = SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            };
+                                            let layer_layout = LayoutStyle::default();
 
                                             let from_opacity = 1.0 - t;
                                             let to_opacity = t;
 
-                                            let from_children = vec![cx.container(
-                                                ContainerProps {
-                                                    layout: LayoutStyle::default(),
-                                                    padding: content_padding,
-                                                    ..Default::default()
-                                                },
-                                                {
-                                                    let from_children = from_children.clone();
-                                                    move |_cx| from_children
-                                                },
-                                            )];
-                                            let to_children = vec![cx.container(
-                                                ContainerProps {
-                                                    layout: LayoutStyle::default(),
-                                                    padding: content_padding,
-                                                    ..Default::default()
-                                                },
-                                                {
-                                                    let to_children = to_children.clone();
-                                                    move |_cx| to_children
-                                                },
-                                            )];
+                                            let from_children = vec![cx.keyed("from-body", |cx| {
+                                                cx.container(
+                                                    ContainerProps {
+                                                        layout: LayoutStyle::default(),
+                                                        padding: content_padding,
+                                                        ..Default::default()
+                                                    },
+                                                    {
+                                                        let from_children = from_children.clone();
+                                                        move |_cx| from_children
+                                                    },
+                                                )
+                                            })];
+                                            let to_body = cx.keyed("to-body", |cx| {
+                                                cx.container(
+                                                    ContainerProps {
+                                                        layout: LayoutStyle::default(),
+                                                        padding: content_padding,
+                                                        ..Default::default()
+                                                    },
+                                                    {
+                                                        let to_children = to_children.clone();
+                                                        move |_cx| to_children
+                                                    },
+                                                )
+                                            });
+                                            if viewport_enabled_for_registry {
+                                                radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                    cx,
+                                                    root_id_for_registry,
+                                                    value_for_registry_for_layers.clone(),
+                                                    to_body.id,
+                                                );
+                                            }
+                                            let to_children = vec![to_body];
 
                                             let from = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
                                                 cx,
@@ -1198,7 +1317,23 @@ impl NavigationMenu {
 
                                             vec![from, to]
                                         },
-                                    )]
+                                    );
+                                    if viewport_enabled_for_registry {
+                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                            cx,
+                                            root_id_for_registry,
+                                            value_for_registry.clone(),
+                                            stack.id,
+                                        );
+                                    } else {
+                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                            cx,
+                                            root_id_for_registry,
+                                            value_for_registry.clone(),
+                                            content_id_for_registry,
+                                        );
+                                    }
+                                    vec![stack]
                                 })];
 
                                 (
@@ -1215,25 +1350,19 @@ impl NavigationMenu {
                             },
                         );
 
-                        if let Some(selected_value) = selected_value_for_content_id.clone() {
-                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                cx,
-                                root_id,
-                                selected_value,
-                                content.id,
-                            );
-                        }
-
                         let transform = overlay_motion::shadcn_zoom_transform_with_scale(
                             layout.transform_origin,
                             scale,
                         );
 
-                        let panel = popper_content::popper_wrapper_panel_at(
+                        // `NavigationMenuContent` (desktop) and `NavigationMenuViewport` (mobile)
+                        // are intrinsically sized in Radix/shadcn. Use an autosizing wrapper so we
+                        // don't have to provide a fixed `placed.size` up-front (which would
+                        // otherwise lock the content to an estimated/previous size during switch
+                        // interactions).
+                        let panel = popper_content::popper_wrapper_at_autosize(
                             cx,
-                            layout.placed,
-                            Edges::all(Px(0.0)),
-                            fret_ui::element::Overflow::Visible,
+                            layout.placed.origin,
                             move |_cx| vec![content],
                         );
 
