@@ -29,7 +29,7 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "visible_in_window",
         "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-row-9000-label" }
       },
       "timeout_frames": 240
@@ -41,7 +41,7 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "visible_in_window",
         "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-edit-input" }
       },
       "timeout_frames": 120

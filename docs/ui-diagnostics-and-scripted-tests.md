@@ -346,6 +346,7 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
+- `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

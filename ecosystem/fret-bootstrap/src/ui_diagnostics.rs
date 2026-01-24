@@ -2349,8 +2349,20 @@ pub struct UiKeyModifiersV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
-    Exists { target: UiSelectorV1 },
-    FocusIs { target: UiSelectorV1 },
+    Exists {
+        target: UiSelectorV1,
+    },
+    FocusIs {
+        target: UiSelectorV1,
+    },
+    /// True when the target exists and its semantics bounds intersect the active window bounds.
+    ///
+    /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
+    /// that exists in the tree but is currently far off-screen due to an in-flight scroll/window
+    /// update.
+    VisibleInWindow {
+        target: UiSelectorV1,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4253,7 +4265,36 @@ fn eval_predicate(
             };
             node.id == focus
         }
+        UiPredicateV1::VisibleInWindow { target } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let Some(window_bounds) = snapshot
+                .nodes
+                .iter()
+                .find(|n| n.role == fret_core::SemanticsRole::Window)
+                .map(|n| n.bounds)
+            else {
+                return false;
+            };
+            rects_intersect(node.bounds, window_bounds)
+        }
     }
+}
+
+fn rects_intersect(a: Rect, b: Rect) -> bool {
+    let ax0 = a.origin.x.0;
+    let ay0 = a.origin.y.0;
+    let ax1 = ax0 + a.size.width.0.max(0.0);
+    let ay1 = ay0 + a.size.height.0.max(0.0);
+
+    let bx0 = b.origin.x.0;
+    let by0 = b.origin.y.0;
+    let bx1 = bx0 + b.size.width.0.max(0.0);
+    let by1 = by0 + b.size.height.0.max(0.0);
+
+    ax1 > bx0 && bx1 > ax0 && ay1 > by0 && by1 > ay0
 }
 
 fn center_of_rect(rect: Rect) -> Point {
