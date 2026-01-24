@@ -212,12 +212,16 @@ Current vs target (VirtualList example):
 Concrete alignment targets (beyond VirtualList):
 
 - **Windowed 1D surfaces (rows/lines)**:
-  - tables/trees/lists, large inspectors/logs, command palette/search results,
-  - code/text/markdown lines (especially syntax-highlighted code blocks).
+  - code/text views (`ecosystem/fret-code-view`, editor surfaces): visible line windows,
+  - long documents (`ecosystem/fret-markdown`, logs/traces): visible line/row windows,
+  - tables/trees/lists (via `ecosystem/fret-ui-kit` helpers): row windows + stable item keys,
+  - command/search surfaces (palette, search results, outline): list-of-rows windows under rapid updates.
 - **Windowed 2D surfaces (viewport culling)**:
-  - node graphs/canvas scenes, large gizmo/viewport overlays.
+  - node graphs/canvas scenes (`ecosystem/fret-node`, `ecosystem/fret-canvas`): world-space culling windows,
+  - gizmos/viewport overlays (`ecosystem/fret-gizmo`, `ecosystem/fret-viewport-tooling`): cull + paint-only chrome.
 - **Sampling surfaces**:
-  - plots/charts where pan/zoom should adjust a data window or sampling window without rebuilding full series.
+  - plots/charts (`ecosystem/fret-chart`, `ecosystem/fret-plot`, `ecosystem/fret-plot3d`, `ecosystem/delinea`):
+    pan/zoom adjusts a data window / sampling window without rebuilding full series.
 
 - **Paint-only chrome surfaces** (should avoid rerender by default; ADR 0181):
   - hover/focus/pressed style refinements across common controls,
@@ -246,6 +250,13 @@ Fearless refactor tactic:
    a redraw and invalidate the right cache boundary (ADR 0180 / ADR 0190).
 4) Migrate surfaces one-by-one via ecosystem helpers (`fret-ui-kit`), so multiple crates get the same perf/correctness
    loop without duplicating invalidation logic.
+
+Recommended migration order (maximize ROI, minimize churn):
+
+1) **1D line windows** (code/text/markdown): the “editor core” payoff and easiest to validate with scroll harnesses.
+2) **Row windows** (lists/inspectors/palettes): broad ecosystem reuse via `fret-ui-kit` helper patterns.
+3) **2D culling windows** (node graph/canvas): unlock stable perf under pan/zoom with a single stress harness.
+4) **Sampling windows** (charts/plots): separate “sampling math” from rendering and make it explainable in bundles.
 
 ### 1.4 Contract gates (ADRs)
 
