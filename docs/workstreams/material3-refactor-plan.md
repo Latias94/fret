@@ -260,6 +260,7 @@ These are *candidates*, not guaranteed core work:
 - [x] Provide a small internal conformance harness (unit tests) for:
   - pressed/hover/focus state transitions,
   - ripple bounded/unbounded rules,
+  - overlay motion + modal focus outcomes (cubic-bezier transitions, focus trap/restore),
   - “no fallback to shadcn tokens” enforcement (where feasible).
 
 ### M2 — Migrate 2 components end-to-end

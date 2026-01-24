@@ -395,6 +395,32 @@ let drawer = m3::NavigationDrawer::new(value)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = r#"
+## Material 3 Modal Navigation Drawer (MVP)
+
+This page validates a Material 3 **modal** navigation drawer surface:
+
+- modal barrier (no click-through)
+- token-driven scrim opacity
+- slide-in motion driven by theme easing tokens
+- focus trap while open + focus restore on close
+"#;
+
+pub(crate) const USAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let open = app.models_mut().insert(false);
+let value = app.models_mut().insert(Arc::<str>::from("search"));
+let root = m3::ModalNavigationDrawer::new(open).into_element(
+    cx,
+    |cx| m3::NavigationDrawer::new(value).into_element(cx),
+    |cx| cx.text("Content"),
+);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_MENU: &str = r#"
 ## Material 3 Menu (MVP)
 

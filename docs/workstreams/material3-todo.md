@@ -192,12 +192,19 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `crates/fret-ui/src/paint.rs` (`paint_ripple`).
 - [ ] Ripple (unbounded, keyboard click synthesis, spec fade rules).
 - [ ] Focus ring style and focus-visible heuristics aligned with Material expectations.
+- [x] Transition timelines support theme cubic-bezier easing (overlay motion parity).
+  - Evidence: `ecosystem/fret-ui-headless/src/transition.rs` (`update_with_cubic_bezier`),
+    `ecosystem/fret-ui-kit/src/declarative/transition.rs` (`drive_transition_with_durations_and_cubic_bezier`),
+    `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`transition_with_durations_and_cubic_bezier`).
 - [ ] Overlay outcomes (menu, dialog, tooltip):
   - [x] Escape dismissal (menu dropdown)
     - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu)
   - [x] outside press dismissal (menu dropdown)
     - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu)
-  - [ ] focus trap/restore (modal)
+  - [x] focus trap/restore (modal) (currently validated via modal navigation drawer)
+    - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (focus trap),
+      `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (focus restore),
+      `ecosystem/fret-ui-primitives/src/focus_scope.rs` (`FocusScopeProps { trap_focus: true }`).
   - [ ] click-through semantics (non-modal)
 
 ### Visual Outcomes
@@ -247,6 +254,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_drawer_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_navigation_drawer`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_NAVIGATION_DRAWER`).
+- [x] Modal navigation drawer (MVP: modal overlay + scrim + slide-in motion + focus trap/restore)
+  - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (`ModalNavigationDrawer`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_modal_navigation_drawer`),
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER`).
 - [x] Menu (MVP: in-place list + dropdown overlay, roving focus + prefix typeahead, state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/menu.rs` (`Menu`, `MenuItem`, `roving_typeahead_prefix_arc_str_always_wrap`),
     `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (`DropdownMenu`),

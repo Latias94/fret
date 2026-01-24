@@ -131,6 +131,7 @@ pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_BAR: &str = "material3_navigation_bar";
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_RAIL: &str = "material3_navigation_rail";
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_DRAWER: &str = "material3_navigation_drawer";
+pub(crate) const PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = "material3_modal_navigation_drawer";
 pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
 pub(crate) const PAGE_MATERIAL3_STATE_MATRIX: &str = "material3_state_matrix";
 
@@ -177,6 +178,8 @@ pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_RAIL: &str =
     "ui_gallery.nav.select.material3_navigation_rail";
 pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_DRAWER: &str =
     "ui_gallery.nav.select.material3_navigation_drawer";
+pub(crate) const CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str =
+    "ui_gallery.nav.select.material3_modal_navigation_drawer";
 pub(crate) const CMD_NAV_MATERIAL3_MENU: &str = "ui_gallery.nav.select.material3_menu";
 pub(crate) const CMD_NAV_MATERIAL3_STATE_MATRIX: &str =
     "ui_gallery.nav.select.material3_state_matrix";
@@ -700,6 +703,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_MATERIAL3_NAVIGATION_DRAWER,
                 docs::USAGE_MATERIAL3_NAVIGATION_DRAWER,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER,
+                "Modal Navigation Drawer",
+                "Material 3 Modal Navigation Drawer (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER,
+                &[
+                    "material3",
+                    "navigation-drawer",
+                    "modal",
+                    "overlay",
+                    "scrim",
+                    "focus-trap",
+                    "motion",
+                ],
+                docs::DOC_MATERIAL3_MODAL_NAVIGATION_DRAWER,
+                docs::USAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_MENU,
