@@ -10,8 +10,8 @@ pub use cx::ElementContext;
 pub use hash::global_root;
 pub use id::GlobalElementId;
 pub use queries::{
-    bounds_for_element, node_for_element, root_bounds_for_element, visual_bounds_for_element,
-    with_element_cx,
+    bounds_for_element, element_is_live_in_current_frame, node_for_element,
+    root_bounds_for_element, visual_bounds_for_element, with_element_cx,
 };
 #[cfg(feature = "diagnostics")]
 pub use runtime::WindowElementDiagnosticsSnapshot;
