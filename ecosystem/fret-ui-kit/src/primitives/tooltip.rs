@@ -41,6 +41,7 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
+use fret_ui::element::PointerRegionProps;
 
 /// Stamps Radix-like trigger relationships:
 /// - `described_by_element` mirrors `aria-describedby` (by element id).
@@ -158,6 +159,274 @@ pub fn tooltip_last_pointer_model<H: UiHost>(
     let model = cx.app.models_mut().insert(None);
     cx.with_state(State::default, |st| st.model = Some(model.clone()));
     model
+}
+
+#[derive(Clone)]
+pub struct TooltipTriggerEventModels {
+    pub has_pointer_move_opened: Model<bool>,
+    pub pointer_transit_geometry: Model<Option<(Rect, Rect)>>,
+    pub suppress_hover_open: Model<bool>,
+    pub suppress_focus_open: Model<bool>,
+    pub close_requested: Model<bool>,
+    pub open: Model<bool>,
+}
+
+/// Returns the per-tooltip trigger models used by Radix-aligned tooltip policies.
+///
+/// Recipes can use these models to:
+/// - derive whether hover/focus should be treated as an "open affordance",
+/// - request closes via `close_requested` (e.g. on outside press),
+/// - keep `open` as an authoritative model so view-cache synthesis can remain stable.
+pub fn tooltip_trigger_event_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> TooltipTriggerEventModels {
+    #[derive(Default)]
+    struct State {
+        models: Option<TooltipTriggerEventModels>,
+    }
+
+    let existing = cx.with_state(State::default, |st| st.models.clone());
+    if let Some(models) = existing {
+        return models;
+    }
+
+    let models = TooltipTriggerEventModels {
+        has_pointer_move_opened: cx.app.models_mut().insert(false),
+        pointer_transit_geometry: pointer_transit_geometry_model(cx),
+        suppress_hover_open: cx.app.models_mut().insert(false),
+        suppress_focus_open: cx.app.models_mut().insert(false),
+        close_requested: cx.app.models_mut().insert(false),
+        open: cx.app.models_mut().insert(false),
+    };
+
+    cx.with_state(State::default, |st| st.models = Some(models.clone()));
+    models
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct TooltipTriggerHoverEdgeState {
+    was_hovered: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TooltipTriggerGatedSignals {
+    pub trigger_hovered: bool,
+    pub trigger_focused: bool,
+    pub force_close: bool,
+}
+
+/// Applies Radix-aligned "open affordance" gating rules for tooltip triggers.
+///
+/// This is responsible for:
+/// - suppressing immediate re-open after explicit dismiss (outside press / escape),
+/// - requiring at least one pointer move (mouse) to allow hover-open,
+/// - clearing suppression once the pointer leaves (hover edge) or focus is lost.
+pub fn tooltip_trigger_update_gates<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    hovered: bool,
+    focused: bool,
+    models: &TooltipTriggerEventModels,
+) -> TooltipTriggerGatedSignals {
+    let close_requested = cx
+        .watch_model(&models.close_requested)
+        .layout()
+        .copied()
+        .unwrap_or(false);
+    let has_pointer_move_opened = cx
+        .watch_model(&models.has_pointer_move_opened)
+        .layout()
+        .copied()
+        .unwrap_or(false);
+    let suppress_hover_open = cx
+        .watch_model(&models.suppress_hover_open)
+        .layout()
+        .copied()
+        .unwrap_or(false);
+    let suppress_focus_open = cx
+        .watch_model(&models.suppress_focus_open)
+        .layout()
+        .copied()
+        .unwrap_or(false);
+
+    let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+        let left = st.was_hovered && !hovered;
+        st.was_hovered = hovered;
+        left
+    });
+
+    if left_hover && (has_pointer_move_opened || suppress_hover_open) {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&models.has_pointer_move_opened, |v| *v = false);
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&models.suppress_hover_open, |v| *v = false);
+    }
+
+    if !focused && suppress_focus_open {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&models.suppress_focus_open, |v| *v = false);
+    }
+
+    if close_requested {
+        if has_pointer_move_opened && !suppress_hover_open {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&models.suppress_hover_open, |v| *v = true);
+        }
+        if focused && !suppress_focus_open {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&models.suppress_focus_open, |v| *v = true);
+        }
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&models.close_requested, |v| *v = false);
+    }
+
+    TooltipTriggerGatedSignals {
+        trigger_hovered: hovered && has_pointer_move_opened && !suppress_hover_open,
+        trigger_focused: focused && !suppress_focus_open,
+        force_close: close_requested,
+    }
+}
+
+/// Installs default Radix-aligned dismiss policies for a tooltip trigger.
+///
+/// This wires:
+/// - pointer-down (close and suppress focus/hover re-open),
+/// - activation (close and suppress focus re-open),
+/// - Escape keydown (close and suppress focus re-open).
+pub fn tooltip_install_default_trigger_dismiss_handlers<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    trigger: GlobalElementId,
+    models: TooltipTriggerEventModels,
+) {
+    cx.pressable_add_on_pointer_down_for(
+        trigger,
+        Arc::new({
+            let close_requested = models.close_requested.clone();
+            let suppress_focus_open = models.suppress_focus_open.clone();
+            let has_pointer_move_opened = models.has_pointer_move_opened.clone();
+            let suppress_hover_open = models.suppress_hover_open.clone();
+            move |host, acx, down| {
+                if down.pointer_type != PointerType::Touch {
+                    let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                }
+                let _ = host
+                    .models_mut()
+                    .update(&suppress_focus_open, |v| *v = true);
+                let gate = host
+                    .models_mut()
+                    .read(&has_pointer_move_opened, |v| *v)
+                    .ok()
+                    .unwrap_or(false);
+                if gate {
+                    let _ = host
+                        .models_mut()
+                        .update(&suppress_hover_open, |v| *v = true);
+                }
+                host.request_redraw(acx.window);
+                fret_ui::action::PressablePointerDownResult::Continue
+            }
+        }),
+    );
+
+    cx.pressable_add_on_activate_for(
+        trigger,
+        Arc::new({
+            let close_requested = models.close_requested.clone();
+            let suppress_focus_open = models.suppress_focus_open.clone();
+            move |host, acx, _reason| {
+                let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                let _ = host
+                    .models_mut()
+                    .update(&suppress_focus_open, |v| *v = true);
+                host.request_redraw(acx.window);
+            }
+        }),
+    );
+
+    cx.key_add_on_key_down_for(
+        trigger,
+        Arc::new({
+            let close_requested = models.close_requested.clone();
+            let suppress_focus_open = models.suppress_focus_open.clone();
+            move |host, acx, down| {
+                if down.repeat || down.key != fret_core::KeyCode::Escape {
+                    return false;
+                }
+                let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                let _ = host
+                    .models_mut()
+                    .update(&suppress_focus_open, |v| *v = true);
+                host.request_redraw(acx.window);
+                true
+            }
+        }),
+    );
+}
+
+/// Wraps a tooltip trigger with a pointer-move gate that enables hover-open.
+///
+/// This follows Radix Tooltip's "require pointer move" behavior to avoid opening on incidental
+/// hover states, and also respects "pointer in transit" while the pointer moves between trigger
+/// and content (so other tooltip triggers do not open during the safe corridor).
+pub fn tooltip_wrap_trigger_with_pointer_move_open_gate<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    trigger: AnyElement,
+    models: TooltipTriggerEventModels,
+    pointer_in_transit_buffer: Px,
+) -> AnyElement {
+    cx.pointer_region(PointerRegionProps::default(), move |cx| {
+        cx.pointer_region_on_pointer_move(Arc::new({
+            let has_pointer_move_opened = models.has_pointer_move_opened.clone();
+            let pointer_transit_geometry = models.pointer_transit_geometry.clone();
+            move |host, acx, mv| {
+                if mv.pointer_type == PointerType::Touch {
+                    return false;
+                }
+
+                let geometry = host
+                    .models_mut()
+                    .read(&pointer_transit_geometry, |v| *v)
+                    .ok()
+                    .flatten();
+                if let Some((anchor, floating)) = geometry
+                    && tooltip_pointer_in_transit(
+                        mv.position,
+                        anchor,
+                        floating,
+                        pointer_in_transit_buffer,
+                    )
+                {
+                    return false;
+                }
+
+                let already = host
+                    .models_mut()
+                    .read(&has_pointer_move_opened, |v| *v)
+                    .ok()
+                    .unwrap_or(false);
+                if !already {
+                    let _ = host
+                        .models_mut()
+                        .update(&has_pointer_move_opened, |v| *v = true);
+                    host.request_redraw(acx.window);
+                }
+                false
+            }
+        }));
+
+        vec![trigger]
+    })
 }
 
 fn tooltip_floating_side(anchor: Rect, floating: Rect) -> Option<fret_ui::overlay_placement::Side> {
