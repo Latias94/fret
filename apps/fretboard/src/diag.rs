@@ -55,6 +55,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_view_cache_reuse_min: Option<u64> = None;
+    let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut compare_eps_px: f32 = 0.5;
     let mut compare_ignore_bounds: bool = false;
     let mut compare_ignore_scene_fingerprint: bool = false;
@@ -287,6 +288,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_view_cache_reuse_min =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-view-cache-reuse-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-overlay-synthesis-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-overlay-synthesis-min".to_string());
+                };
+                check_overlay_synthesis_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-overlay-synthesis-min".to_string()
                     })?);
                 i += 1;
             }
@@ -597,6 +609,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_wheel_scroll_test_id.is_some()
                     || check_hover_layout_max.is_some()
                     || check_view_cache_reuse_min.is_some()
+                    || check_overlay_synthesis_min.is_some()
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -616,6 +629,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
                         check_view_cache_reuse_min,
+                        check_overlay_synthesis_min,
                         warmup_frames,
                     )?;
                 }
@@ -734,7 +748,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     && (check_stale_paint_test_id.is_some()
                         || check_wheel_scroll_test_id.is_some()
                         || check_hover_layout_max.is_some()
-                        || check_view_cache_reuse_min.is_some())
+                        || check_view_cache_reuse_min.is_some()
+                        || check_overlay_synthesis_min.is_some())
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -755,6 +770,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
                         check_view_cache_reuse_min,
+                        check_overlay_synthesis_min,
                         warmup_frames,
                     )?;
                 }
@@ -1081,6 +1097,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 None => Some(1),
             };
 
+            // In matrix mode, treat `--check-overlay-synthesis-min 0` as “disabled”.
+            let overlay_synthesis_gate = match check_overlay_synthesis_min {
+                Some(0) => None,
+                Some(v) => Some(v),
+                None => None,
+            };
+
             let uncached_out_dir = resolved_out_dir.join("uncached");
             let cached_out_dir = resolved_out_dir.join("cached");
 
@@ -1101,6 +1124,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 poll_ms,
                 warmup_frames,
                 None,
+                None,
             )?;
             let cached_bundles = run_script_suite_collect_bundles(
                 &scripts,
@@ -1112,6 +1136,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 poll_ms,
                 warmup_frames,
                 reuse_gate,
+                overlay_synthesis_gate,
             )?;
 
             let mut ok = true;
@@ -1140,6 +1165,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "ignore_bounds": compare_opts.ignore_bounds,
                         "ignore_scene_fingerprint": compare_opts.ignore_scene_fingerprint,
                         "check_view_cache_reuse_min": reuse_gate,
+                        "check_overlay_synthesis_min": overlay_synthesis_gate,
                     },
                     "comparisons": comparisons.iter().map(|(script, report)| serde_json::json!({
                         "script": script.display().to_string(),
@@ -1156,18 +1182,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 Ok(())
             } else if ok {
                 println!(
-                    "matrix: ok (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?})",
+                    "matrix: ok (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?})",
                     scripts.len(),
                     warmup_frames,
-                    reuse_gate
+                    reuse_gate,
+                    overlay_synthesis_gate
                 );
                 Ok(())
             } else {
                 println!(
-                    "matrix: failed (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?})",
+                    "matrix: failed (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?})",
                     scripts.len(),
                     warmup_frames,
-                    reuse_gate
+                    reuse_gate,
+                    overlay_synthesis_gate
                 );
                 for (script, report) in comparisons {
                     if report.ok {
@@ -1543,6 +1571,7 @@ fn run_script_suite_collect_bundles(
     poll_ms: u64,
     warmup_frames: u64,
     check_view_cache_reuse_min: Option<u64>,
+    check_overlay_synthesis_min: Option<u64>,
 ) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
@@ -1606,6 +1635,11 @@ fn run_script_suite_collect_bundles(
         {
             check_bundle_for_view_cache_reuse_min(&bundle_path, min, warmup_frames)?;
         }
+        if let Some(min) = check_overlay_synthesis_min
+            && min > 0
+        {
+            check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
+        }
 
         bundle_paths.push(bundle_path);
     }
@@ -1621,6 +1655,7 @@ fn apply_post_run_checks(
     check_wheel_scroll_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     check_view_cache_reuse_min: Option<u64>,
+    check_overlay_synthesis_min: Option<u64>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -1642,6 +1677,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_view_cache_reuse_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_overlay_synthesis_min
+        && min > 0
+    {
+        check_bundle_for_overlay_synthesis_min(bundle_path, min, warmup_frames)?;
     }
     Ok(())
 }
@@ -4027,6 +4067,115 @@ in bundle: {}",
     ))
 }
 
+fn check_bundle_for_overlay_synthesis_min(
+    bundle_path: &Path,
+    min_synthesized_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_overlay_synthesis_min_json(
+        &bundle,
+        bundle_path,
+        min_synthesized_events,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_overlay_synthesis_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_synthesized_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut synthesized_events: u64 = 0;
+    let mut suppression_counts: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+
+            let Some(events) = s
+                .get("debug")
+                .and_then(|v| v.get("overlay_synthesis"))
+                .and_then(|v| v.as_array())
+            else {
+                continue;
+            };
+
+            for e in events {
+                let kind = e.get("kind").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let outcome = e
+                    .get("outcome")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                if outcome == "synthesized" {
+                    synthesized_events = synthesized_events.saturating_add(1);
+                    if synthesized_events >= min_synthesized_events {
+                        return Ok(());
+                    }
+                } else {
+                    let key = format!("{kind}/{outcome}");
+                    *suppression_counts.entry(key).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    let mut suppressions: Vec<(String, u64)> = suppression_counts.into_iter().collect();
+    suppressions.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    suppressions.truncate(12);
+    let suppressions = if suppressions.is_empty() {
+        String::new()
+    } else {
+        let mut msg = String::new();
+        msg.push_str(" suppressions=[");
+        for (idx, (k, c)) in suppressions.into_iter().enumerate() {
+            if idx > 0 {
+                msg.push_str(", ");
+            }
+            msg.push_str(&format!("{k}:{c}"));
+        }
+        msg.push(']');
+        msg
+    };
+
+    Err(format!(
+        "expected at least {min_synthesized_events} overlay synthesis events, got {synthesized_events} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}).{suppressions} \
+bundle: {}",
+        bundle_path.display()
+    ))
+}
+
 fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
     top: usize,
@@ -5740,6 +5889,81 @@ mod tests {
                 .expect_err("expected reuse<2 due to warmup");
         assert!(err.contains("expected at least 2 view-cache reuse events"));
         assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn check_bundle_for_overlay_synthesis_min_counts_synthesized_events() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "popover", "id": 101, "source": "cached_declaration", "outcome": "synthesized" },
+                                    { "kind": "tooltip", "id": 202, "source": "cached_declaration", "outcome": "suppressed_missing_trigger" }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "tooltip", "id": 303, "source": "cached_declaration", "outcome": "synthesized" }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_overlay_synthesis_min_json(&bundle, Path::new("bundle.json"), 2, 0)
+            .expect("expected synthesized>=2");
+    }
+
+    #[test]
+    fn check_bundle_for_overlay_synthesis_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "tooltip", "id": 1, "source": "cached_declaration", "outcome": "synthesized" }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "hover", "id": 2, "source": "cached_declaration", "outcome": "suppressed_trigger_not_live_in_current_frame" }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_overlay_synthesis_min_json(&bundle, Path::new("bundle.json"), 1, 1)
+                .expect_err("expected synthesized<1 due to warmup");
+        assert!(err.contains("expected at least 1 overlay synthesis events"));
+        assert!(err.contains("got 0"));
+        assert!(err.contains("suppressions=["));
     }
 
     #[test]
