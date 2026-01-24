@@ -77,17 +77,22 @@ View-cache seam:
   producer running): if `open` flips false, the overlay disappears as soon as we stop synthesizing
   a request.
 
-### Hover overlays + tooltips (per-frame only, no presence contract yet)
+### Hover overlays + tooltips (authoritative `open` + `present`)
 
-`HoverOverlayRequest` and `TooltipRequest` currently do not include authoritative `open/present`.
-They are treated as **strict per-frame requests** to avoid “ghost overlays” that stay alive after
-their producer subtree stops requesting them.
+`HoverOverlayRequest` and `TooltipRequest` carry:
 
-This is a known gap for view-cache reuse: if the producer subtree is skipped for a frame, the
-request disappears for that frame and the overlay may unmount.
+- `open: Model<bool>`
+- `present: bool`
 
-Follow-up item: track a future "authoritative presence" for hover/tooltip separately (see workstream
-tracker `OVERLAY-life-002`).
+This makes hover/tooltip safe under view-cache reuse: cached request declarations can be
+synthesized when the producer subtree is skipped.
+
+Ghost prevention / liveness gate:
+
+- Cached hover/tooltip synthesis requires the trigger element to be **live in the current frame**
+  (`fret_ui::elements::element_is_live_in_current_frame`). This prevents overlays from persisting
+  after their producer subtree unmounts, while still allowing view-cache reuse (cache reuse touches
+  subtree element liveness each frame).
 
 ## Contract checkpoints (tests)
 
@@ -96,8 +101,16 @@ The lifecycle contract is enforced by tests at two layers:
 - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
   - Cached request synthesis for view-cache: `cached_modal_request_is_synthesized_when_open_without_rerender`,
     `cached_popover_request_is_synthesized_when_open_without_rerender`
+  - Cached hover/tooltip synthesis + liveness:
+    `cached_hover_overlay_request_is_synthesized_when_open_without_rerender`,
+    `cached_tooltip_request_is_synthesized_when_open_without_rerender`,
+    `cached_hover_overlay_is_not_synthesized_when_trigger_unmounted`,
+    `cached_tooltip_is_not_synthesized_when_trigger_unmounted`
   - Modal close transition keeps barrier active: `modal_is_hit_testable_while_closing_but_still_present`
   - Non-modal close transition becomes click-through: `non_modal_overlay_does_not_request_outside_press_observer_while_closing`
+  - Hover/tooltip close transition becomes non-interactive:
+    `hover_overlay_is_pointer_transparent_while_closing`,
+    `tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing`
 - `crates/fret-ui/src/tree/tests/outside_press.rs`
   - Outside-press observer dispatch semantics (topmost dismissible, branch exemptions).
 - `crates/fret-ui/src/tree/tests/window_input_arbitration_snapshot.rs`
@@ -114,4 +127,3 @@ Entry points:
 
 - `docs/ui-diagnostics-and-scripted-tests.md`
 - `apps/fretboard/src/diag.rs` (suite + matrix runner)
-
