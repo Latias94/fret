@@ -15,7 +15,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::primitives::popper;
-use crate::{OverlayController, OverlayRequest};
+use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Stable per-overlay root naming convention for hover cards.
 pub fn hover_card_root_name(id: GlobalElementId) -> String {
@@ -91,7 +91,25 @@ pub fn hover_card_request(
     trigger: GlobalElementId,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
-    let mut request = OverlayRequest::hover(id, trigger, children);
+    hover_card_request_with_presence(
+        id,
+        trigger,
+        OverlayPresence {
+            present: true,
+            interactive: true,
+        },
+        children,
+    )
+}
+
+/// Builds an overlay request for a Radix-style hover card with explicit presence semantics.
+pub fn hover_card_request_with_presence(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    presence: OverlayPresence,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    let mut request = OverlayRequest::hover_with_presence(id, trigger, presence, children);
     request.root_name = Some(hover_card_root_name(id));
     request
 }
