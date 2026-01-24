@@ -207,11 +207,14 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Motivation: `ui-gallery-virtual-list-torture.json` remains layout-dominated even with view-cache + shell reuse.
   - Progress: measured-mode virtual lists skip redundant per-frame `measure_in` passes for already-measured, clean visible rows.
   - Progress: re-measure is forced when the cross-axis viewport extent changes or when a row is layout-invalidated.
-  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (measurement gate), `crates/fret-ui/src/virtual_list.rs` (cross-extent measurement reset), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_skips_redundant_measures_for_clean_measured_rows`).
-  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`; updated after `ff621ba`):
+  - Progress: apply scroll offsets via a children-only render transform (content-space child bounds), matching `Scroll` and avoiding translation-only layout rect churn.
+  - Progress: fix focus/click scroll-into-view to map the viewport into the same (unscrolled) content coordinate space as `descendant_bounds` (prevents scroll jumps under render transforms).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (measurement gate, content-space bounds + `scroll_child_transform`), `crates/fret-ui/src/virtual_list.rs` (cross-extent measurement reset), `crates/fret-ui/src/declarative/host_widget/paint.rs` (paint applies `children_render_transform`), `crates/fret-ui/src/declarative/host_widget.rs` (scroll-into-view viewport mapping), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_skips_redundant_measures_for_clean_measured_rows`, `virtual_list_scroll_offsets_apply_in_semantics_snapshot`, `virtual_list_click_focus_does_not_trigger_scroll_jump_under_children_transform`).
+  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`; updated after scroll-transform refactor):
     - Torture (`tools/diag-scripts/ui-gallery-virtual-list-torture.json`):
-      - Baseline: `max.total_time_us=28209` (layout `26854`, prepaint `26`, paint `1329`).
-      - ViewCache+Shell: `max.total_time_us=28606` (layout `27069`, prepaint `22`, paint `1515`).
+      - Baseline: `max.total_time_us=42472` (layout `42077`, prepaint `35`, paint `360`) (run dir: `target/fret-diag-perf-vlist-transform-baseline2`).
+      - ViewCache+Shell: `max.total_time_us=55708` (layout `51830`, prepaint `91`, paint `3787`) (run dir: `target/fret-diag-perf-vlist-transform-cache-shell2`).
+      - Note: timings are noisy; re-run locally to confirm deltas after major layout changes.
     - Smooth wheel (`tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
       - Baseline: `max.total_time_us=22721` (layout `22424`, prepaint `22`, paint `275`).
       - ViewCache+Shell: `max.total_time_us=24991` (layout `24308`, prepaint `23`, paint `660`).
