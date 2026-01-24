@@ -182,10 +182,14 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Re-verified (2026-01-24): PASS on this branch with the stopgap still enabled:
       - `target/fret-diag-overlay-torture-cache005-stopgap/1769240992350-ui-gallery-overlay-torture/bundle.json`
       - `target/fret-diag-sidebar-scroll-refresh-cache005-stopgap/1769241046228-ui-gallery-sidebar-scroll-refresh/bundle.json`
+    - Re-verified (2026-01-24): PASS with `debug.overlay_policy_decisions` exported:
+      - `target/fret-diag-overlay-torture-cache005-overlay-policy/1769266152963-ui-gallery-overlay-torture/bundle.json`
   - Evidence (fail when stopgap is removed):
     - Removing the `view_cache_has_reuse_roots` GC guard regresses `ui-gallery-overlay-torture.json` at step 10 (`click_no_semantics_match`):
       - `target/fret-diag-overlay-torture-cache005/1769240888633-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag-overlay-torture-cache005-newdiags/1769260341209-script-step-0010-click-no-semantics-match/bundle.json`
+    - Repro note (diagnostics-only): set `FRET_UI_DISABLE_VIEW_CACHE_GC_STOPGAP=1` to force the same behavior without editing code.
+      - `target/fret-diag-overlay-torture-cache005-stopgap-disabled/1769266528812-script-step-0010-click-no-semantics-match/bundle.json`
   - Next:
     - In the failing bundle above, `ui-gallery-dialog-trigger` exists up to `frame_id=33`, then disappears on `frame_id=34` when `debug.removed_subtrees.len()` spikes (31).
       Use `frame_id=34` `debug.removed_subtrees[*].root/root_element/root_path` as the entry point for root-cause analysis.
@@ -193,15 +197,20 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       (the node id `4294967671` appears in `debug.removed_subtrees[*].removed_head`).
       The record reports `root_layer=None` and `reachable_from_layer_roots=false`, so the subtree is treated as detached at sweep time (not just missing a `last_seen_frame` touch).
     - Note (2026-01-24): `debug.layer_visible_writes` attributes the `visible=false` toggle for the `4294967718` layer root to `ecosystem/fret-ui-kit/src/window_overlays/state.rs:159`.
+    - Note (2026-01-24): `debug.overlay_policy_decisions` attributes overlay-manager policy (kind/present/interactive/reason) with an explicit callsite.
     - Unblock checklist (to move from `[!]` -> `[~]`):
       - Export enough layer visibility state in `bundle.json` to explain *why* a layer root flips `visible=false` on the failing frame.
         - `debug.layers_in_paint_order[*].visible` reports the per-frame visibility state.
         - `debug.layer_visible_writes[*]` reports the callsite(s) that toggled layer visibility in that frame.
+        - `debug.overlay_policy_decisions[*]` reports the overlay policy decision (kind/present/interactive/reason) with callsite.
       - Add a debug-only GC classification in `removed_subtrees` that tells us whether we removed a subtree that was still reachable from a registered layer root.
         - `debug.removed_subtrees[*].reachable_from_layer_roots=true` indicates a likely broken parent-chain / `node_layer(..)` attachment classification.
       - If `reachable_from_layer_roots` remains `false` for the subtree that contains the missing semantics target, prioritize explaining *why it became detached*:
         - export whether the parent still referenced the removed root via `ui.children(parent)` and/or `WindowFrame.children[parent]` on the failing frame.
           - `debug.removed_subtrees[*].root_parent_children_contains_root` / `root_parent_frame_children_contains_root` + corresponding `*_len` fields.
+        - if both `root_parent_children_contains_root=true` and `root_parent_frame_children_contains_root=true` but `reachable_from_layer_roots=false`,
+          suspect the reachability walker is missing an edge higher in the chain because `push_existing_subtree_children(..)` prefers `ui.children(..)` over `WindowFrame.children[..]`
+          (consider unioning both sources for GC reachability classification).
       - Confirm whether parent-pointer repair is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the repair seed set if needed.
     - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
 
