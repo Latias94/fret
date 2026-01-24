@@ -1139,6 +1139,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 warmup_frames,
                 None,
                 None,
+                None,
             )?;
             let cached_bundles = run_script_suite_collect_bundles(
                 &scripts,
@@ -1151,6 +1152,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 warmup_frames,
                 reuse_gate,
                 overlay_synthesis_gate,
+                overlay_synthesis_gate.map(|_| {
+                    ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool
+                }),
             )?;
 
             let mut ok = true;
@@ -1525,6 +1529,27 @@ fn ui_gallery_suite_scripts() -> [&'static str; 11] {
     ]
 }
 
+fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    // These scripts are expected to exercise the cached overlay synthesis seam when view-cache
+    // shell reuse is enabled.
+    matches!(
+        name,
+        "ui-gallery-overlay-torture.json"
+            | "ui-gallery-modal-barrier-underlay-block.json"
+            | "ui-gallery-popover-dialog-escape-underlay.json"
+            | "ui-gallery-portal-geometry-scroll-clamp.json"
+            | "ui-gallery-dropdown-open-select.json"
+            | "ui-gallery-dropdown-submenu-underlay-dismiss.json"
+            | "ui-gallery-context-menu-right-click.json"
+            | "ui-gallery-dialog-escape-focus-restore.json"
+            | "ui-gallery-menubar-keyboard-nav.json"
+    )
+}
+
 #[derive(Debug, Clone)]
 struct ResolvedScriptPaths {
     out_dir: PathBuf,
@@ -1586,6 +1611,7 @@ fn run_script_suite_collect_bundles(
     warmup_frames: u64,
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
+    overlay_synthesis_gate_predicate: Option<fn(&Path) -> bool>,
 ) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
@@ -1652,7 +1678,12 @@ fn run_script_suite_collect_bundles(
         if let Some(min) = check_overlay_synthesis_min
             && min > 0
         {
-            check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
+            let should_gate = overlay_synthesis_gate_predicate
+                .map(|pred| pred(src))
+                .unwrap_or(true);
+            if should_gate {
+                check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
+            }
         }
 
         bundle_paths.push(bundle_path);
