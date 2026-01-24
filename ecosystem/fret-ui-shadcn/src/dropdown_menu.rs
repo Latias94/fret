@@ -3614,7 +3614,9 @@ mod tests {
             let mut services = FakeServices::default();
 
             let open = app.models_mut().insert(true);
-            let trigger_id_out = app.models_mut().insert(None);
+            let trigger_id_out = app
+                .models_mut()
+                .insert(None::<fret_ui::elements::GlobalElementId>);
 
             let entries = vec![DropdownMenuEntry::Item(
                 DropdownMenuItem::new("Alpha").value("alpha"),
@@ -5336,7 +5338,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app.models_mut().insert(None);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
