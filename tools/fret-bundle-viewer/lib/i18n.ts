@@ -1,0 +1,382 @@
+'use client'
+
+export type Locale = 'en' | 'zh'
+
+export const translations = {
+  en: {
+    // App
+    'app.title': 'Fret Bundle Viewer',
+    'app.description': 'Offline diagnostics bundle inspector',
+    'app.offline': 'Offline — no data leaves your machine.',
+
+    // Header
+    'header.open': 'Open',
+    'header.openTooltip': 'Open bundle.json (Ctrl+O)',
+    'header.sample': 'Sample',
+    'header.sampleSimple': 'Simple (3 snapshots)',
+    'header.sampleMultiWindow': 'Multi-window (2 windows)',
+    'header.export': 'Export',
+    'header.exportTooltip': 'Export Markdown summary',
+    'header.redact': 'Redact',
+    'header.compare': 'Compare',
+    'header.searchCommands': 'Search commands...',
+    'header.warnings': 'warnings',
+    'header.warning': 'warning',
+    'header.andMore': '...and {count} more',
+
+    // Empty State
+    'empty.title': 'No Bundle Loaded',
+    'empty.description': 'Open a Fret diagnostics bundle.json file to inspect snapshots, semantics trees, events, and performance data.',
+    'empty.openButton': 'Open bundle.json',
+    'empty.loadSample': 'Load sample',
+    'empty.recentFiles': 'Recent Files',
+    'empty.recentFilesNote': "Note: Recent files list is stored locally. You'll need to re-select the file to open it.",
+    'empty.clear': 'Clear',
+
+    // Error State
+    'error.title': 'Parse Error',
+    'error.rawPreview': 'Raw text preview (truncated):',
+    'error.tryAnother': 'Try another file',
+
+    // Semantics Tree
+    'tree.title': 'Semantics',
+    'tree.noData': 'No semantics data in the selected snapshot',
+    'tree.searchPlaceholder': 'Search nodes...',
+    'tree.noMatches': 'No matches',
+    'tree.expandAll': 'Expand all',
+    'tree.collapseAll': 'Collapse all',
+    'tree.searchTree': 'Search tree (Ctrl+F)',
+    'tree.previousMatch': 'Previous match (Shift+Enter)',
+    'tree.nextMatch': 'Next match (Enter)',
+    'tree.closeSearch': 'Close search (Esc)',
+
+    // Context Menu
+    'context.copySelector': 'Copy selector JSON',
+    'context.copyPath': 'Copy node path',
+    'context.copyId': 'Copy node ID',
+    'context.generateScript': 'Generate script step',
+
+    // Snapshots Panel
+    'snapshots.title': 'Windows & Snapshots',
+    'snapshots.noBundle': 'No bundle loaded',
+    'snapshots.hasSemantics': 'Has semantics',
+    'snapshots.slowFrames': 'Slow frames',
+    'snapshots.clearFilter': 'Clear filter',
+    'snapshots.noMatch': 'No snapshots match the current filter',
+    'snapshots.frameTiming': 'Frame timing (first {count})',
+    'snapshots.of': 'of',
+
+    // Details Panel Tabs
+    'details.summary': 'Summary',
+    'details.node': 'Node',
+    'details.events': 'Events',
+    'details.performance': 'Perf',
+    'details.diff': 'Diff',
+    'details.raw': 'Raw',
+
+    // Summary Tab
+    'summary.noSnapshot': 'No snapshot selected',
+    'summary.window': 'Window',
+    'summary.windowId': 'Window ID',
+    'summary.scaleFactor': 'Scale Factor',
+    'summary.logicalSize': 'Logical Size',
+    'summary.snapshot': 'Snapshot',
+    'summary.tickId': 'Tick ID',
+    'summary.frameId': 'Frame ID',
+    'summary.timestamp': 'Timestamp',
+    'summary.focus': 'Focus',
+    'summary.focusedNode': 'Focused Node',
+    'summary.activeDescendant': 'Active Descendant',
+    'summary.overlayRouting': 'Overlay Routing',
+    'summary.barrierRoot': 'Barrier Root',
+    'summary.topLayerRoots': 'Top Layer Roots:',
+    'summary.layerRoots': 'Layer Roots',
+    'summary.hitTest': 'Hit Test',
+    'summary.pointer': 'Pointer',
+    'summary.hitChain': 'Hit Chain:',
+    'summary.missing': 'Missing',
+
+    // Node Tab
+    'node.noSelection': 'Select a node in the tree to view details',
+    'node.copySelector': 'Copy selector',
+    'node.scriptStep': 'Script step',
+    'node.path': 'Path',
+    'node.properties': 'Properties',
+    'node.id': 'ID',
+    'node.role': 'Role',
+    'node.testId': 'Test ID',
+    'node.label': 'Label',
+    'node.name': 'Name',
+    'node.bounds': 'Bounds',
+    'node.flags': 'Flags',
+    'node.actions': 'Actions',
+    'node.relationships': 'Relationships',
+    'node.parent': 'Parent:',
+    'node.children': 'Children',
+    'node.more': '+{count} more',
+
+    // Events Tab
+    'events.noEvents': 'No events in this snapshot',
+    'events.searchPlaceholder': 'Search events...',
+    'events.noMatch': 'No matching events',
+
+    // Performance Tab
+    'perf.noData': 'No performance data in this snapshot',
+    'perf.timing': 'Timing',
+    'perf.total': 'Total',
+    'perf.layout': 'Layout',
+    'perf.prepaint': 'Prepaint',
+    'perf.paint': 'Paint',
+    'perf.timingBreakdown': 'Timing Breakdown',
+    'perf.cache': 'Cache',
+    'perf.hits': 'Hits',
+    'perf.misses': 'Misses',
+    'perf.hitRate': 'Hit Rate',
+    'perf.invalidations': 'Invalidations',
+    'perf.count': 'Count',
+    'perf.sources': 'Sources:',
+
+    // Diff Tab
+    'diff.title': 'Snapshot Diff',
+    'diff.selectTwo': 'Enable compare mode and select two snapshots (A and B) to see the difference.',
+    'diff.enableCompare': 'Enable Compare Mode',
+    'diff.comparing': 'Comparing',
+    'diff.noChanges': 'No changes detected',
+    'diff.added': 'Added',
+    'diff.removed': 'Removed',
+    'diff.changed': 'Changed',
+
+    // Raw Tab
+    'raw.noSnapshot': 'No snapshot selected',
+    'raw.rawJson': 'Raw JSON',
+    'raw.normalized': 'Normalized',
+    'raw.copyAll': 'Copy all',
+
+    // Command Palette
+    'cmd.placeholder': 'Type a command or search...',
+    'cmd.noResults': 'No results found.',
+    'cmd.file': 'File',
+    'cmd.openBundle': 'Open bundle.json',
+    'cmd.loadSampleSimple': 'Load sample: Simple (3 snapshots)',
+    'cmd.loadSampleMulti': 'Load sample: Multi-window',
+    'cmd.exportSummary': 'Export Markdown summary',
+    'cmd.recentFiles': 'Recent Files',
+    'cmd.view': 'View',
+    'cmd.showText': 'Show text content',
+    'cmd.redactText': 'Redact text content',
+    'cmd.disableCompare': 'Disable compare mode',
+    'cmd.enableCompare': 'Enable compare mode',
+    'cmd.tree': 'Semantics Tree',
+    'cmd.searchNodes': 'Search nodes',
+    'cmd.expandAll': 'Expand all nodes',
+    'cmd.collapseAll': 'Collapse all nodes',
+    'cmd.windows': 'Windows',
+    'cmd.current': '(current)',
+    'cmd.snapshots': 'snapshots',
+    'cmd.quickJump': 'Quick Jump',
+    'cmd.firstSnapshot': 'First snapshot',
+    'cmd.lastSnapshot': 'Last snapshot',
+    'cmd.slowestSnapshot': 'Slowest snapshot (#{index})',
+
+    // Theme
+    'theme.light': 'Light',
+    'theme.dark': 'Dark',
+    'theme.system': 'System',
+    'theme.toggle': 'Toggle theme',
+
+    // Time
+    'time.justNow': 'just now',
+    'time.minutesAgo': '{count}m ago',
+    'time.hoursAgo': '{count}h ago',
+    'time.daysAgo': '{count}d ago',
+  },
+  zh: {
+    // App
+    'app.title': 'Fret Bundle 查看器',
+    'app.description': '离线诊断包检查工具',
+    'app.offline': '离线运行 — 数据不会离开您的设备。',
+
+    // Header
+    'header.open': '打开',
+    'header.openTooltip': '打开 bundle.json (Ctrl+O)',
+    'header.sample': '示例',
+    'header.sampleSimple': '简单 (3 个快照)',
+    'header.sampleMultiWindow': '多窗口 (2 个窗口)',
+    'header.export': '导出',
+    'header.exportTooltip': '导出 Markdown 摘要',
+    'header.redact': '脱敏',
+    'header.compare': '对比',
+    'header.searchCommands': '搜索命令...',
+    'header.warnings': '个警告',
+    'header.warning': '个警告',
+    'header.andMore': '...还有 {count} 个',
+
+    // Empty State
+    'empty.title': '未加载 Bundle',
+    'empty.description': '打开 Fret 诊断 bundle.json 文件以检查快照、语义树、事件和性能数据。',
+    'empty.openButton': '打开 bundle.json',
+    'empty.loadSample': '加载示例',
+    'empty.recentFiles': '最近打开',
+    'empty.recentFilesNote': '注意：最近文件列表存储在本地。您需要重新选择文件才能打开。',
+    'empty.clear': '清空',
+
+    // Error State
+    'error.title': '解析错误',
+    'error.rawPreview': '原始文本预览（已截断）：',
+    'error.tryAnother': '尝试其他文件',
+
+    // Semantics Tree
+    'tree.title': '语义树',
+    'tree.noData': '所选快照中没有语义数据',
+    'tree.searchPlaceholder': '搜索节点...',
+    'tree.noMatches': '无匹配',
+    'tree.expandAll': '全部展开',
+    'tree.collapseAll': '全部折叠',
+    'tree.searchTree': '搜索树 (Ctrl+F)',
+    'tree.previousMatch': '上一个匹配 (Shift+Enter)',
+    'tree.nextMatch': '下一个匹配 (Enter)',
+    'tree.closeSearch': '关闭搜索 (Esc)',
+
+    // Context Menu
+    'context.copySelector': '复制选择器 JSON',
+    'context.copyPath': '复制节点路径',
+    'context.copyId': '复制节点 ID',
+    'context.generateScript': '生成脚本步骤',
+
+    // Snapshots Panel
+    'snapshots.title': '窗口与快照',
+    'snapshots.noBundle': '未加载 Bundle',
+    'snapshots.hasSemantics': '有语义数据',
+    'snapshots.slowFrames': '慢帧',
+    'snapshots.clearFilter': '清除筛选',
+    'snapshots.noMatch': '没有匹配当前筛选条件的快照',
+    'snapshots.frameTiming': '帧耗时 (前 {count} 个)',
+    'snapshots.of': '/',
+
+    // Details Panel Tabs
+    'details.summary': '摘要',
+    'details.node': '节点',
+    'details.events': '事件',
+    'details.performance': '性能',
+    'details.diff': '对比',
+    'details.raw': '原始',
+
+    // Summary Tab
+    'summary.noSnapshot': '未选择快照',
+    'summary.window': '窗口',
+    'summary.windowId': '窗口 ID',
+    'summary.scaleFactor': '缩放因子',
+    'summary.logicalSize': '逻辑尺寸',
+    'summary.snapshot': '快照',
+    'summary.tickId': 'Tick ID',
+    'summary.frameId': '帧 ID',
+    'summary.timestamp': '时间戳',
+    'summary.focus': '焦点',
+    'summary.focusedNode': '聚焦节点',
+    'summary.activeDescendant': '活动后代',
+    'summary.overlayRouting': '覆盖层路由',
+    'summary.barrierRoot': '屏障根',
+    'summary.topLayerRoots': '顶层根节点：',
+    'summary.layerRoots': '层根节点',
+    'summary.hitTest': '命中测试',
+    'summary.pointer': '指针',
+    'summary.hitChain': '命中链：',
+    'summary.missing': '缺失',
+
+    // Node Tab
+    'node.noSelection': '在树中选择一个节点以查看详情',
+    'node.copySelector': '复制选择器',
+    'node.scriptStep': '脚本步骤',
+    'node.path': '路径',
+    'node.properties': '属性',
+    'node.id': 'ID',
+    'node.role': '角色',
+    'node.testId': '测试 ID',
+    'node.label': '标签',
+    'node.name': '名称',
+    'node.bounds': '边界',
+    'node.flags': '标志',
+    'node.actions': '操作',
+    'node.relationships': '关系',
+    'node.parent': '父节点：',
+    'node.children': '子节点',
+    'node.more': '+{count} 更多',
+
+    // Events Tab
+    'events.noEvents': '此快照中没有事件',
+    'events.searchPlaceholder': '搜索事件...',
+    'events.noMatch': '没有匹配的事件',
+
+    // Performance Tab
+    'perf.noData': '此快照中没有性能数据',
+    'perf.timing': '耗时',
+    'perf.total': '总计',
+    'perf.layout': '布局',
+    'perf.prepaint': '预绘制',
+    'perf.paint': '绘制',
+    'perf.timingBreakdown': '耗时分解',
+    'perf.cache': '缓存',
+    'perf.hits': '命中',
+    'perf.misses': '未命中',
+    'perf.hitRate': '命中率',
+    'perf.invalidations': '失效',
+    'perf.count': '次数',
+    'perf.sources': '来源：',
+
+    // Diff Tab
+    'diff.title': '快照对比',
+    'diff.selectTwo': '启用对比模式并选择两个快照 (A 和 B) 以查看差异。',
+    'diff.enableCompare': '启用对比模式',
+    'diff.comparing': '正在对比',
+    'diff.noChanges': '未检测到变化',
+    'diff.added': '新增',
+    'diff.removed': '删除',
+    'diff.changed': '修改',
+
+    // Raw Tab
+    'raw.noSnapshot': '未选择快照',
+    'raw.rawJson': '原始 JSON',
+    'raw.normalized': '标准化',
+    'raw.copyAll': '复制全部',
+
+    // Command Palette
+    'cmd.placeholder': '输入命令或搜索...',
+    'cmd.noResults': '未找到结果。',
+    'cmd.file': '文件',
+    'cmd.openBundle': '打开 bundle.json',
+    'cmd.loadSampleSimple': '加载示例：简单 (3 个快照)',
+    'cmd.loadSampleMulti': '加载示例：多窗口',
+    'cmd.exportSummary': '导出 Markdown 摘要',
+    'cmd.recentFiles': '最近打开',
+    'cmd.view': '视图',
+    'cmd.showText': '显示文本内容',
+    'cmd.redactText': '隐藏文本内容',
+    'cmd.disableCompare': '关闭对比模式',
+    'cmd.enableCompare': '开启对比模式',
+    'cmd.tree': '语义树',
+    'cmd.searchNodes': '搜索节点',
+    'cmd.expandAll': '全部展开',
+    'cmd.collapseAll': '全部折叠',
+    'cmd.windows': '窗口',
+    'cmd.current': '(当前)',
+    'cmd.snapshots': '个快照',
+    'cmd.quickJump': '快速跳转',
+    'cmd.firstSnapshot': '第一个快照',
+    'cmd.lastSnapshot': '最后一个快照',
+    'cmd.slowestSnapshot': '最慢的快照 (#{index})',
+
+    // Theme
+    'theme.light': '浅色',
+    'theme.dark': '深色',
+    'theme.system': '跟随系统',
+    'theme.toggle': '切换主题',
+
+    // Time
+    'time.justNow': '刚刚',
+    'time.minutesAgo': '{count} 分钟前',
+    'time.hoursAgo': '{count} 小时前',
+    'time.daysAgo': '{count} 天前',
+  },
+} as const
+
+export type TranslationKey = keyof typeof translations.en

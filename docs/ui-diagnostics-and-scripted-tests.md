@@ -47,6 +47,18 @@ Related ADRs:
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
+## Offline bundle viewer (optional)
+
+This repo includes an offline web viewer for `bundle.json` at `tools/fret-bundle-viewer`.
+
+```powershell
+$env:HTTP_PROXY='http://127.0.0.1:10809'
+$env:HTTPS_PROXY='http://127.0.0.1:10809'
+
+pnpm -C tools/fret-bundle-viewer install
+pnpm -C tools/fret-bundle-viewer dev
+```
+
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:
