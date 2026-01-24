@@ -133,6 +133,9 @@ See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed
 - Menu ergonomics: ensure submenu timers (open/close/focus delay) and safe-hover pointer-move outcomes
   are routed consistently by installing timer + pointer-move handlers on the submenu trigger path.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/{root.rs,sub_trigger.rs}`
+- Menu open modality: pointer-open focuses content and prevents entry focus; keyboard-open allows entry focus (Radix `onOpenAutoFocus` outcomes).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`,
+    `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}`
 
 ## Compatibility with “per-frame rebuilt” UI
 
