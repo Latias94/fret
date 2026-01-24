@@ -23,7 +23,9 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
-use crate::foundation::elevation::{apply_surface_tint, shadow_for_elevation_with_color};
+use crate::foundation::elevation::{
+    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
@@ -190,10 +192,6 @@ impl NavigationDrawer {
             };
             let mut container_bg = tokens.color_comp_or_sys(container_key, container_fallback);
 
-            // Note: Material Web v30 ships tonal surface roles for drawer container colors (see
-            // `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-navigation-drawer.scss`),
-            // but we keep a tonal elevation overlay path for themes that still bind the container
-            // to `md.sys.color.surface`.
             let elevation = match variant {
                 NavigationDrawerVariant::Standard => theme
                     .metric_by_key("md.comp.navigation-drawer.standard.container.elevation")
@@ -202,13 +200,7 @@ impl NavigationDrawer {
                     .metric_by_key("md.comp.navigation-drawer.modal.container.elevation")
                     .unwrap_or(Px(1.0)),
             };
-            if container_key == "md.comp.navigation-drawer.standard.container.color" {
-                let surface_tint = tokens.color_comp_or_sys(
-                    "md.comp.navigation-drawer.container.surface-tint-layer.color",
-                    "md.sys.color.surface-tint",
-                );
-                container_bg = apply_surface_tint(container_bg, surface_tint, elevation);
-            }
+            container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
 
             let container_shape = theme
                 .corners_by_key("md.comp.navigation-drawer.container.shape")

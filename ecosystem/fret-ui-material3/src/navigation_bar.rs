@@ -23,7 +23,9 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
-use crate::foundation::elevation::{apply_surface_tint, shadow_for_elevation_with_color};
+use crate::foundation::elevation::{
+    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
@@ -176,11 +178,7 @@ impl NavigationBar {
             let elevation = theme
                 .metric_by_key("md.comp.navigation-bar.container.elevation")
                 .unwrap_or(Px(0.0));
-            let surface_tint = tokens.color_comp_or_sys(
-                "md.comp.navigation-bar.container.surface-tint-layer.color",
-                "md.sys.color.surface-tint",
-            );
-            let container_bg = apply_surface_tint(container_bg, surface_tint, elevation);
+            let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
             let shadow_color = tokens.color_comp_or_sys(
                 "md.comp.navigation-bar.container.shadow-color",
                 "md.sys.color.shadow",

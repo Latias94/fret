@@ -225,7 +225,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 ### Visual Outcomes
 
 - [x] Elevation mapping (shadow + tonal surface tint overlay).
-  - Evidence: `ecosystem/fret-ui-material3/src/foundation/elevation.rs` (`shadow_for_elevation_with_color`, `apply_surface_tint`),
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/elevation.rs` (`shadow_for_elevation_with_color`, `apply_surface_tint`, `apply_surface_tint_if_surface`),
     `ecosystem/fret-ui-material3/src/dialog.rs` (container surface tint + shadow),
     `ecosystem/fret-ui-material3/src/tooltip.rs` (container surface tint + shadow),
     `ecosystem/fret-ui-material3/src/navigation_bar.rs` (container surface tint + shadow),

@@ -22,7 +22,9 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
-use crate::foundation::elevation::{apply_surface_tint, shadow_for_elevation_with_color};
+use crate::foundation::elevation::{
+    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
+};
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
@@ -474,11 +476,7 @@ impl Dialog {
                 let elevation = theme
                     .metric_by_key("md.comp.dialog.container.elevation")
                     .unwrap_or(Px(0.0));
-                let surface_tint = tokens.color_comp_or_sys(
-                    "md.comp.dialog.container.surface-tint-layer.color",
-                    "md.sys.color.surface-tint",
-                );
-                let container_bg = apply_surface_tint(container_bg, surface_tint, elevation);
+                let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
                 let shadow_color = theme
                     .color_by_key("md.comp.dialog.container.shadow-color")
                     .unwrap_or_else(|| tokens.color_sys("md.sys.color.shadow"));

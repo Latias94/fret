@@ -28,7 +28,9 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
 
-use crate::foundation::elevation::{apply_surface_tint, shadow_for_elevation_with_color};
+use crate::foundation::elevation::{
+    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
+};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::ms_to_frames;
 
@@ -331,13 +333,7 @@ impl PlainTooltip {
             .metric_by_key("md.comp.plain-tooltip.container.elevation")
             .or_else(|| theme.metric_by_key("md.comp.rich-tooltip.container.elevation"))
             .unwrap_or(Px(0.0));
-        let surface_tint = theme
-            .color_by_key("md.comp.plain-tooltip.container.surface-tint-layer.color")
-            .or_else(|| {
-                theme.color_by_key("md.comp.rich-tooltip.container.surface-tint-layer.color")
-            })
-            .unwrap_or_else(|| resolver.color_sys("md.sys.color.surface-tint"));
-        let container_bg = apply_surface_tint(container_bg, surface_tint, elevation);
+        let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
         let shadow_color = theme
             .color_by_key("md.comp.plain-tooltip.container.shadow-color")
             .or_else(|| theme.color_by_key("md.comp.rich-tooltip.container.shadow-color"))

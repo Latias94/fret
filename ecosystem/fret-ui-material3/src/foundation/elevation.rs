@@ -30,6 +30,23 @@ pub fn apply_surface_tint(background: Color, surface_tint: Color, elevation: Px)
     composite_over(overlay, background)
 }
 
+/// Apply a tonal elevation overlay only when `background` is `md.sys.color.surface`.
+///
+/// This matches Compose Material 3 `Surface`: tonal elevation is only applied when the surface's
+/// base color equals `ColorScheme.surface`.
+pub fn apply_surface_tint_if_surface(theme: &Theme, background: Color, elevation: Px) -> Color {
+    let Some(surface) = theme.color_by_key("md.sys.color.surface") else {
+        return background;
+    };
+    if !colors_close(background, surface) {
+        return background;
+    }
+
+    let tokens = MaterialTokenResolver::new(theme);
+    let surface_tint = tokens.color_sys("md.sys.color.surface-tint");
+    apply_surface_tint(background, surface_tint, elevation)
+}
+
 /// Convert a Material elevation token (dp-like px values or web "level" numbers) into a Fret shadow.
 ///
 /// Source of truth (web box-shadow mapping):
@@ -167,4 +184,12 @@ fn composite_over(overlay: Color, base: Color) -> Color {
         b: (out_pb / out_a).clamp(0.0, 1.0),
         a: out_a,
     }
+}
+
+fn colors_close(a: Color, b: Color) -> bool {
+    let eps = 1e-4;
+    (a.r - b.r).abs() <= eps
+        && (a.g - b.g).abs() <= eps
+        && (a.b - b.b).abs() <= eps
+        && (a.a - b.a).abs() <= eps
 }

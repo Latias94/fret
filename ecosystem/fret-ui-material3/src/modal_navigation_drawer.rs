@@ -12,8 +12,8 @@ use fret_core::{Color, Px};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, OnActivate, OnDismissRequest};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FractionalRenderTransformProps, InsetStyle, LayoutStyle, Length,
-    PositionStyle, PressableA11y, PressableProps,
+    AnyElement, ContainerProps, FractionalRenderTransformProps, InsetStyle, InteractivityGateProps,
+    LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::overlay_controller;
@@ -258,9 +258,18 @@ impl ModalNavigationDrawer {
                                         translate_y_fraction: 0.0,
                                     },
                                     move |cx| {
-                                        vec![focus_scope_prim::focus_trap(cx, move |cx| {
-                                            vec![drawer(cx)]
-                                        })]
+                                        vec![cx.interactivity_gate_props(
+                                            InteractivityGateProps {
+                                                layout: LayoutStyle::default(),
+                                                present: true,
+                                                interactive: open_now,
+                                            },
+                                            move |cx| {
+                                                vec![focus_scope_prim::focus_trap(cx, move |cx| {
+                                                    vec![drawer(cx)]
+                                                })]
+                                            },
+                                        )]
                                     },
                                 )
                             });
