@@ -320,6 +320,54 @@ mod tests {
     }
 
     #[test]
+    fn updating_base_snapshot_does_not_override_active_overlay_snapshot() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        let token = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected stack top snapshot to win"
+        );
+
+        let mut new_base_ctx = InputContext::default();
+        new_base_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(new_base_ctx, HashMap::new()),
+        );
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected base updates to not override the active overlay snapshot"
+        );
+
+        svc.remove_pushed_snapshot(window, token)
+            .expect("remove pushed snapshot");
+        assert_eq!(
+            svc.snapshot(window)
+                .expect("snapshot")
+                .input_ctx()
+                .dispatch_phase,
+            crate::InputDispatchPhase::Capture,
+            "expected base snapshot to be visible again after popping overlay snapshots"
+        );
+    }
+
+    #[test]
     fn pushed_snapshots_can_be_removed_out_of_order() {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
