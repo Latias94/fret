@@ -161,6 +161,59 @@ pub fn month_grid(month: CalendarMonth, week_start: Weekday) -> [CalendarDay; 42
     })
 }
 
+/// Builds a compact calendar grid for the given month.
+///
+/// This matches `react-day-picker`'s default behavior used by shadcn's `Calendar`:
+/// - the grid is aligned to week boundaries (start at `week_start`, end at the corresponding week end)
+/// - the number of rows is variable (typically 5 or 6; 4 is possible for some Februaries)
+/// - outside-month days are included with `in_month=false`
+pub fn month_grid_compact(month: CalendarMonth, week_start: Weekday) -> Vec<CalendarDay> {
+    let first = month.first_day();
+    let next_first = month.next_month().first_day();
+    let last = next_first - Duration::days(1);
+
+    let start_offset = offset_to_week_start(first.weekday(), week_start) as i64;
+    let grid_start = first - Duration::days(start_offset);
+
+    let week_start_idx = weekday_index_from_monday(week_start) as i16;
+    let week_end_idx = (week_start_idx + 6) % 7;
+    let last_idx = weekday_index_from_monday(last.weekday()) as i16;
+    let end_offset = ((week_end_idx - last_idx) % 7 + 7) % 7;
+    let grid_end = last + Duration::days(end_offset as i64);
+
+    let days = (grid_end - grid_start).whole_days() + 1;
+    debug_assert!(days > 0 && days % 7 == 0);
+
+    (0..days)
+        .map(|i| {
+            let date = grid_start + Duration::days(i);
+            CalendarDay {
+                date,
+                in_month: date.year() == month.year && date.month() == month.month,
+            }
+        })
+        .collect()
+}
+
+/// Returns a week number aligned to `week_start`, matching `date-fns`'s `getWeek` defaults
+/// (`firstWeekContainsDate = 1`).
+///
+/// This is the numbering used by `react-day-picker` when `showWeekNumber` is enabled.
+pub fn week_number(date: Date, week_start: Weekday) -> u32 {
+    let week_start_offset = offset_to_week_start(date.weekday(), week_start) as i64;
+    let week_start_date = date - Duration::days(week_start_offset);
+    let week_end_date = week_start_date + Duration::days(6);
+    let week_year = week_end_date.year();
+
+    let jan1 = Date::from_calendar_date(week_year, Month::January, 1).expect("valid year");
+    let week1_start_offset = offset_to_week_start(jan1.weekday(), week_start) as i64;
+    let week1_start = jan1 - Duration::days(week1_start_offset);
+
+    let diff_days = (week_start_date - week1_start).whole_days();
+    let weeks = diff_days.div_euclid(7).max(0);
+    (weeks as u32) + 1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,6 +240,31 @@ mod tests {
 
         let jan = CalendarMonth::new(2026, Month::January);
         assert_eq!(jan.prev_month(), CalendarMonth::new(2025, Month::December));
+    }
+
+    #[test]
+    fn month_grid_compact_can_return_5_weeks() {
+        // January 2026 starts on Thursday; for week_start=Sunday, it fits exactly into 5 rows
+        // (Dec 28..31 + Jan 1..31 = 35 days).
+        let m = CalendarMonth::new(2026, Month::January);
+        let grid = month_grid_compact(m, Weekday::Sunday);
+        assert_eq!(grid.len(), 35);
+        assert_eq!(
+            grid.first().map(|d| d.date),
+            Some(Date::from_calendar_date(2025, Month::December, 28).unwrap())
+        );
+        assert_eq!(
+            grid.last().map(|d| d.date),
+            Some(Date::from_calendar_date(2026, Month::January, 31).unwrap())
+        );
+    }
+
+    #[test]
+    fn week_number_matches_sunday_aligned_year_weeks() {
+        // With week_start=Sunday and firstWeekContainsDate=1, 2025-06-01 is the start of week 23
+        // (week 1 starts on 2024-12-29).
+        let d = Date::from_calendar_date(2025, Month::June, 1).unwrap();
+        assert_eq!(week_number(d, Weekday::Sunday), 23);
     }
 
     #[test]

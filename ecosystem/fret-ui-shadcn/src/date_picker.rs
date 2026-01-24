@@ -263,7 +263,31 @@ mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
     use fret_ui::UiTree;
     use fret_ui_kit::OverlayController;
-    use time::Month;
+    use time::{Date, Month};
+
+    fn ordinal_suffix(day: u8) -> &'static str {
+        let mod_100 = day % 100;
+        if mod_100 >= 11 && mod_100 <= 13 {
+            return "th";
+        }
+        match day % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        }
+    }
+
+    fn shadcn_calendar_day_aria_label(date: Date) -> String {
+        let day = date.day();
+        format!(
+            "{:?}, {:?} {day}{}, {}",
+            date.weekday(),
+            date.month(),
+            ordinal_suffix(day),
+            date.year()
+        )
+    }
 
     use fret_core::{
         PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, SvgId,
@@ -383,10 +407,15 @@ mod tests {
         );
 
         let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_label = selected_date.to_string();
+        let selected_label = format!(
+            "{}, selected",
+            shadcn_calendar_day_aria_label(selected_date)
+        );
         let trigger_node = snap1
             .nodes
             .iter()
-            .find(|n| n.label.as_deref() == Some("2026-01-15"))
+            .find(|n| n.label.as_deref() == Some(trigger_label.as_str()))
             .map(|n| n.id)
             .expect("trigger semantics node");
         ui.set_focus(Some(trigger_node));
@@ -411,7 +440,7 @@ mod tests {
             .iter()
             .find(|n| n.id == focused)
             .expect("focused semantics node");
-        assert_eq!(focused_sem.label.as_deref(), Some("2026-01-15"));
+        assert_eq!(focused_sem.label.as_deref(), Some(selected_label.as_str()));
         assert!(
             focused_sem.flags.selected,
             "expected focused day to be selected"

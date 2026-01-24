@@ -150,6 +150,20 @@ fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Opt
     None
 }
 
+fn find_all<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Vec<&'a WebNode> {
+    let mut out = Vec::new();
+    let mut stack = vec![node];
+    while let Some(n) = stack.pop() {
+        if pred(n) {
+            out.push(n);
+        }
+        for child in &n.children {
+            stack.push(child);
+        }
+    }
+    out
+}
+
 fn contains_text(node: &WebNode, needle: &str) -> bool {
     if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
         return true;
@@ -998,6 +1012,413 @@ fn web_vs_fret_layout_button_default_height() {
         button.bounds.size.height,
         web_button.rect.h,
         1.0,
+    );
+}
+
+fn web_find_button_by_aria_label<'a>(root: &'a WebNode, aria_label: &str) -> Option<&'a WebNode> {
+    find_first(root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == aria_label)
+    })
+}
+
+fn assert_toggle_variant_geometry_matches(
+    web_name: &str,
+    aria_label: &str,
+    size: fret_ui_shadcn::ToggleSize,
+    variant: fret_ui_shadcn::ToggleVariant,
+    disabled: bool,
+    with_text: bool,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_toggle = web_find_button_by_aria_label(&theme.root, aria_label).expect("web toggle");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<bool> = cx.app.models_mut().insert(false);
+        let mut toggle = fret_ui_shadcn::Toggle::new(model)
+            .size(size)
+            .variant(variant)
+            .disabled(disabled)
+            .a11y_label(aria_label)
+            .children(vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)]);
+
+        if with_text {
+            toggle = toggle.label("Italic");
+        }
+
+        vec![toggle.into_element(cx)]
+    });
+
+    let toggle = find_semantics(&snap, SemanticsRole::Button, Some(aria_label))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret toggle semantics node");
+
+    assert_close_px(
+        &format!("{web_name} height"),
+        toggle.bounds.size.height,
+        web_toggle.rect.h,
+        1.0,
+    );
+
+    // Avoid comparing text-driven widths in this file: `FakeServices` does not provide a
+    // font-accurate text width model, and width gates would become flaky across environments.
+    if !with_text {
+        assert_close_px(
+            &format!("{web_name} width"),
+            toggle.bounds.size.width,
+            web_toggle.rect.w,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_sm_geometry_matches() {
+    assert_toggle_variant_geometry_matches(
+        "toggle-sm",
+        "Toggle italic",
+        fret_ui_shadcn::ToggleSize::Sm,
+        fret_ui_shadcn::ToggleVariant::Default,
+        false,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_lg_geometry_matches() {
+    assert_toggle_variant_geometry_matches(
+        "toggle-lg",
+        "Toggle italic",
+        fret_ui_shadcn::ToggleSize::Lg,
+        fret_ui_shadcn::ToggleVariant::Default,
+        false,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_outline_geometry_matches() {
+    assert_toggle_variant_geometry_matches(
+        "toggle-outline",
+        "Toggle italic",
+        fret_ui_shadcn::ToggleSize::Default,
+        fret_ui_shadcn::ToggleVariant::Outline,
+        false,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_disabled_geometry_matches() {
+    assert_toggle_variant_geometry_matches(
+        "toggle-disabled",
+        "Toggle italic",
+        fret_ui_shadcn::ToggleSize::Default,
+        fret_ui_shadcn::ToggleVariant::Default,
+        true,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_with_text_height_matches() {
+    assert_toggle_variant_geometry_matches(
+        "toggle-with-text",
+        "Toggle italic",
+        fret_ui_shadcn::ToggleSize::Default,
+        fret_ui_shadcn::ToggleVariant::Default,
+        false,
+        true,
+    );
+}
+
+fn web_find_toggle_group_container<'a>(root: &'a WebNode) -> Option<&'a WebNode> {
+    find_first(root, &|n| {
+        n.tag == "div" && n.attrs.get("role").is_some_and(|v| v == "group")
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ToggleGroupItemSpec {
+    value: &'static str,
+    a11y_label: &'static str,
+    text: Option<&'static str>,
+}
+
+fn assert_toggle_group_variant_heights_match(
+    web_name: &str,
+    group_kind: fret_ui_shadcn::ToggleGroupKind,
+    size: fret_ui_shadcn::ToggleSize,
+    variant: fret_ui_shadcn::ToggleVariant,
+    disabled: bool,
+    spacing: Space,
+    items: &'static [ToggleGroupItemSpec],
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_group =
+        web_find_toggle_group_container(&theme.root).expect("web toggle-group container");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let group_label: Arc<str> = Arc::from(format!("Golden:{web_name}:group"));
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model_single: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let model_multi: Model<Vec<Arc<str>>> = cx.app.models_mut().insert(Vec::new());
+
+        let base = match group_kind {
+            fret_ui_shadcn::ToggleGroupKind::Single => {
+                fret_ui_shadcn::ToggleGroup::single(model_single)
+            }
+            fret_ui_shadcn::ToggleGroupKind::Multiple => {
+                fret_ui_shadcn::ToggleGroup::multiple(model_multi)
+            }
+        };
+
+        let group = items.iter().fold(
+            base.size(size)
+                .variant(variant)
+                .disabled(disabled)
+                .spacing(spacing),
+            |group, spec| {
+                let mut children: Vec<fret_ui::element::AnyElement> =
+                    vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)];
+                if let Some(text) = spec.text {
+                    children.push(decl_text::text_sm(cx, text));
+                }
+                group.item(
+                    fret_ui_shadcn::ToggleGroupItem::new(spec.value, children)
+                        .a11y_label(spec.a11y_label),
+                )
+            },
+        );
+
+        let group = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(group_label.clone()),
+                ..Default::default()
+            },
+            move |cx| vec![group.into_element(cx)],
+        );
+
+        vec![group]
+    });
+
+    let group = find_semantics(&snap, SemanticsRole::Panel, Some(group_label.as_ref()))
+        .expect("fret toggle-group semantics node");
+    assert_close_px(
+        &format!("{web_name} group height"),
+        group.bounds.size.height,
+        web_group.rect.h,
+        1.0,
+    );
+
+    let item_role = match group_kind {
+        fret_ui_shadcn::ToggleGroupKind::Single => SemanticsRole::RadioButton,
+        fret_ui_shadcn::ToggleGroupKind::Multiple => SemanticsRole::Button,
+    };
+
+    for spec in items {
+        let web_item =
+            web_find_button_by_aria_label(&theme.root, spec.a11y_label).expect("web toggle item");
+        let item = find_semantics(&snap, item_role, Some(spec.a11y_label))
+            .expect("fret toggle item semantics node");
+        assert_close_px(
+            &format!("{web_name} item height ({})", spec.a11y_label),
+            item.bounds.size.height,
+            web_item.rect.h,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_group_sm_heights_match() {
+    const ITEMS: &[ToggleGroupItemSpec] = &[
+        ToggleGroupItemSpec {
+            value: "bold",
+            a11y_label: "Toggle bold",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "italic",
+            a11y_label: "Toggle italic",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "strikethrough",
+            a11y_label: "Toggle strikethrough",
+            text: None,
+        },
+    ];
+    assert_toggle_group_variant_heights_match(
+        "toggle-group-sm",
+        fret_ui_shadcn::ToggleGroupKind::Single,
+        fret_ui_shadcn::ToggleSize::Sm,
+        fret_ui_shadcn::ToggleVariant::Default,
+        false,
+        Space::N0,
+        ITEMS,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_group_lg_heights_match() {
+    const ITEMS: &[ToggleGroupItemSpec] = &[
+        ToggleGroupItemSpec {
+            value: "bold",
+            a11y_label: "Toggle bold",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "italic",
+            a11y_label: "Toggle italic",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "strikethrough",
+            a11y_label: "Toggle strikethrough",
+            text: None,
+        },
+    ];
+    assert_toggle_group_variant_heights_match(
+        "toggle-group-lg",
+        fret_ui_shadcn::ToggleGroupKind::Multiple,
+        fret_ui_shadcn::ToggleSize::Lg,
+        fret_ui_shadcn::ToggleVariant::Default,
+        false,
+        Space::N0,
+        ITEMS,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_group_outline_heights_match() {
+    const ITEMS: &[ToggleGroupItemSpec] = &[
+        ToggleGroupItemSpec {
+            value: "bold",
+            a11y_label: "Toggle bold",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "italic",
+            a11y_label: "Toggle italic",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "strikethrough",
+            a11y_label: "Toggle strikethrough",
+            text: None,
+        },
+    ];
+    assert_toggle_group_variant_heights_match(
+        "toggle-group-outline",
+        fret_ui_shadcn::ToggleGroupKind::Multiple,
+        fret_ui_shadcn::ToggleSize::Default,
+        fret_ui_shadcn::ToggleVariant::Outline,
+        false,
+        Space::N0,
+        ITEMS,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_group_disabled_heights_match() {
+    const ITEMS: &[ToggleGroupItemSpec] = &[
+        ToggleGroupItemSpec {
+            value: "bold",
+            a11y_label: "Toggle bold",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "italic",
+            a11y_label: "Toggle italic",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "strikethrough",
+            a11y_label: "Toggle strikethrough",
+            text: None,
+        },
+    ];
+    assert_toggle_group_variant_heights_match(
+        "toggle-group-disabled",
+        fret_ui_shadcn::ToggleGroupKind::Multiple,
+        fret_ui_shadcn::ToggleSize::Default,
+        fret_ui_shadcn::ToggleVariant::Default,
+        true,
+        Space::N0,
+        ITEMS,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_group_single_heights_match() {
+    const ITEMS: &[ToggleGroupItemSpec] = &[
+        ToggleGroupItemSpec {
+            value: "bold",
+            a11y_label: "Toggle bold",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "italic",
+            a11y_label: "Toggle italic",
+            text: None,
+        },
+        ToggleGroupItemSpec {
+            value: "strikethrough",
+            a11y_label: "Toggle strikethrough",
+            text: None,
+        },
+    ];
+    assert_toggle_group_variant_heights_match(
+        "toggle-group-single",
+        fret_ui_shadcn::ToggleGroupKind::Single,
+        fret_ui_shadcn::ToggleSize::Default,
+        fret_ui_shadcn::ToggleVariant::Default,
+        false,
+        Space::N0,
+        ITEMS,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_toggle_group_spacing_heights_match() {
+    const ITEMS: &[ToggleGroupItemSpec] = &[
+        ToggleGroupItemSpec {
+            value: "star",
+            a11y_label: "Toggle star",
+            text: Some("Star"),
+        },
+        ToggleGroupItemSpec {
+            value: "heart",
+            a11y_label: "Toggle heart",
+            text: Some("Heart"),
+        },
+        ToggleGroupItemSpec {
+            value: "bookmark",
+            a11y_label: "Toggle bookmark",
+            text: Some("Bookmark"),
+        },
+    ];
+    assert_toggle_group_variant_heights_match(
+        "toggle-group-spacing",
+        fret_ui_shadcn::ToggleGroupKind::Multiple,
+        fret_ui_shadcn::ToggleSize::Sm,
+        fret_ui_shadcn::ToggleVariant::Outline,
+        false,
+        Space::N2,
+        ITEMS,
     );
 }
 
@@ -13718,6 +14139,637 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
         expected_indicator_bg,
         0.02,
     );
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web() {
+    let web = read_web_golden("calendar-demo");
+    let theme = web_theme(&web);
+
+    let web_prev = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Previous Month")
+    })
+    .expect("web prev-month button");
+
+    let web_day = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Sunday, December 28th, 2025")
+    })
+    .expect("web day button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        use fret_ui_headless::calendar::CalendarMonth;
+        use time::{Month, Weekday};
+
+        let month: Model<CalendarMonth> = cx
+            .app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+
+        vec![
+            fret_ui_shadcn::Calendar::new(month, selected)
+                .week_start(Weekday::Sunday)
+                .disable_outside_days(false)
+                .into_element(cx),
+        ]
+    });
+
+    fn is_calendar_day_label(label: &str) -> bool {
+        // Examples:
+        // - "Sunday, December 28th, 2025"
+        // - "Thursday, June 12th, 2025, selected"
+        let label = label.strip_suffix(", selected").unwrap_or(label);
+        let label = label.strip_prefix("Today, ").unwrap_or(label);
+        if !label.contains(',') {
+            return false;
+        }
+        let Some((_weekday, rest)) = label.split_once(", ") else {
+            return false;
+        };
+        let Some((_month_and_day, year)) = rest.rsplit_once(", ") else {
+            return false;
+        };
+        if year.len() != 4 || !year.chars().all(|c| c.is_ascii_digit()) {
+            return false;
+        }
+        label.contains("st, ")
+            || label.contains("nd, ")
+            || label.contains("rd, ")
+            || label.contains("th, ")
+    }
+
+    let day_buttons = snap
+        .nodes
+        .iter()
+        .filter(|n| {
+            n.role == SemanticsRole::Button
+                && n.label
+                    .as_deref()
+                    .is_some_and(|label| is_calendar_day_label(label))
+        })
+        .count();
+    assert_eq!(
+        day_buttons, 35,
+        "expected a 5-week (35-day) grid for January 2026 when week starts on Sunday"
+    );
+
+    let prev = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Go to the Previous Month"),
+    )
+    .expect("fret prev-month semantics node");
+    assert_close_px(
+        "calendar prev button width",
+        prev.bounds.size.width,
+        web_prev.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "calendar prev button height",
+        prev.bounds.size.height,
+        web_prev.rect.h,
+        1.0,
+    );
+
+    let day = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Sunday, December 28th, 2025"),
+    )
+    .expect("fret day semantics node");
+    assert_close_px(
+        "calendar day button width",
+        day.bounds.size.width,
+        web_day.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "calendar day button height",
+        day.bounds.size.height,
+        web_day.rect.h,
+        1.0,
+    );
+
+    let node_bounds = ui.debug_node_bounds(day.id).expect("fret day node bounds");
+    assert_close_px("calendar day x", node_bounds.origin.x, web_day.rect.x, 3.0);
+    assert_close_px("calendar day y", node_bounds.origin.y, web_day.rect.y, 3.0);
+}
+
+fn parse_calendar_title_label(label: &str) -> Option<(time::Month, i32)> {
+    let (month, year) = label.split_once(' ')?;
+    if year.len() != 4 || !year.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let year: i32 = year.parse().ok()?;
+    let month = match month {
+        "January" => time::Month::January,
+        "February" => time::Month::February,
+        "March" => time::Month::March,
+        "April" => time::Month::April,
+        "May" => time::Month::May,
+        "June" => time::Month::June,
+        "July" => time::Month::July,
+        "August" => time::Month::August,
+        "September" => time::Month::September,
+        "October" => time::Month::October,
+        "November" => time::Month::November,
+        "December" => time::Month::December,
+        _ => return None,
+    };
+    Some((month, year))
+}
+
+fn parse_calendar_weekday_label(label: &str) -> Option<time::Weekday> {
+    match label {
+        "Monday" => Some(time::Weekday::Monday),
+        "Tuesday" => Some(time::Weekday::Tuesday),
+        "Wednesday" => Some(time::Weekday::Wednesday),
+        "Thursday" => Some(time::Weekday::Thursday),
+        "Friday" => Some(time::Weekday::Friday),
+        "Saturday" => Some(time::Weekday::Saturday),
+        "Sunday" => Some(time::Weekday::Sunday),
+        _ => None,
+    }
+}
+
+fn parse_calendar_day_aria_label(label: &str) -> Option<(time::Date, bool)> {
+    let selected = label.ends_with(", selected");
+    let label = label.strip_suffix(", selected").unwrap_or(label);
+    let label = label.strip_prefix("Today, ").unwrap_or(label);
+
+    let (prefix, year) = label.rsplit_once(", ")?;
+    if year.len() != 4 || !year.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let year: i32 = year.parse().ok()?;
+
+    let (_weekday, month_and_day) = prefix.split_once(", ")?;
+    let (month, day_with_suffix) = month_and_day.split_once(' ')?;
+    let (month, _label_year) = parse_calendar_title_label(&format!("{month} {year}"))?;
+
+    let day_digits: String = day_with_suffix
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    if day_digits.is_empty() {
+        return None;
+    }
+    let day: u8 = day_digits.parse().ok()?;
+
+    let date = time::Date::from_calendar_date(year, month, day).ok()?;
+    Some((date, selected))
+}
+
+fn days_in_month(year: i32, month: time::Month) -> u8 {
+    match month {
+        time::Month::January => 31,
+        time::Month::February => {
+            let leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+            if leap { 29 } else { 28 }
+        }
+        time::Month::March => 31,
+        time::Month::April => 30,
+        time::Month::May => 31,
+        time::Month::June => 30,
+        time::Month::July => 31,
+        time::Month::August => 31,
+        time::Month::September => 30,
+        time::Month::October => 31,
+        time::Month::November => 30,
+        time::Month::December => 31,
+    }
+}
+
+fn parse_calendar_cell_size_px(theme: &WebGoldenTheme) -> Option<Px> {
+    let rdp_root = web_find_by_class_token(&theme.root, "rdp-root")?;
+    let class_name = rdp_root.class_name.as_deref().unwrap_or("");
+
+    fn parse_spacing_value(token: &str, prefix: &str) -> Option<f32> {
+        let rest = token.strip_prefix(prefix)?;
+        let rest = rest.strip_suffix(")]")?;
+        rest.parse::<f32>().ok()
+    }
+
+    let mut base: Option<f32> = None;
+    let mut md: Option<f32> = None;
+    for token in class_name.split_whitespace() {
+        if let Some(v) = parse_spacing_value(token, "[--cell-size:--spacing(") {
+            base = Some(v);
+        }
+        if let Some(v) = parse_spacing_value(token, "md:[--cell-size:--spacing(") {
+            md = Some(v);
+        }
+    }
+
+    let viewport_w = theme.viewport.w;
+    let spacing = if viewport_w >= 768.0 {
+        md.or(base)
+    } else {
+        base
+    }?;
+
+    Some(Px(spacing * 4.0))
+}
+
+fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_rdp_root = web_find_by_class_token(&theme.root, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+
+    fn parse_css_px(s: &str) -> Option<f32> {
+        s.strip_suffix("px")?.parse::<f32>().ok()
+    }
+
+    let web_padding_left = web_rdp_root
+        .computed_style
+        .get("paddingLeft")
+        .and_then(|v| parse_css_px(v))
+        .unwrap_or(0.0);
+    let web_border_left = web_rdp_root
+        .computed_style
+        .get("borderLeftWidth")
+        .and_then(|v| parse_css_px(v))
+        .unwrap_or(0.0);
+
+    let web_show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+
+    let web_month_grids = find_all(&theme.root, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    });
+    assert_eq!(
+        web_month_grids.len(),
+        1,
+        "expected a single month grid for {web_name} (multi-month variants are gated separately)"
+    );
+    let web_month_grid = web_month_grids[0];
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let web_prev = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Previous Month")
+    })
+    .expect("web prev-month button");
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(
+        !web_day_buttons.is_empty(),
+        "expected calendar day buttons for {web_name}"
+    );
+
+    let web_weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = web_weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let web_today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let web_selected_dates: Vec<time::Date> = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .filter_map(|label| parse_calendar_day_aria_label(label).filter(|(_, sel)| *sel))
+        .map(|(d, _)| d)
+        .collect();
+
+    let web_selected = web_day_buttons
+        .iter()
+        .find(|n| {
+            n.attrs
+                .get("aria-label")
+                .is_some_and(|label| label.as_str().ends_with(", selected"))
+        })
+        .copied();
+    let selected_date = match web_selected_dates.as_slice() {
+        [] => None,
+        [d] => Some(*d),
+        _ => None,
+    };
+
+    let web_show_outside_days = web_day_buttons.len() != (days_in_month(year, month) as usize);
+    let web_disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let web_sample = web_selected.unwrap_or(web_day_buttons[0]);
+    let web_sample_label = web_sample
+        .attrs
+        .get("aria-label")
+        .expect("web sample day aria-label")
+        .clone();
+
+    let cell_size = parse_calendar_cell_size_px(&theme);
+
+    let chrome_override = {
+        let mut chrome = ChromeRefinement::default();
+        if (web_padding_left - 0.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N0);
+        } else if (web_padding_left - 12.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N3);
+        } else if (web_padding_left - 8.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N2);
+        }
+        if web_border_left >= 0.5 {
+            chrome = chrome.border_1();
+        }
+        chrome
+    };
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        use fret_ui_headless::calendar::CalendarMonth;
+        use fret_ui_headless::calendar::DateRangeSelection;
+
+        let month_model: Model<CalendarMonth> =
+            cx.app.models_mut().insert(CalendarMonth::new(year, month));
+        match web_selected_dates.as_slice() {
+            [] | [_] => {
+                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(selected_date);
+                let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                    .week_start(week_start)
+                    .show_outside_days(web_show_outside_days)
+                    .disable_outside_days(web_disable_outside_days)
+                    .show_week_number(web_show_week_number)
+                    .refine_style(chrome_override);
+                if let Some(cell_size) = cell_size {
+                    calendar = calendar.cell_size(cell_size);
+                }
+                if let Some(today) = web_today {
+                    calendar = calendar.today(today);
+                }
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        padding: fret_core::Edges {
+                            left: Px(web_origin_x),
+                            top: Px(web_origin_y),
+                            right: Px(0.0),
+                            bottom: Px(0.0),
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| vec![calendar.into_element(cx)],
+                )]
+            }
+            _ => {
+                let (min, max) = web_selected_dates.iter().fold(
+                    (web_selected_dates[0], web_selected_dates[0]),
+                    |(min, max), d| (min.min(*d), max.max(*d)),
+                );
+                let selected: Model<DateRangeSelection> =
+                    cx.app.models_mut().insert(DateRangeSelection {
+                        from: Some(min),
+                        to: Some(max),
+                    });
+                let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                    .week_start(week_start)
+                    .show_outside_days(web_show_outside_days)
+                    .disable_outside_days(web_disable_outside_days)
+                    .show_week_number(web_show_week_number)
+                    .refine_style(chrome_override);
+                if let Some(cell_size) = cell_size {
+                    calendar = calendar.cell_size(cell_size);
+                }
+                if let Some(today) = web_today {
+                    calendar = calendar.today(today);
+                }
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        padding: fret_core::Edges {
+                            left: Px(web_origin_x),
+                            top: Px(web_origin_y),
+                            right: Px(0.0),
+                            bottom: Px(0.0),
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| vec![calendar.into_element(cx)],
+                )]
+            }
+        }
+    });
+
+    let fret_day_buttons = snap
+        .nodes
+        .iter()
+        .filter(|n| {
+            n.role == SemanticsRole::Button
+                && n.label
+                    .as_deref()
+                    .is_some_and(|label| parse_calendar_day_aria_label(label).is_some())
+        })
+        .count();
+    assert_eq!(
+        fret_day_buttons,
+        web_day_buttons.len(),
+        "expected the same number of calendar day buttons for {web_name}"
+    );
+
+    let prev = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Go to the Previous Month"),
+    )
+    .expect("fret prev-month semantics node");
+    assert_close_px(
+        &format!("{web_name} prev button width"),
+        prev.bounds.size.width,
+        web_prev.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        &format!("{web_name} prev button height"),
+        prev.bounds.size.height,
+        web_prev.rect.h,
+        1.0,
+    );
+
+    let day = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some(web_sample_label.as_ref()),
+    )
+    .expect("fret day semantics node");
+    assert_close_px(
+        &format!("{web_name} day button width"),
+        day.bounds.size.width,
+        web_sample.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        &format!("{web_name} day button height"),
+        day.bounds.size.height,
+        web_sample.rect.h,
+        1.0,
+    );
+
+    let node_bounds = ui.debug_node_bounds(day.id).expect("fret day node bounds");
+    assert_close_px(
+        &format!("{web_name} day x"),
+        node_bounds.origin.x,
+        web_sample.rect.x,
+        3.0,
+    );
+    assert_close_px(
+        &format!("{web_name} day y"),
+        node_bounds.origin.y,
+        web_sample.rect.y,
+        3.0,
+    );
+
+    if let Some(web_selected) = web_selected {
+        let label = web_selected
+            .attrs
+            .get("aria-label")
+            .expect("web selected day label");
+        let fret_selected = find_semantics(&snap, SemanticsRole::Button, Some(label))
+            .expect("fret selected day semantics node");
+        assert!(
+            fret_selected.flags.selected,
+            "expected fret selected day to have selected semantics flag for {web_name}"
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_01_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-01");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_04_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-04");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_06_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-06");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_08_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-08");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_10_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-10");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_13_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-13");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_14_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-14");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_15_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-15");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_16_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-16");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_17_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-17");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_18_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-18");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_19_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-19");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_20_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-20");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_21_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-21");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_31_geometry_matches() {
+    assert_calendar_single_month_variant_geometry_matches_web("calendar-31");
 }
 
 #[test]
