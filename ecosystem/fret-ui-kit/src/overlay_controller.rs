@@ -82,6 +82,10 @@ pub struct OverlayRequest {
     pub close_on_window_focus_lost: bool,
     /// Whether this overlay should close when the OS window is resized (or scale factor changes).
     pub close_on_window_resize: bool,
+    /// Whether focus should be restored when the overlay closes via Escape.
+    pub restore_focus_on_escape: bool,
+    /// Whether focus should be restored when the overlay closes via outside press.
+    pub restore_focus_on_outside_press: bool,
     pub open: Option<Model<bool>>,
     pub dismissible_on_dismiss_request: Option<OnDismissRequest>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
@@ -106,6 +110,11 @@ impl std::fmt::Debug for OverlayRequest {
             .field(
                 "disable_outside_pointer_events",
                 &self.disable_outside_pointer_events,
+            )
+            .field("restore_focus_on_escape", &self.restore_focus_on_escape)
+            .field(
+                "restore_focus_on_outside_press",
+                &self.restore_focus_on_outside_press,
             )
             .field("open", &self.open)
             .field(
@@ -142,6 +151,8 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
+            restore_focus_on_escape: true,
+            restore_focus_on_outside_press: true,
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
@@ -186,6 +197,8 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
+            restore_focus_on_escape: true,
+            restore_focus_on_outside_press: true,
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
@@ -211,6 +224,8 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
+            restore_focus_on_escape: false,
+            restore_focus_on_outside_press: false,
             open: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
@@ -236,6 +251,8 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
+            restore_focus_on_escape: false,
+            restore_focus_on_outside_press: false,
             open: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
@@ -260,6 +277,8 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
+            restore_focus_on_escape: false,
+            restore_focus_on_outside_press: false,
             open: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
@@ -463,6 +482,8 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
+                        restore_focus_on_escape: request.restore_focus_on_escape,
+                        restore_focus_on_outside_press: request.restore_focus_on_outside_press,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,

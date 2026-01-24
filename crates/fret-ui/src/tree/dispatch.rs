@@ -1129,6 +1129,9 @@ impl<H: UiHost> UiTree<H> {
                     self.topmost_pointer_occlusion_layer(barrier_root)
                 && occlusion != PointerOcclusion::None
             {
+                #[cfg(debug_assertions)]
+                let debug_occlusion = std::env::var_os("FRET_DEBUG_POINTER_OCCLUSION").is_some();
+
                 let occlusion_z = self
                     .layer_order
                     .iter()
@@ -1157,6 +1160,13 @@ impl<H: UiHost> UiTree<H> {
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
                     }
+                }
+
+                #[cfg(debug_assertions)]
+                if debug_occlusion && matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                    eprintln!(
+                        "pointer_occlusion: occlusion_layer={occlusion_layer:?} occlusion={occlusion:?} occlusion_z={occlusion_z:?} hit={hit:?} hit_layer_z={hit_layer_z:?} hit_below={hit_is_below_occlusion} suppress={suppress_pointer_dispatch}",
+                    );
                 }
             }
 
@@ -1433,11 +1443,28 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
+        // Pointer occlusion suppresses hit-tested pointer dispatch for underlay layers, but overlay
+        // policies may still need to observe global pointer-move streams (e.g. Radix menu safe
+        // corridor). Keep pointer-move observers running even when hit-tested dispatch is
+        // suppressed.
+        if suppress_pointer_dispatch
+            && matches!(event, Event::Pointer(_))
+            && !matches!(event, Event::Pointer(PointerEvent::Move { .. }))
+        {
             if needs_redraw {
                 self.request_redraw_coalesced(app);
             }
             return;
+        }
+
+        #[cfg(debug_assertions)]
+        let debug_pointer_dispatch = std::env::var_os("FRET_DEBUG_POINTER_DISPATCH").is_some();
+        #[cfg(debug_assertions)]
+        if debug_pointer_dispatch && matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+            eprintln!(
+                "pointer_dispatch: suppress={suppress_pointer_dispatch} pointer_down_outside_suppress={} target={:?}",
+                pointer_down_outside.suppress_hit_test_dispatch, target
+            );
         }
 
         if !suppress_pointer_dispatch
@@ -1449,6 +1476,11 @@ impl<H: UiHost> UiTree<H> {
                     | Event::InternalDrag(_)
             )
         {
+            #[cfg(debug_assertions)]
+            if debug_pointer_dispatch && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
+            {
+                eprintln!("pointer_dispatch: hit-tested dispatch starting at node={node_id:?}");
+            }
             let chain = if event_position(event).is_some() {
                 self.build_mapped_event_chain(node_id, event)
             } else {
@@ -1700,6 +1732,20 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
             }
+        } else if suppress_pointer_dispatch
+            && matches!(
+                event,
+                Event::Pointer(PointerEvent::Move { .. })
+                    | Event::PointerCancel(_)
+                    | Event::ExternalDrag(_)
+                    | Event::InternalDrag(_)
+            )
+        {
+            // Pointer occlusion suppresses hit-tested pointer dispatch for underlay layers.
+            //
+            // For pointer-move events, we still want to keep pointer-move observers (e.g. Radix
+            // menu safe corridor) active, so we skip normal widget dispatch here and allow the
+            // observer stream to run later in this function.
         } else {
             if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
                 let mut chain: Vec<NodeId> = Vec::new();
@@ -2341,6 +2387,10 @@ impl<H: UiHost> UiTree<H> {
             ..
         }) = event
         {
+            #[cfg(debug_assertions)]
+            let debug_pointer_move_observers =
+                std::env::var_os("FRET_DEBUG_POINTER_MOVE_OBSERVERS").is_some();
+
             let captured_layer_for_pointer_move = self
                 .captured
                 .get(pointer_id)
@@ -2355,6 +2405,12 @@ impl<H: UiHost> UiTree<H> {
                         && *occlusion != PointerOcclusion::None
                 })
                 .map(|(layer, _)| layer);
+            #[cfg(debug_assertions)]
+            if debug_pointer_move_observers {
+                eprintln!(
+                    "pointer_move_observers: captured_layer={captured_layer_for_pointer_move:?} occlusion_layer={pointer_move_occlusion_layer:?} barrier_root={barrier_root:?}"
+                );
+            }
             let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
             let mut hit_barrier = false;
             for layer_id in layers.into_iter().rev() {
@@ -2368,6 +2424,12 @@ impl<H: UiHost> UiTree<H> {
                 if !visible {
                     continue;
                 }
+                #[cfg(debug_assertions)]
+                if debug_pointer_move_observers {
+                    eprintln!(
+                        "pointer_move_observers: visiting layer={layer_id:?} root={layer_root:?} wants={wants_pointer_move_events} hit_barrier={hit_barrier}"
+                    );
+                }
                 if barrier_root.is_some() && hit_barrier {
                     break;
                 }
@@ -2376,6 +2438,12 @@ impl<H: UiHost> UiTree<H> {
                         hit_barrier = true;
                     }
                     if pointer_move_occlusion_layer == Some(layer_id) {
+                        #[cfg(debug_assertions)]
+                        if debug_pointer_move_observers {
+                            eprintln!(
+                                "pointer_move_observers: stopping at occlusion layer (no wants)"
+                            );
+                        }
                         break;
                     }
                     continue;
@@ -2404,6 +2472,12 @@ impl<H: UiHost> UiTree<H> {
                     hit_barrier = true;
                 }
                 if pointer_move_occlusion_layer == Some(layer_id) {
+                    #[cfg(debug_assertions)]
+                    if debug_pointer_move_observers {
+                        eprintln!(
+                            "pointer_move_observers: stopping at occlusion layer (after dispatch)"
+                        );
+                    }
                     break;
                 }
             }

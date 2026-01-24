@@ -868,6 +868,14 @@ pub trait Widget<H: UiHost> {
     fn semantics_children(&self) -> bool {
         true
     }
+    /// Optional synchronization hook for declarative `InteractivityGate` nodes.
+    ///
+    /// Declarative `InteractivityGate` is allowed to short-circuit layout when `present == false`
+    /// (display-none behavior). In those frames the layout engine may skip calling `layout()` for
+    /// the gate node, leaving cached widget gates stale. Declarative host widgets can override
+    /// this hook so the mount pipeline can keep semantics/hit-test traversal consistent even when
+    /// layout is skipped.
+    fn sync_interactivity_gate(&mut self, _present: bool, _interactive: bool) {}
     /// Whether focus traversal should recurse into this node's children.
     ///
     /// This is a mechanism-only gate used by `UiTree` to model "inert" subtrees during

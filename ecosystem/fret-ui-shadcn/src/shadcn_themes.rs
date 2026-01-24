@@ -164,6 +164,14 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry(theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT.to_string())
         .or_insert(24.0);
 
+    // Calendar (shadcn `Calendar` uses `h-8 w-8` day cells with `space-y-2` between week rows).
+    metrics
+        .entry("component.calendar.day_size".to_string())
+        .or_insert(32.0);
+    metrics
+        .entry("component.calendar.week_row_gap".to_string())
+        .or_insert(8.0);
+
     metrics
         .entry("component.ring.width".to_string())
         .or_insert(3.0);

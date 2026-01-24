@@ -6,6 +6,14 @@ use fret_ui::elements::GlobalElementId;
 
 use super::{ToastPosition, ToastStore, toast_layer_root_name};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DismissCause {
+    Escape,
+    OutsidePress,
+    FocusOutside,
+    Scroll,
+}
+
 #[derive(Clone)]
 pub struct DismissiblePopoverRequest {
     pub id: GlobalElementId,
@@ -23,6 +31,8 @@ pub struct DismissiblePopoverRequest {
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub restore_focus_on_escape: bool,
+    pub restore_focus_on_outside_press: bool,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
@@ -51,6 +61,11 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
+            .field("restore_focus_on_escape", &self.restore_focus_on_escape)
+            .field(
+                "restore_focus_on_outside_press",
+                &self.restore_focus_on_outside_press,
+            )
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())
             .field("children_len", &self.children.len())

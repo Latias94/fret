@@ -22,6 +22,7 @@ pub use crate::headless::presence::{
 /// Drive a fade presence transition using the UI runtime's monotonic frame clock.
 ///
 /// This is a thin facade around `crate::declarative::presence::fade_presence`.
+#[track_caller]
 pub fn fade_presence<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -31,6 +32,7 @@ pub fn fade_presence<H: UiHost>(
 }
 
 /// Drive a fade presence transition with separate open/close durations.
+#[track_caller]
 pub fn fade_presence_with_durations<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -41,6 +43,7 @@ pub fn fade_presence_with_durations<H: UiHost>(
 }
 
 /// Drive a scale+fade presence transition using the UI runtime's monotonic frame clock.
+#[track_caller]
 pub fn scale_fade_presence<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -52,6 +55,7 @@ pub fn scale_fade_presence<H: UiHost>(
 }
 
 /// Drive a scale+fade presence transition with separate open/close durations.
+#[track_caller]
 pub fn scale_fade_presence_with_durations<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -70,6 +74,7 @@ pub fn scale_fade_presence_with_durations<H: UiHost>(
     )
 }
 
+#[track_caller]
 pub fn scale_fade_presence_with_durations_and_easing<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -109,15 +114,19 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
+        fn render(app: &mut App, window: AppWindowId) -> PresenceOutput {
+            fret_ui::elements::with_element_cx(app, window, bounds(), "p0", |cx| {
+                fade_presence(cx, true, 3)
+            })
+        }
+
         // Simulate the runner's monotonic clock.
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
         // First call enters the opening phase: request animation frames + redraw.
 
-        let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
-            fade_presence(cx, true, 3)
-        });
+        let out0 = render(&mut app, window);
         let effects0 = app.flush_effects();
         assert!(out0.present);
         assert!(out0.animating);
@@ -132,9 +141,7 @@ mod tests {
 
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
-        let out1 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
-            fade_presence(cx, true, 3)
-        });
+        let out1 = render(&mut app, window);
         let effects1 = app.flush_effects();
         assert!(out1.present);
         assert!(out1.animating);
@@ -149,9 +156,7 @@ mod tests {
 
         app.set_tick_id(TickId(3));
         app.set_frame_id(FrameId(3));
-        let out2 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
-            fade_presence(cx, true, 3)
-        });
+        let out2 = render(&mut app, window);
         let effects2 = app.flush_effects();
         assert!(out2.present);
         assert!(!out2.animating);
@@ -162,25 +167,26 @@ mod tests {
     fn fade_presence_reacquires_animation_frame_on_new_animation() {
         let window = AppWindowId::default();
         let mut app = App::new();
+
+        fn render(app: &mut App, window: AppWindowId, open: bool, ticks: u64) -> PresenceOutput {
+            fret_ui::elements::with_element_cx(app, window, bounds(), "p1", |cx| {
+                fade_presence(cx, open, ticks)
+            })
+        }
+
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
         // Open first and reach a stable state.
-        let _ = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p1", |cx| {
-            fade_presence(cx, true, 1)
-        });
+        let _ = render(&mut app, window, true, 1);
         let _ = app.flush_effects();
-        let _ = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p1", |cx| {
-            fade_presence(cx, true, 1)
-        });
+        let _ = render(&mut app, window, true, 1);
         let _ = app.flush_effects();
 
         // Trigger a close animation: reacquire a RAF lease and request a redraw.
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
-        let out = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p1", |cx| {
-            fade_presence(cx, false, 3)
-        });
+        let out = render(&mut app, window, false, 3);
         let effects = app.flush_effects();
         assert!(out.present);
         assert!(out.animating);
@@ -237,5 +243,45 @@ mod tests {
         assert!(out0.animating);
         assert!((out0.opacity - 0.25).abs() < 1e-6);
         assert!((out0.scale - 0.85).abs() < 1e-6);
+    }
+
+    #[test]
+    fn separate_presence_callsites_do_not_share_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fn render_pair(
+            app: &mut App,
+            window: AppWindowId,
+            open_a: bool,
+            open_b: bool,
+        ) -> (PresenceOutput, PresenceOutput) {
+            fret_ui::elements::with_element_cx(app, window, bounds(), "p_callsites", |cx| {
+                let a = fade_presence_with_durations(cx, open_a, 2, 2);
+                let b = fade_presence_with_durations(cx, open_b, 2, 2);
+                (a, b)
+            })
+        }
+
+        // Frame 1: open both.
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let (a0, b0) = render_pair(&mut app, window, true, true);
+        assert!(a0.present);
+        assert!(b0.present);
+
+        // Frame 2: keep A open, start closing B.
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        let (a1, b1) = render_pair(&mut app, window, true, false);
+        assert!(a1.present);
+        assert!(b1.present, "B should remain present while closing");
+
+        // Frame 3: B should now be unmounted, A remains open.
+        app.set_tick_id(TickId(3));
+        app.set_frame_id(FrameId(3));
+        let (a2, b2) = render_pair(&mut app, window, true, false);
+        assert!(a2.present);
+        assert!(!b2.present, "B should unmount after close ticks");
     }
 }

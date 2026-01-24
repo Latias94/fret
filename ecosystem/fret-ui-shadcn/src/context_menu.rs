@@ -2992,17 +2992,9 @@ impl ContextMenu {
                             Size::new(submenu_min_width, submenu_max_h)
                         });
                     let submenu_is_open = submenu_open_value.is_some();
-                    let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                        cx,
-                        submenu_is_open,
-                        overlay_motion::SHADCN_MOTION_TICKS_100,
-                        0,
-                        0.95,
-                        1.0,
-                        overlay_motion::shadcn_ease,
-                    );
-                    let submenu_opacity = submenu_motion.opacity;
-                    let submenu_scale = submenu_motion.scale;
+                    let submenu_present = submenu_is_open;
+                    let submenu_opacity = 1.0;
+                    let submenu_scale = 1.0;
 
                     let open_submenu = menu::sub::with_open_submenu_synced(
                         cx,
@@ -3013,29 +3005,23 @@ impl ContextMenu {
                     );
 
                     #[derive(Default)]
-                    struct SubmenuLast {
-                        open_value: Option<Arc<str>>,
+                    struct SubmenuLastGeometry {
                         geometry: Option<menu::sub::MenuSubmenuGeometry>,
                     }
 
-                    let (last_value, last_geometry) = cx.with_state(SubmenuLast::default, |st| {
-                        if let Some((open_value, geometry)) = open_submenu.as_ref() {
-                            st.open_value = Some(open_value.clone());
+                    let last_geometry = cx.with_state(SubmenuLastGeometry::default, |st| {
+                        if let Some((_, geometry)) = open_submenu.as_ref() {
                             st.geometry = Some(*geometry);
                         }
-                        (st.open_value.clone(), st.geometry)
+                        st.geometry
                     });
 
-                    if submenu_motion.present {
-                        let open_value = open_submenu
-                            .as_ref()
-                            .map(|(open_value, _)| open_value.clone())
-                            .or(last_value);
-                        let geometry = open_submenu
-                            .map(|(_, geometry)| geometry)
-                            .or(last_geometry);
-
-                        let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
+                    if submenu_present {
+                        let Some(open_value) = submenu_open_value.clone() else {
+                            return (children, Some(dismissible_on_pointer_move));
+                        };
+                        let geometry = open_submenu.map(|(_, geometry)| geometry).or(last_geometry);
+                        let Some(geometry) = geometry else {
                             return (children, Some(dismissible_on_pointer_move));
                         };
 
@@ -3070,7 +3056,7 @@ impl ContextMenu {
 
                             let opacity = submenu_opacity;
                             let submenu_panel = cx.interactivity_gate(
-                                submenu_motion.present,
+                                submenu_present,
                                 submenu_is_open,
                                 move |cx| {
                                     vec![overlay_motion::wrap_opacity_and_render_transform(
@@ -3088,7 +3074,7 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
+                let mut request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     id,
                     trigger_id,
@@ -3101,6 +3087,9 @@ impl ContextMenu {
                     dismissible_on_pointer_move,
                     modal,
                 );
+                // Radix ContextMenu: outside click + Escape both clear focus (restore to body).
+                request.restore_focus_on_outside_press = false;
+                request.restore_focus_on_escape = false;
                 OverlayController::request(cx, request);
             }
 

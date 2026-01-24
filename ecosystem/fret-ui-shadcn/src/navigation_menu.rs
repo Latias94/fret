@@ -1581,7 +1581,12 @@ mod tests {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
     }
 
-    fn assert_align_start(dir: LayoutDirection, anchor: Rect, panel: Rect) {
+    fn assert_align_start_for_desired_width(
+        dir: LayoutDirection,
+        anchor: Rect,
+        panel: Rect,
+        desired_width: Px,
+    ) {
         let eps = 0.75;
         match dir {
             LayoutDirection::Ltr => {
@@ -1591,51 +1596,14 @@ mod tests {
                 );
             }
             LayoutDirection::Rtl => {
-                let panel_right = panel.origin.x.0 + panel.size.width.0;
                 let anchor_right = anchor.origin.x.0 + anchor.size.width.0;
+                let expected_left = anchor_right - desired_width.0;
                 assert!(
-                    (panel_right - anchor_right).abs() <= eps,
-                    "expected RTL start alignment (panel.right == anchor.right); anchor={anchor:?} panel={panel:?}",
+                    (panel.origin.x.0 - expected_left).abs() <= eps,
+                    "expected RTL start alignment (panel.left == anchor.right - desired_width); desired_width={desired_width:?} anchor={anchor:?} panel={panel:?}",
                 );
             }
         }
-    }
-
-    fn find_overlay_panel_bounds(ui: &UiTree<App>, window_bounds: Rect, point: Point) -> Rect {
-        let hit = ui.debug_hit_test(point);
-        let Some(hit_node) = hit.hit else {
-            panic!("expected hit at point={point:?} (window={window_bounds:?})");
-        };
-
-        let path = ui.debug_node_path(hit_node);
-        for node in path.iter().copied().rev() {
-            let Some(bounds) = ui.debug_node_bounds(node) else {
-                continue;
-            };
-
-            if !bounds.contains(point) {
-                continue;
-            }
-
-            let is_fullscreen =
-                bounds.origin == window_bounds.origin && bounds.size == window_bounds.size;
-            if is_fullscreen {
-                continue;
-            }
-
-            if bounds.size.width.0 >= 100.0
-                && bounds.size.height.0 >= 80.0
-                && bounds.size.width.0 <= window_bounds.size.width.0 - 1.0
-                && bounds.size.height.0 <= window_bounds.size.height.0 - 1.0
-            {
-                return bounds;
-            }
-        }
-
-        panic!(
-            "expected to find an overlay panel bounds in hit path; point={point:?} hit_node={hit_node:?} path_len={}",
-            path.len()
-        );
     }
 
     #[test]
@@ -2179,31 +2147,65 @@ mod tests {
                 ui.layout_all(app, services, bounds, 1.0);
             };
 
-            // Two frames: first establishes trigger bounds; second mounts the overlay anchored to them.
+            // Three frames:
+            // - frame 1 establishes trigger/root bounds,
+            // - frame 2 mounts the overlay and records viewport content bounds,
+            // - frame 3 uses last-frame content bounds to drive viewport sizing.
+            render_frame(&mut ui, &mut app, &mut services);
             render_frame(&mut ui, &mut app, &mut services);
             render_frame(&mut ui, &mut app, &mut services);
 
-            let snap = ui.semantics_snapshot().expect("semantics snapshot");
-            let alpha_btn = snap
-                .nodes
-                .iter()
-                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
-                .expect("alpha button semantics");
-            let anchor = alpha_btn.bounds;
-
-            let probe = Point::new(
-                Px(anchor.origin.x.0 + anchor.size.width.0 * 0.5),
-                Px(anchor.origin.y.0 + anchor.size.height.0 + 60.0),
+            let overlay_stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+            assert!(
+                overlay_stack.topmost_popover.is_some(),
+                "expected a popover overlay for the navigation menu viewport; snapshot={overlay_stack:?}"
             );
-            let panel = find_overlay_panel_bounds(&ui, bounds, probe);
+            let popover_layer = overlay_stack
+                .stack
+                .iter()
+                .rev()
+                .find(|e| e.kind == fret_ui_kit::OverlayStackEntryKind::Popover && e.visible)
+                .expect("expected a visible popover layer entry");
+            assert!(
+                popover_layer.hit_testable,
+                "expected navigation menu popover to be hit-testable; entry={popover_layer:?} snapshot={overlay_stack:?}"
+            );
+
+            let root_id = overlay_stack
+                .topmost_popover
+                .expect("expected a popover overlay id");
+            let anchor = fret_ui::elements::bounds_for_element(&mut app, window, root_id)
+                .expect("expected navigation menu root bounds");
+            let viewport_panel_id = fret_ui::elements::with_element_cx(
+                &mut app,
+                window,
+                bounds,
+                "navigation-menu-dir",
+                |cx| radix_navigation_menu::navigation_menu_viewport_panel_id(cx, root_id),
+            )
+            .expect("expected viewport panel id for navigation menu root");
+            let panel = fret_ui::elements::bounds_for_element(&mut app, window, viewport_panel_id)
+                .expect("expected viewport panel bounds");
             (anchor, panel)
         }
 
+        let desired_width = Px(320.0);
+
         let (ltr_anchor, ltr_panel) = run(LayoutDirection::Ltr);
-        assert_align_start(LayoutDirection::Ltr, ltr_anchor, ltr_panel);
+        assert_align_start_for_desired_width(
+            LayoutDirection::Ltr,
+            ltr_anchor,
+            ltr_panel,
+            desired_width,
+        );
 
         let (rtl_anchor, rtl_panel) = run(LayoutDirection::Rtl);
-        assert_align_start(LayoutDirection::Rtl, rtl_anchor, rtl_panel);
+        assert_align_start_for_desired_width(
+            LayoutDirection::Rtl,
+            rtl_anchor,
+            rtl_panel,
+            desired_width,
+        );
     }
 
     #[test]
@@ -2222,7 +2224,7 @@ mod tests {
 
         app.set_global(WindowCommandEnabledService::default());
         app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
-            svc.set_enabled_for_command(window, cmd.clone(), false);
+            svc.set_enabled(window, cmd.clone(), false);
         });
 
         let bounds = Rect::new(

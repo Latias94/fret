@@ -26,11 +26,16 @@ fn base_menu_overlay_request(
     children: Vec<AnyElement>,
     modal: bool,
 ) -> OverlayRequest {
-    if modal {
-        OverlayRequest::dismissible_menu(id, trigger, open, presence, children)
-    } else {
-        OverlayRequest::dismissible_popover(id, trigger, open, presence, children)
-    }
+    // Radix menu-like overlays can be "modal" (the default) or non-modal.
+    //
+    // In practice this controls whether outside pointer interactions are allowed while the menu is
+    // open:
+    // - modal: outside pointer events are blocked and outside presses are not click-through.
+    // - non-modal: outside presses are click-through (the underlay can receive the click).
+    let mut req = OverlayRequest::dismissible_popover(id, trigger, open, presence, children);
+    req.consume_outside_pointer_events = modal;
+    req.disable_outside_pointer_events = modal;
+    req
 }
 
 /// A stable per-overlay root name for menu-like popovers.

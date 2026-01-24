@@ -1,6 +1,8 @@
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::elements::ContinuousFrames;
+use fret_ui::elements::GlobalElementId;
+use std::panic::Location;
 
 use crate::headless::transition::{TransitionOutput, TransitionTimeline};
 
@@ -15,6 +17,74 @@ struct TransitionDriverState {
     lease: Option<ContinuousFrames>,
 }
 
+fn callsite_hash(loc: &Location<'_>) -> u64 {
+    // Keep this independent from element id counters: transition state is a pure per-callsite
+    // cache, not an element tree node.
+    struct Fnv1a64(u64);
+
+    impl Default for Fnv1a64 {
+        fn default() -> Self {
+            Self(0xcbf29ce484222325)
+        }
+    }
+
+    impl Fnv1a64 {
+        fn write(&mut self, bytes: &[u8]) {
+            for b in bytes {
+                self.0 ^= *b as u64;
+                self.0 = self.0.wrapping_mul(0x100000001b3);
+            }
+        }
+
+        fn write_u32(&mut self, v: u32) {
+            self.write(&v.to_le_bytes());
+        }
+
+        fn write_u64(&mut self, v: u64) {
+            self.write(&v.to_le_bytes());
+        }
+
+        fn finish(self) -> u64 {
+            self.0
+        }
+    }
+
+    let mut h = Fnv1a64::default();
+    h.write(loc.file().as_bytes());
+    h.write_u32(loc.line());
+    h.write_u32(loc.column());
+    h.finish()
+}
+
+fn transition_state_owner(root: GlobalElementId, loc: &Location<'_>) -> GlobalElementId {
+    struct Fnv1a64(u64);
+
+    impl Default for Fnv1a64 {
+        fn default() -> Self {
+            Self(0xcbf29ce484222325)
+        }
+    }
+
+    impl Fnv1a64 {
+        fn write_u64(&mut self, v: u64) {
+            for b in v.to_le_bytes() {
+                self.0 ^= b as u64;
+                self.0 = self.0.wrapping_mul(0x100000001b3);
+            }
+        }
+
+        fn finish(self) -> u64 {
+            self.0
+        }
+    }
+
+    let mut h = Fnv1a64::default();
+    h.write_u64(root.0);
+    h.write_u64(callsite_hash(loc));
+    GlobalElementId(h.finish())
+}
+
+#[track_caller]
 pub fn drive_transition<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -29,6 +99,7 @@ pub fn drive_transition<H: UiHost>(
     )
 }
 
+#[track_caller]
 pub fn drive_transition_with_durations<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -44,6 +115,7 @@ pub fn drive_transition_with_durations<H: UiHost>(
     )
 }
 
+#[track_caller]
 pub fn drive_transition_with_durations_and_easing<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -51,39 +123,64 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
     close_ticks: u64,
     ease: fn(f32) -> f32,
 ) -> TransitionOutput {
+    let loc = Location::caller();
+    let state_owner = transition_state_owner(cx.root_id(), loc);
     let app_tick = cx.app.tick_id().0;
     let frame_tick = cx.frame_id.0;
 
-    let (output, start_lease, stop_lease) = cx.with_state(TransitionDriverState::default, |st| {
-        if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
-            st.configured_open_ticks = open_ticks;
-            st.configured_close_ticks = close_ticks;
-            st.timeline.set_durations(open_ticks, close_ticks);
-        }
+    #[cfg(debug_assertions)]
+    let debug_enabled = std::env::var_os("FRET_DEBUG_TRANSITION_CALLER").is_some();
 
-        if st.last_frame_tick != frame_tick {
-            st.last_frame_tick = frame_tick;
-            st.tick = st.tick.saturating_add(1);
-        } else if st.last_app_tick != app_tick {
-            st.last_app_tick = app_tick;
-            st.tick = st.tick.saturating_add(1);
-        } else {
-            st.tick = st.tick.saturating_add(1);
-        }
+    let (output, start_lease, stop_lease) =
+        cx.with_state_for(state_owner, TransitionDriverState::default, |st| {
+            if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
+                st.configured_open_ticks = open_ticks;
+                st.configured_close_ticks = close_ticks;
+                st.timeline.set_durations(open_ticks, close_ticks);
+            }
 
-        let output = st.timeline.update_with_easing(open, st.tick, ease);
-        let start_lease = output.animating && st.lease.is_none();
-        let stop_lease = !output.animating && st.lease.is_some();
-        (output, start_lease, stop_lease)
-    });
+            if st.last_frame_tick != frame_tick {
+                st.last_frame_tick = frame_tick;
+                st.tick = st.tick.saturating_add(1);
+            } else if st.last_app_tick != app_tick {
+                st.last_app_tick = app_tick;
+                st.tick = st.tick.saturating_add(1);
+            } else {
+                st.tick = st.tick.saturating_add(1);
+            }
+
+            let output = st.timeline.update_with_easing(open, st.tick, ease);
+            let start_lease = output.animating && st.lease.is_none();
+            let stop_lease = !output.animating && st.lease.is_some();
+            (output, start_lease, stop_lease)
+        });
+
+    #[cfg(debug_assertions)]
+    if debug_enabled {
+        eprintln!(
+            "drive_transition caller: {}:{}:{} open={open} open_ticks={open_ticks} close_ticks={close_ticks}",
+            loc.file(),
+            loc.line(),
+            loc.column()
+        );
+        eprintln!(
+            "drive_transition out: {}:{}:{} present={} animating={} linear={:.3}",
+            loc.file(),
+            loc.line(),
+            loc.column(),
+            output.present,
+            output.animating,
+            output.linear
+        );
+    }
 
     if start_lease {
         let lease = cx.begin_continuous_frames();
-        cx.with_state(TransitionDriverState::default, |st| {
+        cx.with_state_for(state_owner, TransitionDriverState::default, |st| {
             st.lease = Some(lease);
         });
     } else if stop_lease {
-        cx.with_state(TransitionDriverState::default, |st| {
+        cx.with_state_for(state_owner, TransitionDriverState::default, |st| {
             st.lease = None;
         });
     }

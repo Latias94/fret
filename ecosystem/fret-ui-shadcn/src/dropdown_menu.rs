@@ -1163,6 +1163,7 @@ impl DropdownMenu {
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
+            let overlay_id = cx.root_id();
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx
                 .watch_model(&self.open)
@@ -1199,10 +1200,17 @@ impl DropdownMenu {
                     .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme))
             });
 
-            let trigger = trigger(cx);
+            // Keep the trigger element id stable across frames even if upstream rendering changes
+            // the number of elements/state slots created before/after this callsite.
+            //
+            // Overlay placement relies on looking up the trigger's anchor bounds from the
+            // previous layout pass. If the trigger id churns between frames, the overlay will
+            // transiently lose its anchor and blink out (breaking Radix-style menu grace
+            // behaviors like submenu close delays).
+            let trigger = cx.keyed(("dropdown-menu-trigger", overlay_id), |cx| trigger(cx));
             let trigger_id = trigger.id;
             menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
-            let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+            let overlay_root_name = menu::dropdown_menu_root_name(overlay_id);
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
@@ -1235,12 +1243,36 @@ impl DropdownMenu {
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
-                    cx.with_root_name(&overlay_root_name, move |cx| {
-                    let theme = &theme;
-                    let anchor = overlay::anchor_bounds_for_element(cx, trigger_id);
-                    let Some(anchor) = anchor else {
-                        return (Vec::new(), None);
-                    };
+                     cx.with_root_name(&overlay_root_name, move |cx| {
+                     let theme = &theme;
+
+                     #[derive(Default)]
+                     struct TriggerAnchorCache {
+                         last: Option<Rect>,
+                     }
+
+                     let anchor_now = overlay::anchor_bounds_for_element(cx, trigger_id);
+                     let anchor = cx.with_state(TriggerAnchorCache::default, |st| {
+                         if let Some(anchor) = anchor_now {
+                             st.last = Some(anchor);
+                         }
+                         st.last
+                     });
+
+                    #[cfg(debug_assertions)]
+                    if std::env::var_os("FRET_DEBUG_DROPDOWN_MENU_ANCHOR").is_some() {
+                        eprintln!(
+                            "dropdown_menu anchor: frame={} overlay_id={:?} trigger_id={:?} anchor={:?}",
+                            cx.app.frame_id().0,
+                            overlay_id,
+                            trigger_id,
+                            anchor
+                        );
+                    }
+
+                     let Some(anchor) = anchor else {
+                         return (Vec::new(), None);
+                     };
 
                     let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries(cx).into_boxed_slice());
                     let reserve_leading_slot_enabled =
@@ -2277,11 +2309,10 @@ impl DropdownMenu {
 
                     let mut children = vec![content];
                     let submenu_open_value = cx
-                        .app
-                        .models_mut()
-                        .read(&submenu_for_panel.open_value, |v| v.clone())
-                        .ok()
-                        .flatten();
+                        .watch_model(&submenu_for_panel.open_value)
+                        .layout()
+                        .cloned()
+                        .unwrap_or(None);
                     let desired = submenu_open_value
                         .as_deref()
                         .and_then(|open_value| {
@@ -2307,17 +2338,9 @@ impl DropdownMenu {
                             Size::new(submenu_min_width, submenu_max_h)
                         });
                     let submenu_is_open = submenu_open_value.is_some();
-                    let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
-                        cx,
-                        submenu_is_open,
-                        overlay_motion::SHADCN_MOTION_TICKS_100,
-                        0,
-                        0.95,
-                        1.0,
-                        overlay_motion::shadcn_ease,
-                    );
-                    let submenu_opacity = submenu_motion.opacity;
-                    let submenu_scale = submenu_motion.scale;
+                    let submenu_present = submenu_is_open;
+                    let submenu_opacity = 1.0;
+                    let submenu_scale = 1.0;
 
                     let open_submenu = menu::sub::with_open_submenu_synced(
                         cx,
@@ -2328,29 +2351,25 @@ impl DropdownMenu {
                     );
 
                     #[derive(Default)]
-                    struct SubmenuLast {
-                        open_value: Option<Arc<str>>,
+                    struct SubmenuLastGeometry {
                         geometry: Option<menu::sub::MenuSubmenuGeometry>,
                     }
 
-                    let (last_value, last_geometry) = cx.with_state(SubmenuLast::default, |st| {
-                        if let Some((open_value, geometry)) = open_submenu.as_ref() {
-                            st.open_value = Some(open_value.clone());
+                    let last_geometry = cx.with_state(SubmenuLastGeometry::default, |st| {
+                        if let Some((_, geometry)) = open_submenu.as_ref() {
                             st.geometry = Some(*geometry);
                         }
-                        (st.open_value.clone(), st.geometry)
+                        st.geometry
                     });
 
-                    if submenu_motion.present {
-                        let open_value = open_submenu
-                            .as_ref()
-                            .map(|(open_value, _)| open_value.clone())
-                            .or(last_value);
-                        let geometry = open_submenu
-                            .map(|(_, geometry)| geometry)
-                            .or(last_geometry);
+                    let mut submenu_gate: Option<AnyElement> = None;
+                    if submenu_present {
+                        let Some(open_value) = submenu_open_value.clone() else {
+                            return (children, Some(dismissible_on_pointer_move));
+                        };
+                        let geometry = open_submenu.map(|(_, geometry)| geometry).or(last_geometry);
 
-                        let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
+                        let Some(geometry) = geometry else {
                             return (children, Some(dismissible_on_pointer_move));
                         };
 
@@ -3074,30 +3093,49 @@ impl DropdownMenu {
                                             true,
                                         );
 
-                                        let opacity = submenu_opacity;
-                                        let submenu_panel = cx.interactivity_gate(
-                                            submenu_motion.present,
-                                            submenu_is_open,
-                                            move |cx| {
-                                                vec![overlay_motion::wrap_opacity_and_render_transform(
-                                                    cx,
-                                                    opacity,
-                                                    transform,
-                                                    vec![submenu_panel],
-                                                )]
-                                            },
-                                        );
+                                        let submenu_panel =
+                                            overlay_motion::wrap_opacity_and_render_transform(
+                                                cx,
+                                                submenu_opacity,
+                                                transform,
+                                                vec![submenu_panel],
+                                            );
 
-                                        children.push(submenu_panel);
+                                        submenu_gate = Some(submenu_panel);
                                     }
                                 }
+
+                    #[cfg(debug_assertions)]
+                    if std::env::var_os("FRET_DEBUG_DROPDOWN_SUBMENU_RENDER").is_some() {
+                        eprintln!(
+                            "dropdown_menu submenu render: frame={} open_value={:?} is_open={} present={} gate_child_present={}",
+                            cx.app.frame_id().0,
+                            submenu_open_value,
+                            submenu_is_open,
+                            submenu_present,
+                            submenu_gate.is_some()
+                        );
+                    }
+
+                    let mut submenu_gate_layout = LayoutStyle::default();
+                    submenu_gate_layout.size.width = Length::Fill;
+                    submenu_gate_layout.size.height = Length::Fill;
+                    let submenu_gate = cx.interactivity_gate_props(
+                        fret_ui::element::InteractivityGateProps {
+                            layout: submenu_gate_layout,
+                            present: submenu_present,
+                            interactive: submenu_is_open,
+                        },
+                        move |_cx| submenu_gate.into_iter().collect::<Vec<_>>(),
+                    );
+                    children.push(submenu_gate);
 
                     (children, Some(dismissible_on_pointer_move))
                 });
 
                 let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
-                    trigger_id,
+                    overlay_id,
                     trigger_id,
                     open,
                     overlay_presence,
@@ -3227,6 +3265,11 @@ mod tests {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
+        let changed_models = app.take_changed_models();
+        let changed_globals = app.take_changed_globals();
+        let _ =
+            fret_ui::frame_pipeline::propagate_changes(ui, app, &changed_models, &changed_globals);
+
         OverlayController::begin_frame(app, window);
         let root = fret_ui::declarative::render_root(
             ui,
@@ -3251,6 +3294,79 @@ mod tests {
                             },
                             |_cx| Vec::new(),
                         )
+                    },
+                    move |_cx| entries,
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_capture_submenu_models(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        submenu_models_out: Model<Option<menu::sub::MenuSubmenuModels>>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        let changed_models = app.take_changed_models();
+        let changed_globals = app.take_changed_globals();
+        let _ =
+            fret_ui::frame_pipeline::propagate_changes(ui, app, &changed_models, &changed_globals);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu",
+            move |cx| {
+                let submenu_models_out = submenu_models_out.clone();
+                vec![DropdownMenu::new(open.clone()).into_element(
+                    cx,
+                    move |cx| {
+                        let trigger = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        );
+
+                        let is_open = cx.app.models_mut().get_copied(&open).unwrap_or(false);
+                        let overlay_root_name = menu::dropdown_menu_root_name(cx.root_id());
+                        let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
+                        let submenu_models = cx.with_root_name(&overlay_root_name, |cx| {
+                            menu::root::sync_root_open_and_ensure_submenu(
+                                cx,
+                                is_open,
+                                cx.root_id(),
+                                submenu_cfg,
+                            )
+                        });
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&submenu_models_out, |v| *v = Some(submenu_models));
+
+                        trigger
                     },
                     move |_cx| entries,
                 )]
@@ -4695,6 +4811,8 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let submenu_models_out: fret_runtime::Model<Option<menu::sub::MenuSubmenuModels>> =
+            app.models_mut().insert(None);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4711,26 +4829,28 @@ mod tests {
         ];
 
         // First frame: establish stable trigger bounds.
-        let _ = render_frame(
+        let _ = render_frame_capture_submenu_models(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            submenu_models_out.clone(),
             entries.clone(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
 
         // Second frame: open the menu.
-        let _ = render_frame(
+        let _ = render_frame_capture_submenu_models(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            submenu_models_out.clone(),
             entries.clone(),
         );
 
@@ -4790,13 +4910,14 @@ mod tests {
         };
 
         // Third frame: hovering does not open the submenu immediately (open-delay timer).
-        let _ = render_frame(
+        let _ = render_frame_capture_submenu_models(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            submenu_models_out.clone(),
             entries.clone(),
         );
 
@@ -4822,13 +4943,14 @@ mod tests {
         ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
 
         // Fourth frame: after open timer fires, the submenu opens.
-        let _ = render_frame(
+        let _ = render_frame_capture_submenu_models(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            submenu_models_out.clone(),
             entries.clone(),
         );
 
@@ -4850,6 +4972,33 @@ mod tests {
             "submenu items should render after the open-delay timer fires"
         );
 
+        let models = app
+            .models_mut()
+            .read(&submenu_models_out, |v| v.clone())
+            .ok()
+            .flatten()
+            .expect("submenu models");
+        let _ = app
+            .models_mut()
+            .read(&models.geometry, |v| *v)
+            .ok()
+            .flatten();
+        let _ = app
+            .models_mut()
+            .read(&models.last_pointer, |v| *v)
+            .ok()
+            .flatten();
+        let _ = app
+            .models_mut()
+            .read(&models.open_value, |v| v.clone())
+            .ok()
+            .flatten();
+        let _ = app
+            .models_mut()
+            .read(&models.trigger, |v| *v)
+            .ok()
+            .flatten();
+
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -4861,6 +5010,17 @@ mod tests {
                 pointer_type: fret_core::PointerType::Mouse,
             }),
         );
+
+        let _ = app
+            .models_mut()
+            .read(&models.last_pointer, |v| *v)
+            .ok()
+            .flatten();
+        let _ = app
+            .models_mut()
+            .read(&models.close_timer, |v| *v)
+            .ok()
+            .flatten();
 
         let effects = app.flush_effects();
         let timer = effects.iter().find_map(|e| match e {
@@ -4882,6 +5042,17 @@ mod tests {
             entries,
         );
 
+        let _ = app
+            .models_mut()
+            .read(&models.close_timer, |v| *v)
+            .ok()
+            .flatten();
+        let _ = app
+            .models_mut()
+            .read(&models.open_value, |v| v.clone())
+            .ok()
+            .flatten();
+
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(
             snap.nodes
@@ -4893,7 +5064,18 @@ mod tests {
 
         ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: timer });
 
-        // Sixth frame: after the close timer fires, the submenu begins closing.
+        let _ = app
+            .models_mut()
+            .read(&models.close_timer, |v| *v)
+            .ok()
+            .flatten();
+        let _ = app
+            .models_mut()
+            .read(&models.open_value, |v| v.clone())
+            .ok()
+            .flatten();
+
+        // Sixth frame: after the close timer fires, the submenu closes.
         let _ = render_frame(
             &mut ui,
             &mut app,
@@ -4910,24 +5092,6 @@ mod tests {
             ],
         );
 
-        for _ in 0..overlay_motion::SHADCN_MOTION_TICKS_100 {
-            let _ = render_frame(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-                open.clone(),
-                vec![
-                    DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
-                        DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
-                        DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
-                    ])),
-                    DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
-                ],
-            );
-        }
-
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(
             !snap
@@ -4935,7 +5099,7 @@ mod tests {
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
-            "submenu should unmount after the close transition completes"
+            "submenu should close after the close timer fires"
         );
     }
 
@@ -5271,7 +5435,10 @@ mod tests {
         );
         assert_eq!(trigger_id3, trigger_id, "expected trigger id to be stable");
 
-        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+        let overlay_id = OverlayController::stack_snapshot_for_window(&ui, &mut app, window)
+            .topmost_popover
+            .expect("expected popover overlay to be active");
+        let overlay_root_name = menu::dropdown_menu_root_name(overlay_id);
         let submenu_models = fret_ui::elements::with_element_cx(
             &mut app,
             window,

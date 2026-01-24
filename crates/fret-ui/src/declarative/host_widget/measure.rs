@@ -163,6 +163,14 @@ impl ElementHostWidget {
 
         match instance {
             ElementInstance::InteractivityGate(props) if !props.present => {
+                // When `present == false`, this subtree is treated like `display: none`. The layout
+                // engine may skip calling `layout_impl`, so we must eagerly update the widget-level
+                // gates here to avoid stale semantics / hit-test behavior.
+                self.hit_testable = false;
+                self.hit_test_children = false;
+                self.focus_traversal_children = false;
+                self.semantics_present = false;
+                self.semantics_children = false;
                 Size::new(Px(0.0), Px(0.0))
             }
             ElementInstance::Container(props) => self.measure_container(cx, window, props),

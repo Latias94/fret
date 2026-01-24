@@ -531,6 +531,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
@@ -557,6 +558,7 @@ impl Select {
             placeholder: Arc::from("Select..."),
             disabled: false,
             a11y_label: None,
+            trigger_test_id: None,
             aria_invalid: false,
             on_dismiss_request: None,
             chrome: ChromeRefinement::default(),
@@ -635,6 +637,11 @@ impl Select {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
         self
     }
 
@@ -750,6 +757,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.a11y_label,
+            self.trigger_test_id,
             self.aria_invalid,
             self.on_dismiss_request,
             self.chrome,
@@ -788,6 +796,7 @@ pub fn select<H: UiHost>(
         placeholder,
         disabled,
         a11y_label,
+        None,
         false,
         None,
         ChromeRefinement::default(),
@@ -814,6 +823,7 @@ fn select_impl<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
@@ -1188,6 +1198,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
+            props.a11y.test_id = trigger_test_id.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier

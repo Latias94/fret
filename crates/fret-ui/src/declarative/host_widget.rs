@@ -479,6 +479,18 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.semantics_children
     }
 
+    fn sync_interactivity_gate(&mut self, present: bool, interactive: bool) {
+        // Keep gate-derived traversal flags in sync even if layout is skipped for display-none
+        // subtrees.
+        self.hit_testable = false;
+        self.hit_test_children = present && interactive;
+        self.focus_traversal_children = present && interactive;
+        self.semantics_present = present;
+        self.semantics_children = present;
+        self.is_focusable = false;
+        self.is_text_input = false;
+    }
+
     fn is_focusable(&self) -> bool {
         self.is_focusable
     }

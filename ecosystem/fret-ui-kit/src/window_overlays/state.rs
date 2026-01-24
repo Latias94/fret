@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
-use fret_runtime::FrameId;
+use fret_runtime::{FrameId, Model};
 use fret_ui::tree::UiLayerId;
 use fret_ui::{UiHost, UiTree};
 
 use super::{
-    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
+    DismissCause, DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest,
+    TooltipRequest,
 };
 use fret_ui::elements::GlobalElementId;
 
@@ -32,9 +33,12 @@ pub(super) struct ActivePopover {
     pub(super) initial_focus: Option<GlobalElementId>,
     pub(super) consume_outside_pointer_events: bool,
     pub(super) disable_outside_pointer_events: bool,
+    pub(super) restore_focus_on_escape: bool,
+    pub(super) restore_focus_on_outside_press: bool,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) last_focus: Option<NodeId>,
+    pub(super) dismiss_cause: Model<Option<DismissCause>>,
 }
 
 pub(super) struct ActiveModal {

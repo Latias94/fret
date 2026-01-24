@@ -783,6 +783,10 @@ fn mount_element<H: UiHost>(
     };
 
     collect_scroll_handle_bindings(id, &instance, scroll_bindings);
+    let interactivity_gate_state = match &instance {
+        ElementInstance::InteractivityGate(p) => Some((p.present, p.interactive)),
+        _ => None,
+    };
 
     let previous_instance = window_frame.instances.get(&node).map(|r| &r.instance);
     if !reuse_view_cache {
@@ -808,6 +812,9 @@ fn mount_element<H: UiHost>(
             instance,
         },
     );
+    if let Some((present, interactive)) = interactivity_gate_state {
+        ui.sync_interactivity_gate_widget(node, present, interactive);
+    }
 
     if reuse_view_cache {
         let reuse_span = if tracing::enabled!(tracing::Level::TRACE) {
