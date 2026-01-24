@@ -144,7 +144,8 @@ Related ADRs:
     `dock_drag_closes_dismissible_popovers_only_in_affected_window`, `dock_drag_does_not_restore_closed_non_modal_overlays_on_drag_end`,
     `dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing`, `dock_drag_hides_hover_overlays_in_affected_window`,
     `dock_drag_hides_tooltips_in_affected_window`, `dock_drag_restores_focus_when_focus_is_missing_on_drag_end`,
-    `dock_drag_cross_window_hides_overlays_in_source_and_current_window`),
+    `dock_drag_cross_window_hides_overlays_in_source_and_current_window`,
+    `dock_drag_cross_window_closes_dismissible_popovers_in_source_and_current_window`),
   - docking drag + overlay hygiene (ADR 0072 edges),
   - viewport tool capture vs hover overlays/tooltips (ADR 0049 follow-up).
 - Diagnostics: pointer/wheel scope roots are exposed via `UiTree::debug_hit_test` (includes modal barrier and pointer occlusion roots) and exported via `fret-bootstrap` hit-test snapshots.
