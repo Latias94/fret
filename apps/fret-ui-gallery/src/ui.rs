@@ -1852,6 +1852,7 @@ fn preview_material3_modal_navigation_drawer(
             cx,
             move |cx| {
                 material3::NavigationDrawer::new(value)
+                    .variant(material3::NavigationDrawerVariant::Modal)
                     .a11y_label("Material 3 Modal Navigation Drawer")
                     .test_id("ui-gallery-material3-modal-navigation-drawer-panel")
                     .items(vec![

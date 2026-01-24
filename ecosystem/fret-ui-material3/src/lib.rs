@@ -35,7 +35,7 @@ pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
 pub use menu::{Menu, MenuEntry, MenuItem};
 pub use modal_navigation_drawer::ModalNavigationDrawer;
 pub use navigation_bar::{NavigationBar, NavigationBarItem};
-pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem};
+pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant};
 pub use navigation_rail::{NavigationRail, NavigationRailItem};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation};
 pub use snackbar::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};

@@ -229,6 +229,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/dialog.rs` (container surface tint + shadow),
     `ecosystem/fret-ui-material3/src/tooltip.rs` (container surface tint + shadow),
     `ecosystem/fret-ui-material3/src/navigation_bar.rs` (container surface tint + shadow),
+    `ecosystem/fret-ui-material3/src/navigation_drawer.rs` (modal container elevation + shadow),
     `crates/fret-ui/src/paint.rs` (`paint_shadow`).
 - [ ] Shape mapping (corner tokens, per-state expressive shape where applicable).
   - [x] Corner set tokens (`md.sys.shape.corner.*.(top|start|end)`) and component shapes that depend on them.

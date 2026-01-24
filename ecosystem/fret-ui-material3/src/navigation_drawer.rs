@@ -23,6 +23,7 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
+use crate::foundation::elevation::{apply_surface_tint, shadow_for_elevation_with_color};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
@@ -67,6 +68,13 @@ impl NavigationDrawerItem {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum NavigationDrawerVariant {
+    #[default]
+    Standard,
+    Modal,
+}
+
 #[derive(Debug, Clone)]
 pub struct NavigationDrawer {
     model: Model<Arc<str>>,
@@ -75,6 +83,7 @@ pub struct NavigationDrawer {
     test_id: Option<Arc<str>>,
     disabled: bool,
     loop_navigation: bool,
+    variant: NavigationDrawerVariant,
 }
 
 impl NavigationDrawer {
@@ -86,6 +95,7 @@ impl NavigationDrawer {
             test_id: None,
             disabled: false,
             loop_navigation: true,
+            variant: NavigationDrawerVariant::default(),
         }
     }
 
@@ -114,6 +124,11 @@ impl NavigationDrawer {
         self
     }
 
+    pub fn variant(mut self, variant: NavigationDrawerVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let NavigationDrawer {
             model,
@@ -122,6 +137,7 @@ impl NavigationDrawer {
             test_id,
             disabled,
             loop_navigation,
+            variant,
         } = self;
 
         cx.scope(|cx| {
@@ -161,14 +177,44 @@ impl NavigationDrawer {
                 .metric_by_key("md.comp.navigation-drawer.active-indicator.width")
                 .unwrap_or(Px(336.0));
             let item_h_pad = Px(((container_w.0 - active_indicator_w.0) / 2.0).max(0.0));
-            let container_bg = tokens.color_comp_or_sys(
-                "md.comp.navigation-drawer.standard.container.color",
-                "md.sys.color.surface",
-            );
+
+            let (container_key, container_fallback) = match variant {
+                NavigationDrawerVariant::Standard => (
+                    "md.comp.navigation-drawer.standard.container.color",
+                    "md.sys.color.surface",
+                ),
+                NavigationDrawerVariant::Modal => (
+                    "md.comp.navigation-drawer.modal.container.color",
+                    "md.sys.color.surface-container-low",
+                ),
+            };
+            let mut container_bg = tokens.color_comp_or_sys(container_key, container_fallback);
+
+            // Note: Material Web v30 ships tonal surface roles for drawer container colors (see
+            // `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-navigation-drawer.scss`),
+            // but we keep a tonal elevation overlay path for themes that still bind the container
+            // to `md.sys.color.surface`.
+            let elevation = match variant {
+                NavigationDrawerVariant::Standard => theme
+                    .metric_by_key("md.comp.navigation-drawer.standard.container.elevation")
+                    .unwrap_or(Px(0.0)),
+                NavigationDrawerVariant::Modal => theme
+                    .metric_by_key("md.comp.navigation-drawer.modal.container.elevation")
+                    .unwrap_or(Px(1.0)),
+            };
+            if container_key == "md.comp.navigation-drawer.standard.container.color" {
+                let surface_tint = tokens.color_comp_or_sys(
+                    "md.comp.navigation-drawer.container.surface-tint-layer.color",
+                    "md.sys.color.surface-tint",
+                );
+                container_bg = apply_surface_tint(container_bg, surface_tint, elevation);
+            }
+
             let container_shape = theme
                 .corners_by_key("md.comp.navigation-drawer.container.shape")
                 .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
                 .unwrap_or_else(|| Corners::all(Px(0.0)));
+            let shadow = shadow_for_elevation_with_color(&theme, elevation, None, container_shape);
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Vertical;
@@ -191,6 +237,7 @@ impl NavigationDrawer {
                 vec![cx.container(
                     ContainerProps {
                         background: Some(container_bg),
+                        shadow,
                         corner_radii: container_shape,
                         layout: {
                             let mut layout = fret_ui::element::LayoutStyle::default();

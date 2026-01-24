@@ -415,7 +415,7 @@ let open = app.models_mut().insert(false);
 let value = app.models_mut().insert(Arc::<str>::from("search"));
 let root = m3::ModalNavigationDrawer::new(open).into_element(
     cx,
-    |cx| m3::NavigationDrawer::new(value).into_element(cx),
+    |cx| m3::NavigationDrawer::new(value).variant(m3::NavigationDrawerVariant::Modal).into_element(cx),
     |cx| cx.text("Content"),
 );
 ```

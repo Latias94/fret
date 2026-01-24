@@ -1806,7 +1806,7 @@ fn inject_comp_navigation_drawer_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.navigation-drawer.modal.container.color",
-        "md.sys.color.surface",
+        "md.sys.color.surface-container-low",
     );
     copy_color(
         cfg,
