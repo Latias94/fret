@@ -14,7 +14,7 @@ use fret_ui_kit::declarative::{scheduling, style as decl_style};
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::hover_card as radix_hover_card;
-use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
+use fret_ui_kit::primitives::hover_intent::HoverIntentConfig;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -369,88 +369,14 @@ impl HoverCard {
             let has_text_selection = cx.has_active_text_selection_in_root(overlay_root_id);
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
-
-            #[derive(Debug, Default, Clone, Copy)]
-            struct HoverCardIntentDriverState {
-                last_frame_tick: Option<u64>,
-                tick: u64,
-                intent: hover_intent::HoverIntentState,
-                saw_active_since_open: bool,
-                last_pointer_down: bool,
-                close_suppressed_after_pointer_down: bool,
-            }
-
-            let frame_tick = cx.app.frame_id().0;
-            let update =
-                cx.with_state_for(hover_card_id, HoverCardIntentDriverState::default, |st| {
-                    match st.last_frame_tick {
-                        None => {
-                            st.last_frame_tick = Some(frame_tick);
-                            st.tick = frame_tick;
-                        }
-                        Some(prev) if prev != frame_tick => {
-                            st.last_frame_tick = Some(frame_tick);
-                            st.tick = frame_tick;
-                        }
-                        Some(_) => {
-                            // In some unit tests the runner-owned frame clock may not advance; fall back
-                            // to a per-call monotonic tick so delays can still elapse deterministically.
-                            st.tick = st.tick.saturating_add(1);
-                        }
-                    }
-
-                    if st.intent.is_open() != open_now {
-                        st.intent.set_open(open_now);
-                        st.saw_active_since_open = false;
-                        st.close_suppressed_after_pointer_down = false;
-                    }
-
-                    let signal_active = hovered;
-                    let was_open = st.intent.is_open();
-
-                    if pointer_down_on_content_now != st.last_pointer_down {
-                        if pointer_down_on_content_now {
-                            st.close_suppressed_after_pointer_down = false;
-                        } else if was_open && !signal_active {
-                            // Mirror Radix HoverCard: if the pointer left while the button is
-                            // held, `onClose` does not schedule a close timer. We model that by
-                            // suppressing close until the next "active -> inactive" edge.
-                            st.close_suppressed_after_pointer_down = true;
-                        }
-                        st.last_pointer_down = pointer_down_on_content_now;
-                    }
-                    if st.close_suppressed_after_pointer_down && signal_active {
-                        st.close_suppressed_after_pointer_down = false;
-                    }
-
-                    if was_open && (signal_active || pointer_down_on_content_now) {
-                        st.saw_active_since_open = true;
-                    }
-
-                    // Radix HoverCard opens/closes based on enter/leave edges, not a pure level signal.
-                    // If the root is open but we've never observed an "active" signal since it opened
-                    // (e.g. `defaultOpen=true` on first mount), keep it open until we see at least one
-                    // active period and then a leave edge.
-                    let effective_hovered = if was_open {
-                        signal_active
-                            || pointer_down_on_content_now
-                            || st.close_suppressed_after_pointer_down
-                            || has_text_selection
-                            || !st.saw_active_since_open
-                    } else {
-                        signal_active || pointer_down_on_content_now
-                    };
-
-                    let out = st.intent.update(effective_hovered, st.tick, cfg);
-                    if !was_open && out.open {
-                        st.saw_active_since_open = signal_active || pointer_down_on_content_now;
-                    } else if was_open && !out.open {
-                        st.saw_active_since_open = false;
-                        st.close_suppressed_after_pointer_down = false;
-                    }
-
-                    out
-                });
+            let update = radix_hover_card::hover_card_update_interaction(
+                cx,
+                open_now,
+                hovered,
+                pointer_down_on_content_now,
+                has_text_selection,
+                cfg,
+            );
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
 
