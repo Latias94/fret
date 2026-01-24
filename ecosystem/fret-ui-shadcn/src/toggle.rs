@@ -394,19 +394,25 @@ impl Toggle {
     }
 }
 
-pub fn toggle<H: UiHost>(
+pub fn toggle<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<bool>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Toggle::new(model).children(f(cx)).into_element(cx)
 }
 
-pub fn toggle_uncontrolled<H: UiHost>(
+pub fn toggle_uncontrolled<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     default_pressed: bool,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Toggle::uncontrolled(default_pressed)
         .children(f(cx))
         .into_element(cx)

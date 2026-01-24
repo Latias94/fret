@@ -103,10 +103,13 @@ impl ItemGroup {
     }
 }
 
-pub fn item_group<H: UiHost>(
+pub fn item_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     ItemGroup::new(f(cx)).into_element(cx)
 }
 

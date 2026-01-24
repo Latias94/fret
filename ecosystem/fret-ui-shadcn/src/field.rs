@@ -307,10 +307,13 @@ impl FieldSet {
     }
 }
 
-pub fn field_set<H: UiHost>(
+pub fn field_set<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     FieldSet::new(f(cx)).into_element(cx)
 }
 
@@ -484,10 +487,13 @@ impl FieldGroup {
     }
 }
 
-pub fn field_group<H: UiHost>(
+pub fn field_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     FieldGroup::new(f(cx)).into_element(cx)
 }
 

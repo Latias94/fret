@@ -185,11 +185,14 @@ impl TooltipProvider {
         self
     }
 
-    pub fn with<H: UiHost>(
+    pub fn with<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> Vec<AnyElement> {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         tooltip_provider::with_tooltip_provider(
             cx,
             tooltip_provider::TooltipProviderConfig::new(
@@ -197,7 +200,7 @@ impl TooltipProvider {
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            f,
+            |cx| f(cx).into_iter().collect::<Vec<_>>(),
         )
     }
 }

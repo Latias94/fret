@@ -584,10 +584,13 @@ impl ScrollArea {
     }
 }
 
-pub fn scroll_area<H: UiHost>(
+pub fn scroll_area<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     ScrollArea::new(f(cx)).into_element(cx)
 }
 

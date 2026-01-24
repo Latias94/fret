@@ -2558,10 +2558,13 @@ struct CommandPaletteState {
     items_fingerprint: u64,
 }
 
-pub fn command<H: UiHost>(
+pub fn command<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Command::new(f(cx)).into_element(cx)
 }
 
