@@ -113,7 +113,8 @@ Related ADRs:
 - Policy-level capture suppression conformance:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`pointer_capture_hides_hover_overlays_in_same_window`,
     `pointer_capture_hides_tooltips_in_same_window`, `pointer_capture_restores_hover_overlays_after_release`,
-    `pointer_capture_restores_tooltips_after_release`)
+    `pointer_capture_restores_tooltips_after_release`, `viewport_capture_hides_hover_overlays_and_restores_after_release`,
+    `viewport_capture_hides_tooltips_and_restores_after_release`)
 - Policy-level close-transition observer invariants:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_while_closing`,
     `hover_overlay_is_click_through_while_closing`)
@@ -138,7 +139,10 @@ Related ADRs:
 ## Next (P0 follow-ups)
 
 - Expand the arbitration conformance suite:
-  - dock drag closes/hides non-modal overlays (ADR 0072) (covered by `dock_drag_closes_dismissible_popovers_in_affected_window`, `dock_drag_closes_dismissible_popovers_for_non_mouse_pointer`, `dock_drag_closes_dismissible_popovers_only_in_affected_window`, `dock_drag_hides_hover_overlays_in_affected_window`, `dock_drag_hides_hover_overlays_for_non_mouse_pointer`),
+  - dock drag closes/hides non-modal overlays (ADR 0072) (covered by `dock_drag_closes_non_modal_overlays_for_entire_window`,
+    `dock_drag_closes_dismissible_popovers_only_in_affected_window`, `dock_drag_does_not_restore_closed_non_modal_overlays_on_drag_end`,
+    `dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing`, `dock_drag_hides_hover_overlays_in_affected_window`,
+    `dock_drag_hides_tooltips_in_affected_window`, `dock_drag_restores_focus_when_focus_is_missing_on_drag_end`),
   - docking drag + overlay hygiene (ADR 0072 edges),
   - viewport tool capture vs hover overlays/tooltips (ADR 0049 follow-up).
 - Diagnostics: pointer/wheel scope roots are exposed via `UiTree::debug_hit_test` (includes modal barrier and pointer occlusion roots) and exported via `fret-bootstrap` hit-test snapshots.
