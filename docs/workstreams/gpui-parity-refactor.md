@@ -529,7 +529,9 @@ Implementation note (current state):
   to avoid deleting live cached subtrees. MVP2-cache-005 removes this by relying on parent-pointer repair +
   reachability-based detachment checks + explicit view-cache subtree liveness.
   - Status note: removing the stopgap currently regresses `ui-gallery-overlay-torture.json` under cache+shell reuse
-    (`click_no_semantics_match`); keep this gate until MVP2-cache-005 is green (see the TODO tracker evidence).
+    (`click_no_semantics_match`); failing bundles also show the overlay layer root flipping `visible=false` while
+    GC removes subtrees with `root_layer=None`, suggesting broken layer-root attachment. Keep this gate until
+    MVP2-cache-005 is green (see the TODO tracker evidence).
 
 Proposed ecosystem-facing API surface (runtime internal may differ):
 

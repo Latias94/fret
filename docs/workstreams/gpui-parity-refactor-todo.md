@@ -157,7 +157,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
   - Follow-up: remove the global "skip sweep when reuse exists" stopgap by relying on explicit liveness under cache-root reuse (dirty views + notify + cache key gates).
 
-- [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
+- [!] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
   - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Root cause: `node_layer` (and cache-root discovery) relies on parent pointers; a reachable subtree can retain correct child edges but have a broken parent chain,
@@ -188,6 +188,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Next:
     - In the failing bundle above, `ui-gallery-dialog-trigger` exists up to `frame_id=33`, then disappears on `frame_id=34` when `debug.removed_subtrees.len()` spikes (31).
       Use `frame_id=34` `debug.removed_subtrees[*].root/root_element/root_path` as the entry point for root-cause analysis.
+    - Observation (2026-01-24): the largest `removed_subtrees` entry at `frame_id=34` has `root_layer=None` and a `root_root` that is *not* a registered layer root,
+      while the layer root (`4294967718` in the overlay torture bundles) flips `visible=false`. This points to a broken parent-chain / layer-root attachment problem
+      (not just a missing `last_seen_frame` touch).
     - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
