@@ -376,6 +376,26 @@ where
         }
 
         for node in stale_nodes {
+            #[cfg(feature = "diagnostics")]
+            if let Some(ctx) = with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let parent = ui.node_parent(node);
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
+                    parent_frame_children_len: parent_frame_children
+                        .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    parent_frame_children_contains_root: parent_frame_children
+                        .map(|v| v.contains(&node)),
+                    root_frame_instance_present: window_frame.instances.contains_key(&node),
+                    root_frame_children_len: window_frame
+                        .children
+                        .get(&node)
+                        .map(|v| v.len().min(u32::MAX as usize) as u32),
+                })
+            }) {
+                ui.debug_set_remove_subtree_frame_context(node, ctx);
+            }
+
             let removed = ui.remove_subtree(services, node);
             app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                 let window_frame = frame.windows.entry(window).or_default();
@@ -631,6 +651,26 @@ where
         }
 
         for node in stale_nodes {
+            #[cfg(feature = "diagnostics")]
+            if let Some(ctx) = with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let parent = ui.node_parent(node);
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
+                    parent_frame_children_len: parent_frame_children
+                        .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    parent_frame_children_contains_root: parent_frame_children
+                        .map(|v| v.contains(&node)),
+                    root_frame_instance_present: window_frame.instances.contains_key(&node),
+                    root_frame_children_len: window_frame
+                        .children
+                        .get(&node)
+                        .map(|v| v.len().min(u32::MAX as usize) as u32),
+                })
+            }) {
+                ui.debug_set_remove_subtree_frame_context(node, ctx);
+            }
+
             let removed = ui.remove_subtree(services, node);
             app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                 let window_frame = frame.windows.entry(window).or_default();

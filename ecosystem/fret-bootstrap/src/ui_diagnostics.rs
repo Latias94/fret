@@ -2876,6 +2876,16 @@ pub struct UiRemovedSubtreeV1 {
     pub root_children_len: u32,
     #[serde(default)]
     pub root_parent_children_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_children_contains_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_frame_children_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_frame_children_contains_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_frame_instance_present: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_frame_children_len: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub root_path: Vec<u64>,
     #[serde(default)]
@@ -2951,6 +2961,11 @@ impl UiRemovedSubtreeV1 {
             reachable_from_layer_roots: r.reachable_from_layer_roots,
             root_children_len: r.root_children_len,
             root_parent_children_len: r.root_parent_children_len,
+            root_parent_children_contains_root: r.root_parent_children_contains_root,
+            root_parent_frame_children_len: r.root_parent_frame_children_len,
+            root_parent_frame_children_contains_root: r.root_parent_frame_children_contains_root,
+            root_frame_instance_present: r.root_frame_instance_present,
+            root_frame_children_len: r.root_frame_children_len,
             root_path,
             root_path_truncated: r.root_path_truncated,
             root_parent_children_last_set_location,

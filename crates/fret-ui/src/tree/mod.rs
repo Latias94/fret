@@ -493,6 +493,15 @@ pub struct UiDebugSetLayerVisibleWrite {
 }
 
 #[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugRemoveSubtreeFrameContext {
+    pub parent_frame_children_len: Option<u32>,
+    pub parent_frame_children_contains_root: Option<bool>,
+    pub root_frame_instance_present: bool,
+    pub root_frame_children_len: Option<u32>,
+}
+
+#[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugRemoveSubtreeOutcome {
     SkippedLayerRoot,
@@ -514,6 +523,11 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub reachable_from_layer_roots: bool,
     pub root_children_len: u32,
     pub root_parent_children_len: Option<u32>,
+    pub root_parent_children_contains_root: Option<bool>,
+    pub root_parent_frame_children_len: Option<u32>,
+    pub root_parent_frame_children_contains_root: Option<bool>,
+    pub root_frame_instance_present: Option<bool>,
+    pub root_frame_children_len: Option<u32>,
     pub root_path_len: u8,
     pub root_path: [u64; 16],
     pub root_path_truncated: bool,
@@ -881,6 +895,8 @@ pub struct UiTree<H: UiHost> {
     #[cfg(feature = "diagnostics")]
     debug_layer_visible_writes: Vec<UiDebugSetLayerVisibleWrite>,
     #[cfg(feature = "diagnostics")]
+    debug_remove_subtree_frame_context: HashMap<NodeId, UiDebugRemoveSubtreeFrameContext>,
+    #[cfg(feature = "diagnostics")]
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
     #[cfg(feature = "diagnostics")]
     debug_reachable_from_layer_roots: Option<(FrameId, HashSet<NodeId>)>,
@@ -964,6 +980,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
             debug_layer_visible_writes: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_remove_subtree_frame_context: HashMap::new(),
             #[cfg(feature = "diagnostics")]
             debug_removed_subtrees: Vec::new(),
             #[cfg(feature = "diagnostics")]
@@ -1122,6 +1140,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_set_children_writes.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_layer_visible_writes.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_remove_subtree_frame_context.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_removed_subtrees.clear();
         #[cfg(feature = "diagnostics")]
@@ -1342,6 +1362,18 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_layer_visible_writes.as_slice()
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn debug_set_remove_subtree_frame_context(
+        &mut self,
+        root: NodeId,
+        ctx: UiDebugRemoveSubtreeFrameContext,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_remove_subtree_frame_context.insert(root, ctx);
     }
 
     #[cfg(feature = "diagnostics")]
@@ -2247,6 +2279,9 @@ impl<H: UiHost> UiTree<H> {
                     .get(p)
                     .map(|n| n.children.len().min(u32::MAX as usize) as u32)
             });
+            let root_parent_children_contains_root =
+                root_parent.and_then(|p| self.nodes.get(p).map(|n| n.children.contains(&root)));
+            let frame_context = self.debug_remove_subtree_frame_context.remove(&root);
             let mut root_path: [u64; 16] = [0u64; 16];
             let mut root_path_len: u8 = 0;
             let mut root_path_truncated = false;
@@ -2273,6 +2308,8 @@ impl<H: UiHost> UiTree<H> {
                 reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
+                root_parent_children_contains_root,
+                frame_context,
                 root_path_len,
                 root_path,
                 root_path_truncated,
@@ -2296,11 +2333,30 @@ impl<H: UiHost> UiTree<H> {
                 reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
+                root_parent_children_contains_root,
+                frame_context,
                 root_path_len,
                 root_path,
                 root_path_truncated,
             )) = remove_record
             {
+                let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
+                    frame_context
+                        .map(|ctx| {
+                            (
+                                ctx.parent_frame_children_len,
+                                ctx.parent_frame_children_contains_root,
+                            )
+                        })
+                        .unwrap_or((None, None));
+                let (root_frame_instance_present, root_frame_children_len) = frame_context
+                    .map(|ctx| {
+                        (
+                            Some(ctx.root_frame_instance_present),
+                            ctx.root_frame_children_len,
+                        )
+                    })
+                    .unwrap_or((None, None));
                 self.debug_removed_subtrees
                     .push(UiDebugRemoveSubtreeRecord {
                         outcome: UiDebugRemoveSubtreeOutcome::SkippedLayerRoot,
@@ -2314,6 +2370,11 @@ impl<H: UiHost> UiTree<H> {
                         reachable_from_layer_roots,
                         root_children_len,
                         root_parent_children_len,
+                        root_parent_children_contains_root,
+                        root_parent_frame_children_len,
+                        root_parent_frame_children_contains_root,
+                        root_frame_instance_present,
+                        root_frame_children_len,
                         root_path_len,
                         root_path,
                         root_path_truncated,
@@ -2346,11 +2407,30 @@ impl<H: UiHost> UiTree<H> {
             reachable_from_layer_roots,
             root_children_len,
             root_parent_children_len,
+            root_parent_children_contains_root,
+            frame_context,
             root_path_len,
             root_path,
             root_path_truncated,
         )) = remove_record
         {
+            let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
+                frame_context
+                    .map(|ctx| {
+                        (
+                            ctx.parent_frame_children_len,
+                            ctx.parent_frame_children_contains_root,
+                        )
+                    })
+                    .unwrap_or((None, None));
+            let (root_frame_instance_present, root_frame_children_len) = frame_context
+                .map(|ctx| {
+                    (
+                        Some(ctx.root_frame_instance_present),
+                        ctx.root_frame_children_len,
+                    )
+                })
+                .unwrap_or((None, None));
             let outcome = if pre_exists {
                 UiDebugRemoveSubtreeOutcome::Removed
             } else {
@@ -2384,6 +2464,11 @@ impl<H: UiHost> UiTree<H> {
                     reachable_from_layer_roots,
                     root_children_len,
                     root_parent_children_len,
+                    root_parent_children_contains_root,
+                    root_parent_frame_children_len,
+                    root_parent_frame_children_contains_root,
+                    root_frame_instance_present,
+                    root_frame_children_len,
                     root_path_len,
                     root_path,
                     root_path_truncated,
