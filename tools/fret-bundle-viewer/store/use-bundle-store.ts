@@ -12,6 +12,19 @@ export function setOnFileLoadedCallback(callback: OnFileLoadedCallback | null) {
   onFileLoadedCallback = callback
 }
 
+function revokeZipObjectUrls(zip?: ZipImportMeta) {
+  if (!zip?.screenshots?.length) return
+  if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
+  for (const s of zip.screenshots) {
+    if (!s?.objectUrl) continue
+    try {
+      URL.revokeObjectURL(s.objectUrl)
+    } catch {
+      // ignore
+    }
+  }
+}
+
 interface BundleState {
   // Bundle data
   bundle: BundleModel | null
@@ -111,6 +124,8 @@ export const useBundleStore = create<BundleState>((set, get) => ({
 
   // Actions
   loadBundle: (text, fileNameOrOptions) => {
+    revokeZipObjectUrls(get().bundle?.meta.zip)
+
     const options =
       typeof fileNameOrOptions === 'string'
         ? { fileName: fileNameOrOptions }
@@ -195,6 +210,7 @@ export const useBundleStore = create<BundleState>((set, get) => ({
   },
 
   setParseError: (error, rawText = null) => {
+    revokeZipObjectUrls(get().bundle?.meta.zip)
     set({
       bundle: null,
       rawText,
@@ -214,6 +230,7 @@ export const useBundleStore = create<BundleState>((set, get) => ({
   },
 
   clearBundle: () => {
+    revokeZipObjectUrls(get().bundle?.meta.zip)
     set({
       bundle: null,
       rawText: null,

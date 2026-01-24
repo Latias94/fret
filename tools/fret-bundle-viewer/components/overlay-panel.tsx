@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBundleStore } from '@/store/use-bundle-store'
-import type { SemanticsNodeModel } from '@/lib/types'
+import type { SemanticsNodeModel, ZipScreenshot } from '@/lib/types'
 import { useTranslation } from '@/hooks/use-i18n'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -127,6 +127,7 @@ function collectSubtree(nodesById: Record<string, DrawNode>, rootId: string | nu
 }
 
 export function OverlayPanel() {
+  const screenshots = useBundleStore((s) => s.bundle?.meta.zip?.screenshots ?? [])
   const snapshot = useBundleStore((s) => s.getSelectedSnapshotA())
   const selectedNodeId = useBundleStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useBundleStore((s) => s.setSelectedNodeId)
@@ -140,6 +141,13 @@ export function OverlayPanel() {
   const [showLayerRoots, setShowLayerRoots] = useState(true)
   const [showBlocksUnderlay, setShowBlocksUnderlay] = useState(true)
   const [onlySelectedSubtree, setOnlySelectedSubtree] = useState(false)
+
+  const [showBackground, setShowBackground] = useState(false)
+  const [backgroundOpacity, setBackgroundOpacity] = useState(0.75)
+  const [backgroundPath, setBackgroundPath] = useState<string | null>(null)
+  const [backgroundScale, setBackgroundScale] = useState(1)
+  const [backgroundOffsetX, setBackgroundOffsetX] = useState(0)
+  const [backgroundOffsetY, setBackgroundOffsetY] = useState(0)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -250,6 +258,45 @@ export function OverlayPanel() {
   const worldSize = useMemo(() => {
     return worldSizeFromSnapshot(drawNodes, snapshot?.windowSizeLogical)
   }, [drawNodes, snapshot?.windowSizeLogical])
+
+  const defaultBackgroundScale = useMemo(() => {
+    const sf = snapshot?.scaleFactor
+    if (typeof sf === 'number' && Number.isFinite(sf) && sf > 0) {
+      return 1 / sf
+    }
+    return 1
+  }, [snapshot?.scaleFactor])
+
+  useEffect(() => {
+    if (screenshots.length === 0) {
+      setShowBackground(false)
+      setBackgroundPath(null)
+      return
+    }
+    if (!backgroundPath || !screenshots.some((s) => s.path === backgroundPath)) {
+      setBackgroundPath(screenshots[0]!.path)
+      setShowBackground(true)
+    }
+  }, [backgroundPath, screenshots])
+
+  useEffect(() => {
+    if (!backgroundPath) return
+    setBackgroundScale(defaultBackgroundScale)
+    setBackgroundOffsetX(0)
+    setBackgroundOffsetY(0)
+  }, [backgroundPath, defaultBackgroundScale])
+
+  const selectedScreenshot = useMemo<ZipScreenshot | null>(() => {
+    if (!backgroundPath) return null
+    return screenshots.find((s) => s.path === backgroundPath) ?? null
+  }, [backgroundPath, screenshots])
+
+  const handleBackgroundReset = useCallback(() => {
+    setBackgroundScale(defaultBackgroundScale)
+    setBackgroundOffsetX(0)
+    setBackgroundOffsetY(0)
+    setBackgroundOpacity(0.75)
+  }, [defaultBackgroundScale])
 
   const scheduleDraw = useCallback(() => {
     const canvas = canvasRef.current
@@ -638,6 +685,87 @@ export function OverlayPanel() {
             </label>
           </div>
 
+          {screenshots.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2">
+                <Checkbox checked={showBackground} onCheckedChange={(v) => setShowBackground(Boolean(v))} />
+                <span className="text-xs">{t('overlay.bgShow')}</span>
+              </label>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{t('overlay.bgImage')}</span>
+                <select
+                  className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+                  value={backgroundPath ?? ''}
+                  disabled={!showBackground}
+                  onChange={(e) => setBackgroundPath(e.target.value || null)}
+                >
+                  {screenshots.map((s) => (
+                    <option key={s.path} value={s.path}>
+                      {s.fileName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{t('overlay.bgOpacity')}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={backgroundOpacity}
+                  disabled={!showBackground}
+                  onChange={(e) => setBackgroundOpacity(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{t('overlay.bgScale')}</span>
+                <input
+                  type="number"
+                  className="h-7 w-20 rounded-md border border-input bg-background px-2 text-xs font-mono"
+                  step={0.01}
+                  min={0.01}
+                  value={backgroundScale}
+                  disabled={!showBackground}
+                  onChange={(e) => setBackgroundScale(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground">{t('overlay.bgOffset')}</span>
+                <input
+                  type="number"
+                  className="h-7 w-16 rounded-md border border-input bg-background px-2 text-xs font-mono"
+                  step={1}
+                  value={backgroundOffsetX}
+                  disabled={!showBackground}
+                  onChange={(e) => setBackgroundOffsetX(Number(e.target.value))}
+                />
+                <input
+                  type="number"
+                  className="h-7 w-16 rounded-md border border-input bg-background px-2 text-xs font-mono"
+                  step={1}
+                  value={backgroundOffsetY}
+                  disabled={!showBackground}
+                  onChange={(e) => setBackgroundOffsetY(Number(e.target.value))}
+                />
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={!showBackground}
+                onClick={handleBackgroundReset}
+              >
+                {t('overlay.bgReset')}
+              </Button>
+            </div>
+          )}
+
           <div className="ml-auto flex items-center gap-2">
             <Label className="text-xs text-muted-foreground">{t('overlay.hover')}</Label>
             <span className={cn('text-xs font-mono truncate max-w-64', !hoveredNode && 'text-muted-foreground')}>
@@ -648,6 +776,32 @@ export function OverlayPanel() {
       </div>
 
       <div ref={containerRef} className="relative flex-1 overflow-hidden bg-background">
+        {showBackground && selectedScreenshot && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+              className="absolute left-0 top-0"
+              style={{
+                transformOrigin: 'top left',
+                transform: `translate(${viewport.tx}px, ${viewport.ty}px) scale(${viewport.scale})`,
+              }}
+            >
+              <img
+                src={selectedScreenshot.objectUrl}
+                alt={selectedScreenshot.fileName}
+                className="absolute left-0 top-0 select-none"
+                style={{
+                  transformOrigin: 'top left',
+                  transform: `translate(${backgroundOffsetX}px, ${backgroundOffsetY}px) scale(${backgroundScale})`,
+                  opacity: backgroundOpacity,
+                  maxWidth: 'none',
+                  maxHeight: 'none',
+                }}
+                draggable={false}
+              />
+            </div>
+          </div>
+        )}
+
         <canvas
           ref={canvasRef}
           className="h-full w-full touch-none"

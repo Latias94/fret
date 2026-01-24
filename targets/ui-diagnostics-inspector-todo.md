@@ -83,6 +83,7 @@ Related docs:
 
 3. **Sharing**
    - Bundle compression option (zip) with stable naming. (done: `fretboard diag pack`, plus `--include-triage`)
+   - Optional screenshot packaging for visual overlay debugging. (done: `fretboard diag pack --include-screenshots`; viewer can display `*/_root/screenshots/*.png` as an overlay background)
    - Simple bug template: attach `bundle.json` + optional `script.json`.
    - Offline bundle viewer: `tools/fret-bundle-viewer` (supports semantics tree, perf panels, `triage.json` export, and `.zip`/paste import).
 

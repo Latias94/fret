@@ -134,6 +134,12 @@ export const translations = {
     'overlay.onlySelectedSubtree': 'Selected subtree only',
     'overlay.hover': 'Hover',
     'overlay.none': 'none',
+    'overlay.bgShow': 'Background',
+    'overlay.bgImage': 'Image',
+    'overlay.bgOpacity': 'Opacity',
+    'overlay.bgScale': 'Scale',
+    'overlay.bgOffset': 'Offset',
+    'overlay.bgReset': 'Reset',
 
     // Summary Tab
     'summary.noSnapshot': 'No snapshot selected',
@@ -450,6 +456,12 @@ export const translations = {
     'overlay.onlySelectedSubtree': '仅选中子树',
     'overlay.hover': '悬停',
     'overlay.none': '无',
+    'overlay.bgShow': '背景',
+    'overlay.bgImage': '图片',
+    'overlay.bgOpacity': '透明度',
+    'overlay.bgScale': '缩放',
+    'overlay.bgOffset': '偏移',
+    'overlay.bgReset': '重置',
 
     // Summary Tab
     'summary.noSnapshot': '未选择快照',

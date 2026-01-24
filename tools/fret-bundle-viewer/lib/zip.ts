@@ -1,7 +1,7 @@
 'use client'
 
 import { strFromU8, unzipSync } from 'fflate'
-import type { ZipArtifact } from './types'
+import type { ZipArtifact, ZipScreenshot } from './types'
 import { LocalizedError } from './localized-error'
 
 function pickBundleJsonPath(entries: Record<string, Uint8Array>): string | null {
@@ -24,6 +24,7 @@ export async function extractBundleJsonFromZipFile(file: File): Promise<{
 }
 
 const MAX_ARTIFACT_BYTES = 1024 * 1024
+const MAX_SCREENSHOT_BYTES = 64 * 1024 * 1024
 
 function pickArtifacts(
   entries: Record<string, Uint8Array>,
@@ -67,10 +68,60 @@ function pickArtifacts(
   return artifacts
 }
 
+function pickScreenshots(
+  entries: Record<string, Uint8Array>,
+  bundlePathInZip: string
+): ZipScreenshot[] {
+  const names = Object.keys(entries).filter((n) => !n.endsWith('/'))
+
+  const bundleDir = bundlePathInZip.includes('/')
+    ? bundlePathInZip.split('/').slice(0, -1).join('/')
+    : ''
+
+  const preferredPrefixes = [
+    bundleDir ? `${bundleDir}/_root/screenshots/` : `_root/screenshots/`,
+    bundleDir ? `${bundleDir}/screenshots/` : `screenshots/`,
+  ]
+
+  const preferred = names.filter((n) => {
+    const lower = n.toLowerCase()
+    if (!lower.endsWith('.png')) return false
+    return preferredPrefixes.some((p) => n.startsWith(p))
+  })
+
+  const fallback = preferred.length > 0
+    ? []
+    : names.filter((n) => n.toLowerCase().endsWith('.png') && n.includes('/screenshots/'))
+
+  const candidates = (preferred.length > 0 ? preferred : fallback)
+    .slice()
+    .sort((a, b) => a.length - b.length || a.localeCompare(b))
+
+  const screenshots: ZipScreenshot[] = []
+  for (const path of candidates) {
+    const payload = entries[path]
+    if (!payload) continue
+    const sizeBytes = payload.length
+    if (sizeBytes > MAX_SCREENSHOT_BYTES) continue
+
+    const blob = new Blob([payload], { type: 'image/png' })
+    const objectUrl = URL.createObjectURL(blob)
+    screenshots.push({
+      path,
+      fileName: path.split('/').pop() ?? path,
+      sizeBytes,
+      objectUrl,
+    })
+  }
+
+  return screenshots
+}
+
 export async function extractBundleAndArtifactsFromZipFile(file: File): Promise<{
   bundleText: string
   bundlePathInZip: string
   artifacts: ZipArtifact[]
+  screenshots: ZipScreenshot[]
 }> {
   const buf = await file.arrayBuffer()
   const entries = unzipSync(new Uint8Array(buf))
@@ -85,5 +136,6 @@ export async function extractBundleAndArtifactsFromZipFile(file: File): Promise<
   }
 
   const artifacts = pickArtifacts(entries, bundlePathInZip)
-  return { bundleText: strFromU8(payload), bundlePathInZip, artifacts }
+  const screenshots = pickScreenshots(entries, bundlePathInZip)
+  return { bundleText: strFromU8(payload), bundlePathInZip, artifacts, screenshots }
 }
