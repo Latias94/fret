@@ -24,6 +24,9 @@ pub fn minimum_interactive_size(theme: &Theme) -> Px {
 
 pub fn enforce_minimum_interactive_size(layout: &mut LayoutStyle, theme: &Theme) {
     let min = minimum_interactive_size(theme);
+    if min.0 <= 0.0 {
+        return;
+    }
     layout.size.min_width = Some(min);
     layout.size.min_height = Some(min);
 }

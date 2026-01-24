@@ -164,6 +164,7 @@ This page validates minimum interactive sizing outcomes (touch targets):
 
 Notes:
 - This mirrors Compose Material3 `minimumInteractiveComponentSize()` outcomes.
+- Set `md.sys.layout.minimum-touch-target.size` to `0` to disable enforcement (dense desktop mode).
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TOUCH_TARGETS: &str = r#"
