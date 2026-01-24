@@ -75,8 +75,9 @@ Keep this list short and evidence-backed:
 
 - [x] IDV2-freeze-030 Freeze command palette gating while open (editor-style discoverability).
   - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`WindowCommandGatingService::set_snapshot`)
-- [ ] IDV2-freeze-031 Support nested overlays (stackable gating snapshots per window).
-  - Notes: current `WindowCommandGatingService` is single-snapshot per window; nested menus/palettes will need a stack.
+- [~] IDV2-freeze-031 Support nested overlays (stackable gating snapshots per window).
+  - Active branch: `feat/window-command-gating-stack`
+  - Notes: `main` is single-snapshot per window; nested menus/palettes will need a stack to avoid clobbering.
   - Candidate: `crates/fret-runtime/src/window_command_gating.rs`
 
 ## MVP4 — Coverage Targets (Keep Expanding Incrementally)
