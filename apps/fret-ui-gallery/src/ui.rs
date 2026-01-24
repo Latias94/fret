@@ -221,6 +221,7 @@ pub(crate) fn content_view(
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
     material3_navigation_bar_value: Model<Arc<str>>,
+    material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
@@ -358,6 +359,7 @@ pub(crate) fn content_view(
         material3_radio_value,
         material3_tabs_value,
         material3_navigation_bar_value,
+        material3_navigation_rail_value,
         material3_navigation_drawer_value,
         material3_text_field_value,
         material3_text_field_disabled,
@@ -470,6 +472,7 @@ fn page_preview(
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
     material3_navigation_bar_value: Model<Arc<str>>,
+    material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
@@ -577,6 +580,9 @@ fn page_preview(
         PAGE_MATERIAL3_TABS => preview_material3_tabs(cx, material3_tabs_value),
         PAGE_MATERIAL3_NAVIGATION_BAR => {
             preview_material3_navigation_bar(cx, material3_navigation_bar_value)
+        }
+        PAGE_MATERIAL3_NAVIGATION_RAIL => {
+            preview_material3_navigation_rail(cx, material3_navigation_rail_value)
         }
         PAGE_MATERIAL3_NAVIGATION_DRAWER => {
             preview_material3_navigation_drawer(cx, material3_navigation_drawer_value)
@@ -1699,6 +1705,55 @@ fn preview_material3_navigation_bar(
     vec![
         cx.text("Material 3 Navigation Bar: roving focus + state layer + bounded ripple."),
         bar,
+        cx.text(format!("value={}", current.as_ref())),
+    ]
+}
+
+fn preview_material3_navigation_rail(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+
+    let current = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let rail = material3::NavigationRail::new(value)
+        .a11y_label("Material 3 Navigation Rail")
+        .test_id("ui-gallery-material3-navigation-rail")
+        .items(vec![
+            material3::NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                .a11y_label("Destination Search")
+                .test_id("ui-gallery-material3-rail-search"),
+            material3::NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS)
+                .a11y_label("Destination Settings")
+                .test_id("ui-gallery-material3-rail-settings"),
+            material3::NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                .a11y_label("Destination Play")
+                .test_id("ui-gallery-material3-rail-play"),
+            material3::NavigationRailItem::new("disabled", "Disabled", ids::ui::SLASH)
+                .disabled(true)
+                .a11y_label("Destination Disabled")
+                .test_id("ui-gallery-material3-rail-disabled"),
+        ])
+        .into_element(cx);
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = fret_ui::element::Length::Fill;
+    layout.size.height = fret_ui::element::Length::Px(Px(360.0));
+
+    let container = cx.container(
+        fret_ui::element::ContainerProps {
+            layout,
+            ..Default::default()
+        },
+        move |_cx| vec![rail],
+    );
+
+    vec![
+        cx.text("Material 3 Navigation Rail: roving focus + state layer + bounded ripple."),
+        container,
         cx.text(format!("value={}", current.as_ref())),
     ]
 }

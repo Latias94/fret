@@ -237,6 +237,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/navigation_bar.rs` (`NavigationBar`, `NavigationBarItem`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_bar_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_navigation_bar`).
+- [x] Navigation rail (MVP: roving focus + state layer + bounded ripple + active indicator)
+  - Evidence: `ecosystem/fret-ui-material3/src/navigation_rail.rs` (`NavigationRail`, `NavigationRailItem`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_rail_*`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_navigation_rail`),
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_NAVIGATION_RAIL`).
 - [x] Navigation drawer (MVP: roving focus + state layer + bounded ripple + selected pill background)
   - Evidence: `ecosystem/fret-ui-material3/src/navigation_drawer.rs` (`NavigationDrawer`, `NavigationDrawerItem`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_drawer_*`),

@@ -337,6 +337,35 @@ let bar = m3::NavigationBar::new(value)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_NAVIGATION_RAIL: &str = r#"
+## Material 3 Navigation Rail (MVP)
+
+This page validates a Material 3 navigation rail surface:
+
+- roving focus + automatic activation (selection follows focus)
+- state layer (hover / pressed / focus) bounded to the indicator pill
+- bounded ripple (pointer-origin) bounded to the indicator pill
+- active indicator that tracks the selected icon slot
+"#;
+
+pub(crate) const USAGE_MATERIAL3_NAVIGATION_RAIL: &str = r#"
+```rust
+use fret_icons::ids;
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let value = app.models_mut().insert(Arc::<str>::from("search"));
+let rail = m3::NavigationRail::new(value)
+    .a11y_label("Demo navigation rail")
+    .items(vec![
+        m3::NavigationRailItem::new("search", "Search", ids::ui::SEARCH),
+        m3::NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS),
+        m3::NavigationRailItem::new("play", "Play", ids::ui::PLAY),
+    ])
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_NAVIGATION_DRAWER: &str = r#"
 ## Material 3 Navigation Drawer (MVP)
 
