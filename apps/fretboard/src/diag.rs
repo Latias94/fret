@@ -98,6 +98,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pack_include_root_artifacts = true;
                 i += 1;
             }
+            "--include-all" => {
+                pack_include_root_artifacts = true;
+                pack_include_triage = true;
+                i += 1;
+            }
             "--include-triage" => {
                 pack_include_triage = true;
                 i += 1;
