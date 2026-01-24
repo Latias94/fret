@@ -1,6 +1,17 @@
 import type { BundleModel, SnapshotModel, SemanticsNodeModel, DiffResult } from './types'
 import { getDiffSummary, diffSnapshots } from './diff'
 
+type JsonObject = Record<string, unknown>
+
+function asObject(v: unknown): JsonObject | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null
+  return v as JsonObject
+}
+
+function asArray(v: unknown): unknown[] | null {
+  return Array.isArray(v) ? v : null
+}
+
 export function generateMarkdownSummary(
   bundle: BundleModel,
   selectedWindow: number,
@@ -48,7 +59,7 @@ export function generateMarkdownSummary(
     if (snapshotA) {
       lines.push('### Snapshot A')
       lines.push('')
-      lines.push(formatSnapshotSummary(snapshotA))
+      lines.push(formatSnapshotSummary(snapshotA, window.events))
       lines.push('')
     }
 
@@ -57,7 +68,7 @@ export function generateMarkdownSummary(
       if (snapshotB && snapshotA) {
         lines.push('### Snapshot B')
         lines.push('')
-        lines.push(formatSnapshotSummary(snapshotB))
+        lines.push(formatSnapshotSummary(snapshotB, window.events))
         lines.push('')
 
         lines.push('### Diff Summary')
@@ -88,7 +99,7 @@ export function generateMarkdownSummary(
   return lines.join('\n')
 }
 
-function formatSnapshotSummary(snapshot: SnapshotModel): string {
+function formatSnapshotSummary(snapshot: SnapshotModel, windowEvents?: Array<{ kind: string; summary: string; tickId?: string; frameId?: string }>): string {
   const lines: string[] = []
 
   if (snapshot.tickId) lines.push(`- **Tick ID:** ${snapshot.tickId}`)
@@ -108,10 +119,120 @@ function formatSnapshotSummary(snapshot: SnapshotModel): string {
     lines.push(`- **Focused Node:** ${snapshot.focus.focusedNodeId}`)
   }
 
+  if (snapshot.overlay?.barrierRootId) {
+    lines.push(`- **Barrier Root:** ${snapshot.overlay.barrierRootId}`)
+  }
+
+  if (snapshot.overlay?.layerRoots && snapshot.overlay.layerRoots.length > 0) {
+    const roots = snapshot.overlay.layerRoots
+      .slice(0, 6)
+      .map((r) => {
+        const flags: string[] = []
+        if (r.blocksUnderlay) flags.push('blocks_underlay')
+        if (r.hitTestable === false) flags.push('no_hit_test')
+        if (r.zIndex !== undefined) flags.push(`z=${r.zIndex}`)
+        return `${r.nodeId ?? '—'}${flags.length > 0 ? ` (${flags.join(', ')})` : ''}`
+      })
+    lines.push(`- **Layer Roots:** ${roots.join('; ')}${snapshot.overlay.layerRoots.length > 6 ? ' …' : ''}`)
+  }
+
   if (snapshot.perf) {
     if (snapshot.perf.totalUs) lines.push(`- **Total Time:** ${snapshot.perf.totalUs}us`)
     if (snapshot.perf.layoutUs) lines.push(`- **Layout Time:** ${snapshot.perf.layoutUs}us`)
+    if (snapshot.perf.prepaintUs) lines.push(`- **Prepaint Time:** ${snapshot.perf.prepaintUs}us`)
     if (snapshot.perf.paintUs) lines.push(`- **Paint Time:** ${snapshot.perf.paintUs}us`)
+    if (snapshot.perf.cache?.hits !== undefined || snapshot.perf.cache?.misses !== undefined) {
+      lines.push(
+        `- **Paint Cache:** hits=${snapshot.perf.cache?.hits ?? 0} misses=${snapshot.perf.cache?.misses ?? 0}`
+      )
+    }
+    if (snapshot.perf.invalidations && typeof snapshot.perf.invalidations === 'object') {
+      const inv = snapshot.perf.invalidations as any
+      const count = typeof inv.count === 'number' ? inv.count : undefined
+      const nodes = typeof inv.nodes === 'number' ? inv.nodes : undefined
+      if (count !== undefined || nodes !== undefined) {
+        lines.push(`- **Invalidation Walks:** calls=${count ?? '—'} nodes=${nodes ?? '—'}`)
+      }
+    }
+  }
+
+  // Deep debug summaries (best-effort from raw snapshot)
+  const debug = asObject(asObject(snapshot.raw)?.debug)
+
+  const inv = asArray(debug?.invalidation_walks)
+  if (inv && inv.length > 0) {
+    const rows: Array<{ walkedNodes: number; kind: string; source: string; detail?: string }> = []
+    for (const r of inv) {
+      const o = asObject(r)
+      if (!o) continue
+      rows.push({
+        walkedNodes: typeof o.walked_nodes === 'number' ? o.walked_nodes : 0,
+        kind: typeof o.kind === 'string' ? o.kind : 'unknown',
+        source: typeof o.source === 'string' ? o.source : 'unknown',
+        detail: typeof o.detail === 'string' ? o.detail : undefined,
+      })
+    }
+    rows.sort((a, b) => b.walkedNodes - a.walkedNodes)
+    const top = rows.slice(0, 8).map((r) => `${r.walkedNodes} ${r.kind}/${r.source}${r.detail ? ` (${r.detail})` : ''}`)
+    lines.push(`- **Top Invalidation Walks:** ${top.join('; ')}${rows.length > 8 ? ' …' : ''}`)
+  }
+
+  const solves = asArray(debug?.layout_engine_solves)
+  if (solves && solves.length > 0) {
+    const s0 = asObject(solves[0])
+    if (s0) {
+      const solveUs = typeof s0.solve_time_us === 'number' ? s0.solve_time_us : undefined
+      const measureUs = typeof s0.measure_time_us === 'number' ? s0.measure_time_us : undefined
+      if (solveUs !== undefined || measureUs !== undefined) {
+        lines.push(`- **Layout Solve:** solve_us=${solveUs ?? '—'} measure_us=${measureUs ?? '—'}`)
+      }
+      const topMeasures = asArray(s0.top_measures)
+      if (topMeasures && topMeasures.length > 0) {
+        const tm = topMeasures
+          .slice(0, 6)
+          .map((m) => {
+            const mo = asObject(m)
+            if (!mo) return null
+            const us = typeof mo.measure_time_us === 'number' ? mo.measure_time_us : undefined
+            const kind = typeof mo.element_kind === 'string' ? mo.element_kind : 'unknown'
+            const calls = typeof mo.calls === 'number' ? mo.calls : undefined
+            return `${us ?? '—'} ${kind}${calls !== undefined ? ` (calls=${calls})` : ''}`
+          })
+          .filter(Boolean)
+        if (tm.length > 0) {
+          lines.push(`- **Top Measures:** ${tm.join('; ')}${topMeasures.length > 6 ? ' …' : ''}`)
+        }
+      }
+    }
+  }
+
+  const cacheRoots = asArray(debug?.cache_roots)
+  if (cacheRoots && cacheRoots.length > 0) {
+    const top = cacheRoots.slice(0, 6).map((r) => {
+      const ro = asObject(r)
+      if (!ro) return null
+      const root = ro.root != null ? String(ro.root) : '—'
+      const reused = typeof ro.reused === 'boolean' ? ro.reused : undefined
+      const reason = typeof ro.reuse_reason === 'string' ? ro.reuse_reason : undefined
+      const ops = typeof ro.paint_replayed_ops === 'number' ? ro.paint_replayed_ops : undefined
+      const nodes = typeof ro.subtree_nodes === 'number' ? ro.subtree_nodes : undefined
+      return `${root}${reused !== undefined ? (reused ? ' reused' : ' new') : ''}${reason ? ` (${reason})` : ''}${ops !== undefined ? ` ops=${ops}` : ''}${nodes !== undefined ? ` nodes=${nodes}` : ''}`
+    }).filter(Boolean)
+    if (top.length > 0) {
+      lines.push(`- **Cache Roots:** ${top.join('; ')}${cacheRoots.length > 6 ? ' …' : ''}`)
+    }
+  }
+
+  // Events (window-level), filtered up to selected tick if possible.
+  if (windowEvents && windowEvents.length > 0) {
+    const maxTick = snapshot.tickId ? Number(snapshot.tickId) : NaN
+    const filtered = Number.isFinite(maxTick)
+      ? windowEvents.filter((e) => (e.tickId ? Number(e.tickId) <= maxTick : true))
+      : windowEvents
+    const tail = filtered.slice(-8)
+    if (tail.length > 0) {
+      lines.push(`- **Recent Events:** ${tail.map((e) => `${e.kind}: ${e.summary}`).join(' | ')}`)
+    }
   }
 
   return lines.join('\n')
