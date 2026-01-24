@@ -221,6 +221,10 @@ Constrained viewport (useful for clamping/placement regressions):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger'];components-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger']"`
 
+Constrained mobile hover-switch (click Home, then hover Components):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320-then-hover-components=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']" --steps="hover=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];wait=300"`
+
 Indicator (opt-in child, `shadow-md` diamond):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo-indicator --modes=open --update`

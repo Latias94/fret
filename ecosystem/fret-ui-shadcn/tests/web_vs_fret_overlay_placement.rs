@@ -14019,6 +14019,16 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_hover_to_components_viewport_geo
 }
 
 #[test]
+fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_hover_to_components_viewport_geometry_matches()
+ {
+    assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
+        "navigation-menu-demo.home-mobile-vp375x320-then-hover-components",
+        "home",
+        "components",
+    );
+}
+
+#[test]
 fn web_vs_fret_menubar_demo_overlay_placement_matches() {
     let web = read_web_golden_open("menubar-demo");
     let theme = web_theme(&web);
