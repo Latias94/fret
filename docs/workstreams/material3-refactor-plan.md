@@ -1,6 +1,6 @@
 # Material 3 (and Expressive) Refactor Plan
 
-Status: Draft / in-progress
+Status: In progress (foundation landed; migration ongoing)
 
 This document is the **execution plan** for a “fearless refactor” of Material 3 alignment in Fret.
 It complements `docs/workstreams/material3-todo.md`, which remains the broader tracking checklist.
@@ -49,9 +49,136 @@ References in this repo:
 
 All Material policies stay in **one crate**: `ecosystem/fret-ui-material3`.
 
-### 1) Foundation layer (new)
+Current state in this worktree:
 
-Introduce a small “foundation” module set that components depend on:
+- A `foundation` layer already exists (`indication`, `token_resolver`, `content`, `geometry`,
+  `focus_ring`).
+- Multiple components already use the foundation indication path (`Button`, `Tabs`, `Checkbox`,
+  `IconButton`, `Switch`, `Menu`, `Radio`).
+- A token import + audit pipeline exists to keep scalar tokens aligned with Material Web v30.
+
+## Compose Multiplatform Baseline (Reference Architecture)
+
+This section inventories the core "infrastructure" building blocks used by Compose Material3, so we
+can make explicit boundary decisions in Fret (what belongs in `crates/fret-ui` vs
+`ecosystem/fret-ui-material3` vs per-component recipes).
+
+### Theming + tree-local overrides
+
+Compose:
+
+- `MaterialTheme` provides tree-local values via composition locals and supports partial overrides
+  for subtrees.
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MaterialTheme.kt`
+- `LocalContentColor` models “content defaults” (text/icon color) based on background surfaces.
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ContentColor.kt`
+- A `MotionScheme` is also part of the theme and can be overridden per subtree.
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MotionScheme.kt`
+
+Implication for Fret:
+
+- We should keep `crates/fret-ui` mechanism-only, but we still need a **tree-local “Material
+  context”** concept in `fret-ui-material3` so components can share consistent defaults without
+  duplicating logic.
+- The existing `ElementCx::inherited_state` mechanism is sufficient to implement subtree-scoped
+  overrides in `fret-ui-material3` (provider pattern) without new core runtime concepts. Core work
+  should only be considered if we hit hard limitations (e.g. ergonomics or missing invalidation
+  hooks).
+
+### Interaction → indication (state layer + ripple)
+
+Compose:
+
+- The default `LocalIndication` is a Material ripple, and components rely on a shared
+  `InteractionSource` contract to coordinate pressed/hover/focus/dragged states.
+- Ripple is implemented as an `IndicationNodeFactory` with:
+  - bounded vs unbounded behavior,
+  - optional fixed radius,
+  - theme-aware defaults (uses `LocalContentColor` and state-layer alpha tokens),
+  - a tree-local override (`LocalRippleConfiguration`) used as an escape hatch.
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Ripple.kt`
+
+Implication for Fret:
+
+- This maps directly onto our `foundation::indication` goal, but we should close the remaining
+  parity gaps as *foundation work*, not per-component patches:
+  - unbounded ripples,
+  - keyboard activation ripple origin rules,
+  - a scoped ripple configuration override (escape hatch).
+
+### Motion scheme (spatial vs effects)
+
+Compose:
+
+- `MotionScheme` exposes 6 canonical specs: `{default, fast, slow} × {spatial, effects}`.
+- The built-in schemes are implemented using springs with token-driven stiffness/damping
+  (`StandardMotionTokens` / `ExpressiveMotionTokens`).
+  - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MotionScheme.kt`
+
+Implication for Fret:
+
+- Our token model already supports durations/easings and scalar numbers, but we currently do not
+  have a first-class “motion scheme” mapping. We should introduce a `foundation::motion_scheme`
+  module that:
+  - reads the relevant `md.sys.motion.*` / `md.comp.*.motion.spring.*` numbers,
+  - converts them into reusable animator configs (spring or our closest equivalent),
+  - centralizes “spatial vs effects” choices so components stop picking ad-hoc timings.
+- If “spring” is required for parity, decide whether to implement it in `fret-ui-material3`
+  (policy-heavy) or extend `crates/fret-ui` with a small, renderer-agnostic spring primitive.
+
+### Tokens (typed access vs string keys)
+
+Compose:
+
+- Components typically read values from typed token objects (e.g. `ButtonTokens`, `CheckboxTokens`,
+  `StateTokens`) rather than hardcoding raw keys.
+- Many tokens resolve through `MaterialTheme.colorScheme.fromToken(...)` / `MaterialTheme.typography`
+  / `MaterialTheme.shapes`, and produce the final per-state values.
+
+Implication for Fret:
+
+- We should keep “token resolution policy” in `fret-ui-material3` foundation (`token_resolver`,
+  typed helpers), and keep raw string usage as a last resort.
+- A practical Fret analogue is a set of typed helper modules (not necessarily 1:1 with Compose)
+  that wrap:
+  - key spelling,
+  - fallback chain (`md.comp.*` → `md.sys.*`),
+  - any derived tokens (e.g. disabled alpha multiplication).
+
+## Boundary Decisions (What counts as “infrastructure”)
+
+Rule of thumb:
+
+- If multiple components must behave identically to avoid perceptual drift (ink, motion, focus,
+  content defaults), it belongs in `ecosystem/fret-ui-material3` foundation.
+- If the behavior requires engine guarantees (layout stability, hit test rules, clipping/shadows,
+  theme scoping), it is a `crates/fret-ui` mechanism candidate.
+- If the behavior is primarily structure/layout of one component, it stays in the component recipe.
+
+**Mechanism candidates (`crates/fret-ui`)**
+
+- Tree-local theme/content defaults overlay only if the provider pattern is insufficient for
+  ergonomics or invalidation correctness.
+- Unbounded ripple clipping rules / paint support if current primitives are insufficient.
+- Stable structural guidance/helpers if indicator insertion/removal causes flicker.
+
+**Material foundation (`ecosystem/fret-ui-material3`)**
+
+- `foundation::indication` (state layer + ripple) as the only supported ink orchestration path.
+- `foundation::motion_scheme` (spatial/effects mapping + spring configs).
+- `foundation::tokens` + `foundation::token_resolver` (typed access + strict fallback chain).
+- `foundation::content` (content color defaults + disabled opacity conventions).
+- `foundation::elevation` (MD3 level → shadow + tonal overlay mapping).
+
+**Component recipes (`ecosystem/fret-ui-material3/src/*.rs`)**
+
+- Layout structure and measurement strategy.
+- Accessibility semantics for the component surface (role/checked/selected, roving focus wiring).
+- Per-state token selection *only when it is truly component-specific*.
+
+### 1) Foundation layer (consolidate + extend)
+
+The crate should have a small “foundation” module set that components depend on:
 
 - `foundation::interaction_source`
   - Canonical pressed/hover/focus state model.
@@ -66,9 +193,10 @@ Introduce a small “foundation” module set that components depend on:
   - Strict M3 token lookup:
     - `md.comp.*` → fallback to `md.sys.*` → last-resort fallback.
   - Explicitly avoid falling back into shadcn tokens during Material3 rendering (configurable).
-- `foundation::content_color`
-  - A scoped content color strategy (text/icon defaults) comparable to Compose’s
-    `LocalContentColor`, without requiring a full composition-local system on day one.
+- `foundation::content`
+  - Content default helpers today, and a scoped content color strategy (text/icon defaults)
+    comparable to Compose’s `LocalContentColor` without requiring a full composition-local system on
+    day one.
 
 ### 2) Components become “thin recipes”
 
@@ -95,8 +223,8 @@ These are *candidates*, not guaranteed core work:
 
 - **Structured corner sets**: implemented via `ThemeConfig.corners` + `Theme::corners_by_key` to
   represent Material corner-set tokens (e.g. `corner-extra-small-top`).
-- **Scoped theme / content defaults**: a local theme overlay / “content color” propagation
-  mechanism would reduce boilerplate and mismatch risk.
+- **Scoped theme / content defaults**: implement via `ElementCx::inherited_state` provider patterns in
+  `fret-ui-material3` first; consider core help only if invalidation/ergonomics require it.
 - **Subcompose-like measurement**: for tabs (indicator “match content size”) and other
   measurement-driven visuals, relying only on last-frame bounds can cause visible jitter.
 - **Pixel snapping / rounding policy**: some controls require consistent rounding rules across
@@ -108,14 +236,14 @@ These are *candidates*, not guaranteed core work:
 
 ### M0 — Lock the invariants
 
-- Define “no shadcn fallbacks” rule for Material3 components.
-- Define strict token namespaces and the canonical fallback chain.
-- Decide the public surface for hoisted interaction sources (if any).
+- [x] Define “no shadcn fallbacks” rule for Material3 components (regression test).
+- [x] Define strict token namespaces and the canonical fallback chain (`md.comp.*` → `md.sys.*`).
+- [ ] Decide the public surface for hoisted interaction sources (if any).
 
 ### M1 — Introduce foundation modules
 
-- Add `foundation` modules + internal APIs.
-- Provide a small internal conformance harness (unit tests) for:
+- [x] Add `foundation` modules + internal APIs.
+- [x] Provide a small internal conformance harness (unit tests) for:
   - pressed/hover/focus state transitions,
   - ripple bounded/unbounded rules,
   - “no fallback to shadcn tokens” enforcement (where feasible).
@@ -134,20 +262,26 @@ Goal: prove the foundation approach reduces divergence and removes flicker/misma
 - `IconButton`, `Checkbox`, `Switch`, `Radio`, `TextField`, `Menu/MenuItem`, and new components.
 - Remove duplicated per-component animators and ad-hoc fallbacks.
 
+Status notes:
+
+- Most migrated components now rely on `foundation::indication`.
+- `TextField` still needs a full indication migration (it currently only avoids non-Material token
+  fallbacks).
+
 ### M4 — Add alignment tracking and regression tooling
 
-- Expand UI Gallery pages to cover “state matrix” views:
+- [x] Expand UI Gallery pages to cover “state matrix” views:
   - default/hover/focus/pressed/disabled/selected,
   - light/dark,
   - (later) Expressive variants.
-- Add scripted interaction tests where feasible.
-- Add token coverage tooling to detect drift:
+- [ ] Add scripted interaction tests where feasible.
+- [x] Add token coverage tooling to detect drift:
   - `cargo run -p fret-ui-material3 --bin material3_token_audit -- --material-web-dir <path>`
   - This reports:
     - keys referenced by `fret-ui-material3` sources but missing from `tokens::v30` injection,
     - keys that do not exist in Material Web v30 sassvars (typos / wrong namespaces),
     - (optional) Material Web keys missing in our injection by component prefix.
-- Add a token import generator to keep sys/comp tokens in sync with Material Web:
+- [x] Add a token import generator to keep sys/comp tokens in sync with Material Web:
   - `cargo run -p fret-ui-material3 --bin material3_token_import -- --material-web-dir <path>`
   - This regenerates `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`.
   - Typescale injection is generated as composed `TextStyle` tokens and maps `md.ref.typeface`

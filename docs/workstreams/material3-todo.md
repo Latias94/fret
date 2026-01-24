@@ -158,6 +158,20 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Provide a mechanism-level primitive for ripple painting (policy in ecosystem).
   - Evidence: `crates/fret-ui/src/paint.rs` (`paint_ripple`) + unit tests.
 
+### Material Foundation Backlog (Compose baseline)
+
+- [ ] Add a tree-local Material context provider (theme-ish overrides) in `fret-ui-material3`:
+  - content defaults (Compose `LocalContentColor` analogue),
+  - ripple configuration escape hatch (Compose `LocalRippleConfiguration` analogue),
+  - motion scheme override (Compose `LocalMotionScheme` analogue).
+- [ ] Decide whether we need a hoistable interaction source surface (Compose
+  `MutableInteractionSource` analogue) or whether `PressableState` + foundation runtime state is
+  sufficient for our current authoring model.
+- [ ] Implement a first-class MotionScheme mapping (6 canonical specs; standard vs expressive), and
+  decide how to represent spring configs (ecosystem-only vs core mechanism).
+- [ ] Introduce typed token modules per component to reduce raw string key usage and centralize
+  derived token math (disabled alpha, state-layer alpha selection).
+
 ### Interaction Outcomes
 
 - [x] State layer policy (hover/pressed/focus) with v30 sys opacities.
