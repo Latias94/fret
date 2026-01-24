@@ -24,7 +24,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
-    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
@@ -246,6 +246,7 @@ impl DialogAction {
                     let ink = material_ink_layer(
                         cx,
                         config.corner_radii,
+                        RippleClip::Bounded,
                         state_layer_color,
                         indication.state_layer_opacity,
                         indication.ripple_frame,

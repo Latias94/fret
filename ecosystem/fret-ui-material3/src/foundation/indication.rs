@@ -8,6 +8,14 @@ use crate::foundation::context::{MaterialRippleConfiguration, inherited_ripple_c
 use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
 use crate::interaction::state_layer::StateLayerAnimator;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RippleClip {
+    /// Clip the ripple to the component's shape (bounded ripple).
+    Bounded,
+    /// Do not clip the ripple (unbounded ripple).
+    Unbounded,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct IndicationConfig {
     pub state_duration_ms: u32,
@@ -210,6 +218,7 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
 pub fn material_ink_layer<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     corner_radii: Corners,
+    ripple_clip: RippleClip,
     color: Color,
     state_layer_opacity: f32,
     ripple_frame: Option<RipplePaintFrame>,
@@ -237,6 +246,10 @@ pub fn material_ink_layer<H: UiHost>(
         }
 
         if let Some(r) = ripple_frame {
+            let clip = match ripple_clip {
+                RippleClip::Bounded => Some(corner_radii),
+                RippleClip::Unbounded => None,
+            };
             fret_ui::paint::paint_ripple(
                 p.scene(),
                 DrawOrder(1),
@@ -245,7 +258,7 @@ pub fn material_ink_layer<H: UiHost>(
                 r.radius,
                 color,
                 r.opacity,
-                Some(corner_radii),
+                clip,
             );
         }
 
@@ -259,6 +272,7 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     paint_bounds: Rect,
     corner_radii: Corners,
+    ripple_clip: RippleClip,
     color: Color,
     state_layer_opacity: f32,
     ripple_frame: Option<RipplePaintFrame>,
@@ -284,6 +298,10 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
         }
 
         if let Some(r) = ripple_frame {
+            let clip = match ripple_clip {
+                RippleClip::Bounded => Some(corner_radii),
+                RippleClip::Unbounded => None,
+            };
             fret_ui::paint::paint_ripple(
                 p.scene(),
                 DrawOrder(1),
@@ -292,7 +310,7 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
                 r.radius,
                 color,
                 r.opacity,
-                Some(corner_radii),
+                clip,
             );
         }
 

@@ -2,7 +2,7 @@
 //!
 //! Outcome-oriented implementation:
 //! - Token-driven sizing/colors via `md.comp.switch.*`.
-//! - State layer (hover/pressed/focus) + bounded ripple using `fret_ui::paint`.
+//! - State layer (hover/pressed/focus) + unbounded ripple using `fret_ui::paint`.
 
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ use fret_ui::{Invalidation, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, advance_indication_for_pressable_with_ripple_bounds,
+    IndicationConfig, RippleClip, advance_indication_for_pressable_with_ripple_bounds,
     material_ink_layer_with_bounds,
 };
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
@@ -238,6 +238,7 @@ impl Switch {
                             cx,
                             geom.ink_bounds,
                             Corners::all(Px(9999.0)),
+                            RippleClip::Unbounded,
                             state_layer_color,
                             indication.state_layer_opacity,
                             indication.ripple_frame,

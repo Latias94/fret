@@ -190,11 +190,16 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/button.rs` (`state_layer_target_opacity`),
     `ecosystem/fret-ui-material3/src/interaction/state_layer.rs` (`StateLayerAnimator`),
     `crates/fret-ui/src/paint.rs` (`paint_state_layer`).
-- [x] Ripple policy (bounded, pointer-origin) wired to mechanism primitive.
+- [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.
   - Evidence: `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RippleAnimator`),
     `ecosystem/fret-ui-material3/src/button.rs` (`PointerRegion` → `PointerRegionState.last_down`),
+    `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin_local`),
     `crates/fret-ui/src/paint.rs` (`paint_ripple`).
-- [ ] Ripple (unbounded, keyboard click synthesis, spec fade rules).
+- [ ] Ripple parity improvements (unbounded clip, token radius, spec fade rules).
+  - Evidence (partial): `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleClip`),
+    `ecosystem/fret-ui-material3/src/checkbox.rs` (unbounded ripple),
+    `ecosystem/fret-ui-material3/src/radio.rs` (unbounded ripple),
+    `ecosystem/fret-ui-material3/src/switch.rs` (unbounded ripple).
 - [x] Focus ring style and focus-visible heuristics aligned with Material expectations.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/focus_ring.rs` (`material_focus_ring_for_component`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (`paint_focus_ring` gated by `focus_visible::is_focus_visible`).

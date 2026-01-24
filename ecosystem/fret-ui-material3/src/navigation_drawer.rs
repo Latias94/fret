@@ -25,7 +25,7 @@ use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
@@ -450,6 +450,7 @@ fn navigation_drawer_item<H: UiHost>(
                 let ink = material_ink_layer(
                     cx,
                     corner_radii,
+                    RippleClip::Bounded,
                     state_layer_color,
                     indication.state_layer_opacity,
                     indication.ripple_frame,

@@ -466,32 +466,19 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
 
-            for window in scene.ops().windows(3) {
-                let [a, b, c] = window else {
-                    continue;
-                };
-                let SceneOp::PushClipRRect { rect: clip, .. } = a else {
-                    continue;
-                };
+            for op in scene.ops() {
                 let SceneOp::Quad {
                     rect: circle,
                     background,
                     border,
                     corner_radii,
                     ..
-                } = b
+                } = op
                 else {
                     continue;
                 };
-                if !matches!(c, SceneOp::PopClip) {
-                    continue;
-                }
 
                 if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
-                    continue;
-                }
-                if (clip.size.width.0 - 40.0).abs() > 0.5 || (clip.size.height.0 - 40.0).abs() > 0.5
-                {
                     continue;
                 }
                 if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
@@ -503,6 +490,11 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
                     && (corner_radii.bottom_left.0 - r).abs() < 1e-3
                     && (corner_radii.bottom_right.0 - r).abs() < 1e-3;
                 if !r_ok {
+                    continue;
+                }
+                if (circle.size.width.0 * 0.5 - r).abs() > 1e-3
+                    || (circle.size.height.0 * 0.5 - r).abs() > 1e-3
+                {
                     continue;
                 }
 
@@ -519,9 +511,7 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
         }
 
         let Some(ripple_center) = ripple_center else {
-            panic!(
-                "expected a bounded ripple (PushClipRRect + circle quad + PopClip) in the scene"
-            );
+            panic!("expected a ripple circle quad in the scene");
         };
 
         assert!(

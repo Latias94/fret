@@ -2,7 +2,7 @@
 //!
 //! Outcome-oriented implementation:
 //! - Token-driven sizing/colors via `md.comp.checkbox.*`.
-//! - State layer (hover/pressed/focus) + bounded ripple using `fret_ui::paint`.
+//! - State layer (hover/pressed/focus) + unbounded ripple using `fret_ui::paint`.
 
 use std::sync::Arc;
 
@@ -19,7 +19,7 @@ use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
 
 #[derive(Clone)]
@@ -200,6 +200,7 @@ impl Checkbox {
                         let overlay = material_ink_layer(
                             cx,
                             Corners::all(Px(9999.0)),
+                            RippleClip::Unbounded,
                             state_layer_color,
                             indication.state_layer_opacity,
                             indication.ripple_frame,

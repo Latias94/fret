@@ -18,7 +18,7 @@ use fret_ui::{SvgSource, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
@@ -250,6 +250,7 @@ impl IconButton {
                         let overlay = material_ink_layer(
                             cx,
                             corner_radii,
+                            RippleClip::Bounded,
                             colors.state_layer_color,
                             indication.state_layer_opacity,
                             indication.ripple_frame,

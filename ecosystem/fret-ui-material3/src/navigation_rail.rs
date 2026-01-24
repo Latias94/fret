@@ -24,7 +24,7 @@ use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
 use crate::foundation::indication::{
-    IndicationConfig, advance_indication_for_pressable_with_ripple_bounds,
+    IndicationConfig, RippleClip, advance_indication_for_pressable_with_ripple_bounds,
     material_ink_layer_with_bounds,
 };
 use crate::foundation::layout_probe::LayoutProbeList;
@@ -520,6 +520,7 @@ fn navigation_rail_item<H: UiHost>(
                     cx,
                     indicator_bounds,
                     corner_radii,
+                    RippleClip::Bounded,
                     state_layer_color,
                     indication.state_layer_opacity,
                     indication.ripple_frame,

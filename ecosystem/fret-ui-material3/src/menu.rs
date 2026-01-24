@@ -24,7 +24,7 @@ use fret_ui::{Theme, UiHost};
 use crate::foundation::content::MaterialContentDefaults;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
-    IndicationConfig, advance_indication_for_pressable, material_ink_layer,
+    IndicationConfig, RippleClip, advance_indication_for_pressable, material_ink_layer,
 };
 
 #[derive(Debug, Clone)]
@@ -441,6 +441,7 @@ fn material_menu_item<H: UiHost>(
                 let overlay = material_ink_layer(
                     cx,
                     Corners::all(Px(0.0)),
+                    RippleClip::Bounded,
                     state_layer_color,
                     indication.state_layer_opacity,
                     indication.ripple_frame,
