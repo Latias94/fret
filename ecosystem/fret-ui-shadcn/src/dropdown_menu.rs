@@ -3911,6 +3911,7 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4039,6 +4040,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4102,6 +4106,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4181,7 +4188,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app.models_mut().insert(None);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4766,27 +4775,37 @@ mod tests {
         ];
 
         // First frame: establish stable trigger bounds.
-        let _ = render_frame(
+        let (_, trigger_id) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
 
         // Second frame: open the menu.
-        let _ = render_frame(
+        let (_, trigger_id_2) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
+        );
+        assert_eq!(trigger_id_2, trigger_id, "expected a stable trigger element id");
+
+        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        assert!(
+            fret_ui::elements::dismissible_has_pointer_move_handler(&mut app, window, overlay_root),
+            "expected dropdown menu overlay root to install a dismissible pointer-move hook (submenu safe-hover)"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4951,7 +4970,11 @@ mod tests {
             _ => None,
         });
         let Some(timer) = timer else {
-            panic!("expected submenu safe-hover close timer effect");
+            let hit = ui.debug_hit_test(probe);
+            panic!(
+                "expected submenu safe-hover close timer effect; effects={effects:?} probe={probe:?} hit={hit:?} submenu_bounds={submenu_bounds:?} layers={:?}",
+                ui.debug_layers_in_paint_order()
+            );
         };
 
         // Fifth frame: leaving the safe corridor arms a short close delay (submenu remains visible).
