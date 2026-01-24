@@ -496,6 +496,8 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     requested_focus: &mut cx.requested_focus,
                     requested_capture: &mut cx.requested_capture,
                     requested_cursor: &mut cx.requested_cursor,
+                    notify_requested: &mut cx.notify_requested,
+                    invalidations: &mut cx.invalidations,
                 };
                 let handled = h(
                     &mut host,
