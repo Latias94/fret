@@ -472,6 +472,27 @@ let menu = m3::Menu::new().entries(vec![
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_TOOLTIP: &str = r#"
+## Material 3 Tooltip (MVP)
+
+This page validates a Material 3 plain tooltip surface:
+
+- Radix-aligned delay group + hover intent + safe-hover corridor (via `fret-ui-kit`)
+- deterministic open/close motion driven by `md.sys.motion.*` (duration + cubic-bezier)
+- token-driven container/text styling via `md.comp.plain-tooltip.*`
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+m3::TooltipProvider::new().with(cx, |cx| {
+    let trigger = m3::Button::new("Hover me").into_element(cx);
+    vec![m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+});
+```
+"#;
+
 pub(crate) const DOC_FORMS: &str = r#"
 ## Forms
 

@@ -24,6 +24,7 @@ pub mod tabs;
 pub mod text_field;
 pub mod theme;
 pub mod tokens;
+pub mod tooltip;
 
 pub use button::{Button, ButtonVariant};
 pub use checkbox::Checkbox;
@@ -39,6 +40,7 @@ pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation};
 pub use switch::Switch;
 pub use tabs::{TabItem, Tabs};
 pub use text_field::{TextField, TextFieldVariant};
+pub use tooltip::{PlainTooltip, TooltipAlign, TooltipProvider, TooltipSide};
 
 #[cfg(test)]
 mod tests {
@@ -89,6 +91,7 @@ mod tests {
             include_str!("switch.rs"),
             include_str!("tabs.rs"),
             include_str!("text_field.rs"),
+            include_str!("tooltip.rs"),
             include_str!("foundation/indication.rs"),
             include_str!("foundation/focus_ring.rs"),
             include_str!("foundation/geometry.rs"),

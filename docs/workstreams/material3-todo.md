@@ -273,7 +273,12 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/dialog.rs` (`Dialog`, `DialogAction`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_dialog`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_DIALOG`).
-- [ ] Snackbar / Tooltip (pick order based on demos)
+- [x] Tooltip (MVP: plain tooltip, delay group + hover intent + safe-hover corridor, token-driven styling)
+  - Evidence: `ecosystem/fret-ui-material3/src/tooltip.rs` (`PlainTooltip`, `TooltipProvider`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_plain_tooltip_*`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_tooltip`),
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TOOLTIP`).
+- [ ] Snackbar (pick order based on demos)
 
 ### Conformance / Regression
 

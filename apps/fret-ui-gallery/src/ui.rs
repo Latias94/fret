@@ -602,6 +602,7 @@ fn page_preview(
             preview_material3_dialog(cx, material3_dialog_open, last_action.clone())
         }
         PAGE_MATERIAL3_MENU => preview_material3_menu(cx, material3_menu_open, last_action.clone()),
+        PAGE_MATERIAL3_TOOLTIP => preview_material3_tooltip(cx),
         _ => preview_intro(cx, theme),
     };
 
@@ -2127,6 +2128,79 @@ fn preview_material3_menu(
         card,
         cx.text(format!("last action: {last}")),
     ]
+}
+
+fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let content = material3::TooltipProvider::new().with(cx, |cx| {
+        let outlined = material3::ButtonVariant::Outlined;
+
+        let top = material3::PlainTooltip::new(
+            material3::Button::new("Hover (Top)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-tooltip-top-trigger")
+                .into_element(cx),
+            "Plain tooltip (top)",
+        )
+        .side(material3::TooltipSide::Top)
+        .into_element(cx);
+
+        let right = material3::PlainTooltip::new(
+            material3::Button::new("Hover (Right)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-tooltip-right-trigger")
+                .into_element(cx),
+            "Plain tooltip (right)",
+        )
+        .side(material3::TooltipSide::Right)
+        .into_element(cx);
+
+        let bottom = material3::PlainTooltip::new(
+            material3::Button::new("Hover (Bottom)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-tooltip-bottom-trigger")
+                .into_element(cx),
+            "Plain tooltip (bottom)",
+        )
+        .side(material3::TooltipSide::Bottom)
+        .into_element(cx);
+
+        let left = material3::PlainTooltip::new(
+            material3::Button::new("Hover (Left)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-tooltip-left-trigger")
+                .into_element(cx),
+            "Plain tooltip (left)",
+        )
+        .side(material3::TooltipSide::Left)
+        .into_element(cx);
+
+        vec![
+            stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N4)
+                    .layout(LayoutRefinement::default().w_full()),
+                |_cx| vec![top, right, bottom, left],
+            ),
+            cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
+        ]
+    });
+
+    let card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Tooltip").into_element(cx),
+            shadcn::CardDescription::new(
+                "Plain tooltip MVP: delay group + hover intent + safe-hover corridor + token-driven styling.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(content).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    vec![card]
 }
 
 fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
