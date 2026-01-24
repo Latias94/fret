@@ -145,6 +145,7 @@ Related ADRs:
     `dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing`, `dock_drag_hides_hover_overlays_in_affected_window`,
     `dock_drag_hides_tooltips_in_affected_window`, `dock_drag_restores_focus_when_focus_is_missing_on_drag_end`,
     `dock_drag_cross_window_hides_overlays_in_source_and_current_window`,
+    `dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_window`,
     `dock_drag_cross_window_closes_dismissible_popovers_in_source_and_current_window`),
   - docking drag + overlay hygiene (ADR 0072 edges),
   - viewport tool capture vs hover overlays/tooltips (ADR 0049 follow-up).
