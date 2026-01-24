@@ -47,8 +47,9 @@ Each TODO is labeled:
 - [x] OVERLAY-reg-010 Add a “menu stack” scripted scenario (submenu hover + outside press + focus handoff).
   - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json`, `apps/fretboard/src/diag.rs`
   - Notes: validates submenu opens on hover and that an outside press dismisses overlays and focuses the underlying target.
-- [ ] OVERLAY-reg-011 Add a “nested popover + dialog” scripted scenario (focus trap + escape + underlay).
-  - Touches: `tools/diag-scripts/*`, `apps/fretboard/src/diag.rs`
+- [x] OVERLAY-reg-011 Add a “nested popover + dialog” scripted scenario (focus trap + escape + underlay).
+  - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json`, `apps/fretboard/src/diag.rs`
+  - Notes: opens a dialog from inside a popover, asserts modal barrier blocks underlay, then verifies escape focus restore to the popover trigger.
 - [ ] OVERLAY-reg-012 Add a “portal geometry” scenario (floating placement + viewport clamp + scroll/resize).
   - Touches: `crates/fret-ui/src/overlay_placement/*`, `tools/diag-scripts/*`
 - [x] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.

@@ -2523,14 +2523,24 @@ fn preview_overlay(
                             .into_element(cx)
                     },
                     |cx| {
+                        let open_dialog = shadcn::Button::new("Open dialog")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-popover-dialog-trigger")
+                            .toggle_model(dialog_open.clone())
+                            .into_element(cx);
+
                         let close = shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
                             .test_id("ui-gallery-popover-close")
                             .toggle_model(popover_open.clone())
                             .into_element(cx);
 
-                        shadcn::PopoverContent::new(vec![cx.text("Popover content"), close])
-                            .into_element(cx)
+                        shadcn::PopoverContent::new(vec![
+                            cx.text("Popover content"),
+                            open_dialog,
+                            close,
+                        ])
+                        .into_element(cx)
                     },
                 );
 
