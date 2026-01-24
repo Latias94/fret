@@ -317,7 +317,6 @@ where
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         let mut stale_elements: Vec<GlobalElementId> = Vec::new();
         let mut reachable_from_root: Option<HashSet<NodeId>> = None;
-        let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -340,9 +339,6 @@ where
             let reachable =
                 reachable_from_root.get_or_insert_with(|| collect_reachable_nodes(ui, root_node));
             if reachable.contains(&entry.node) {
-                return true;
-            }
-            if view_cache_has_reuse_roots {
                 return true;
             }
             stale_nodes.push(entry.node);
@@ -551,7 +547,6 @@ where
         let mut stale_nodes: Vec<NodeId> = Vec::new();
         let mut stale_elements: Vec<GlobalElementId> = Vec::new();
         let mut reachable_from_root: Option<HashSet<NodeId>> = None;
-        let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -576,9 +571,6 @@ where
             let reachable =
                 reachable_from_root.get_or_insert_with(|| collect_reachable_nodes(ui, root_node));
             if reachable.contains(&entry.node) {
-                return true;
-            }
-            if view_cache_has_reuse_roots {
                 return true;
             }
             stale_nodes.push(entry.node);
