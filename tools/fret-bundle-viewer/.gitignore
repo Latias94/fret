@@ -3,9 +3,13 @@
 # dependencies
 /node_modules
 
-# next.js
+# legacy next.js outputs (kept ignored to avoid stale artifacts)
 /.next/
 /out/
+
+# build outputs
+/dist/
+/.vite/
 
 # production
 /build
