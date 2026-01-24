@@ -102,6 +102,7 @@ Examples:
   fretboard diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --check-overlay-synthesis-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release
+  fretboard diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json
   fretboard dev native --hotpatch-devserver ws://127.0.0.1:8080/_dioxus
   fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx

@@ -468,6 +468,7 @@ Notes:
 - Requires `--launch` so the runner can control `FRET_UI_GALLERY_VIEW_CACHE` (0 vs 1) per run.
 - Writes bundles under `--dir/uncached` and `--dir/cached`, then compares each script pair via `diag compare` semantics.
 - Default reuse gate is `--check-view-cache-reuse-min 1` (pass `--check-view-cache-reuse-min 0` to disable the gate).
+- If `--env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1` is set, the matrix run also defaults to `--check-overlay-synthesis-min 1` for the cached variant (pass `--check-overlay-synthesis-min 0` to disable).
 
 ### Bundle comparison (cached vs uncached)
 

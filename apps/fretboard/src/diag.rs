@@ -1098,10 +1098,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             };
 
             // In matrix mode, treat `--check-overlay-synthesis-min 0` as “disabled”.
+            //
+            // Default behavior:
+            //
+            // - If the caller enables shell reuse (`FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`), also
+            //   enable a minimal overlay synthesis gate by default. This helps ensure the
+            //   cached-synthesis seam is actually exercised (rather than “view cache enabled but
+            //   overlay producers always rerendered”).
+            // - Otherwise, leave the gate off by default to avoid forcing overlay-specific
+            //   assumptions onto non-overlay scripts (e.g. virtual-list torture).
+            let shell_reuse_enabled = launch_env.iter().any(|(k, v)| {
+                (k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                    && !v.trim().is_empty()
+                    && (v.as_str() != "0")
+            });
             let overlay_synthesis_gate = match check_overlay_synthesis_min {
                 Some(0) => None,
                 Some(v) => Some(v),
-                None => None,
+                None => shell_reuse_enabled.then_some(1),
             };
 
             let uncached_out_dir = resolved_out_dir.join("uncached");
