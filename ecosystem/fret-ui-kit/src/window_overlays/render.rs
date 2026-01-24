@@ -906,14 +906,15 @@ pub fn render<H: UiHost>(
         seen_hover_overlays.insert(req.id);
         let interactive = req.interactive;
 
-        let root = fret_ui::declarative::render_root(
+        let children = req.children;
+        let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
             services,
             window,
             bounds,
             &req.root_name,
-            |_cx| req.children,
+            |_cx| children,
         );
 
         let key = (window, req.id);
