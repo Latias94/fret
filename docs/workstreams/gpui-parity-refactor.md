@@ -228,7 +228,8 @@ Concrete alignment targets (beyond VirtualList):
   - caret blink + selection highlights in text/code views,
   - scrollbars and drag/drop indicators.
   - Harness: UI Gallery `PAGE_CHROME_TORTURE` + `tools/diag-scripts/ui-gallery-chrome-torture.json`.
-  - Pattern: prefer pointer-hook `invalidate(Paint)` + `request_redraw` when only visuals change, and reserve `notify()` for structural/state changes that must rerender.
+  - Pattern: prefer pointer-hook `invalidate(Paint)` and schedule frames via `request_animation_frame_paint_only()` when
+    only visuals change; reserve `notify()` (or `request_animation_frame()`) for structural/state changes that must rerender.
 
 What should be “per-frame rebuilt” (and where):
 

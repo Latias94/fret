@@ -25,6 +25,9 @@ These defaults are intentionally “cache-root-first” to maximize performance 
   to the window root.
 - `request_animation_frame()` requested from within a view implies `notify()` for the nearest cache root on the next
   tick (GPUI-aligned), so view-cache reuse cannot replay stale output indefinitely during animations.
+- A paint-only variant (e.g. `request_animation_frame_paint_only()`) MAY be used for chrome-only loops under view-cache
+  reuse (hover/focus/selection/caret/drag indicators): it schedules a frame without marking the view dirty and should
+  be paired with paint invalidation.
 - Dirty cache roots propagate to ancestor cache roots (nested boundaries must not replay stale ranges).
 - `request_animation_frame()` parity note: implemented as `request_animation_frame() -> (next tick) notify(nearest cache root)`
   (see `GPUI-MVP2-rt-003` evidence below).
@@ -411,6 +414,10 @@ topics (if/when we implement them):
         `target/fret-diag-perf-vlist-window-boundary-sticky2/1769177002575-script-step-0027-wheel/bundle.json`.
     - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell/1769174146628-script-step-0027-wheel/bundle.json`
       - Takeaway: the boundary tick remains layout-dominated even without measurement, so the dominant cost is rebuilding/layouting the row subtree, not measuring it.
+  - Next (v2 direction; ADR 0190):
+    - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
+    - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
+    - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that still force a cache-root rerender in cache+shell mode.
 
 - [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
   - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
