@@ -31,6 +31,12 @@ pub(crate) fn apply_selectable_text_command(
     state: &mut SelectableTextState,
     command: &str,
 ) -> SelectableTextCommandOutcome {
+    let command = match command {
+        "edit.copy" => "text.copy",
+        "edit.select_all" => "text.select_all",
+        other => other,
+    };
+
     state.caret = utf8::clamp_to_char_boundary(text, state.caret);
     state.selection_anchor = utf8::clamp_to_char_boundary(text, state.selection_anchor);
     state.dragging = false;
