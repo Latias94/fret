@@ -16,6 +16,53 @@ Coverage snapshot (time of writing):
 
 - shadcn-web `v4/new-york-v4`: `236/448` keys referenced (`52.7%`)
 
+## Executive summary (current status + next targets)
+
+This audit intentionally separates “breadth coverage” (what is gated at all) from “depth conformance”
+(how close we are to upstream across all variants, viewports, DPIs, and font metrics).
+
+### What is currently high-signal (already gated somewhere)
+
+These areas have multiple geometry + overlay placement/chrome gates and tend to catch regressions early:
+
+- **Menus / listboxes**: `DropdownMenu`, `Select`, `Menubar` (panel chrome, placement, constrained viewport
+  max-height behavior, and menu row height as a styling outcome).
+- **Sidebar blocks**: sidebar menu-button heights (including the “collapsed overrides size” rule), and a dialog
+  portal placement gate for `sidebar-13` (`*.open.json`).
+- **Calendar (single-month variants)**: day grid geometry + ARIA label strings; outside-days + week number
+  behaviors that are easy to drift when refactoring.
+- **Typography / Progress**: focused paint/geometry gates for high-leverage styling primitives.
+
+These gates do **not** imply full parity; they are simply the most effective early tripwires we have so far.
+
+### Largest remaining gaps (by golden family)
+
+From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
+
+- `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
+- `form` (19 variants): field composition + validation chrome + error state tokens.
+- `calendar` (18 variants): mostly multi-month and special modes (see below).
+- `typography` (13 variants): prose defaults + text metric edge cases.
+- `carousel` (6 variants): layout + snapping + spacing.
+
+### Recommended next alignment targets (P0 order)
+
+1. **Calendar multi-month (`numberOfMonths=2`) parity**
+   - Blocks: `calendar-02`, `calendar-05`, `calendar-07`, `calendar-09`, `calendar-11`, `calendar-12`.
+   - Expected work: render multiple month grids, keep shared `nav` positioning aligned (absolute nav over the
+     months container), and preserve `--cell-size`-driven sizing.
+2. **Calendar multiple selection parity**
+   - Block: `calendar-03` (`mode="multiple"`, `max`, `required`) — requires a distinct selection model.
+3. **Forms / Field validation chrome**
+   - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
+4. **Carousel**
+   - Add a default gate first, then a constrained viewport gate if the layout policy changes.
+5. **Typography breadth**
+   - Gate remaining typography pages that are sensitive to font metrics and baseline rounding.
+
+When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
+second wave (because we can keep the matrix small and stable).
+
 ## How to validate
 
 - Run the component gallery: `cargo run -p fret-demo --bin components_gallery`

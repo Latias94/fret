@@ -15,6 +15,13 @@ Related trackers:
 - Cross-repo priorities: `docs/roadmap.md`, `docs/todo-tracker.md`
 - Web conformance harness: `docs/shadcn-web-goldens.md`, `docs/audits/shadcn-web-layout-conformance.md`
 - new-york-v4 coverage snapshot: `docs/audits/shadcn-new-york-v4-coverage.md`
+- new-york-v4 alignment notes: `docs/audits/shadcn-new-york-v4-alignment.md`
+
+Current golden parity snapshot (new-york-v4):
+
+- Keys referenced by tests: `236/448` (`52.7%`)
+- Next P0 gaps: calendar multi-month (`calendar-02/05/07/09/11/12`), calendar multiple selection (`calendar-03`),
+  then forms/field validation chrome and carousel.
 
 ## Scope
 

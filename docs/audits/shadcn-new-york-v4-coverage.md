@@ -79,13 +79,20 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## What to do next (recommended order)
 
-1. **Gate missing primitives-heavy widgets** first (high churn risk): Calendar, Carousel, etc.
-2. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
-3. **Add constrained viewport variants** for overlay-like components (if not already gated):
+1. **Gate missing primitives-heavy widgets** first (high churn risk):
+   - Calendar multi-month (`numberOfMonths=2`): `calendar-02/05/07/09/11/12`
+   - Calendar multiple selection: `calendar-03`
+2. **Gate missing form composition + validation chrome** (high leverage):
+   - `form-*` and any remaining `field-*` / `input-*` invalid variants
+3. **Gate missing medium-surface components** next:
+   - Carousel (`carousel-*`)
+   - Typography breadth (`typography-*`)
+4. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
+5. **Add constrained viewport variants** for overlay-like components (if not already gated):
    - menus: height/width clamp + scroll buttons
    - popovers/tooltips: flip/shift under low height
    - dialogs/sheets: insets under low height/width
-4. Keep `docs/audits/shadcn-new-york-v4-alignment.md` updated as behavior becomes audited (add
+6. Keep `docs/audits/shadcn-new-york-v4-alignment.md` updated as behavior becomes audited (add
    “Conformance gates” anchors and “Known gaps” notes).
 
 ## Common “coverage smells”
