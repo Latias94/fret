@@ -12,6 +12,7 @@ pub mod dropdown_menu;
 mod foundation;
 pub mod icon_button;
 pub mod interaction;
+pub mod list;
 pub mod menu;
 pub mod modal_navigation_drawer;
 pub mod motion;
@@ -32,6 +33,7 @@ pub use checkbox::Checkbox;
 pub use dialog::{Dialog, DialogAction};
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
 pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
+pub use list::{List, ListItem};
 pub use menu::{Menu, MenuEntry, MenuItem};
 pub use modal_navigation_drawer::ModalNavigationDrawer;
 pub use navigation_bar::{NavigationBar, NavigationBarItem};
@@ -84,6 +86,7 @@ mod tests {
             include_str!("dialog.rs"),
             include_str!("dropdown_menu.rs"),
             include_str!("icon_button.rs"),
+            include_str!("list.rs"),
             include_str!("menu.rs"),
             include_str!("modal_navigation_drawer.rs"),
             include_str!("navigation_bar.rs"),
@@ -137,6 +140,7 @@ mod tests {
             ("navigation_rail.rs", include_str!("navigation_rail.rs")),
             ("navigation_drawer.rs", include_str!("navigation_drawer.rs")),
             ("menu.rs", include_str!("menu.rs")),
+            ("list.rs", include_str!("list.rs")),
         ];
 
         for (file, src) in sources {

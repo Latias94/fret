@@ -308,7 +308,11 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_menu_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_menu`),
     `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_MENU`).
-- [ ] List (standalone primitive; icons/selection density; shared with menu)
+- [x] List (MVP: roving focus + selection follows focus + state layer + bounded ripple)
+  - Evidence: `ecosystem/fret-ui-material3/src/list.rs` (`List`, `ListItem`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_list_*`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_list`),
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_LIST`).
 - [x] Dialog (MVP: modal overlay + scrim + focus trap/restore + dialog actions)
   - Evidence: `ecosystem/fret-ui-material3/src/dialog.rs` (`Dialog`, `DialogAction`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_dialog`),

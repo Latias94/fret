@@ -491,6 +491,29 @@ let menu = m3::Menu::new().entries(vec![
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_LIST: &str = r#"
+## Material 3 List (MVP)
+
+This page validates the Material 3 list surface:
+
+- token-driven list item sizing (`md.comp.list.list-item.*`)
+- selection follows focus (roving focus → model update)
+- state layer + bounded ripple aligned to item bounds
+"#;
+
+pub(crate) const USAGE_MATERIAL3_LIST: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let value = app.models_mut().insert(Arc::<str>::from("alpha"));
+let list = m3::List::new(value).items(vec![
+    m3::ListItem::new("alpha", "Alpha"),
+    m3::ListItem::new("beta", "Beta").disabled(true),
+]);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_SNACKBAR: &str = r#"
 ## Material 3 Snackbar (MVP)
 

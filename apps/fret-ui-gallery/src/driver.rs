@@ -131,6 +131,7 @@ struct UiGalleryWindowState {
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_list_value: Model<Arc<str>>,
     material3_navigation_bar_value: Model<Arc<str>>,
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
@@ -411,6 +412,7 @@ impl UiGalleryDriver {
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
         let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
+        let material3_list_value = app.models_mut().insert(Arc::<str>::from("alpha"));
         let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
         let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
         let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
@@ -527,6 +529,7 @@ impl UiGalleryDriver {
             material3_switch,
             material3_radio_value,
             material3_tabs_value,
+            material3_list_value,
             material3_navigation_bar_value,
             material3_navigation_rail_value,
             material3_navigation_drawer_value,
@@ -978,6 +981,7 @@ impl UiGalleryDriver {
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
         let material3_tabs_value = state.material3_tabs_value.clone();
+        let material3_list_value = state.material3_list_value.clone();
         let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
         let material3_navigation_rail_value = state.material3_navigation_rail_value.clone();
         let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
@@ -1353,6 +1357,7 @@ impl UiGalleryDriver {
                                             material3_switch.clone(),
                                             material3_radio_value.clone(),
                                             material3_tabs_value.clone(),
+                                            material3_list_value.clone(),
                                             material3_navigation_bar_value.clone(),
                                             material3_navigation_rail_value.clone(),
                                             material3_navigation_drawer_value.clone(),
@@ -1436,18 +1441,19 @@ impl UiGalleryDriver {
                                         switch.clone(),
                                         material3_checkbox.clone(),
                                         material3_switch.clone(),
-                                            material3_radio_value.clone(),
-                                            material3_tabs_value.clone(),
-                                            material3_navigation_bar_value.clone(),
-                                            material3_navigation_rail_value.clone(),
-                                            material3_navigation_drawer_value.clone(),
-                                            material3_modal_navigation_drawer_open.clone(),
-                                            material3_dialog_open.clone(),
-                                            material3_text_field_value.clone(),
-                                            material3_text_field_disabled.clone(),
-                                            material3_text_field_error.clone(),
-                                            material3_menu_open.clone(),
-                                            text_input.clone(),
+                                        material3_radio_value.clone(),
+                                        material3_tabs_value.clone(),
+                                        material3_list_value.clone(),
+                                        material3_navigation_bar_value.clone(),
+                                        material3_navigation_rail_value.clone(),
+                                        material3_navigation_drawer_value.clone(),
+                                        material3_modal_navigation_drawer_open.clone(),
+                                        material3_dialog_open.clone(),
+                                        material3_text_field_value.clone(),
+                                        material3_text_field_disabled.clone(),
+                                        material3_text_field_error.clone(),
+                                        material3_menu_open.clone(),
+                                        text_input.clone(),
                                         text_area.clone(),
                                         dropdown_open.clone(),
                                         context_menu_open.clone(),

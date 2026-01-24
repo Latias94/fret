@@ -223,6 +223,7 @@ pub(crate) fn content_view(
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_list_value: Model<Arc<str>>,
     material3_navigation_bar_value: Model<Arc<str>>,
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
@@ -363,6 +364,7 @@ pub(crate) fn content_view(
         material3_switch,
         material3_radio_value,
         material3_tabs_value,
+        material3_list_value,
         material3_navigation_bar_value,
         material3_navigation_rail_value,
         material3_navigation_drawer_value,
@@ -478,6 +480,7 @@ fn page_preview(
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_list_value: Model<Arc<str>>,
     material3_navigation_bar_value: Model<Arc<str>>,
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
@@ -594,6 +597,7 @@ fn page_preview(
             material3_text_field_error,
         ),
         PAGE_MATERIAL3_TABS => preview_material3_tabs(cx, material3_tabs_value),
+        PAGE_MATERIAL3_LIST => preview_material3_list(cx, material3_list_value),
         PAGE_MATERIAL3_NAVIGATION_BAR => {
             preview_material3_navigation_bar(cx, material3_navigation_bar_value)
         }
@@ -2359,6 +2363,43 @@ fn preview_material3_menu(
         cx.text("Tip: Arrow keys / Home / End navigate; type to jump by prefix; Esc/outside press closes."),
         card,
         cx.text(format!("last action: {last}")),
+    ]
+}
+
+fn preview_material3_list(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+
+    let current = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let list = material3::List::new(value)
+        .a11y_label("Material 3 List")
+        .test_id("ui-gallery-material3-list")
+        .items(vec![
+            material3::ListItem::new("alpha", "Alpha")
+                .leading_icon(ids::ui::SEARCH)
+                .a11y_label("List item alpha")
+                .test_id("ui-gallery-material3-list-item-alpha"),
+            material3::ListItem::new("beta", "Beta")
+                .leading_icon(ids::ui::SETTINGS)
+                .a11y_label("List item beta")
+                .test_id("ui-gallery-material3-list-item-beta"),
+            material3::ListItem::new("disabled", "Disabled")
+                .leading_icon(ids::ui::SLASH)
+                .disabled(true)
+                .a11y_label("List item disabled")
+                .test_id("ui-gallery-material3-list-item-disabled"),
+        ])
+        .into_element(cx);
+
+    vec![
+        cx.text("Material 3 List: roving focus (Up/Down/Home/End) + selection follows focus."),
+        list,
+        cx.text(format!("value={}", current.as_ref())),
     ]
 }
 

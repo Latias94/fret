@@ -4,7 +4,7 @@
 //! stable "inject tokens into ThemeConfig" surface. It does not attempt to mirror the
 //! `@material/web` API or DOM/Lit implementation details.
 
-use fret_core::FontId;
+use fret_core::{Corners, FontId, Px};
 use fret_ui::theme::ThemeConfig;
 use material_colors::color::Argb;
 use material_colors::dynamic_color::Variant as MaterialVariant;
@@ -119,6 +119,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_navigation_drawer_scalars(cfg);
     inject_comp_navigation_rail_scalars(cfg);
     inject_comp_menu_scalars(cfg);
+    inject_comp_list_scalars(cfg);
     inject_comp_plain_tooltip_scalars(cfg);
     inject_comp_rich_tooltip_scalars(cfg);
     inject_comp_snackbar_scalars(cfg);
@@ -284,6 +285,7 @@ pub fn theme_config_with_colors(
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
     inject_comp_navigation_rail_colors_from_sys(&mut cfg);
     inject_comp_menu_colors_from_sys(&mut cfg);
+    inject_comp_list_colors_from_sys(&mut cfg);
     inject_comp_plain_tooltip_colors_from_sys(&mut cfg);
     inject_comp_rich_tooltip_colors_from_sys(&mut cfg);
     inject_comp_snackbar_colors_from_sys(&mut cfg);
@@ -741,6 +743,13 @@ fn copy_color(cfg: &mut ThemeConfig, to_key: &str, from_key: &str) {
     cfg.colors.insert(to_key.to_string(), c);
 }
 
+fn copy_number(cfg: &mut ThemeConfig, to_key: &str, from_key: &str) {
+    let Some(v) = cfg.numbers.get(from_key).copied() else {
+        return;
+    };
+    cfg.numbers.insert(to_key.to_string(), v);
+}
+
 fn inject_comp_checkbox_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_checkbox_scalars(cfg);
 }
@@ -1157,6 +1166,50 @@ fn inject_comp_navigation_rail_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_menu_scalars(cfg);
+}
+
+fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-list.scss
+
+    cfg.metrics.insert(
+        "md.comp.list.list-item.one-line.container.height".to_string(),
+        56.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.list.list-item.two-line.container.height".to_string(),
+        72.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.list.list-item.three-line.container.height".to_string(),
+        88.0,
+    );
+
+    cfg.metrics
+        .insert("md.comp.list.list-item.leading-space".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.list.list-item.trailing-space".to_string(), 16.0);
+    cfg.metrics
+        .insert("md.comp.list.list-item.between-space".to_string(), 12.0);
+    cfg.metrics
+        .insert("md.comp.list.list-item.top-space".to_string(), 10.0);
+    cfg.metrics
+        .insert("md.comp.list.list-item.bottom-space".to_string(), 10.0);
+
+    cfg.metrics
+        .insert("md.comp.list.list-item.leading-icon.size".to_string(), 24.0);
+    cfg.metrics.insert(
+        "md.comp.list.list-item.trailing-icon.size".to_string(),
+        24.0,
+    );
+
+    cfg.corners.insert(
+        "md.comp.list.list-item.container.shape".to_string(),
+        Corners::all(Px(0.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.selected.container.shape".to_string(),
+        Corners::all(Px(0.0)),
+    );
 }
 
 fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
@@ -2102,6 +2155,209 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.menu.list-item.pressed.state-layer.color",
         "md.sys.color.on-surface",
+    );
+}
+
+fn inject_comp_list_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-list.scss
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.container.color",
+        "md.sys.color.surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.leading-icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.pressed.leading-icon.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.hover.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.focus.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.pressed.label-text.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.disabled.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.disabled.leading-icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.container.color",
+        "md.sys.color.secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.leading-icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.hover.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.focus.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.pressed.label-text.color",
+        "md.sys.color.on-secondary-container",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.focus.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.pressed.leading-icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.disabled.container.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.disabled.label-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.list.list-item.selected.disabled.leading-icon.color",
+        "md.sys.color.on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.list.focus.indicator.color",
+        "md.sys.color.secondary",
+    );
+
+    // Opacity tokens used by outcomes.
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.hover.state-layer.opacity",
+        "md.sys.state.hover.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.focus.state-layer.opacity",
+        "md.sys.state.focus.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.pressed.state-layer.opacity",
+        "md.sys.state.pressed.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.selected.hover.state-layer.opacity",
+        "md.sys.state.hover.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.selected.focus.state-layer.opacity",
+        "md.sys.state.focus.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.selected.pressed.state-layer.opacity",
+        "md.sys.state.pressed.state-layer-opacity",
+    );
+
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.disabled.label-text.opacity",
+        "md.sys.state.disabled.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.disabled.leading-icon.opacity",
+        "md.sys.state.disabled.state-layer-opacity",
+    );
+
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.selected.disabled.label-text.opacity",
+        "md.sys.state.disabled.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.selected.disabled.leading-icon.opacity",
+        "md.sys.state.disabled.state-layer-opacity",
+    );
+    copy_number(
+        cfg,
+        "md.comp.list.list-item.selected.disabled.container.opacity",
+        "md.sys.state.disabled.state-layer-opacity",
     );
 }
 
