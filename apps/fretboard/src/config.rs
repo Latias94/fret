@@ -57,9 +57,9 @@ fn menubar_cmd(args: Vec<String>) -> Result<(), String> {
                 "items": [
                     { "type": "command", "command": "app.command_palette" },
                     { "type": "separator" },
-                    { "type": "command", "command": "text.copy" },
-                    { "type": "command", "command": "text.paste" },
-                    { "type": "command", "command": "text.select_all" }
+                    { "type": "command", "command": "edit.copy" },
+                    { "type": "command", "command": "edit.paste" },
+                    { "type": "command", "command": "edit.select_all" }
                 ]
             }
         ]
