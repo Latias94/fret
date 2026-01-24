@@ -121,6 +121,8 @@ That keeps runner/menus/palette gating consistent even as the internal authoring
 
 See the TODO tracker for current status and evidence: `docs/workstreams/input-dispatch-v2-todo.md`.
 
+Overlay arbitration follow-ups are tracked separately in `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`.
+
 1) Lock the tri-state semantics in docs and tests (availability snapshot uses `None` for unknown).
 2) Ensure command palette gating uses `WindowCommandGatingSnapshot` consistently across all entry builders.
 3) Promote a single “frozen gating snapshot while overlay is open” pattern that other overlays can reuse.
