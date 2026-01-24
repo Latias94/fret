@@ -12,6 +12,10 @@ For coverage status (what is gated vs only has goldens), see:
 
 - `docs/audits/shadcn-new-york-v4-coverage.md`
 
+Coverage snapshot (time of writing):
+
+- shadcn-web `v4/new-york-v4`: `220/448` keys referenced (`49.1%`)
+
 ## How to validate
 
 - Run the component gallery: `cargo run -p fret-demo --bin components_gallery`
@@ -31,6 +35,22 @@ Recommended minimal viewport matrix:
   regressions that are styling outcomes (padding/border/row heights).
 
 This keeps the test suite tractable while still guarding the highest-risk geometry behaviors early.
+
+## DPI / font metrics strategy
+
+We treat DPI and font metrics variance as a second dimension (orthogonal to viewport size):
+
+- Viewport variants (width/height constraints) catch **layout policy** bugs (clamp/flip/max-height,
+  scroll buttons, truncation, `justify-between` slot behavior).
+- DPI and font variance catch **measurement + baseline** bugs (text ascent/descent, icon centering,
+  "1px off" rounding drift) that can pass at one scale but fail at another.
+
+Current policy:
+
+- Keep the golden gate matrix small while we are still filling breadth.
+- For high-risk pages (menus, listboxes, calendars, typography), run spot checks at a few DPIs and
+  a "weird metrics" font during alignment work, then add targeted gates only when we can keep them
+  stable and deterministic.
 
 ## Infra notes (golden + scroll + paint cache)
 

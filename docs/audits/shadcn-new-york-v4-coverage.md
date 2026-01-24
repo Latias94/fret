@@ -47,12 +47,26 @@ At the time of writing, the largest missing groups were:
 - `sidebar` (16; layout + scroll behavior; often depends on menu primitives)
 - `typography` (13; baseline text metrics and prose defaults)
 
+The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were:
+
+- `button` (25)
+- `navigation` (17)
+- `input` (17)
+- `calendar` (16)
+- `toggle` (13)
+- `dropdown` (10)
+- `scroll` (10)
+- `sheet` (10)
+- `breadcrumb` (9)
+- `menubar` (9)
+
 Recompute locally:
 
 ```powershell
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowMissing -TopMissing 50
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowUsed
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -GroupUsedByPrefix -TopGroups 20
 ```
 
 To drill into a specific family:
