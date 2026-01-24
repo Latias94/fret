@@ -22,7 +22,9 @@ use fret_ui::{Invalidation, Theme, UiHost};
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::motion::SpringAnimator;
 
 #[derive(Debug, Clone)]
 pub struct TabItem {
@@ -430,7 +432,7 @@ fn material_primary_tab<H: UiHost>(
                     indication.want_frames,
                 );
                 let label_el = primary_tab_label(cx, theme, &label, label_color);
-                let indicator = primary_tab_indicator(cx, theme, selected);
+                let indicator = primary_tab_indicator(cx, theme, pressable_id, now_frame, selected);
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
@@ -441,7 +443,7 @@ fn material_primary_tab<H: UiHost>(
                 row.align = CrossAlign::Center;
                 row.padding = Edges::all(Px(0.0));
 
-                vec![cx.flex(row, move |_cx| vec![ink, label_el, indicator.clone()])]
+                vec![cx.flex(row, move |_cx| vec![indicator.clone(), ink, label_el])]
             })
         });
 
@@ -470,9 +472,11 @@ fn primary_tab_label<H: UiHost>(
 fn primary_tab_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    pressable_id: fret_ui::elements::GlobalElementId,
+    now_frame: u64,
     active: bool,
 ) -> AnyElement {
-    let height = if active {
+    let target_height = if active {
         theme
             .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
             .unwrap_or(Px(3.0))
@@ -496,15 +500,52 @@ fn primary_tab_indicator<H: UiHost>(
             bottom_left: Px(0.0),
         });
 
-    let mut props = fret_ui::element::ContainerProps::default();
+    #[derive(Debug, Default, Clone)]
+    struct TabIndicatorRuntime {
+        spring: SpringAnimator,
+    }
+
+    let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+    let (height, want_frames) =
+        cx.with_state_for(pressable_id, TabIndicatorRuntime::default, |rt| {
+            if !rt.spring.is_initialized() {
+                rt.spring.reset(now_frame, target_height.0);
+            }
+            rt.spring.set_target(now_frame, target_height.0, spring);
+            rt.spring.advance(now_frame);
+            (Px(rt.spring.value()), rt.spring.is_active())
+        });
+
+    let mut props = fret_ui::element::CanvasProps::default();
     props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.left = Some(Px(0.0));
+    props.layout.inset.top = Some(Px(0.0));
     props.layout.inset.right = Some(Px(0.0));
     props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.size.height = Length::Px(height);
-    props.background = Some(color);
-    props.corner_radii = corner_radii;
-    cx.container(props, |_cx| vec![])
+    props.layout.inset.left = Some(Px(0.0));
+
+    cx.canvas(props, move |p| {
+        if height.0 > 0.0 && color.a > 0.0 {
+            let bounds = p.bounds();
+            let top = Px(bounds.origin.y.0 + bounds.size.height.0 - height.0);
+            let rect = fret_core::Rect::new(
+                fret_core::Point::new(bounds.origin.x, top),
+                fret_core::Size::new(bounds.size.width, height),
+            );
+
+            fret_ui::paint::paint_state_layer(
+                p.scene(),
+                fret_core::DrawOrder(0),
+                rect,
+                color,
+                1.0,
+                corner_radii,
+            );
+        }
+
+        if want_frames {
+            p.request_animation_frame();
+        }
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

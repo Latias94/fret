@@ -133,6 +133,7 @@ Current progress:
   token reader for the 6 canonical specs.
 - `Button` and `IconButton` pressed shape now uses the spring path (corner radius morph), which acts as a
   conformance probe for MotionScheme plumbing.
+- `Tabs` active indicator height now animates via the same spring substrate (instead of snapping 0↔height).
 
 ### Tokens (typed access vs string keys)
 
