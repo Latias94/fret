@@ -202,6 +202,31 @@ Examples:
 - command routing invariants,
 - token resolution fallback behavior.
 
+## 9) Interactivity pseudoclasses (hover/focus/pressed): keep structure stable
+
+Rule of thumb: treat `:hover`, `:focus`, `:focus-visible`, and `:active` as **style inputs**, not as
+"different trees".
+
+Why this matters:
+
+- It keeps hover/focus chrome paint-only by default (better cache reuse and fewer layout invalidations).
+- It avoids flicker and “feels random” regressions when view-cache reuse skips subtree execution.
+
+Practical guidance:
+
+- Do not add/remove nodes on hover/focus/pressed. Keep the subtree shape stable.
+- Reserve space for transient chrome (toolbars, affordances) and fade it in/out via `Opacity` instead of
+  inserting/removing elements.
+- Use `InteractivityGate` to make closing overlays or transitioning surfaces pointer-transparent without
+  unmounting them.
+- If a pseudoclass edge must change intrinsic size, treat it as an explicit opt-in and document why (layout
+  invalidation should be a conscious trade-off, not an accident).
+
+Contract references:
+
+- ADR 0181: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
+- View-cache semantics: `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
+
 ## References
 
 - Component ecosystem conventions: `docs/adr/0163-component-ecosystem-authoring-conventions-v1.md`

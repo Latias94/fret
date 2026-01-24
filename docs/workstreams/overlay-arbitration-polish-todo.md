@@ -1,6 +1,6 @@
 # Overlay Arbitration Polish — TODO Tracker
 
-Status: Active (workstream tracker; keep updated during refactors)
+Status: Complete (v1; keep this tracker updated if new overlay/arbitration gaps are discovered)
 
 This tracker focuses on the “editor-grade UI feel” gaps around overlays/portals (menus, popovers, dialogs),
 their lifecycle, and input arbitration — especially under view-cache reuse.

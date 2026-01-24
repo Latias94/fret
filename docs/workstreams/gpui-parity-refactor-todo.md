@@ -47,6 +47,7 @@ Keep this list short and evidence-backed:
   - Notes: conformance includes modal overlay barrier gating under view-cache reuse.
 - Diagnostics + scripted interaction runner exists (foundation for regression harnesses):
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`.
+  - Notes: `diag matrix ui-gallery` runs cached vs uncached variants per script and can gate on view-cache reuse and overlay cached-synthesis. Evidence: `tools/diag_matrix_ui_gallery.ps1`, `docs/ui-diagnostics-and-scripted-tests.md`.
 - Cache-root and paint-cache counters are exposed in the UI gallery driver:
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (cache roots and paint cache stats).
 
@@ -104,20 +105,18 @@ Goal: make hover/focus/pressed “cheap by default” and stop subtree shape thr
   - Start with: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, `ecosystem/fret-ui-shadcn/src/*scroll*`
   - Done when: no hover-driven `set_children` churn in these components (verified via diagnostics + manual UX sanity).
   - Evidence: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
-- [ ] GPUI-MVP1-eco-003 Write “pseudoclass rules of thumb” for component authors.
-  - Touches: `docs/component-author-guide.md` or a dedicated addendum under `docs/workstreams/`
-  - Done when: the guidance includes examples for scrollbar fade, hover toolbars, and focus rings without layout shifts.
+- [x] GPUI-MVP1-eco-003 Write “pseudoclass rules of thumb” for component authors.
+  - Evidence: `docs/component-author-guide.md` (Interactivity pseudoclasses section)
 
 ## MVP2 — Dirty Views + `notify` (GPUI-Aligned Invalidation)
 
 Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental model (ADR 0180).
 
-- [~] GPUI-MVP2-rt-001 Define `ViewId` and `notify` API shape at the `fret-ui` / `fret-app` boundary.
-  - Touches: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements/*`, `crates/fret-app/src/app.rs`
+- [x] GPUI-MVP2-rt-001 Define `ViewId` and `notify` API shape at the `fret-ui` / `fret-app` boundary.
+  - Touches: `crates/fret-core/src/ids.rs`, `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/tree/*`
   - Reference: `repo-ref/zed/crates/gpui/src/window.rs` (`WindowInvalidator`, `dirty_views`)
-  - Progress: `EventCx::notify()` exists and marks the nearest cache root as `view_cache_needs_rerender` via a dedicated invalidation source.
-  - Evidence: `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationSource::Notify`),
-    `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_notify_marks_cache_root_needs_rerender`).
+  - Evidence: `crates/fret-core/src/ids.rs` (`ViewId`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/dispatch.rs` (notify targets the current view),
+    `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationSource::Notify`, `debug_dirty_views`), `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_notify_marks_cache_root_needs_rerender`).
 - [x] GPUI-MVP2-rt-002 Track per-window dirty view set and coalesce redraw scheduling.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, runner glue in `crates/fret-launch/` if needed
   - Done when: repeated `notify` calls are coalesced; diagnostics can list dirty views (debug-only).
