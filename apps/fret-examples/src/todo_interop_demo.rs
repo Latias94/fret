@@ -11,7 +11,7 @@ use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, AnyElementIterExt as _, ContainerProps, FlexProps, LayoutStyle, Length,
 };
-use fret_ui::{Invalidation, Theme, UiFrameCx, UiTree};
+use fret_ui::{Theme, UiFrameCx, UiTree};
 use fret_ui_kit::declarative as kit_decl;
 use fret_ui_kit::prelude::*;
 use fret_ui_shadcn as shadcn;
@@ -158,12 +158,10 @@ impl TodoInteropDriver {
         let ui = &mut state.ui;
         let root = declarative::RenderRootContext::new(ui, app, services, window, bounds)
             .render_root("todo-interop", |cx| {
-                cx.observe_global::<ExternalViewportStubState>(Invalidation::Paint);
-
                 let theme = Theme::global(&*cx.app).clone();
                 let ext = cx
-                    .app
-                    .global::<ExternalViewportStubState>()
+                    .watch_global::<ExternalViewportStubState>()
+                    .paint()
                     .cloned()
                     .unwrap_or_default();
 
