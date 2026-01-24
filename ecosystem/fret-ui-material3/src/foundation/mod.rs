@@ -3,10 +3,12 @@
 //! This module exists to reduce per-component divergence by centralizing:
 //! - token resolution conventions (Material-only fallbacks),
 //! - interaction-driven ink (state layer + ripple),
+//! - tree-local overrides (content defaults, ripple configuration),
 //! - shared geometry helpers (ripple origin / max radius),
 //! - shared focus-ring style defaults.
 
 pub mod content;
+pub mod context;
 pub mod focus_ring;
 pub mod geometry;
 pub mod indication;

@@ -1,0 +1,216 @@
+//! Tree-local Material 3 overrides.
+//!
+//! Compose Material3 uses composition locals for theme-scoped overrides (`LocalContentColor`,
+//! `LocalRippleConfiguration`, `LocalMotionScheme`, ...). Fret does not require a dedicated runtime
+//! context system to model this outcome: `ElementContext::inherited_state_where` + `with_state`
+//! provides a lightweight provider pattern.
+
+#![allow(dead_code)]
+
+use fret_core::Color;
+use fret_ui::UiHost;
+use fret_ui::elements::ElementContext;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MaterialContentColor {
+    /// Mask any inherited content color and fall back to component defaults.
+    UseDefault,
+    /// Override content color for the subtree.
+    Custom(Color),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MaterialRippleConfiguration {
+    /// Mask any inherited ripple configuration and fall back to component defaults.
+    UseDefault,
+    /// Disable ripples for the subtree.
+    Disabled,
+    /// Override ripple appearance for the subtree.
+    Custom {
+        color: Option<Color>,
+        base_opacity: Option<f32>,
+    },
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct MaterialContextState {
+    content_color: Option<MaterialContentColor>,
+    ripple: Option<MaterialRippleConfiguration>,
+}
+
+pub fn inherited_content_color_policy<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<MaterialContentColor> {
+    cx.inherited_state_where::<MaterialContextState>(|st| st.content_color.is_some())
+        .and_then(|st| st.content_color)
+}
+
+pub fn inherited_content_color<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Color> {
+    match inherited_content_color_policy(cx)? {
+        MaterialContentColor::UseDefault => None,
+        MaterialContentColor::Custom(color) => Some(color),
+    }
+}
+
+pub fn inherited_ripple_configuration<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<MaterialRippleConfiguration> {
+    cx.inherited_state_where::<MaterialContextState>(|st| st.ripple.is_some())
+        .and_then(|st| st.ripple)
+}
+
+#[track_caller]
+pub fn with_material_content_color<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    color: Color,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_content_color_policy(cx, MaterialContentColor::Custom(color), f)
+}
+
+#[track_caller]
+pub fn with_default_material_content_color<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_content_color_policy(cx, MaterialContentColor::UseDefault, f)
+}
+
+#[track_caller]
+pub fn with_material_content_color_policy<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    policy: MaterialContentColor,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MaterialContextState::default, |st| {
+        let prev = st.content_color;
+        st.content_color = Some(policy);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MaterialContextState::default, |st| {
+        st.content_color = prev;
+    });
+    out
+}
+
+#[track_caller]
+pub fn with_material_ripple_configuration<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    config: MaterialRippleConfiguration,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MaterialContextState::default, |st| {
+        let prev = st.ripple;
+        st.ripple = Some(config);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MaterialContextState::default, |st| {
+        st.ripple = prev;
+    });
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::elements::with_element_cx;
+
+    fn bounds() -> Rect {
+        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)))
+    }
+
+    #[test]
+    fn content_color_inherits_masks_and_restores() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let red = Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+        let blue = Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        };
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-context-content-color",
+            |cx| {
+                assert_eq!(inherited_content_color_policy(cx), None);
+                assert_eq!(inherited_content_color(cx), None);
+
+                with_material_content_color(cx, red, |cx| {
+                    assert_eq!(
+                        inherited_content_color_policy(cx),
+                        Some(MaterialContentColor::Custom(red))
+                    );
+                    assert_eq!(inherited_content_color(cx), Some(red));
+
+                    with_default_material_content_color(cx, |cx| {
+                        assert_eq!(
+                            inherited_content_color_policy(cx),
+                            Some(MaterialContentColor::UseDefault)
+                        );
+                        assert_eq!(inherited_content_color(cx), None);
+                    });
+
+                    assert_eq!(inherited_content_color(cx), Some(red));
+
+                    with_material_content_color(cx, blue, |cx| {
+                        assert_eq!(inherited_content_color(cx), Some(blue));
+                    });
+
+                    assert_eq!(inherited_content_color(cx), Some(red));
+                });
+
+                assert_eq!(inherited_content_color(cx), None);
+            },
+        );
+    }
+
+    #[test]
+    fn ripple_configuration_inherits_masks_and_restores() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-context-ripple", |cx| {
+            assert_eq!(inherited_ripple_configuration(cx), None);
+
+            with_material_ripple_configuration(cx, MaterialRippleConfiguration::Disabled, |cx| {
+                assert_eq!(
+                    inherited_ripple_configuration(cx),
+                    Some(MaterialRippleConfiguration::Disabled)
+                );
+
+                with_material_ripple_configuration(
+                    cx,
+                    MaterialRippleConfiguration::UseDefault,
+                    |cx| {
+                        assert_eq!(
+                            inherited_ripple_configuration(cx),
+                            Some(MaterialRippleConfiguration::UseDefault)
+                        );
+                    },
+                );
+
+                assert_eq!(
+                    inherited_ripple_configuration(cx),
+                    Some(MaterialRippleConfiguration::Disabled)
+                );
+            });
+
+            assert_eq!(inherited_ripple_configuration(cx), None);
+        });
+    }
+}

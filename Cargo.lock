@@ -1545,6 +1545,7 @@ dependencies = [
 name = "fret-ui-material3"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
  "fret-core",
  "fret-icons",
  "fret-runtime",

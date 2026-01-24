@@ -4,6 +4,7 @@ use fret_ui::element::{AnyElement, CanvasProps};
 use fret_ui::elements::ElementContext;
 use fret_ui::theme::CubicBezier;
 
+use crate::foundation::context::{MaterialRippleConfiguration, inherited_ripple_configuration};
 use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
 use crate::interaction::state_layer::StateLayerAnimator;
 
@@ -59,6 +60,25 @@ pub fn advance_indication_for_pressable<H: UiHost>(
 ) -> IndicationFrame {
     use crate::foundation::geometry::{down_origin_local, ripple_max_radius};
 
+    let ripple_config = inherited_ripple_configuration(cx);
+    let mut ripple_enabled = true;
+    let mut ripple_base_opacity = ripple_base_opacity;
+    match ripple_config {
+        Some(MaterialRippleConfiguration::Disabled) => ripple_enabled = false,
+        Some(MaterialRippleConfiguration::Custom {
+            base_opacity: Some(base_opacity),
+            ..
+        }) => {
+            ripple_base_opacity = base_opacity;
+            ripple_enabled = base_opacity > 0.0;
+        }
+        Some(MaterialRippleConfiguration::UseDefault)
+        | Some(MaterialRippleConfiguration::Custom {
+            base_opacity: None, ..
+        })
+        | None => {}
+    }
+
     cx.with_state_for(pressable_id, IndicationRuntime::default, |rt| {
         if (state_layer_target - rt.state_target).abs() > 1e-6 {
             rt.state_target = state_layer_target;
@@ -71,9 +91,13 @@ pub fn advance_indication_for_pressable<H: UiHost>(
         }
         rt.state_layer.advance(now_frame);
 
+        if !ripple_enabled {
+            rt.ripple = RippleAnimator::default();
+        }
+
         let pressed_rising = pressed && !rt.prev_pressed;
         rt.prev_pressed = pressed;
-        if pressed_rising {
+        if pressed_rising && ripple_enabled {
             let origin = down_origin_local(bounds, last_down);
             let max_radius = ripple_max_radius(bounds, origin);
             rt.ripple.start(
@@ -86,7 +110,9 @@ pub fn advance_indication_for_pressable<H: UiHost>(
             );
         }
 
-        let ripple_frame = rt.ripple.advance(now_frame, ripple_base_opacity);
+        let ripple_frame = ripple_enabled
+            .then(|| rt.ripple.advance(now_frame, ripple_base_opacity))
+            .flatten();
         let want_frames = rt.state_layer.is_active() || rt.ripple.is_active();
 
         IndicationFrame {
@@ -111,6 +137,25 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
 ) -> IndicationFrame {
     use crate::foundation::geometry::{down_origin_local, ripple_max_radius};
 
+    let ripple_config = inherited_ripple_configuration(cx);
+    let mut ripple_enabled = true;
+    let mut ripple_base_opacity = ripple_base_opacity;
+    match ripple_config {
+        Some(MaterialRippleConfiguration::Disabled) => ripple_enabled = false,
+        Some(MaterialRippleConfiguration::Custom {
+            base_opacity: Some(base_opacity),
+            ..
+        }) => {
+            ripple_base_opacity = base_opacity;
+            ripple_enabled = base_opacity > 0.0;
+        }
+        Some(MaterialRippleConfiguration::UseDefault)
+        | Some(MaterialRippleConfiguration::Custom {
+            base_opacity: None, ..
+        })
+        | None => {}
+    }
+
     cx.with_state_for(pressable_id, IndicationRuntime::default, |rt| {
         if (state_layer_target - rt.state_target).abs() > 1e-6 {
             rt.state_target = state_layer_target;
@@ -123,9 +168,13 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
         }
         rt.state_layer.advance(now_frame);
 
+        if !ripple_enabled {
+            rt.ripple = RippleAnimator::default();
+        }
+
         let pressed_rising = pressed && !rt.prev_pressed;
         rt.prev_pressed = pressed;
-        if pressed_rising {
+        if pressed_rising && ripple_enabled {
             let origin = down_origin_local(bounds, last_down);
             let origin_in_ripple = fret_core::Point::new(
                 Px(origin.x.0 - ripple_bounds.origin.x.0),
@@ -145,7 +194,9 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
             );
         }
 
-        let ripple_frame = rt.ripple.advance(now_frame, ripple_base_opacity);
+        let ripple_frame = ripple_enabled
+            .then(|| rt.ripple.advance(now_frame, ripple_base_opacity))
+            .flatten();
         let want_frames = rt.state_layer.is_active() || rt.ripple.is_active();
 
         IndicationFrame {

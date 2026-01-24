@@ -20,3 +20,6 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit" }
 material-colors.workspace = true
 serde.workspace = true
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }
