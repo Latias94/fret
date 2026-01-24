@@ -212,15 +212,13 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement> {
     cx.observe_model(&st.todos, Invalidation::Layout);
-    cx.observe_model(&st.draft, Invalidation::Layout);
+    let draft_value = cx
+        .watch_model(&st.draft)
+        .layout()
+        .cloned()
+        .unwrap_or_default();
 
     let theme = Theme::global(&*cx.app).clone();
-    let draft_value = cx
-        .app
-        .models()
-        .read(&st.draft, |s| s.clone())
-        .ok()
-        .unwrap_or_default();
 
     let add_enabled = !draft_value.trim().is_empty();
 __ADD_BTN_DEF__
@@ -310,12 +308,10 @@ __ADD_BTN_DEF__
 }
 
 fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) -> AnyElement {
-    cx.observe_model(&item.done, Invalidation::Layout);
     let done = cx
-        .app
-        .models()
-        .read(&item.done, |v| *v)
-        .ok()
+        .watch_model(&item.done)
+        .layout()
+        .copied()
         .unwrap_or(false);
 
     let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
