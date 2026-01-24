@@ -86,8 +86,12 @@ Keep this list short and evidence-backed:
   - Tracker: `docs/audits/action-availability-coverage.md`
   - Evidence anchors: `crates/fret-ui/src/text_input/bound.rs`, `crates/fret-ui/src/text_area/bound.rs`, `crates/fret-ui/src/declarative/host_widget.rs`
   - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`text_input_select_all_is_blocked_when_empty`, `text_area_select_all_is_blocked_when_empty`)
-- [ ] IDV2-avail-041 Define a general “copy-like” command family outside text widgets (tables/lists/node graphs).
-  - Notes: decide whether to reuse `text.copy` vs introduce `edit.copy` (audit-driven).
+- [x] IDV2-avail-041 Define a general “copy-like” command family outside text widgets (tables/lists/node graphs).
+  - Evidence: `crates/fret-app/src/core_commands.rs` (`edit.{copy,cut,paste,select_all}`),
+    `crates/fret-ui/src/text_input/widget.rs` + `crates/fret-ui/src/text_area/widget.rs` (text alias),
+    `ecosystem/fret-node/src/ui/canvas/widget.rs` (node graph availability + command routing)
+  - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`text_input_supports_edit_select_all_and_copy`),
+    `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`
 - [x] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
   - Evidence: `crates/fret-runtime/src/window_menu_bar_focus.rs`, `crates/fret-ui/src/tree/commands.rs`, `ecosystem/fret-kit/src/workspace_shell.rs`
   - Tests: `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs` (`action_availability_snapshot_publishes_focus_menu_bar_gating`)
