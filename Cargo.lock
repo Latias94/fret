@@ -1193,6 +1193,7 @@ dependencies = [
  "fret-render",
  "fret-runner-winit",
  "fret-runtime",
+ "image",
  "objc",
  "pollster",
  "renderdog",

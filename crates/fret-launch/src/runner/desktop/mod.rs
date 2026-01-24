@@ -49,6 +49,8 @@ use fret_platform::open_url::OpenUrl as _;
 type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
+#[cfg(feature = "diag-screenshots")]
+mod diag_screenshots;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
@@ -908,6 +910,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     hotpatch: Option<HotpatchTrigger>,
     #[cfg(feature = "hotpatch-subsecond")]
     hot_reload_generation: u64,
+
+    #[cfg(feature = "diag-screenshots")]
+    diag_screenshots: Option<diag_screenshots::DiagScreenshotCapture>,
 }
 
 struct UploadedImageEntry {
@@ -1997,6 +2002,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
             hot_reload_generation: 0,
+
+            #[cfg(feature = "diag-screenshots")]
+            diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
         }
     }
 

@@ -33,6 +33,7 @@ Related ADRs:
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
 
    - `FRET_DIAG=1`
+   - (Optional) `FRET_DIAG_SCREENSHOTS=1` to request a GPU readback screenshot alongside each bundle dump (written under `target/fret-diag/screenshots/<bundle_timestamp>/`).
 
 2. Reproduce the issue.
 
