@@ -38,6 +38,12 @@ fn sidebar_menu_button_h(theme: &Theme, size: SidebarMenuButtonSize) -> Px {
     theme.metric_by_key(key).unwrap_or(fallback)
 }
 
+fn sidebar_menu_button_collapsed_h(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.sidebar.menu_button.h_collapsed")
+        .unwrap_or(Px(32.0)) // `size-8!`
+}
+
 fn sidebar_width(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.sidebar.width")
@@ -447,7 +453,11 @@ impl SidebarMenuButton {
         let ring = sidebar_ring(&theme, radius);
 
         let label = self.label.clone();
-        let h = sidebar_menu_button_h(&theme, self.size);
+        let h = if self.collapsed {
+            sidebar_menu_button_collapsed_h(&theme)
+        } else {
+            sidebar_menu_button_h(&theme, self.size)
+        };
 
         let pressable = PressableProps {
             enabled: !self.disabled,
@@ -497,12 +507,16 @@ impl SidebarMenuButton {
                 ChromeRefinement::default().rounded(Radius::Md)
             };
 
+            let h = if collapsed {
+                sidebar_menu_button_collapsed_h(&theme)
+            } else {
+                sidebar_menu_button_h(&theme, size)
+            };
+
             let mut props = decl_style::container_props(
                 &theme,
                 chrome,
-                LayoutRefinement::default()
-                    .w_full()
-                    .h_px(MetricRef::Px(sidebar_menu_button_h(&theme, size))),
+                LayoutRefinement::default().w_full().h_px(MetricRef::Px(h)),
             );
             props.layout.overflow = Overflow::Clip;
 

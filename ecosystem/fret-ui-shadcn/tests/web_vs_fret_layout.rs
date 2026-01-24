@@ -1125,71 +1125,150 @@ fn web_vs_fret_layout_toggle_disabled_geometry_matches() {
     );
 }
 
-fn web_find_sidebar_menu_button<'a>(
+fn web_find_sidebar_menu_button_by_height<'a>(
     root: &'a WebNode,
-    tag: &str,
-    text: &str,
     height_token: &str,
-) -> &'a WebNode {
+) -> Option<&'a WebNode> {
     find_first(root, &|n| {
-        n.tag == tag
+        (n.tag == "button" || n.tag == "a")
             && class_has_token(n, "peer/menu-button")
             && class_has_token(n, height_token)
-            && contains_text(n, text)
     })
-    .unwrap_or_else(|| panic!("missing web sidebar menu button {tag} {text} ({height_token})"))
 }
 
-#[test]
-fn web_vs_fret_layout_sidebar_01_menu_button_heights_match_web() {
-    let web = read_web_golden("sidebar-01");
+fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
+    let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
-    let web_lg = web_find_sidebar_menu_button(&theme.root, "button", "Documentation", "h-12");
-    let web_default = web_find_sidebar_menu_button(&theme.root, "a", "Installation", "h-8");
+    let web_default = web_find_sidebar_menu_button_by_height(&theme.root, "h-8")
+        .unwrap_or_else(|| panic!("missing web sidebar menu button (h-8) in {web_name}"));
+    let web_lg = web_find_sidebar_menu_button_by_height(&theme.root, "h-12");
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
-    let snap_lg = run_fret_root(bounds, |cx| {
-        vec![
-            fret_ui_shadcn::SidebarMenuButton::new("Documentation")
-                .size(fret_ui_shadcn::SidebarMenuButtonSize::Lg)
-                .into_element(cx),
-        ]
-    });
-
-    let fret_lg = find_semantics(&snap_lg, SemanticsRole::Button, Some("Documentation"))
-        .or_else(|| find_semantics(&snap_lg, SemanticsRole::Button, None))
-        .expect("fret sidebar menu button (lg) semantics node");
-
-    assert_close_px(
-        "sidebar-01 version-switcher button height",
-        fret_lg.bounds.size.height,
-        web_lg.rect.h,
-        1.0,
-    );
-
     let snap_default = run_fret_root(bounds, |cx| {
         vec![
-            fret_ui_shadcn::SidebarMenuButton::new("Installation")
+            fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
                 .size(fret_ui_shadcn::SidebarMenuButtonSize::Default)
                 .into_element(cx),
         ]
     });
 
-    let fret_default = find_semantics(&snap_default, SemanticsRole::Button, Some("Installation"))
-        .or_else(|| find_semantics(&snap_default, SemanticsRole::Button, None))
-        .expect("fret sidebar menu button (default) semantics node");
+    let fret_default = find_semantics(
+        &snap_default,
+        SemanticsRole::Button,
+        Some("Sidebar Menu Button"),
+    )
+    .or_else(|| find_semantics(&snap_default, SemanticsRole::Button, None))
+    .expect("fret sidebar menu button (default) semantics node");
 
     assert_close_px(
-        "sidebar-01 menu button height",
+        &format!("{web_name} menu button height (h-8)"),
         fret_default.bounds.size.height,
         web_default.rect.h,
         1.0,
     );
+
+    if let Some(web_lg) = web_lg {
+        let collapsed = (web_lg.rect.h - 32.0).abs() <= 1.0;
+        let snap_lg = run_fret_root(bounds, |cx| {
+            vec![
+                fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
+                    .size(fret_ui_shadcn::SidebarMenuButtonSize::Lg)
+                    .collapsed(collapsed)
+                    .into_element(cx),
+            ]
+        });
+
+        let fret_lg = find_semantics(&snap_lg, SemanticsRole::Button, Some("Sidebar Menu Button"))
+            .or_else(|| find_semantics(&snap_lg, SemanticsRole::Button, None))
+            .expect("fret sidebar menu button (lg) semantics node");
+
+        assert_close_px(
+            &format!("{web_name} menu button height (h-12)"),
+            fret_lg.bounds.size.height,
+            web_lg.rect.h,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_01_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-01");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_02_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-02");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_03_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-03");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_04_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-04");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_05_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-05");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_06_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-06");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_07_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-07");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_08_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-08");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_09_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-09");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_10_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-10");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_11_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-11");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_12_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-12");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_14_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-14");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_15_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-15");
+}
+
+#[test]
+fn web_vs_fret_layout_sidebar_16_menu_button_heights_match_web() {
+    assert_sidebar_menu_button_heights_match_web("sidebar-16");
 }
 
 #[test]
