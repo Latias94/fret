@@ -16,7 +16,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps, TextProps,
 };
-use fret_ui::elements::ElementContext;
+use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 
 use crate::foundation::indication::{
@@ -25,6 +25,11 @@ use crate::foundation::indication::{
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::SpringAnimator;
+
+#[derive(Debug, Default, Clone)]
+struct TabListLayoutRuntime {
+    tab_ids: Vec<GlobalElementId>,
+}
 
 #[derive(Debug, Clone)]
 pub struct TabItem {
@@ -186,10 +191,18 @@ impl Tabs {
                     move |cx| {
                         let now_frame = cx.frame_id.0;
                         let tab_count = items.len();
+                        let container_id = cx.root_id();
+
+                        cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                            if rt.tab_ids.len() != tab_count {
+                                rt.tab_ids.resize(tab_count, GlobalElementId(0));
+                            }
+                        });
                         let indicator = primary_tab_list_indicator(
                             cx,
                             &theme,
                             now_frame,
+                            container_id,
                             tab_count,
                             selected_idx,
                         );
@@ -286,6 +299,7 @@ impl Tabs {
                                         material_primary_tab(
                                             cx,
                                             &theme,
+                                            container_id,
                                             model.clone(),
                                             it,
                                             idx,
@@ -307,6 +321,7 @@ impl Tabs {
 fn material_primary_tab<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    container_id: GlobalElementId,
     model: Model<Arc<str>>,
     item: &TabItem,
     idx: usize,
@@ -325,6 +340,15 @@ fn material_primary_tab<H: UiHost>(
             .get_model_cloned(&model, Invalidation::Layout)
             .map(|v| v.as_ref() == value.as_ref())
             .unwrap_or(false);
+
+        cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
+            if rt.tab_ids.len() != set_size {
+                rt.tab_ids.resize(set_size, GlobalElementId(0));
+            }
+            if let Some(slot) = rt.tab_ids.get_mut(idx) {
+                *slot = pressable_id;
+            }
+        });
 
         if enabled {
             let model_for_press = model.clone();
@@ -494,6 +518,7 @@ fn primary_tab_list_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     now_frame: u64,
+    container_id: GlobalElementId,
     tab_count: usize,
     selected_idx: Option<usize>,
 ) -> AnyElement {
@@ -506,11 +531,29 @@ fn primary_tab_list_indicator<H: UiHost>(
 
     cx.named("primary_tab_indicator", move |cx| {
         let id = cx.root_id();
-        let last_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+        let tab_bounds = selected_idx
+            .and_then(|idx| {
+                cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
+                    rt.tab_ids.get(idx).copied()
+                })
+            })
+            .and_then(|tab_id| (tab_id.0 != 0).then_some(tab_id))
+            .and_then(|tab_id| cx.last_bounds_for_element(tab_id));
 
         let (target_x, target_width, target_height, color) = if tab_count > 0 {
-            let tab_width_px = last_bounds.size.width.0 / (tab_count as f32);
-            if let Some(idx) = selected_idx {
+            if let Some(tab_bounds) = tab_bounds {
+                let height = theme
+                    .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
+                    .unwrap_or(Px(3.0));
+                let color = MaterialTokenResolver::new(theme).color_comp_or_sys(
+                    "md.comp.primary-navigation-tab.active-indicator.color",
+                    "md.sys.color.primary",
+                );
+                let x = tab_bounds.origin.x.0 - container_bounds.origin.x.0;
+                (x, tab_bounds.size.width.0, height.0, color)
+            } else if let Some(idx) = selected_idx {
+                let tab_width_px = container_bounds.size.width.0 / (tab_count as f32);
                 let height = theme
                     .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
                     .unwrap_or(Px(3.0));

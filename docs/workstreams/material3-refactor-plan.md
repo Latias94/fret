@@ -134,7 +134,8 @@ Current progress:
 - `Button` and `IconButton` pressed shape now uses the spring path (corner radius morph), which acts as a
   conformance probe for MotionScheme plumbing.
 - `Tabs` active indicator now animates via the same spring substrate (x/width/height) using a single
-  container-level indicator (instead of per-tab conditional insertion or snapping 0↔height).
+  container-level indicator. The indicator tracks the selected tab's last-known bounds (fallback:
+  equal-split width), which mirrors the measurement-driven approach used by Compose `TabRow`.
 - `Switch` thumb motion now uses the spring substrate (selected + pressed), replacing duration-based tweens.
 
 ### Tokens (typed access vs string keys)
