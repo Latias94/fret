@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `476`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `221` (`49.3%`)
-- Keys not referenced by tests: `227`
+- Keys referenced by tests: `235` (`52.5%`)
+- Keys not referenced by tests: `213`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -44,8 +44,8 @@ At the time of writing, the largest missing groups were:
 - `chart` (76 variants; high surface area)
 - `form` (19; field composition + validation chrome)
 - `calendar` (18; primitives-heavy; tends to expose text metrics + grid layout edge cases)
-- `sidebar` (15; layout + scroll behavior; often depends on menu primitives)
 - `typography` (13; baseline text metrics and prose defaults)
+- `input` (10; control chrome + stacking patterns)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were:
 
@@ -53,6 +53,7 @@ The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-sha
 - `navigation` (17)
 - `input` (17)
 - `calendar` (16)
+- `sidebar` (15)
 - `toggle` (13)
 - `dropdown` (10)
 - `scroll` (10)
