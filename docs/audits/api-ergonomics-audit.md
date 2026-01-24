@@ -69,6 +69,9 @@ This document is meant to stay “live” while we iterate. Update this section 
   - Evidence: `apps/fret-examples/src/todo_demo.rs`
   - Evidence: `apps/fret-examples/src/todo_mvu_demo.rs`
   - Evidence: `apps/fret-examples/src/todo_interop_kit_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_mvu_interop_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_interop_demo.rs`
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
