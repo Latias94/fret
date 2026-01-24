@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+use zip::write::FileOptions;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 enum BundleStatsSort {
     #[default]
@@ -31,6 +33,7 @@ impl BundleStatsSort {
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
+    let mut pack_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -78,6 +81,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --trigger-path".to_string());
                 };
                 trigger_path = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--pack-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --pack-out".to_string());
+                };
+                pack_out = Some(PathBuf::from(v));
                 i += 1;
             }
             "--script-path" => {
@@ -498,6 +509,35 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 "no diagnostics bundle found under {}",
                 resolved_out_dir.display()
             ))
+        }
+        "pack" => {
+            if rest.len() > 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let bundle_dir = match rest.first() {
+                Some(src) => {
+                    let src = resolve_path(&workspace_root, PathBuf::from(src));
+                    resolve_bundle_root_dir(&src)?
+                }
+                None => read_latest_pointer(&resolved_out_dir)
+                    .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                    .ok_or_else(|| {
+                        format!(
+                            "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                            resolved_out_dir.display()
+                        )
+                    })?,
+            };
+
+            let bundle_dir = resolve_bundle_root_dir(&bundle_dir)?;
+            let out = pack_out
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
+
+            pack_bundle_dir_to_zip(&bundle_dir, &out)?;
+            println!("{}", out.display());
+            Ok(())
         }
         "script" => {
             let Some(src) = rest.first().cloned() else {
@@ -1150,6 +1190,132 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
+}
+
+fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
+    if path.is_dir() {
+        return Ok(path.to_path_buf());
+    }
+    let Some(parent) = path.parent() else {
+        return Err(format!("invalid bundle path: {}", path.display()));
+    };
+    Ok(parent.to_path_buf())
+}
+
+fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
+    let name = bundle_dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+    if bundle_dir.starts_with(out_dir) {
+        out_dir.join("share").join(format!("{name}.zip"))
+    } else {
+        bundle_dir.with_extension("zip")
+    }
+}
+
+fn pack_bundle_dir_to_zip(bundle_dir: &Path, out_path: &Path) -> Result<(), String> {
+    if !bundle_dir.is_dir() {
+        return Err(format!(
+            "bundle_dir is not a directory: {}",
+            bundle_dir.display()
+        ));
+    }
+
+    let bundle_json = bundle_dir.join("bundle.json");
+    if !bundle_json.is_file() {
+        return Err(format!(
+            "bundle_dir does not contain bundle.json: {}",
+            bundle_dir.display()
+        ));
+    }
+
+    if let Some(parent) = out_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let bundle_name = bundle_dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+
+    let file = std::fs::File::create(out_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+
+    zip_add_dir(
+        &mut zip,
+        bundle_dir,
+        bundle_dir,
+        bundle_name,
+        out_path,
+        options,
+    )?;
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn zip_add_dir(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    base_dir: &Path,
+    prefix: &str,
+    out_path: &Path,
+    options: FileOptions,
+) -> Result<(), String> {
+    let mut entries: Vec<std::fs::DirEntry> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        if path == out_path {
+            continue;
+        }
+
+        let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+        if meta.file_type().is_symlink() {
+            continue;
+        }
+
+        if meta.is_dir() {
+            zip_add_dir(zip, &path, base_dir, prefix, out_path, options)?;
+            continue;
+        }
+
+        if !meta.is_file() {
+            continue;
+        }
+
+        let rel = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "failed to compute zip relative path".to_string())?;
+
+        let name = format!("{}/{}", prefix, zip_name(rel));
+        zip.start_file(name, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn zip_name(path: &Path) -> String {
+    let mut out = String::new();
+    for (i, c) in path.components().enumerate() {
+        if i > 0 {
+            out.push('/');
+        }
+        out.push_str(&c.as_os_str().to_string_lossy());
+    }
+    out
 }
 
 fn parse_bool(s: &str) -> Result<bool, ()> {

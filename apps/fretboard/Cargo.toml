@@ -12,3 +12,4 @@ publish = false
 
 [dependencies]
 serde_json.workspace = true
+zip.workspace = true
