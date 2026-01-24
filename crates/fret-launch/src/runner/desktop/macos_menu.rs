@@ -23,9 +23,9 @@ use cocoa::{
 };
 use fret_core::{AppWindowId, KeyCode};
 use fret_runtime::{
-    CommandId, InputContext, InputDispatchPhase, Keymap, KeymapService, MenuBar, MenuItem,
-    MenuRole, OsAction, Platform, PlatformCapabilities, SystemMenuType, WhenExpr,
-    WindowCommandEnabledService,
+    CommandId, CommandScope, InputContext, InputDispatchPhase, Keymap, KeymapService, MenuBar,
+    MenuItem, MenuRole, OsAction, Platform, PlatformCapabilities, SystemMenuType, WhenExpr,
+    WindowCommandGatingSnapshot,
 };
 use objc::{
     declare::ClassDecl,
@@ -49,6 +49,7 @@ struct MacosMenuItemDef {
     command_when: Option<WhenExpr>,
     item_when: Option<WhenExpr>,
     os_action: Option<OsAction>,
+    command_scope: CommandScope,
 }
 
 #[derive(Debug)]
@@ -59,8 +60,7 @@ struct MacosMenuState {
     ns_window_to_app_window: HashMap<isize, AppWindowId>,
     cached_keymap: Keymap,
     cached_caps: PlatformCapabilities,
-    cached_command_enabled_by_window: HashMap<AppWindowId, HashMap<CommandId, bool>>,
-    cached_input_ctx_by_window: HashMap<AppWindowId, InputContext>,
+    cached_gating_by_window: HashMap<AppWindowId, WindowCommandGatingSnapshot>,
     next_tag: NSInteger,
 }
 
@@ -73,8 +73,7 @@ impl Default for MacosMenuState {
             ns_window_to_app_window: HashMap::new(),
             cached_keymap: Keymap::default(),
             cached_caps: PlatformCapabilities::default(),
-            cached_command_enabled_by_window: HashMap::new(),
-            cached_input_ctx_by_window: HashMap::new(),
+            cached_gating_by_window: HashMap::new(),
             next_tag: 1,
         }
     }
@@ -131,12 +130,11 @@ pub(crate) fn sync_keymap_from_app(app: &fret_app::App) {
     state.cached_caps = caps;
 }
 
-pub(crate) fn sync_input_context_from_app(app: &fret_app::App) {
+pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
     let caps = app
         .global::<PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    let snapshots = app.global::<fret_runtime::WindowInputContextService>();
 
     let windows: Vec<AppWindowId> = {
         let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
@@ -146,21 +144,15 @@ pub(crate) fn sync_input_context_from_app(app: &fret_app::App) {
         state.ns_window_to_app_window.values().copied().collect()
     };
 
-    let mut by_window: HashMap<AppWindowId, InputContext> = HashMap::new();
+    let mut by_window: HashMap<AppWindowId, WindowCommandGatingSnapshot> = HashMap::new();
     for window in windows {
-        let input_ctx = snapshots
-            .and_then(|svc| svc.snapshot(window))
-            .cloned()
-            .unwrap_or(InputContext {
-                platform: Platform::Macos,
-                caps: caps.clone(),
-                ui_has_modal: false,
-                focus_is_text_input: false,
-                edit_can_undo: true,
-                edit_can_redo: true,
-                dispatch_phase: InputDispatchPhase::Normal,
-            });
-        by_window.insert(window, input_ctx);
+        let fallback_input_ctx = InputContext::fallback(Platform::Macos, caps.clone());
+        let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+            app,
+            window,
+            fallback_input_ctx,
+        );
+        by_window.insert(window, snapshot);
     }
 
     let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
@@ -168,39 +160,8 @@ pub(crate) fn sync_input_context_from_app(app: &fret_app::App) {
         return;
     };
     state.cached_caps = caps;
-    for (window, input_ctx) in by_window {
-        state.cached_input_ctx_by_window.insert(window, input_ctx);
-    }
-}
-
-pub(crate) fn sync_command_enabled_from_app(app: &fret_app::App) {
-    let snapshots = app.global::<WindowCommandEnabledService>();
-
-    let windows: Vec<AppWindowId> = {
-        let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-        let Ok(state) = state.lock() else {
-            return;
-        };
-        state.ns_window_to_app_window.values().copied().collect()
-    };
-
-    let mut by_window: HashMap<AppWindowId, HashMap<CommandId, bool>> = HashMap::new();
-    for window in windows {
-        let enabled = snapshots
-            .and_then(|svc| svc.snapshot(window))
-            .cloned()
-            .unwrap_or_default();
-        by_window.insert(window, enabled);
-    }
-
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-    let Ok(mut state) = state.lock() else {
-        return;
-    };
-    for (window, enabled) in by_window {
-        state
-            .cached_command_enabled_by_window
-            .insert(window, enabled);
+    for (window, snapshot) in by_window {
+        state.cached_gating_by_window.insert(window, snapshot);
     }
 }
 
@@ -221,15 +182,7 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         (commands, keymap, caps)
     };
 
-    let base_ctx = InputContext {
-        platform: Platform::Macos,
-        caps: caps.clone(),
-        ui_has_modal: false,
-        focus_is_text_input: false,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
-    };
+    let base_ctx = InputContext::fallback(Platform::Macos, caps.clone());
 
     let Ok(mut state) = state.lock() else {
         return;
@@ -368,10 +321,21 @@ unsafe fn append_menu_item(
             menu.addItem_(submenu_item);
         }
         MenuItem::Command { command, when } => {
-            let (label, command_when, os_action) = match commands.get(command.clone()) {
-                Some(meta) => (meta.title.clone(), meta.when.clone(), meta.os_action),
-                None => (Arc::<str>::from(command.as_str()), None, None),
-            };
+            let (label, command_when, os_action, command_scope) =
+                match commands.get(command.clone()) {
+                    Some(meta) => (
+                        meta.title.clone(),
+                        meta.when.clone(),
+                        meta.os_action,
+                        meta.scope,
+                    ),
+                    None => (
+                        Arc::<str>::from(command.as_str()),
+                        None,
+                        None,
+                        CommandScope::Window,
+                    ),
+                };
 
             let tag = state.next_tag;
             state.next_tag = state.next_tag.saturating_add(1);
@@ -382,6 +346,7 @@ unsafe fn append_menu_item(
                     command_when,
                     item_when: when.clone(),
                     os_action,
+                    command_scope,
                 },
             );
 
@@ -689,37 +654,21 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
         return YES;
     };
 
+    let active_window = active_app_window_id(&state);
+
     let caps = state.cached_caps.clone();
-    let fallback = InputContext {
-        platform: Platform::Macos,
-        caps,
-        ui_has_modal: false,
-        focus_is_text_input: false,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
-    };
+    let fallback = InputContext::fallback(Platform::Macos, caps);
 
-    let input_ctx = active_app_window_id(&state)
-        .and_then(|w| state.cached_input_ctx_by_window.get(&w).cloned())
-        .unwrap_or(fallback);
+    let gating = active_window
+        .and_then(|w| state.cached_gating_by_window.get(&w).cloned())
+        .unwrap_or_else(|| WindowCommandGatingSnapshot::new(fallback, HashMap::new()));
 
-    let command_enabled = active_app_window_id(&state)
-        .and_then(|w| state.cached_command_enabled_by_window.get(&w))
-        .and_then(|m| m.get(&def.command))
-        .copied()
-        .unwrap_or(true);
-
-    let enabled = def
-        .command_when
-        .as_ref()
-        .map(|w| w.eval(&input_ctx))
-        .unwrap_or(true)
-        && def
-            .item_when
-            .as_ref()
-            .map(|w| w.eval(&input_ctx))
-            .unwrap_or(true);
-
-    if enabled && command_enabled { YES } else { NO }
+    let enabled =
+        gating.is_enabled_for_meta(&def.command, def.command_scope, def.command_when.as_ref())
+            && def
+                .item_when
+                .as_ref()
+                .map(|w| w.eval(gating.input_ctx()))
+                .unwrap_or(true);
+    if enabled { YES } else { NO }
 }

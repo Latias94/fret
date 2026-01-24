@@ -52,6 +52,31 @@ impl ElementHostWidget {
                     matches!(props.layout.overflow, Overflow::Clip),
                     Some(props.corner_radii),
                 );
+
+                let focused = cx.focus.is_some_and(|focus| {
+                    if props.focus_within {
+                        cx.tree.is_descendant(cx.node, focus)
+                    } else {
+                        focus == cx.node
+                    }
+                });
+
+                if focused && crate::focus_visible::is_focus_visible(cx.app, cx.window) {
+                    if let Some(border_color) = props.focus_border_color {
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(1),
+                            rect: cx.bounds,
+                            background: Color::TRANSPARENT,
+                            border: props.border,
+                            border_color,
+                            corner_radii: props.corner_radii,
+                        });
+                    }
+
+                    if let Some(ring) = props.focus_ring {
+                        crate::paint::paint_focus_ring(cx.scene, DrawOrder(2), cx.bounds, ring);
+                    }
+                }
             }
             ElementInstance::Semantics(props) => {
                 paint_children_clipped_if(
@@ -234,7 +259,16 @@ impl ElementHostWidget {
                     && crate::focus_visible::is_focus_visible(cx.app, cx.window)
                     && let Some(ring) = props.focus_ring
                 {
-                    crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), cx.bounds, ring);
+                    let bounds = props.focus_ring_bounds.map_or(cx.bounds, |b| {
+                        Rect::new(
+                            Point::new(
+                                cx.bounds.origin.x + b.origin.x,
+                                cx.bounds.origin.y + b.origin.y,
+                            ),
+                            b.size,
+                        )
+                    });
+                    crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), bounds, ring);
                 }
             }
             ElementInstance::Text(props) => {

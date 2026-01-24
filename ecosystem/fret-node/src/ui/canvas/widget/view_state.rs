@@ -325,11 +325,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        let view_w = bounds.size.width.0 / zoom;
-        let view_h = bounds.size.height.0 / zoom;
+        let viewport = CanvasViewport2D::new(
+            bounds,
+            PanZoom2D {
+                pan: Point::new(Px(snapshot.pan.x), Px(snapshot.pan.y)),
+                zoom,
+            },
+        );
+        let vis = viewport.visible_canvas_rect();
+        let view_w = vis.size.width.0;
+        let view_h = vis.size.height.0;
 
-        let view_min_x = -snapshot.pan.x;
-        let view_min_y = -snapshot.pan.y;
+        let view_min_x = vis.origin.x.0;
+        let view_min_y = vis.origin.y.0;
 
         let mut pan = snapshot.pan;
 

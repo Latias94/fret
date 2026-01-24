@@ -18,9 +18,10 @@ use fret_ui::UiTree;
 use fret_ui::action::{DismissReason, UiActionHostAdapter};
 use fret_ui::element::{
     ContainerProps, InsetStyle, LayoutStyle, Length, PointerRegionProps, PositionStyle,
-    PressableProps, SizeStyle,
+    PressableProps, ScrollAxis, SizeStyle, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
+use fret_ui::scroll::ScrollHandle;
 
 #[derive(Default)]
 struct FakeServices;
@@ -145,6 +146,8 @@ fn window_resize_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: Vec::new(),
         },
@@ -165,6 +168,8 @@ fn window_resize_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: Vec::new(),
         },
@@ -209,6 +214,8 @@ fn window_focus_lost_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: Vec::new(),
         },
@@ -230,6 +237,8 @@ fn window_focus_lost_closes_modal_overlays_that_opt_in() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: Vec::new(),
         },
@@ -273,6 +282,8 @@ fn cached_modal_request_is_synthesized_when_open_without_rerender() {
             open: open.clone(),
             present: false,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: Vec::new(),
         },
@@ -332,6 +343,8 @@ fn cached_popover_request_is_synthesized_when_open_without_rerender() {
             open: open.clone(),
             present: false,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -457,6 +470,7 @@ fn render_base_with_trigger_and_underlay_pointer_move(
     bounds: Rect,
     open: Model<bool>,
     underlay_moved: Model<bool>,
+    underlay_scroll: ScrollHandle,
 ) -> (GlobalElementId, GlobalElementId) {
     begin_frame(app, window);
 
@@ -504,8 +518,8 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                     },
                 );
 
-                let underlay = cx.pointer_region(
-                    PointerRegionProps {
+                let underlay = cx.wheel_region(
+                    WheelRegionProps {
                         layout: {
                             LayoutStyle {
                                 position: PositionStyle::Absolute,
@@ -522,18 +536,151 @@ fn render_base_with_trigger_and_underlay_pointer_move(
                                 ..Default::default()
                             }
                         },
-                        enabled: true,
+                        axis: ScrollAxis::Y,
+                        scroll_target: None,
+                        scroll_handle: underlay_scroll,
                     },
                     |cx| {
-                        let underlay_moved = underlay_moved.clone();
-                        cx.pointer_region_on_pointer_move(Arc::new(move |host, _cx, _mv| {
-                            let _ = host.models_mut().update(&underlay_moved, |v| *v = true);
-                            false
-                        }));
+                        let underlay = cx.pointer_region(
+                            PointerRegionProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                            },
+                            |cx| {
+                                let underlay_moved = underlay_moved.clone();
+                                cx.pointer_region_on_pointer_move(Arc::new(
+                                    move |host, _cx, _mv| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&underlay_moved, |v| *v = true);
+                                        false
+                                    },
+                                ));
+                                Vec::new()
+                            },
+                        );
+                        underlay_id = Some(underlay.id);
+                        vec![underlay]
+                    },
+                );
+
+                vec![trigger, underlay]
+            },
+        )]
+    });
+    ui.set_root(root);
+
+    (
+        trigger_id.expect("trigger id"),
+        underlay_id.expect("underlay id"),
+    )
+}
+
+fn render_base_with_trigger_and_underlay_pressable_wheel(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    open: Model<bool>,
+    underlay_clicked: Model<bool>,
+    underlay_scroll: ScrollHandle,
+) -> (GlobalElementId, GlobalElementId) {
+    begin_frame(app, window);
+
+    let mut trigger_id: Option<GlobalElementId> = None;
+    let mut underlay_id: Option<GlobalElementId> = None;
+
+    let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+        vec![cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(80.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
                         Vec::new()
                     },
                 );
-                underlay_id = Some(underlay.id);
+
+                let underlay = cx.wheel_region(
+                    WheelRegionProps {
+                        layout: {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(120.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(160.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        },
+                        axis: ScrollAxis::Y,
+                        scroll_target: None,
+                        scroll_handle: underlay_scroll,
+                    },
+                    |cx| {
+                        let underlay_clicked = underlay_clicked.clone();
+                        vec![cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                cx.pressable_toggle_bool(&underlay_clicked);
+                                underlay_id = Some(id);
+                                Vec::new()
+                            },
+                        )]
+                    },
+                );
 
                 vec![trigger, underlay]
             },
@@ -593,6 +740,7 @@ fn dismissible_popover_closes_on_outside_press() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -626,6 +774,8 @@ fn dismissible_popover_closes_on_outside_press() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: vec![],
@@ -651,6 +801,95 @@ fn dismissible_popover_closes_on_outside_press() {
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn non_modal_overlay_open_auto_focus_handler_can_prevent_default_focus() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: base root to establish stable element mappings for the trigger.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    ui.set_focus(Some(trigger_node));
+
+    let overlay_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "popover-child", |cx| {
+            vec![cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            )]
+        });
+
+    let on_open_auto_focus: fret_ui::action::OnOpenAutoFocus =
+        Arc::new(|_host, _cx, req| req.prevent_default());
+
+    // Second frame: mount a non-modal overlay and suppress default initial focus.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: Some(on_open_auto_focus),
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: overlay_children,
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.focus(), Some(trigger_node));
 }
 
 #[test]
@@ -699,6 +938,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -757,6 +997,8 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children,
@@ -832,6 +1074,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -866,6 +1109,8 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -895,6 +1140,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -930,6 +1176,8 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -989,6 +1237,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -1023,6 +1272,8 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -1053,6 +1304,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -1109,6 +1361,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -1142,6 +1395,8 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -1181,6 +1436,8 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -1239,6 +1496,7 @@ fn dismissible_popover_focus_outside_routes_through_dismiss_handler() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -1272,6 +1530,8 @@ fn dismissible_popover_focus_outside_routes_through_dismiss_handler() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -1288,11 +1548,11 @@ fn dismissible_popover_focus_outside_routes_through_dismiss_handler() {
     let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
         Arc::new(std::sync::Mutex::new(None));
     let reason_cell_for_handler = reason_cell.clone();
-    let handler: fret_ui::action::OnDismissRequest =
-        Arc::new(move |_host, _cx, reason: DismissReason| {
-            let mut lock = reason_cell_for_handler.lock().unwrap();
-            *lock = Some(reason);
-        });
+    let handler: fret_ui::action::OnDismissRequest = Arc::new(move |_host, _cx, req| {
+        let mut lock = reason_cell_for_handler.lock().unwrap();
+        *lock = Some(req.reason);
+        req.prevent_default();
+    });
 
     // Third frame: focus-outside should route through the dismiss handler. The handler chooses not
     // to close `open`, mirroring Radix `preventDefault` behavior.
@@ -1321,6 +1581,8 @@ fn dismissible_popover_focus_outside_routes_through_dismiss_handler() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: Some(handler),
             on_pointer_move: None,
             children: Vec::new(),
@@ -1383,6 +1645,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -1416,6 +1679,8 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -1456,6 +1721,8 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -1664,6 +1931,7 @@ fn toast_hit_testing_tracks_render_transform() {
                     position: pos,
                     button: fret_core::MouseButton::Left,
                     modifiers: fret_core::Modifiers::default(),
+                    is_click: true,
                     click_count: 1,
                     pointer_id: PointerId(0),
                     pointer_type: fret_core::PointerType::Mouse,
@@ -1765,6 +2033,8 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children,
         },
@@ -1793,6 +2063,7 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -1856,10 +2127,13 @@ fn modal_dismiss_handler_can_prevent_default_close() {
             open: open.clone(),
             present: true,
             initial_focus: None,
-            on_dismiss_request: Some(Arc::new(move |host, _cx, _reason| {
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: Some(Arc::new(move |host, _cx, req| {
                 let _ = host
                     .models_mut()
                     .update(&dismiss_called_for_handler, |v| *v = true);
+                req.prevent_default();
             })),
             children: Vec::new(),
         },
@@ -1965,6 +2239,8 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             open,
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children,
         },
@@ -1992,6 +2268,7 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -2079,6 +2356,8 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
             open: open.clone(),
             present: true,
             initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children.clone(),
         },
@@ -2115,6 +2394,8 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
             open: open.clone(),
             present: true,
             initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children,
         },
@@ -2126,6 +2407,129 @@ fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
     let trigger_node =
         fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
     assert_eq!(ui.focus(), Some(trigger_node));
+}
+
+#[test]
+fn modal_close_auto_focus_handler_can_prevent_default_restore() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let modal_id = GlobalElementId(0xabc);
+    let mut modal_focusable: Option<GlobalElementId> = None;
+    let modal_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    modal_focusable = Some(id);
+                    Vec::new()
+                },
+            )]
+        });
+    let modal_focusable = modal_focusable.expect("modal focusable element id");
+
+    let on_close_auto_focus: fret_ui::action::OnCloseAutoFocus =
+        Arc::new(|_host, _cx, req| req.prevent_default());
+
+    // Second frame: mount modal and focus inside.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: Some(on_close_auto_focus.clone()),
+            on_dismiss_request: None,
+            children: modal_children.clone(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let modal_focus_node =
+        fret_ui::elements::node_for_element(&mut app, window, modal_focusable).expect("modal node");
+    assert_eq!(ui.focus(), Some(modal_focus_node));
+
+    // Third frame: close while still present; prevent restoring focus to the trigger.
+    let _ = app.models_mut().update(&open, |v| *v = false);
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: Some(on_close_auto_focus),
+            on_dismiss_request: None,
+            children: modal_children,
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.focus(), Some(modal_focus_node));
 }
 
 #[test]
@@ -2209,6 +2613,8 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
             open: open.clone(),
             present: true,
             initial_focus: Some(a),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children.clone(),
         },
@@ -2246,6 +2652,8 @@ fn modal_initial_focus_is_only_applied_on_opening_edge() {
             open: open.clone(),
             present: true,
             initial_focus: Some(a),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children,
         },
@@ -2332,6 +2740,8 @@ fn modal_reasserts_focus_when_focus_leaves_modal_layer_while_open() {
             open: open.clone(),
             present: true,
             initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children.clone(),
         },
@@ -2368,6 +2778,8 @@ fn modal_reasserts_focus_when_focus_leaves_modal_layer_while_open() {
             open: open.clone(),
             present: true,
             initial_focus: Some(modal_focusable),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             children: modal_children,
         },
@@ -2465,6 +2877,8 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             open,
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: overlay_children,
@@ -2493,6 +2907,133 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
+    assert_eq!(app.models().get_copied(&overlay_clicked), Some(false));
+}
+
+#[test]
+fn non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+    let overlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |cx| {
+            vec![cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |cx, _st| {
+                    cx.pressable_toggle_bool(&underlay_clicked);
+                    vec![]
+                },
+            )]
+        },
+    );
+    ui.set_root(base);
+
+    begin_frame(&mut app, window);
+    let trigger = GlobalElementId(0xdead);
+    let overlay_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "popover-child", |cx| {
+            vec![cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    focusable: false,
+                    ..Default::default()
+                },
+                |cx, _st| {
+                    cx.pressable_toggle_bool(&overlay_clicked);
+                    vec![]
+                },
+            )]
+        });
+
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open,
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: overlay_children,
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -2549,6 +3090,8 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
             open,
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -2574,6 +3117,201 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
     assert!(!info.blocks_underlay_input);
     assert!(!info.hit_testable);
     assert!(!info.wants_pointer_down_outside_events);
+}
+
+#[test]
+fn tooltip_does_not_request_observers_by_default() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_| Vec::new(),
+    );
+    ui.set_root(base);
+
+    // Tooltips are click-through and should not install outside-press / pointer-move observers
+    // unless the request explicitly opts into them.
+    begin_frame(&mut app, window);
+    let id = GlobalElementId(0xdead);
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id,
+            root_name: tooltip_root_name(id),
+            interactive: true,
+            trigger: Some(id),
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays.tooltips.get(&(window, id)).map(|t| t.layer)
+        })
+        .expect("tooltip layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("tooltip debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
+}
+
+#[test]
+fn tooltip_does_not_request_observers_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_| Vec::new(),
+    );
+    ui.set_root(base);
+
+    // Install a tooltip layer that is still present but non-interactive (closing animation).
+    begin_frame(&mut app, window);
+    let id = GlobalElementId(0xdead);
+    let handler: fret_ui::action::OnDismissRequest = Arc::new(|_host, _cx, _req| {});
+    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
+        Arc::new(|_host, _cx, _move| false);
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id,
+            root_name: tooltip_root_name(id),
+            interactive: false,
+            trigger: Some(id),
+            on_dismiss_request: Some(handler),
+            on_pointer_move: Some(on_pointer_move),
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays.tooltips.get(&(window, id)).map(|t| t.layer)
+        })
+        .expect("tooltip layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("tooltip debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
+}
+
+#[test]
+fn hover_overlay_is_click_through_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_| Vec::new(),
+    );
+    ui.set_root(base);
+
+    // Install a hover overlay that is still present but non-interactive (closing animation).
+    begin_frame(&mut app, window);
+    let id = GlobalElementId(0xdead);
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id,
+            root_name: hover_overlay_root_name(id),
+            interactive: false,
+            trigger: id,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays.hover_overlays.get(&(window, id)).map(|h| h.layer)
+        })
+        .expect("hover overlay layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("hover overlay debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
 }
 
 #[test]
@@ -2627,6 +3365,8 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -2711,6 +3451,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -2770,6 +3511,8 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: overlay_children,
@@ -2800,6 +3543,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -2879,6 +3623,7 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -2938,6 +3683,8 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: overlay_children,
@@ -2967,6 +3714,7 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -3042,10 +3790,13 @@ fn non_modal_overlay_dismiss_handler_can_prevent_default_close() {
             open: open.clone(),
             present: true,
             initial_focus: None,
-            on_dismiss_request: Some(Arc::new(move |host, _cx, _reason| {
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: Some(Arc::new(move |host, _cx, req| {
                 let _ = host
                     .models_mut()
                     .update(&dismiss_called_for_handler, |v| *v = true);
+                req.prevent_default();
             })),
             on_pointer_move: None,
             children: Vec::new(),
@@ -3075,6 +3826,7 @@ fn non_modal_overlay_dismiss_handler_can_prevent_default_close() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -3095,6 +3847,9 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
 
     let open = app.models_mut().insert(false);
     let underlay_moved = app.models_mut().insert(false);
+    let underlay_scroll = ScrollHandle::default();
+    underlay_scroll.set_viewport_size(fret_core::Size::new(Px(160.0), Px(32.0)));
+    underlay_scroll.set_content_size(fret_core::Size::new(Px(160.0), Px(200.0)));
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -3111,6 +3866,7 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
         bounds,
         open.clone(),
         underlay_moved.clone(),
+        underlay_scroll.clone(),
     );
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -3140,6 +3896,7 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
         bounds,
         open.clone(),
         underlay_moved.clone(),
+        underlay_scroll.clone(),
     );
 
     request_dismissible_popover_for_window(
@@ -3157,6 +3914,8 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
             open: open.clone(),
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -3178,4 +3937,1232 @@ fn non_modal_overlay_can_disable_outside_pointer_events_while_open() {
         }),
     );
     assert_eq!(app.models().get_copied(&underlay_moved), Some(false));
+
+    // Underlay scroll should still be reachable while outside pointer events are disabled:
+    // the default policy uses an "except scroll" occlusion mode.
+    let prev_scroll_y = underlay_scroll.offset().y;
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: Point::new(Px(10.0), Px(130.0)),
+            delta: Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(underlay_scroll.offset().y.0 > prev_scroll_y.0);
+}
+
+#[test]
+fn non_modal_menu_trigger_press_closes_without_reopening_under_occlusion() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Open via click.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Second frame: render a menu-like dismissible popover that disables outside pointer events.
+    begin_frame(&mut app, window);
+    let _trigger2 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Pressing the trigger while open should close the menu-like overlay without immediately
+    // re-opening it (a common edge when outside-press dismissal runs before trigger activation).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn non_modal_menu_blocks_underlay_click_but_allows_wheel() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let underlay_scroll = ScrollHandle::default();
+    underlay_scroll.set_viewport_size(fret_core::Size::new(Px(160.0), Px(32.0)));
+    underlay_scroll.set_content_size(fret_core::Size::new(Px(160.0), Px(200.0)));
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: base layer with trigger + underlay pressable + wheel region.
+    let (trigger, _underlay) = render_base_with_trigger_and_underlay_pressable_wheel(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+        underlay_scroll.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Open via click on the trigger.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Second frame: request a menu-like dismissible popover (consume outside presses + occlude mouse).
+    begin_frame(&mut app, window);
+    let (_trigger2, _underlay2) = render_base_with_trigger_and_underlay_pressable_wheel(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+        underlay_scroll.clone(),
+    );
+
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Wheel should still reach the underlay scroll target even while mouse interactions are blocked.
+    let prev_scroll_y = underlay_scroll.offset().y;
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: Point::new(Px(10.0), Px(130.0)),
+            delta: Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(underlay_scroll.offset().y.0 > prev_scroll_y.0);
+
+    // Clicking the underlay should dismiss without activating the underlay pressable.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(false));
+    assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
+}
+
+#[test]
+fn dock_drag_closes_non_modal_overlays_for_entire_window() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Second frame: open a non-modal popover overlay.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _trigger2 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Start a dock drag session for a *different* pointer id (window-global suppression).
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // Third frame: re-request the overlay; window_overlays policy should force it closed.
+    begin_frame(&mut app, window);
+    let _trigger3 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Second frame: open a menu-like overlay that enables pointer occlusion.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _trigger2 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+        "expected menu-like overlay to enable pointer occlusion while open"
+    );
+    assert_eq!(snap.topmost_pointer_occluding_overlay, Some(trigger));
+
+    // Start a dock drag session for a *different* pointer id (window-global suppression).
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // Third frame: re-request the overlay; window_overlays policy should force it closed and
+    // drop pointer occlusion even if the layer remains present.
+    begin_frame(&mut app, window);
+    let _trigger3 = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(app.models().get_copied(&open), Some(false));
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None,
+        "expected dock drag to force menu-like overlay to drop pointer occlusion"
+    );
+    assert_eq!(snap.topmost_pointer_occluding_overlay, None);
+}
+
+fn render_base_with_trigger_and_capture_underlay(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    open: Model<bool>,
+) -> (GlobalElementId, GlobalElementId) {
+    begin_frame(app, window);
+
+    let mut trigger_id: Option<GlobalElementId> = None;
+    let mut underlay_id: Option<GlobalElementId> = None;
+
+    let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+        vec![cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(80.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        Vec::new()
+                    },
+                );
+
+                let underlay = cx.pointer_region(
+                    PointerRegionProps {
+                        layout: {
+                            LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(120.0)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(160.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }
+                        },
+                        enabled: true,
+                    },
+                    |cx| {
+                        cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {
+                            host.capture_pointer();
+                            true
+                        }));
+                        Vec::new()
+                    },
+                );
+                underlay_id = Some(underlay.id);
+
+                vec![trigger, underlay]
+            },
+        )]
+    });
+    ui.set_root(root);
+
+    (
+        trigger_id.expect("trigger id"),
+        underlay_id.expect("underlay id"),
+    )
+}
+
+#[test]
+fn dock_drag_does_not_restore_closed_non_modal_overlays_on_drag_end() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Second frame: open a non-modal popover overlay.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Start a dock drag session; policy should force-close the non-modal overlay.
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // Third frame: re-request the overlay; window_overlays policy should force it closed.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(app.models().get_copied(&open), Some(false));
+
+    // End the drag and render another frame; overlays should stay closed unless the user reopens.
+    app.cancel_drag(PointerId(7));
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn pointer_capture_forces_menu_like_overlay_to_close_and_drop_occlusion() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base and capture pointer 0 in the underlay (viewport-like capture).
+    let (trigger, _underlay) = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.any_captured_node().is_some(),
+        "expected pointer capture to be active before opening the menu-like overlay"
+    );
+
+    // Second frame: attempt to open a menu-like overlay that would normally enable pointer occlusion.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_copied(&open),
+        Some(true),
+        "expected capture to suspend pointer gating (not force-close) for menu-like overlays"
+    );
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None,
+        "expected pointer occlusion to be suppressed while capture is active"
+    );
+    assert_eq!(snap.topmost_pointer_occluding_overlay, None);
+
+    let base_root = ui.base_root().expect("base root");
+    let popover_layer = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.root != base_root)
+        .expect("popover layer");
+    assert!(
+        !popover_layer.hit_testable,
+        "expected capture to suspend popover pointer hit-testing"
+    );
+}
+
+#[test]
+fn pointer_capture_forces_consuming_popover_to_close() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base and capture pointer 0 in the underlay (viewport-like capture).
+    let (trigger, _underlay) = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.any_captured_node().is_some(),
+        "expected pointer capture to be active before opening the consuming popover"
+    );
+
+    // Second frame: attempt to open a consuming non-modal overlay. Even without pointer occlusion,
+    // we must not introduce non-click-through dismissal semantics while another layer owns capture.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_copied(&open),
+        Some(true),
+        "expected pointer capture to suspend pointer gating (not force-close) for consuming popovers"
+    );
+
+    let base_root = ui.base_root().expect("base root");
+    let popover_layer = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.root != base_root)
+        .expect("popover layer");
+    assert!(
+        !popover_layer.hit_testable,
+        "expected capture to suspend popover pointer hit-testing"
+    );
+}
+
+#[test]
+fn dock_drag_restores_focus_when_focus_is_missing_on_drag_end() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base and focus the trigger.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    ui.set_focus(Some(trigger_node));
+
+    // Start a dock drag session and render a frame so the overlay policy can record the focus snapshot.
+    app.begin_cross_window_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Simulate focus being cleared during the drag (platform/runner behavior).
+    ui.set_focus(None);
+
+    // End the drag and render another frame; focus should restore to the pre-drag focus node.
+    app.cancel_drag(PointerId(7));
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.focus(), Some(trigger_node));
+}
+
+#[test]
+fn pointer_capture_hides_hover_overlays_in_same_window() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let (trigger, _underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .hover_overlays
+            .get(&(window, trigger))
+            .map(|h| h.layer)
+    });
+    let layer = layer.expect("hover overlay layer");
+    assert!(ui.is_layer_visible(layer));
+
+    // Start a pointer-capture session by pressing (without releasing) a `Pressable`.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.captured().is_some(),
+        "expected pressable pointer down to capture"
+    );
+
+    begin_frame(&mut app, window);
+    let (_trigger2, _underlay2) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected hover overlay to be hidden during pointer capture"
+    );
+}
+
+#[test]
+fn pointer_capture_hides_tooltips_in_same_window() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let (trigger, _underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            interactive: true,
+            trigger: Some(trigger),
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays.tooltips.get(&(window, trigger)).map(|t| t.layer)
+    });
+    let layer = layer.expect("tooltip layer");
+    assert!(ui.is_layer_visible(layer));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.captured().is_some(),
+        "expected pressable pointer down to capture"
+    );
+
+    begin_frame(&mut app, window);
+    let (_trigger2, _underlay2) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: trigger,
+            root_name: tooltip_root_name(trigger),
+            interactive: true,
+            trigger: Some(trigger),
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected tooltip to be hidden during pointer capture"
+    );
 }

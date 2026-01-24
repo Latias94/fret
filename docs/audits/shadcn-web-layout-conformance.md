@@ -72,8 +72,21 @@ These shadcn v4 new-york-v4 pages are good early gates because they stress the m
 patterns:
 
 - `button-default`
+- `button-group-demo` (nested group gaps + merged borders/radii)
+- `button-group-split` (separator sizing + merged radii)
+- `button-group-separator` (separator sizing + merged radii)
+- `button-group-nested` (nested group gap + merged borders/radii)
+- `button-group-orientation` (vertical border/radius merge via `border-t-0`)
+- `button-group-size` (group height scale + icon sizing + `space-y-8` stacking gap)
+- `button-group-dropdown` (asymmetric trigger padding + merged borders/radii)
+- `button-group-popover` (fixed-width lead button + merged borders/radii)
+- `button-group-input` (input/button merge via `border-l-0` + `rounded-r-none`)
+- `button-group-select` (select trigger + input merge; right icon button separated by `gap-2`)
+- `button-group-input-group` (pill wrapper border-box geometry + trailing inline control)
+- `aspect-ratio-demo`
 - `breadcrumb-separator` (custom separator icon sizing)
 - `breadcrumb-ellipsis` (ellipsis box + icon centering)
+- `breadcrumb-link` (link row height + chevron separator sizing/centering)
 - `breadcrumb-dropdown` (dropdown trigger row height + chevron icon sizing)
 - `breadcrumb-demo` (ellipsis trigger variant sizing)
 - `badge-demo`
@@ -86,6 +99,16 @@ patterns:
 - `input-demo`
 - `label-demo`
 - `input-with-label`
+- `input-group-dropdown` (root height)
+- `input-group-icon` (inline-start icon addon + input box geometry)
+- `input-group-spinner` (inline-end spinner addon + input box geometry)
+- `input-group-button` (inline-end button addon negative margin + icon centering)
+- `input-group-tooltip` (inline-start and inline-end button addons + stack gap)
+- `empty-input-group` (inline-start icon + inline-end kbd addon geometry)
+- `kbd-input-group` (inline-end multi-kbd addon geometry)
+- `input-group-textarea` (block-start/bottom + block-end/top addons with dividers)
+- `input-group-text` (inline-start/inline-end text addons)
+- `spinner-input-group` (textarea + block-end addon + `ml-auto` send button)
 - `field-input`
 - `field-checkbox`
 - `field-group`

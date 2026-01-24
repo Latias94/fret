@@ -125,7 +125,10 @@ impl<H: UiHost> UiTree<H> {
             None => return,
         };
 
-        let key = PaintCacheKey::new(bounds, scale_factor, theme_revision);
+        let child_transform = self
+            .node_children_render_transform(node)
+            .unwrap_or(Transform2D::IDENTITY);
+        let key = PaintCacheKey::new(bounds, scale_factor, theme_revision, child_transform);
 
         let can_reuse =
             is_view_cache_root && self.should_reuse_view_cache_node(node) && !invalidation.hit_test;

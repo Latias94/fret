@@ -6,8 +6,11 @@ contracts early to avoid large rewrites later.
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
+- Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
+- Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`

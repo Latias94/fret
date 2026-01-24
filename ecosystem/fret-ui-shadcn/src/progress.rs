@@ -142,6 +142,7 @@ impl Progress {
                                 border: Edges::all(Px(0.0)),
                                 border_color: None,
                                 corner_radii: fret_core::Corners::all(radius),
+                                ..Default::default()
                             },
                             |_cx| Vec::new(),
                         )]

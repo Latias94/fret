@@ -1,12 +1,13 @@
 use fret_core::{Color, Corners, Edges, Px};
 use fret_ui::Theme;
 use fret_ui::element::{
-    ContainerProps, LayoutStyle, Length, MarginEdge, RingPlacement, RingStyle, ShadowStyle,
+    ContainerProps, LayoutStyle, Length, MarginEdge, RingPlacement, RingStyle, ShadowLayerStyle,
+    ShadowStyle,
 };
 
 use crate::style::{
-    ChromeRefinement, InsetRefinement, LayoutRefinement, LengthRefinement, MarginRefinement,
-    PaddingRefinement, SizeRefinement,
+    ChromeRefinement, CornerRadiiRefinement, InsetRefinement, LayoutRefinement, LengthRefinement,
+    MarginRefinement, PaddingRefinement, ShadowPreset, SizeRefinement,
 };
 use crate::{ColorRef, MetricRef, Radius, Space};
 
@@ -48,6 +49,46 @@ fn resolve_padding(theme: &Theme, padding: Option<&PaddingRefinement>) -> Edges 
             .unwrap_or(Px(0.0)),
         left: p.left.as_ref().map(|m| m.resolve(theme)).unwrap_or(Px(0.0)),
     }
+}
+
+fn resolve_corner_radii(
+    theme: &Theme,
+    radii: Option<&CornerRadiiRefinement>,
+    fallback_radius: Px,
+) -> Corners {
+    let Some(r) = radii else {
+        return Corners::all(fallback_radius);
+    };
+    Corners {
+        top_left: r
+            .top_left
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+        top_right: r
+            .top_right
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+        bottom_right: r
+            .bottom_right
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+        bottom_left: r
+            .bottom_left
+            .as_ref()
+            .map(|m| m.resolve(theme))
+            .unwrap_or(fallback_radius),
+    }
+}
+
+fn max_corner_radius(corners: Corners) -> Px {
+    let mut max = corners.top_left.0;
+    max = max.max(corners.top_right.0);
+    max = max.max(corners.bottom_right.0);
+    max = max.max(corners.bottom_left.0);
+    Px(max)
 }
 
 pub fn layout_style(theme: &Theme, refinement: LayoutRefinement) -> LayoutStyle {
@@ -161,22 +202,38 @@ pub fn container_props(
         .unwrap_or(Px(0.0));
     let border_color = chrome.border_color.as_ref().map(|c| c.resolve(theme));
 
-    let radius = chrome
+    let uniform_radius = chrome
         .radius
         .as_ref()
         .map(|m| m.resolve(theme))
         .unwrap_or(Px(0.0));
 
+    let corner_radii = resolve_corner_radii(theme, chrome.corner_radii.as_ref(), uniform_radius);
+
+    let shadow_radius = max_corner_radius(corner_radii);
+
     let layout = layout_style(theme, layout_refinement);
+
+    let shadow = match chrome.shadow {
+        Some(ShadowPreset::None) => None,
+        Some(ShadowPreset::Xs) => Some(shadow_xs(theme, shadow_radius)),
+        Some(ShadowPreset::Sm) => Some(shadow_sm(theme, shadow_radius)),
+        Some(ShadowPreset::Md) => Some(shadow_md(theme, shadow_radius)),
+        Some(ShadowPreset::Lg) => Some(shadow_lg(theme, shadow_radius)),
+        None => None,
+    };
 
     ContainerProps {
         layout,
         padding,
         background,
-        shadow: None,
+        shadow,
         border: Edges::all(border_width),
         border_color,
-        corner_radii: Corners::all(radius),
+        focus_ring: None,
+        focus_border_color: None,
+        focus_within: false,
+        corner_radii,
     }
 }
 
@@ -222,80 +279,123 @@ fn shadow_metric(theme: &Theme, key: &'static str, fallback: Px) -> Px {
     theme.metric_by_key(key).unwrap_or(fallback)
 }
 
-fn shadow_style(
+fn shadow_layer_style(
     theme: &Theme,
     offset_x_key: &'static str,
     offset_y_key: &'static str,
     spread_key: &'static str,
-    softness_key: &'static str,
-    radius: Px,
-    fallback_alpha: f32,
-) -> ShadowStyle {
+    blur_key: &'static str,
+    fallback: (Px, Px, Px, Px),
+    color: Color,
+) -> ShadowLayerStyle {
     let offset_x = shadow_metric(theme, offset_x_key, Px(0.0));
-    let offset_y = shadow_metric(theme, offset_y_key, Px(2.0));
-    let spread = shadow_metric(theme, spread_key, Px(0.0));
-    let softness_px = shadow_metric(theme, softness_key, Px(2.0));
-    let softness = softness_px.0.round().clamp(0.0, 8.0) as u8;
+    let offset_y = shadow_metric(theme, offset_y_key, fallback.1);
+    let spread = shadow_metric(theme, spread_key, fallback.2);
+    // Back-compat: the token name is still `softness` in theme metrics, but maps to CSS blur.
+    let blur = shadow_metric(theme, blur_key, fallback.3);
 
-    ShadowStyle {
-        color: shadow_color(theme, fallback_alpha),
+    ShadowLayerStyle {
+        color,
         offset_x,
         offset_y,
+        blur,
         spread,
-        softness,
-        corner_radii: Corners::all(radius),
     }
 }
 
 pub fn shadow_xs(theme: &Theme, radius: Px) -> ShadowStyle {
-    let offset_x = shadow_metric(theme, "component.shadow.xs.offset_x", Px(0.0));
-    let offset_y = shadow_metric(theme, "component.shadow.xs.offset_y", Px(1.0));
-    let spread = shadow_metric(theme, "component.shadow.xs.spread", Px(0.0));
-    let softness_px = shadow_metric(theme, "component.shadow.xs.softness", Px(1.0));
-    let softness = softness_px.0.round().clamp(0.0, 8.0) as u8;
-
+    // Tailwind default (`shadow-xs`): `0 1px 2px 0 rgba(0,0,0,0.05)`.
+    let color = shadow_color(theme, 0.05);
+    let primary = shadow_layer_style(
+        theme,
+        "component.shadow.xs.offset_x",
+        "component.shadow.xs.offset_y",
+        "component.shadow.xs.spread",
+        "component.shadow.xs.softness",
+        (Px(0.0), Px(1.0), Px(0.0), Px(2.0)),
+        color,
+    );
     ShadowStyle {
-        color: shadow_color(theme, 0.12),
-        offset_x,
-        offset_y,
-        spread,
-        softness,
+        primary,
+        secondary: None,
         corner_radii: Corners::all(radius),
     }
 }
 
 pub fn shadow_sm(theme: &Theme, radius: Px) -> ShadowStyle {
-    shadow_style(
+    let color = shadow_color(theme, 0.14);
+    let primary = shadow_layer_style(
         theme,
         "component.shadow.sm.offset_x",
         "component.shadow.sm.offset_y",
         "component.shadow.sm.spread",
         "component.shadow.sm.softness",
-        radius,
-        0.14,
-    )
+        (Px(0.0), Px(2.0), Px(0.0), Px(2.0)),
+        color,
+    );
+    ShadowStyle {
+        primary,
+        secondary: None,
+        corner_radii: Corners::all(radius),
+    }
 }
 
 pub fn shadow_md(theme: &Theme, radius: Px) -> ShadowStyle {
-    shadow_style(
+    // Tailwind default (`shadow-md`):
+    // `0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)`
+    let color = shadow_color(theme, 0.10);
+    let primary = shadow_layer_style(
         theme,
         "component.shadow.md.offset_x",
         "component.shadow.md.offset_y",
         "component.shadow.md.spread",
         "component.shadow.md.softness",
-        radius,
-        0.18,
-    )
+        (Px(0.0), Px(4.0), Px(-1.0), Px(6.0)),
+        color,
+    );
+    let secondary = shadow_layer_style(
+        theme,
+        "component.shadow.md2.offset_x",
+        "component.shadow.md2.offset_y",
+        "component.shadow.md2.spread",
+        "component.shadow.md2.softness",
+        (Px(0.0), Px(2.0), Px(-2.0), Px(4.0)),
+        color,
+    );
+
+    ShadowStyle {
+        primary,
+        secondary: Some(secondary),
+        corner_radii: Corners::all(radius),
+    }
 }
 
 pub fn shadow_lg(theme: &Theme, radius: Px) -> ShadowStyle {
-    shadow_style(
+    // Tailwind default (`shadow-lg`):
+    // `0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)`
+    let color = shadow_color(theme, 0.10);
+    let primary = shadow_layer_style(
         theme,
         "component.shadow.lg.offset_x",
         "component.shadow.lg.offset_y",
         "component.shadow.lg.spread",
         "component.shadow.lg.softness",
-        radius,
-        0.24,
-    )
+        (Px(0.0), Px(10.0), Px(-3.0), Px(15.0)),
+        color,
+    );
+    let secondary = shadow_layer_style(
+        theme,
+        "component.shadow.lg2.offset_x",
+        "component.shadow.lg2.offset_y",
+        "component.shadow.lg2.spread",
+        "component.shadow.lg2.softness",
+        (Px(0.0), Px(4.0), Px(-4.0), Px(6.0)),
+        color,
+    );
+
+    ShadowStyle {
+        primary,
+        secondary: Some(secondary),
+        corner_radii: Corners::all(radius),
+    }
 }

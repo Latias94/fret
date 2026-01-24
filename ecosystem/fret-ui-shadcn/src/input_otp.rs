@@ -1,16 +1,16 @@
-use fret_core::{
-    Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    PositionStyle, SizeStyle, TextInputProps, TextProps,
+    PositionStyle, SizeStyle, TextInputProps,
 };
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Size as ComponentSize, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
+};
 use std::sync::Arc;
 
 fn otp_gap(theme: &Theme) -> Px {
@@ -176,14 +176,19 @@ impl InputOtp {
                                 wrap: false,
                             },
                             move |cx| {
-                                vec![cx.text_props(TextProps {
-                                    layout: LayoutStyle::default(),
-                                    text: Arc::from("•"),
-                                    style: Some(slot_text_style_for_sep.clone()),
-                                    color: Some(separator_color),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                })]
+                                let style = slot_text_style_for_sep.clone();
+                                let mut label = ui::label(cx, Arc::from("•"))
+                                    .text_size_px(style.size)
+                                    .font_weight(style.weight)
+                                    .text_color(ColorRef::Color(separator_color))
+                                    .nowrap();
+                                if let Some(line_height) = style.line_height {
+                                    label = label.line_height_px(line_height);
+                                }
+                                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                    label = label.letter_spacing_em(letter_spacing_em);
+                                }
+                                vec![label.into_element(cx)]
                             },
                         ));
                     }
@@ -218,6 +223,7 @@ impl InputOtp {
                             border: Edges::all(border),
                             border_color: Some(border_color),
                             corner_radii: Corners::all(radius),
+                            ..Default::default()
                         },
                         move |cx| {
                             vec![cx.flex(
@@ -231,14 +237,19 @@ impl InputOtp {
                                     wrap: false,
                                 },
                                 move |cx| {
-                                    vec![cx.text_props(TextProps {
-                                        layout: LayoutStyle::default(),
-                                        text,
-                                        style: Some(slot_text_style_for_slot.clone()),
-                                        color: Some(fg),
-                                        wrap: TextWrap::None,
-                                        overflow: TextOverflow::Clip,
-                                    })]
+                                    let style = slot_text_style_for_slot.clone();
+                                    let mut label = ui::label(cx, text)
+                                        .text_size_px(style.size)
+                                        .font_weight(style.weight)
+                                        .text_color(ColorRef::Color(fg))
+                                        .nowrap();
+                                    if let Some(line_height) = style.line_height {
+                                        label = label.line_height_px(line_height);
+                                    }
+                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                        label = label.letter_spacing_em(letter_spacing_em);
+                                    }
+                                    vec![label.into_element(cx)]
                                 },
                             )]
                         },

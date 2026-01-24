@@ -12,6 +12,7 @@ pub mod budget;
 pub mod cache;
 pub mod diagnostics;
 pub mod drag;
+pub mod interaction;
 pub mod scale;
 pub mod spatial;
 #[cfg(feature = "rstar")]

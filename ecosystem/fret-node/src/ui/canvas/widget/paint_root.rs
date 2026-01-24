@@ -41,14 +41,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let zoom = snapshot.zoom;
         let pan = snapshot.pan;
 
-        let viewport_w = cx.bounds.size.width.0 / zoom;
-        let viewport_h = cx.bounds.size.height.0 / zoom;
-        let viewport_origin_x = -pan.x;
-        let viewport_origin_y = -pan.y;
-        let viewport_rect = Rect::new(
-            Point::new(Px(viewport_origin_x), Px(viewport_origin_y)),
-            Size::new(Px(viewport_w), Px(viewport_h)),
+        let viewport = CanvasViewport2D::new(
+            cx.bounds,
+            PanZoom2D {
+                pan: Point::new(Px(pan.x), Px(pan.y)),
+                zoom,
+            },
         );
+        let viewport_rect = viewport.visible_canvas_rect();
+        let viewport_w = viewport_rect.size.width.0;
+        let viewport_h = viewport_rect.size.height.0;
+        let viewport_origin_x = viewport_rect.origin.x.0;
+        let viewport_origin_y = viewport_rect.origin.y.0;
         let only_render_visible_elements = snapshot.interaction.only_render_visible_elements;
         let render_cull_rect = if !only_render_visible_elements {
             None

@@ -4,12 +4,13 @@ use fret_core::geometry::Edges;
 use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 use crate::layout as shadcn_layout;
 
@@ -213,10 +214,10 @@ impl std::fmt::Debug for TableRow {
 }
 
 impl TableRow {
-    pub fn new(cols: u16, children: Vec<AnyElement>) -> Self {
+    pub fn new(cols: u16, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             cols: cols.max(1),
-            children,
+            children: children.into_iter().collect(),
             selected: false,
             enabled: true,
             on_click: None,
@@ -253,8 +254,11 @@ impl TableRow {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let cols = self.cols;
         let selected = self.selected;
-        let enabled = self.enabled;
+        let mut enabled = self.enabled;
         let on_click = self.on_click.clone();
+        if let Some(cmd) = on_click.as_ref() {
+            enabled = enabled && cx.command_is_enabled(cmd);
+        }
         let on_activate = self.on_activate.clone();
         let border_bottom = self.border_bottom;
         let children = self.children;
@@ -273,7 +277,7 @@ impl TableRow {
             if let Some(on_activate) = on_activate.clone() {
                 cx.pressable_add_on_activate(on_activate);
             }
-            cx.pressable_dispatch_command_opt(on_click);
+            cx.pressable_dispatch_command_if_enabled_opt(on_click);
             let theme = Theme::global(&*cx.app).clone();
 
             let mut hover_bg = muted_bg(&theme);
@@ -410,14 +414,18 @@ impl TableHead {
                     wrap: false,
                 },
                 move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: text.clone(),
-                        style: Some(style.clone()),
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    })]
+                    let mut head_text = ui::text(cx, text.clone())
+                        .text_size_px(style.size)
+                        .font_weight(style.weight)
+                        .text_color(ColorRef::Color(fg))
+                        .nowrap();
+                    if let Some(line_height) = style.line_height {
+                        head_text = head_text.line_height_px(line_height);
+                    }
+                    if let Some(letter_spacing_em) = style.letter_spacing_em {
+                        head_text = head_text.letter_spacing_em(letter_spacing_em);
+                    }
+                    vec![head_text.into_element(cx)]
                 },
             )]
         })
@@ -517,14 +525,19 @@ impl TableCaption {
         let text = self.text;
 
         cx.container(props, move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: Default::default(),
-                text,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::Word,
-                overflow: TextOverflow::Clip,
-            })]
+            let mut caption_text = ui::text(cx, text)
+                .text_size_px(style.size)
+                .font_weight(style.weight)
+                .text_color(ColorRef::Color(fg))
+                .wrap(TextWrap::Word)
+                .overflow(TextOverflow::Clip);
+            if let Some(line_height) = style.line_height {
+                caption_text = caption_text.line_height_px(line_height);
+            }
+            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                caption_text = caption_text.letter_spacing_em(letter_spacing_em);
+            }
+            vec![caption_text.into_element(cx)]
         })
     }
 }

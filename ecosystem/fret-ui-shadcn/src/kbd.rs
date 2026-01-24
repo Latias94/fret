@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, TextProps,
-};
+use fret_core::{FontWeight, Px};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, LayoutStyle, MainAlign};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 #[derive(Debug, Clone)]
 pub struct Kbd {
@@ -97,28 +95,15 @@ fn kbd_with_patch<H: UiHost>(
                 wrap: false,
             },
             move |cx| {
-                vec![cx.text_props(TextProps {
-                    layout: LayoutStyle {
-                        size: fret_ui::element::SizeStyle {
-                            width: Length::Auto,
-                            height: Length::Px(line_height),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    text: text.clone(),
-                    style: Some(TextStyle {
-                        font: FontId::default(),
-                        size: px,
-                        weight: FontWeight::MEDIUM,
-                        slant: Default::default(),
-                        line_height: Some(line_height),
-                        letter_spacing_em: None,
-                    }),
-                    color: Some(fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })]
+                vec![
+                    ui::label(cx, text.clone())
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(ColorRef::Color(fg))
+                        .h_px(MetricRef::Px(line_height))
+                        .into_element(cx),
+                ]
             },
         )]
     })

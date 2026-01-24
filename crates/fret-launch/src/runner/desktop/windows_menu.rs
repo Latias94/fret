@@ -4,8 +4,8 @@ use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
 use fret_core::AppWindowId;
 use fret_runtime::{
-    CommandId, InputContext, Keymap, KeymapService, MenuBar, MenuItem, Platform, WhenExpr,
-    WindowCommandEnabledService, WindowInputContextService,
+    CommandId, CommandScope, InputContext, Keymap, KeymapService, MenuBar, MenuItem, Platform,
+    WhenExpr, WindowCommandGatingSnapshot,
 };
 use winit::event_loop::EventLoopProxy;
 use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -34,14 +34,14 @@ struct WindowsMenuItemDef {
     label: Arc<str>,
     command_when: Option<WhenExpr>,
     item_when: Option<WhenExpr>,
+    command_scope: CommandScope,
 }
 
 #[derive(Debug, Default)]
 struct WindowsMenuHookState {
     hwnd_to_app_window: HashMap<isize, AppWindowId>,
     hwnd_to_item_defs: HashMap<isize, HashMap<u16, WindowsMenuItemDef>>,
-    hwnd_to_command_enabled: HashMap<isize, HashMap<CommandId, bool>>,
-    hwnd_to_input_ctx: HashMap<isize, InputContext>,
+    hwnd_to_gating: HashMap<isize, WindowCommandGatingSnapshot>,
     cached_keymap: Arc<Keymap>,
 }
 
@@ -77,8 +77,7 @@ pub(crate) fn unregister_window(window: &dyn Window) {
     };
     state.hwnd_to_app_window.remove(&(hwnd as isize));
     state.hwnd_to_item_defs.remove(&(hwnd as isize));
-    state.hwnd_to_command_enabled.remove(&(hwnd as isize));
-    state.hwnd_to_input_ctx.remove(&(hwnd as isize));
+    state.hwnd_to_gating.remove(&(hwnd as isize));
 }
 
 pub(crate) fn msg_hook(msg: *const c_void) -> bool {
@@ -188,48 +187,30 @@ fn apply_popup_menu_state(hwnd: isize, popup: HMENU) {
             return;
         };
         let keymap = state.cached_keymap.clone();
-        let command_enabled = state
-            .hwnd_to_command_enabled
-            .get(&hwnd)
-            .cloned()
-            .unwrap_or_default();
-        let input_ctx = state
-            .hwnd_to_input_ctx
-            .get(&hwnd)
-            .cloned()
-            .unwrap_or(InputContext {
-                platform: Platform::Windows,
-                caps: Default::default(),
-                ui_has_modal: false,
-                focus_is_text_input: false,
-                edit_can_undo: true,
-                edit_can_redo: true,
-                dispatch_phase: Default::default(),
-            });
+        let gating = state.hwnd_to_gating.get(&hwnd).cloned().unwrap_or_default();
 
         for id in ids {
             let Some(def) = defs_by_id.get(&id) else {
                 continue;
             };
 
-            let enabled = def
-                .command_when
+            let enabled = gating.is_enabled_for_meta(
+                &def.command,
+                def.command_scope,
+                def.command_when.as_ref(),
+            ) && def
+                .item_when
                 .as_ref()
-                .map(|w| w.eval(&input_ctx))
-                .unwrap_or(true)
-                && def
-                    .item_when
-                    .as_ref()
-                    .map(|w| w.eval(&input_ctx))
-                    .unwrap_or(true);
-            let enabled = enabled && command_enabled.get(&def.command).copied().unwrap_or(true);
+                .map(|w| w.eval(gating.input_ctx()))
+                .unwrap_or(true);
 
-            let shortcut = keymap.display_shortcut_for_command_sequence(&input_ctx, &def.command);
+            let shortcut =
+                keymap.display_shortcut_for_command_sequence(gating.input_ctx(), &def.command);
             let text = if let Some(seq) = shortcut {
                 format!(
                     "{}\t{}",
                     def.label,
-                    fret_runtime::format_sequence(input_ctx.platform, &seq)
+                    fret_runtime::format_sequence(gating.input_ctx().platform, &seq)
                 )
             } else {
                 def.label.to_string()
@@ -308,27 +289,14 @@ pub(crate) fn set_window_menu_bar(
         .global::<fret_runtime::PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    let input_ctx = app
-        .global::<WindowInputContextService>()
-        .and_then(|svc| svc.snapshot(app_window))
-        .cloned()
-        .unwrap_or(InputContext {
-            platform: Platform::Windows,
-            caps,
-            ui_has_modal: false,
-            focus_is_text_input: false,
-            edit_can_undo: true,
-            edit_can_redo: true,
-            dispatch_phase: Default::default(),
-        });
+    let fallback_input_ctx = InputContext::fallback(Platform::Windows, caps);
+    let gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+        app,
+        app_window,
+        fallback_input_ctx,
+    );
 
-    let enabled = app
-        .global::<WindowCommandEnabledService>()
-        .and_then(|svc| svc.snapshot(app_window))
-        .cloned()
-        .unwrap_or_default();
-
-    let (menu, defs_by_id) = build_menu_bar(menu_bar, commands, keymap, &input_ctx)?;
+    let (menu, defs_by_id) = build_menu_bar(menu_bar, commands, keymap, gating.input_ctx())?;
 
     unsafe {
         SetMenu(hwnd, menu.handle);
@@ -340,8 +308,7 @@ pub(crate) fn set_window_menu_bar(
     };
     state.hwnd_to_app_window.insert(hwnd as isize, app_window);
     state.hwnd_to_item_defs.insert(hwnd as isize, defs_by_id);
-    state.hwnd_to_command_enabled.insert(hwnd as isize, enabled);
-    state.hwnd_to_input_ctx.insert(hwnd as isize, input_ctx);
+    state.hwnd_to_gating.insert(hwnd as isize, gating);
     state.cached_keymap = Arc::new(keymap.cloned().unwrap_or_default());
 
     drop(state);
@@ -363,14 +330,13 @@ pub(crate) fn sync_keymap_from_app(app: &fret_app::App) {
     }
 }
 
-pub(crate) fn sync_input_context_from_app(app: &fret_app::App) {
+pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
     #[cfg(target_os = "windows")]
     {
         let caps = app
             .global::<fret_runtime::PlatformCapabilities>()
             .cloned()
             .unwrap_or_default();
-        let snapshots = app.global::<WindowInputContextService>();
 
         let windows: Vec<(isize, AppWindowId)> = {
             let Ok(state) = MENU_HOOK_STATE.lock() else {
@@ -383,62 +349,22 @@ pub(crate) fn sync_input_context_from_app(app: &fret_app::App) {
                 .collect()
         };
 
-        let mut by_hwnd: HashMap<isize, InputContext> = HashMap::new();
+        let mut by_hwnd: HashMap<isize, WindowCommandGatingSnapshot> = HashMap::new();
         for (hwnd, window) in windows {
-            let input_ctx = snapshots
-                .and_then(|svc| svc.snapshot(window))
-                .cloned()
-                .unwrap_or(InputContext {
-                    platform: Platform::Windows,
-                    caps: caps.clone(),
-                    ui_has_modal: false,
-                    focus_is_text_input: false,
-                    edit_can_undo: true,
-                    edit_can_redo: true,
-                    dispatch_phase: Default::default(),
-                });
-            by_hwnd.insert(hwnd, input_ctx);
+            let fallback_input_ctx = InputContext::fallback(Platform::Windows, caps.clone());
+            let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+                app,
+                window,
+                fallback_input_ctx,
+            );
+            by_hwnd.insert(hwnd, snapshot);
         }
 
         let Ok(mut state) = MENU_HOOK_STATE.lock() else {
             return;
         };
-        for (hwnd, input_ctx) in by_hwnd {
-            state.hwnd_to_input_ctx.insert(hwnd, input_ctx);
-        }
-    }
-}
-
-pub(crate) fn sync_command_enabled_from_app(app: &fret_app::App) {
-    #[cfg(target_os = "windows")]
-    {
-        let snapshots = app.global::<WindowCommandEnabledService>();
-
-        let windows: Vec<(isize, AppWindowId)> = {
-            let Ok(state) = MENU_HOOK_STATE.lock() else {
-                return;
-            };
-            state
-                .hwnd_to_app_window
-                .iter()
-                .map(|(&hwnd, &window)| (hwnd, window))
-                .collect()
-        };
-
-        let mut by_hwnd: HashMap<isize, HashMap<CommandId, bool>> = HashMap::new();
-        for (hwnd, window) in windows {
-            let enabled = snapshots
-                .and_then(|svc| svc.snapshot(window))
-                .cloned()
-                .unwrap_or_default();
-            by_hwnd.insert(hwnd, enabled);
-        }
-
-        let Ok(mut state) = MENU_HOOK_STATE.lock() else {
-            return;
-        };
-        for (hwnd, enabled) in by_hwnd {
-            state.hwnd_to_command_enabled.insert(hwnd, enabled);
+        for (hwnd, snapshot) in by_hwnd {
+            state.hwnd_to_gating.insert(hwnd, snapshot);
         }
     }
 }
@@ -522,9 +448,13 @@ fn append_menu_item(
             let id = *next_id;
             *next_id = next_id.saturating_add(1);
 
-            let (label, command_when) = match commands.get(command.clone()) {
-                Some(meta) => (meta.title.clone(), meta.when.clone()),
-                None => (Arc::<str>::from(command.as_str()), None),
+            let (label, command_when, command_scope) = match commands.get(command.clone()) {
+                Some(meta) => (meta.title.clone(), meta.when.clone(), meta.scope),
+                None => (
+                    Arc::<str>::from(command.as_str()),
+                    None,
+                    CommandScope::Window,
+                ),
             };
             defs_by_id.insert(
                 id,
@@ -533,6 +463,7 @@ fn append_menu_item(
                     label: label.clone(),
                     command_when,
                     item_when: when.clone(),
+                    command_scope,
                 },
             );
 

@@ -750,11 +750,10 @@ mod tests {
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
         ContainerProps, LayoutStyle, Length, PositionStyle, PressableProps, SemanticsProps,
-        TextProps,
     };
     use fret_ui::overlay_placement;
     use fret_ui::tree::UiTree;
-    use fret_ui_kit::OverlayController;
+    use fret_ui_kit::{OverlayController, ui};
 
     #[derive(Default)]
     struct FakeServices;
@@ -862,7 +861,7 @@ mod tests {
                     },
                     |cx| {
                         vec![
-                            HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
+                            HoverCardContent::new(vec![ui::raw_text(cx, "card").into_element(cx)])
                                 .into_element(cx),
                         ]
                     },
@@ -1047,7 +1046,7 @@ mod tests {
                     },
                     |cx| {
                         vec![
-                            HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
+                            HoverCardContent::new(vec![ui::raw_text(cx, "card").into_element(cx)])
                                 .into_element(cx),
                         ]
                     },
@@ -1146,8 +1145,10 @@ mod tests {
                         },
                         |cx| {
                             vec![
-                                HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
-                                    .into_element(cx),
+                                HoverCardContent::new(vec![
+                                    ui::raw_text(cx, "card").into_element(cx),
+                                ])
+                                .into_element(cx),
                             ]
                         },
                     );
@@ -1373,8 +1374,10 @@ mod tests {
                         },
                         |cx| {
                             vec![
-                                HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
-                                    .into_element(cx),
+                                HoverCardContent::new(vec![
+                                    ui::raw_text(cx, "card").into_element(cx),
+                                ])
+                                .into_element(cx),
                             ]
                         },
                     );
@@ -1514,6 +1517,7 @@ mod tests {
                 position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 click_count: 1,
                 pointer_type: fret_core::PointerType::Mouse,
             }),

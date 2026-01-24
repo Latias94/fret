@@ -63,7 +63,8 @@ Key upstream behaviors/surfaces:
 - Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
 - Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
   the menu reserves the slot across the panel for consistent label alignment.
-- Pass: Checkbox/radio indicators render the `ids::ui::CHECK` icon in a fixed 16×16 slot.
+- Pass: Checkbox/radio items reserve a stable indicator slot (`pl-8` / `left-2`) so label alignment does
+  not jitter when toggling selection.
 
 ### Missing surfaces (significant)
 
@@ -101,7 +102,16 @@ Notes on API mapping:
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web menu row height gate (root): `web_vs_fret_dropdown_menu_demo_menu_item_height_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
+- Web item padding + shortcut alignment gate (root): `web_vs_fret_dropdown_menu_demo_profile_item_padding_and_shortcut_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
+- Web checkbox indicator slot inset gate (root): `web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_web`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web radio indicator slot inset gate (root): `web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
 - Web menu content inset gate (root): `web_vs_fret_dropdown_menu_demo_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
+- Web panel shadow gate (root, `shadow-md`): `web_vs_fret_dropdown_menu_demo_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web placement gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
@@ -114,6 +124,9 @@ Notes on API mapping:
 - Web menu content inset gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
 - Web placement gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
+- Web submenu panel shadow gate (`shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
 - Web first visible item gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_first_visible_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).

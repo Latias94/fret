@@ -1,16 +1,15 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, TableState};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack::{HStackProps, hstack};
 use fret_ui_kit::declarative::table::TableViewOutput;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::dropdown_menu::{
@@ -259,14 +258,12 @@ impl<TData> DataTableToolbar<TData> {
             .into_element(cx);
 
         let selected_text: Option<AnyElement> = (selected_count > 0).then(|| {
-            cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: Arc::from(format!("Selected: {selected_count}")),
-                style: None,
-                color: theme.color_by_key("muted-foreground"),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })
+            let mut text =
+                ui::raw_text(cx, Arc::from(format!("Selected: {selected_count}"))).nowrap();
+            if let Some(color) = theme.color_by_key("muted-foreground") {
+                text = text.text_color(ColorRef::Color(color));
+            }
+            text.into_element(cx)
         });
 
         hstack(

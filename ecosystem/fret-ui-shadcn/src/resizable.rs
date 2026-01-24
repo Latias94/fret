@@ -55,6 +55,7 @@ impl ResizablePanel {
             border: Edges::all(Px(0.0)),
             border_color: None,
             corner_radii: Corners::all(Px(0.0)),
+            ..Default::default()
         };
 
         let children = self.children;

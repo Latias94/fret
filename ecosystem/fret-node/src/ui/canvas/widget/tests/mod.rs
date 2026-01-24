@@ -26,6 +26,7 @@ mod color_mode_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod custom_edge_path_conformance;
+mod edit_command_availability_conformance;
 mod elevate_on_select_conformance;
 mod fit_view_nodes_conformance;
 mod fit_view_on_mount_conformance;
@@ -97,7 +98,13 @@ fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let mut snapshot = canvas.sync_view_state(cx.app);
     assert_eq!(snapshot.zoom, 1.0);
@@ -147,7 +154,13 @@ fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let mut snapshot = canvas.sync_view_state(cx.app);
     assert!(snapshot.interaction.space_to_pan);
@@ -219,6 +232,7 @@ fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
             position: *screen_positions.last().unwrap(),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
@@ -255,7 +269,13 @@ fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let _snapshot = canvas.sync_view_state(cx.app);
     assert!(!canvas.interaction.pan_activation_key_held);
@@ -311,7 +331,13 @@ fn pan_activation_key_code_none_disables_space_to_pan_activation() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let _snapshot = canvas.sync_view_state(cx.app);
 
@@ -348,7 +374,13 @@ fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let before = canvas.sync_view_state(cx.app).pan;
     canvas.event(
@@ -398,7 +430,13 @@ fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     cx.input_ctx.platform = fret_runtime::Platform::Windows;
 
     let before = canvas.sync_view_state(cx.app).pan;
@@ -441,7 +479,13 @@ fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let before = canvas.sync_view_state(cx.app).pan;
     canvas.event(
@@ -499,7 +543,13 @@ fn pinch_gesture_zooms_in_about_pointer() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let pos = Point::new(Px(100.0), Px(100.0));
     let before = canvas.sync_view_state(cx.app);
@@ -540,7 +590,13 @@ fn pinch_gesture_respects_toggle() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     canvas.event(
         &mut cx,
@@ -577,7 +633,13 @@ fn wheel_zoom_zooms_about_pointer() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let pos = Point::new(Px(100.0), Px(100.0));
     canvas.event(
@@ -611,7 +673,13 @@ fn delete_key_defaults_to_backspace() {
     );
     let mut services = NullServices::default();
     {
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         cx.window = Some(AppWindowId::default());
         canvas.event(
             &mut cx,
@@ -628,7 +696,13 @@ fn delete_key_defaults_to_backspace() {
     );
 
     {
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         cx.window = Some(AppWindowId::default());
         canvas.event(
             &mut cx,
@@ -669,7 +743,13 @@ fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
     let mut services = NullServices::default();
 
     {
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         cx.window = Some(AppWindowId::default());
         canvas.event(
             &mut cx,
@@ -710,7 +790,13 @@ fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
     let mut services = NullServices::default();
 
     {
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         cx.window = Some(AppWindowId::default());
         canvas.event(
             &mut cx,
@@ -745,7 +831,13 @@ fn double_click_background_zooms_in_about_pointer() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let pos = Point::new(Px(600.0), Px(500.0));
     let before = canvas.sync_view_state(cx.app);
@@ -789,7 +881,13 @@ fn shift_double_click_background_zooms_out_about_pointer() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let pos = Point::new(Px(600.0), Px(500.0));
     canvas.event(
@@ -844,7 +942,13 @@ fn double_click_edge_inserts_reroute_when_enabled() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let snap = canvas.sync_view_state(cx.app);
     let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
@@ -916,7 +1020,13 @@ fn alt_double_click_edge_opens_insert_node_picker() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let snap = canvas.sync_view_state(cx.app);
     let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
@@ -984,7 +1094,13 @@ fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let snap = canvas.sync_view_state(cx.app);
     let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
@@ -1035,6 +1151,7 @@ fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
                 alt: true,
                 ..Modifiers::default()
             },
+            is_click: true,
             click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
@@ -1132,7 +1249,13 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let snap = canvas.sync_view_state(cx.app);
     let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
@@ -1348,6 +1471,35 @@ impl DragHost for TestUiHostImpl {
             .filter(|drag| drag.pointer_id == pointer_id)
     }
 
+    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        self.drag.as_ref().is_some_and(|d| predicate(d))
+    }
+
+    fn find_drag_pointer_id(
+        &self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<fret_core::PointerId> {
+        self.drag
+            .as_ref()
+            .filter(|d| predicate(d))
+            .map(|d| d.pointer_id)
+    }
+
+    fn cancel_drag_sessions(
+        &mut self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Vec<fret_core::PointerId> {
+        let Some(drag) = self.drag.as_ref() else {
+            return Vec::new();
+        };
+        if !predicate(drag) {
+            return Vec::new();
+        }
+        let pointer_id = drag.pointer_id;
+        self.drag = None;
+        vec![pointer_id]
+    }
+
     fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
         self.drag
             .as_mut()
@@ -1401,14 +1553,17 @@ fn event_cx<'a>(
     host: &'a mut TestUiHostImpl,
     services: &'a mut NullServices,
     bounds: Rect,
+    prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
 ) -> fret_ui::retained_bridge::EventCx<'a, TestUiHostImpl> {
     fret_ui::retained_bridge::EventCx {
         app: host,
         services,
         node: fret_core::NodeId::default(),
+        layer_root: None,
         window: None,
         input_ctx: fret_runtime::InputContext::default(),
         pointer_id: None,
+        prevented_default_actions,
         children: &[],
         focus: None,
         captured: None,
@@ -1924,7 +2079,13 @@ fn node_drag_records_single_history_entry_for_multi_node_move() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     canvas.interaction.node_drag = Some(NodeDrag {
         primary: a,
@@ -2079,7 +2240,13 @@ fn connect_bundle_records_single_history_entry() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     canvas.interaction.wire_drag = Some(WireDrag {
         kind: WireDragKind::New {

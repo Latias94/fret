@@ -337,6 +337,7 @@ fn focus_scope_prevents_pointer_focus_from_leaving_subtree_when_trapped() {
             position: click,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,

@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use fret_canvas::view::{PanZoom2D, screen_rect_to_canvas_rect, visible_canvas_rect};
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, Event, KeyCode, MouseButton, Point, Px, Rect,
     SceneOp, Size, TextBlobId, TextConstraints, TextOverflow, TextWrap,
@@ -1312,17 +1313,11 @@ impl NodeGraphMiniMapOverlay {
         snapshot: &super::internals::NodeGraphInternalsSnapshot,
     ) -> Rect {
         let t = snapshot.transform;
-        let zoom = if t.zoom.is_finite() && t.zoom > 0.0 {
-            t.zoom
-        } else {
-            1.0
+        let view = PanZoom2D {
+            pan: Point::new(Px(t.pan.x), Px(t.pan.y)),
+            zoom: t.zoom,
         };
-        let viewport_w = canvas_bounds.size.width.0 / zoom;
-        let viewport_h = canvas_bounds.size.height.0 / zoom;
-        Rect::new(
-            Point::new(Px(-t.pan.x), Px(-t.pan.y)),
-            Size::new(Px(viewport_w), Px(viewport_h)),
-        )
+        visible_canvas_rect(canvas_bounds, view)
     }
 
     fn invert_window_rect_to_canvas(
@@ -1331,19 +1326,12 @@ impl NodeGraphMiniMapOverlay {
         snapshot: &super::internals::NodeGraphInternalsSnapshot,
     ) -> Rect {
         let t = snapshot.transform;
-        let zoom = if t.zoom.is_finite() && t.zoom > 0.0 {
-            t.zoom
-        } else {
-            1.0
+        let bounds = Rect::new(t.bounds_origin, t.bounds_size);
+        let view = PanZoom2D {
+            pan: Point::new(Px(t.pan.x), Px(t.pan.y)),
+            zoom: t.zoom,
         };
-        let ox = t.bounds_origin.x.0;
-        let oy = t.bounds_origin.y.0;
-
-        let x = (r.origin.x.0 - ox) / zoom - t.pan.x;
-        let y = (r.origin.y.0 - oy) / zoom - t.pan.y;
-        let w = r.size.width.0 / zoom;
-        let h = r.size.height.0 / zoom;
-        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+        screen_rect_to_canvas_rect(bounds, view, r)
     }
 
     fn compute_world_bounds(

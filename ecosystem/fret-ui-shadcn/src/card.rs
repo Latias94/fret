@@ -1,19 +1,35 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_core::{Px, TextWrap};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 use crate::layout as shadcn_layout;
 
 fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme.color_required("card");
     let border = theme.color_required("border");
+
+    // shadcn/ui v4: Card uses `rounded-xl`, which is computed from the base `--radius`.
+    //
+    // In the shadcn token model:
+    // - `rounded-lg` ~= `--radius`
+    // - `rounded-md` ~= `--radius - 2px`
+    // - `rounded-xl` ~= `--radius + 4px`
+    //
+    // We model the base radius as `metric.radius.lg`, and derive `rounded-xl` from it to keep
+    // behavior stable when the theme radius changes.
+    let base_radius = theme.metric_required("metric.radius.lg");
+    let rounded_xl = Px(base_radius.0 + 4.0);
+
     ChromeRefinement::default()
-        .rounded(Radius::Lg)
+        .merge(ChromeRefinement {
+            radius: Some(MetricRef::Px(rounded_xl)),
+            ..Default::default()
+        })
         .border_1()
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
@@ -182,21 +198,14 @@ impl CardTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::SEMIBOLD,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: Some(-0.02),
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_semibold()
+            .letter_spacing_em(-0.02)
+            .nowrap()
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
     }
 }
 
@@ -223,20 +232,12 @@ impl CardDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .wrap(TextWrap::Word)
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
     }
 }

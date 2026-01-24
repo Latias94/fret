@@ -16,6 +16,7 @@ cargo-clippy = []
 # Dev-only hotpatch integration (Subsecond). Feature-gated to avoid leaking dev tooling deps
 # into normal builds. See ADR 0107.
 hotpatch-subsecond = ["dep:serde_json", "dep:subsecond", "dep:tungstenite"]
+diag-screenshots = ["dep:serde_json", "dep:image"]
 wasm-emoji-fonts = ["fret-fonts/emoji"]
 wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
 
@@ -39,6 +40,7 @@ slotmap.workspace = true
 renderdog.workspace = true
 stacksafe.workspace = true
 serde_json = { workspace = true, optional = true }
+image = { workspace = true, optional = true }
 subsecond = { version = "0.7.2", optional = true }
 tungstenite = { version = "0.27.0", optional = true }
 

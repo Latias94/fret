@@ -224,7 +224,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                             ..Default::default()
                         },
                         |cx, st| {
-                            cx.pressable_dispatch_command_opt(select_cmd);
+                            cx.pressable_dispatch_command_if_enabled_opt(select_cmd);
                             let row_bg = if bg.is_some() {
                                 bg
                             } else if enabled && st.pressed {
@@ -272,9 +272,7 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                                         ..Default::default()
                                                     },
                                                     |cx, _st| {
-                                                        cx.pressable_dispatch_command_opt(
-                                                            toggle_cmd,
-                                                        );
+                                                        cx.pressable_dispatch_command_if_enabled_opt(toggle_cmd);
                                                         vec![cx.text(glyph.as_ref())]
                                                     },
                                                 ));

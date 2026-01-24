@@ -23,18 +23,10 @@ pub(crate) fn command_shortcut_label<H: UiHost>(
         .and_then(|svc| svc.snapshot(cx.window))
         .cloned();
 
-    let mut base_ctx = snapshot.unwrap_or(InputContext {
-        platform,
-        caps: caps.clone(),
-        ui_has_modal: false,
-        focus_is_text_input: false,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Normal,
-    });
+    let mut base_ctx = snapshot.unwrap_or(InputContext::fallback(platform, caps.clone()));
     base_ctx.platform = platform;
     base_ctx.caps = caps;
-    base_ctx.dispatch_phase = InputDispatchPhase::Normal;
+    base_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
     let seq = cx
         .app

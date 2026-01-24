@@ -1,6 +1,10 @@
 use super::*;
 use std::collections::HashMap;
 
+use fret_runtime::{
+    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
+};
+
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
     inv: Invalidation,
@@ -9,6 +13,87 @@ struct PendingInvalidation {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn event_is_scroll_like(event: &Event) -> bool {
+        // Wheel-only for now (trackpad pan / inertial scrolling can be added later as explicit
+        // inputs without changing the meaning of "Wheel" today).
+        matches!(event, Event::Pointer(PointerEvent::Wheel { .. }))
+    }
+
+    fn run_pressable_hover_hook(
+        app: &mut H,
+        window: AppWindowId,
+        element: crate::elements::GlobalElementId,
+        is_hovered: bool,
+    ) {
+        let hook = crate::elements::with_element_state(
+            app,
+            window,
+            element,
+            crate::action::PressableHoverActionHooks::default,
+            |hooks| hooks.on_hover_change.clone(),
+        );
+
+        let Some(hook) = hook else {
+            return;
+        };
+
+        struct PressableHoverHookHost<'a, H: crate::UiHost> {
+            app: &'a mut H,
+            window: AppWindowId,
+            element: crate::elements::GlobalElementId,
+        }
+
+        impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
+            fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                self.app.models_mut()
+            }
+
+            fn push_effect(&mut self, effect: Effect) {
+                match effect {
+                    Effect::SetTimer {
+                        window: Some(window),
+                        token,
+                        ..
+                    } if window == self.window => {
+                        crate::elements::record_timer_target(
+                            &mut *self.app,
+                            window,
+                            token,
+                            self.element,
+                        );
+                    }
+                    Effect::CancelTimer { token } => {
+                        crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                    }
+                    _ => {}
+                }
+                self.app.push_effect(effect);
+            }
+
+            fn request_redraw(&mut self, window: AppWindowId) {
+                self.app.request_redraw(window);
+            }
+
+            fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                self.app.next_timer_token()
+            }
+        }
+
+        let mut host = PressableHoverHookHost {
+            app,
+            window,
+            element,
+        };
+        hook(
+            &mut host,
+            crate::action::ActionCx {
+                window,
+                target: element,
+            },
+            is_hovered,
+        );
+    }
+
     fn invalidation_rank(inv: Invalidation) -> u8 {
         match inv {
             Invalidation::Paint => 1,
@@ -194,13 +279,15 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 element: root_element,
             };
+            let mut req =
+                crate::action::DismissRequestCx::new(crate::action::DismissReason::Escape);
             hook(
                 &mut host,
                 crate::action::ActionCx {
                     window,
                     target: root_element,
                 },
-                crate::action::DismissReason::Escape,
+                &mut req,
             );
             return true;
         }
@@ -291,6 +378,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
         let (active_roots, _barrier_root) = self.active_input_layers();
         if event_position(event).is_some() {
@@ -312,9 +400,11 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         services: &mut *services,
                         node: node_id,
+                        layer_root: tree.node_root(node_id),
                         window: tree.window,
                         pointer_id: pointer_id_for_capture,
                         input_ctx: input_ctx.clone(),
+                        prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
                         captured: pointer_id_for_capture
@@ -443,9 +533,11 @@ impl<H: UiHost> UiTree<H> {
                     app,
                     services: &mut *services,
                     node: node_id,
+                    layer_root: tree.node_root(node_id),
                     window: tree.window,
                     pointer_id: pointer_id_for_capture,
                     input_ctx: input_ctx.clone(),
+                    prevented_default_actions: &mut prevented_default_actions,
                     children,
                     focus: tree.focus,
                     captured: pointer_id_for_capture.and_then(|p| tree.captured.get(&p).copied()),
@@ -568,8 +660,37 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
+
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
+
+        // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
+        // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
+        //
+        // Modal barriers must continue to block wheel events while present.
+        let wheel_hit_test_layers: Option<Vec<NodeId>> = (is_wheel
+            && barrier_root.is_some_and(|barrier_root| {
+                self.root_to_layer
+                    .get(&barrier_root)
+                    .copied()
+                    .and_then(|layer| self.layers.get(layer))
+                    .is_some_and(|layer| !layer.hit_testable)
+            }))
+        .then(|| {
+            let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+            let mut roots: Vec<NodeId> = Vec::new();
+            for layer_id in visible.into_iter().rev() {
+                let layer = &self.layers[layer_id];
+                if layer.hit_testable {
+                    roots.push(layer.root);
+                }
+            }
+            roots
+        });
+        let hit_test_layer_roots: &[NodeId] = wheel_hit_test_layers
+            .as_deref()
+            .unwrap_or(active_layers.as_slice());
 
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
@@ -601,7 +722,7 @@ impl<H: UiHost> UiTree<H> {
             focus_is_text_input,
             edit_can_undo: true,
             edit_can_redo: true,
-            dispatch_phase: InputDispatchPhase::Normal,
+            dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
             if let Some(availability) = app
@@ -618,6 +739,32 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
+                let snapshot = self.input_arbitration_snapshot();
+                svc.set_snapshot(
+                    window,
+                    WindowInputArbitrationSnapshot {
+                        modal_barrier_root: snapshot.modal_barrier_root,
+                        pointer_occlusion: match snapshot.pointer_occlusion {
+                            PointerOcclusion::None => WindowPointerOcclusion::None,
+                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
+                            PointerOcclusion::BlockMouseExceptScroll => {
+                                WindowPointerOcclusion::BlockMouseExceptScroll
+                            }
+                        },
+                        pointer_occlusion_root: snapshot
+                            .pointer_occlusion_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_active: snapshot.pointer_capture_active,
+                        pointer_capture_root: snapshot
+                            .pointer_capture_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
+                            || (snapshot.pointer_capture_active
+                                && snapshot.pointer_capture_layer.is_none()),
+                    },
+                );
+            });
         }
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
@@ -791,9 +938,13 @@ impl<H: UiHost> UiTree<H> {
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
-        let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
+        let mut suppress_touch_up_outside_dispatch = false;
+        let mut suppress_pointer_dispatch = false;
+        let is_scroll_like = Self::event_is_scroll_like(event);
         let mut wheel_stop_node: Option<NodeId> = None;
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut focus_requested = false;
 
         if let Event::KeyDown {
             key: fret_core::KeyCode::Escape,
@@ -801,7 +952,26 @@ impl<H: UiHost> UiTree<H> {
             ..
         } = event
             && let Some(window) = self.window
-            && self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
+            && {
+                let dock_drag_affects_window = app.any_drag_session(|d| {
+                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                        && (d.source_window == window || d.current_window == window)
+                });
+                if dock_drag_affects_window {
+                    // ADR 0072: Escape cancels the active dock drag session, and must not be
+                    // routed to overlays while the drag is in progress.
+                    let canceled = app.cancel_drag_sessions(|d| {
+                        d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                            && (d.source_window == window || d.current_window == window)
+                    });
+                    for pointer_id in canceled {
+                        self.captured.remove(&pointer_id);
+                    }
+                    true
+                } else {
+                    self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
+                }
+            }
         {
             self.request_redraw_coalesced(app);
             return;
@@ -844,6 +1014,27 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let captured = event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+        if let Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position,
+            pointer_type: fret_core::PointerType::Touch,
+            ..
+        }) = event
+        {
+            self.update_touch_pointer_down_outside_move(*pointer_id, *position);
+        }
+        let (dock_drag_affects_window, dock_drag_capture_anchor) = self
+            .window
+            .map(|window| {
+                let affects = app.any_drag_session(|d| {
+                    d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                        && (d.source_window == window || d.current_window == window)
+                });
+                let anchor =
+                    crate::internal_drag::route(&*app, window, fret_runtime::DRAG_KIND_DOCK_PANEL);
+                (affects, anchor)
+            })
+            .unwrap_or((false, None));
 
         // Internal drag overrides may need to route events to a stable "anchor" node, even if
         // hit-testing fails or the cursor is over an unrelated widget (e.g. docking tear-off).
@@ -872,257 +1063,246 @@ impl<H: UiHost> UiTree<H> {
             // For now, only allow cached hit-test reuse for pointer-move events; other pointer
             // events clear the cache and rebuild it from a full hit-test pass.
             let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
 
+            if let Event::Pointer(PointerEvent::Up {
+                pointer_id,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            }) = event
+                && captured.is_none()
+            {
+                if dock_drag_affects_window {
+                    self.touch_pointer_down_outside_candidates
+                        .remove(pointer_id);
+                } else if let Some(candidate) = self
+                    .touch_pointer_down_outside_candidates
+                    .remove(pointer_id)
+                {
+                    if let Some(layer) = self.layers.get(candidate.layer_id) {
+                        let foreign_capture_active = self.captured.iter().any(|(pid, node)| {
+                            *pid != *pointer_id
+                                && self
+                                    .node_layer(*node)
+                                    .is_some_and(|layer_id| layer_id != candidate.layer_id)
+                        });
+
+                        if !foreign_capture_active && !candidate.moved {
+                            let hit_root = hit.and_then(|n| self.node_root(n));
+                            let hit_is_inside_layer = hit_root == Some(layer.root);
+                            let hit_is_inside_branch = hit.is_some_and(|hit| {
+                                layer
+                                    .pointer_down_outside_branches
+                                    .iter()
+                                    .copied()
+                                    .any(|branch| self.is_descendant(branch, hit))
+                            });
+
+                            if !hit_is_inside_layer && !hit_is_inside_branch {
+                                self.dispatch_event_to_node_chain_observer(
+                                    app,
+                                    services,
+                                    &input_ctx,
+                                    candidate.root,
+                                    &candidate.down_event,
+                                    &mut invalidation_visited,
+                                );
+                                needs_redraw = true;
+                                suppress_touch_up_outside_dispatch = candidate.consume;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Pointer occlusion is a window-level layer substrate mechanism (policy-owned).
+            //
+            // When active, the runtime must:
+            // - suppress hover state for underlay layers (even when scroll is allowed),
+            // - optionally suppress hit-tested pointer dispatch for underlay layers depending on
+            //   the occlusion mode.
+            let mut hit_for_hover = hit;
+            if captured.is_none()
+                && let Some((occlusion_layer, occlusion)) =
+                    self.topmost_pointer_occlusion_layer(barrier_root)
+                && occlusion != PointerOcclusion::None
+            {
+                let occlusion_z = self
+                    .layer_order
+                    .iter()
+                    .position(|id| *id == occlusion_layer);
+                let hit_layer_z = hit
+                    .and_then(|hit| self.node_layer(hit))
+                    .and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
+
+                let hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
+                    (Some(oz), Some(hz), Some(_)) => hz < oz,
+                    (Some(_), None, Some(_)) => true,
+                    (Some(_), _, None) => true,
+                    _ => false,
+                };
+
+                if hit_is_below_occlusion {
+                    // Match GPUI-style "occluded hover": underlay hover/pressable detection is
+                    // disabled while occlusion is active, even when scroll is still allowed.
+                    hit_for_hover = None;
+
+                    let blocks_pointer_dispatch = match occlusion {
+                        PointerOcclusion::None => false,
+                        PointerOcclusion::BlockMouse => true,
+                        PointerOcclusion::BlockMouseExceptScroll => !is_scroll_like,
+                    };
+                    if blocks_pointer_dispatch {
+                        suppress_pointer_dispatch = true;
+                    }
+                }
+            }
+
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
-                pointer_down_outside = self.dispatch_pointer_down_outside(
-                    app,
-                    services,
-                    PointerDownOutsideParams {
-                        input_ctx: &input_ctx,
-                        active_layer_roots: &active_layers,
-                        base_root,
-                        hit,
-                        event,
-                    },
-                    &mut invalidation_visited,
-                );
-                if pointer_down_outside.dispatched {
+                if dock_drag_affects_window {
+                    // ADR 0072: while a dock drag session is active, outside-press dismissal must
+                    // not trigger. The drag owns input arbitration for the window.
+                    //
+                    // This is intentionally window-global (not pointer-local): a dock drag session
+                    // is exclusive for the window, and we do not want secondary pointers to dismiss
+                    // overlays or change focus while the drag is in progress.
+                    //
+                    // Note: overlay policy is expected to close/suspend non-modal overlays when a
+                    // dock drag starts; this suppression makes the routing rule durable even if a
+                    // layer remains mounted for a close transition.
+                    pointer_down_outside = PointerDownOutsideOutcome::default();
+                } else {
+                    pointer_down_outside = self.dispatch_pointer_down_outside(
+                        app,
+                        services,
+                        PointerDownOutsideParams {
+                            input_ctx: &input_ctx,
+                            active_layer_roots: &active_layers,
+                            base_root,
+                            hit,
+                            event,
+                        },
+                        &mut invalidation_visited,
+                    );
+                    if pointer_down_outside.dispatched {
+                        needs_redraw = true;
+                    }
+                }
+            }
+
+            let hover_capable = match event {
+                Event::Pointer(PointerEvent::Move { pointer_type, .. })
+                | Event::Pointer(PointerEvent::Down { pointer_type, .. })
+                | Event::Pointer(PointerEvent::Up { pointer_type, .. })
+                | Event::Pointer(PointerEvent::Wheel { pointer_type, .. })
+                | Event::Pointer(PointerEvent::PinchGesture { pointer_type, .. }) => {
+                    pointer_type_supports_hover(*pointer_type)
+                }
+                _ => false,
+            };
+
+            if hover_capable {
+                let hovered_pressable: Option<crate::elements::GlobalElementId> =
+                    declarative::with_window_frame(app, window, |window_frame| {
+                        let window_frame = window_frame?;
+                        let mut node = hit_for_hover;
+                        while let Some(id) = node {
+                            if let Some(record) = window_frame.instances.get(&id)
+                                && matches!(
+                                    record.instance,
+                                    declarative::ElementInstance::Pressable(_)
+                                )
+                            {
+                                return Some(record.element);
+                            }
+                            node = self.nodes.get(id).and_then(|n| n.parent);
+                        }
+                        None
+                    });
+
+                let (prev_element, prev_node, next_element, next_node) =
+                    crate::elements::update_hovered_pressable(app, window, hovered_pressable);
+                if prev_node.is_some() || next_node.is_some() {
                     needs_redraw = true;
-                }
-            }
-            let hovered_pressable: Option<crate::elements::GlobalElementId> =
-                declarative::with_window_frame(app, window, |window_frame| {
-                    let window_frame = window_frame?;
-                    let mut node = hit;
-                    while let Some(id) = node {
-                        if let Some(record) = window_frame.instances.get(&id)
-                            && matches!(record.instance, declarative::ElementInstance::Pressable(_))
-                        {
-                            return Some(record.element);
-                        }
-                        node = self.nodes.get(id).and_then(|n| n.parent);
+                    self.debug_record_hover_edge_pressable();
+                    if let Some(node) = prev_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
                     }
-                    None
-                });
-
-            let (prev_element, prev_node, next_element, next_node) =
-                crate::elements::update_hovered_pressable(app, window, hovered_pressable);
-            if prev_node.is_some() || next_node.is_some() {
-                needs_redraw = true;
-                self.debug_record_hover_edge_pressable();
-                if let Some(node) = prev_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
-                }
-                if let Some(node) = next_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
-                }
-            }
-
-            if let Some(element) = prev_element
-                && prev_node.is_some()
-            {
-                let hook = crate::elements::with_element_state(
-                    app,
-                    window,
-                    element,
-                    crate::action::PressableHoverActionHooks::default,
-                    |hooks| hooks.on_hover_change.clone(),
-                );
-
-                if let Some(h) = hook {
-                    struct PressableHoverHookHost<'a, H: crate::UiHost> {
-                        app: &'a mut H,
-                        window: AppWindowId,
-                        element: crate::elements::GlobalElementId,
+                    if let Some(node) = next_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
                     }
+                }
 
-                    impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
-                        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
-                            self.app.models_mut()
-                        }
+                if let Some(element) = prev_element
+                    && prev_node.is_some()
+                {
+                    Self::run_pressable_hover_hook(app, window, element, false);
+                }
 
-                        fn push_effect(&mut self, effect: Effect) {
-                            match effect {
-                                Effect::SetTimer {
-                                    window: Some(window),
-                                    token,
-                                    ..
-                                } if window == self.window => {
-                                    crate::elements::record_timer_target(
-                                        &mut *self.app,
-                                        window,
-                                        token,
-                                        self.element,
-                                    );
-                                }
-                                Effect::CancelTimer { token } => {
-                                    crate::elements::clear_timer_target(
-                                        &mut *self.app,
-                                        self.window,
-                                        token,
-                                    );
-                                }
-                                _ => {}
+                if let Some(element) = next_element
+                    && next_node.is_some()
+                {
+                    Self::run_pressable_hover_hook(app, window, element, true);
+                }
+
+                let hovered_hover_region: Option<crate::elements::GlobalElementId> =
+                    declarative::with_window_frame(app, window, |window_frame| {
+                        let window_frame = window_frame?;
+                        let mut node = hit;
+                        while let Some(id) = node {
+                            if let Some(record) = window_frame.instances.get(&id)
+                                && matches!(
+                                    record.instance,
+                                    declarative::ElementInstance::HoverRegion(_)
+                                )
+                            {
+                                return Some(record.element);
                             }
-                            self.app.push_effect(effect);
+                            node = self.nodes.get(id).and_then(|n| n.parent);
                         }
+                        None
+                    });
 
-                        fn request_redraw(&mut self, window: AppWindowId) {
-                            self.app.request_redraw(window);
-                        }
-
-                        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
-                            self.app.next_timer_token()
-                        }
+                let (_prev_element, prev_node, _next_element, next_node) =
+                    crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
+                if prev_node.is_some() || next_node.is_some() {
+                    needs_redraw = true;
+                    self.debug_record_hover_edge_hover_region();
+                    if let Some(node) = prev_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
                     }
-
-                    let mut host = PressableHoverHookHost {
-                        app,
-                        window,
-                        element,
-                    };
-                    h(
-                        &mut host,
-                        crate::action::ActionCx {
-                            window,
-                            target: element,
-                        },
-                        false,
-                    );
-                }
-            }
-
-            if let Some(element) = next_element
-                && next_node.is_some()
-            {
-                let hook = crate::elements::with_element_state(
-                    app,
-                    window,
-                    element,
-                    crate::action::PressableHoverActionHooks::default,
-                    |hooks| hooks.on_hover_change.clone(),
-                );
-
-                if let Some(h) = hook {
-                    struct PressableHoverHookHost<'a, H: crate::UiHost> {
-                        app: &'a mut H,
-                        window: AppWindowId,
-                        element: crate::elements::GlobalElementId,
+                    if let Some(node) = next_node {
+                        self.mark_invalidation_dedup_with_source(
+                            node,
+                            Invalidation::Paint,
+                            &mut invalidation_visited,
+                            UiDebugInvalidationSource::Hover,
+                        );
                     }
-
-                    impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
-                        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
-                            self.app.models_mut()
-                        }
-
-                        fn push_effect(&mut self, effect: Effect) {
-                            match effect {
-                                Effect::SetTimer {
-                                    window: Some(window),
-                                    token,
-                                    ..
-                                } if window == self.window => {
-                                    crate::elements::record_timer_target(
-                                        &mut *self.app,
-                                        window,
-                                        token,
-                                        self.element,
-                                    );
-                                }
-                                Effect::CancelTimer { token } => {
-                                    crate::elements::clear_timer_target(
-                                        &mut *self.app,
-                                        self.window,
-                                        token,
-                                    );
-                                }
-                                _ => {}
-                            }
-                            self.app.push_effect(effect);
-                        }
-
-                        fn request_redraw(&mut self, window: AppWindowId) {
-                            self.app.request_redraw(window);
-                        }
-
-                        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
-                            self.app.next_timer_token()
-                        }
-                    }
-
-                    let mut host = PressableHoverHookHost {
-                        app,
-                        window,
-                        element,
-                    };
-                    h(
-                        &mut host,
-                        crate::action::ActionCx {
-                            window,
-                            target: element,
-                        },
-                        true,
-                    );
-                }
-            }
-
-            let hovered_hover_region: Option<crate::elements::GlobalElementId> =
-                declarative::with_window_frame(app, window, |window_frame| {
-                    let window_frame = window_frame?;
-                    let mut node = hit;
-                    while let Some(id) = node {
-                        if let Some(record) = window_frame.instances.get(&id)
-                            && matches!(
-                                record.instance,
-                                declarative::ElementInstance::HoverRegion(_)
-                            )
-                        {
-                            return Some(record.element);
-                        }
-                        node = self.nodes.get(id).and_then(|n| n.parent);
-                    }
-                    None
-                });
-
-            let (_prev_element, prev_node, _next_element, next_node) =
-                crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
-            if prev_node.is_some() || next_node.is_some() {
-                needs_redraw = true;
-                self.debug_record_hover_edge_hover_region();
-                if let Some(node) = prev_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
-                }
-                if let Some(node) = next_node {
-                    self.mark_invalidation_dedup_with_source(
-                        node,
-                        Invalidation::Paint,
-                        &mut invalidation_visited,
-                        UiDebugInvalidationSource::Hover,
-                    );
                 }
             }
         }
 
+        let mut pointer_hit: Option<NodeId> = None;
         let target = if let Some(captured) = captured {
             Some(captured)
         } else if let Some(target) = internal_drag_target {
@@ -1130,10 +1310,10 @@ impl<H: UiHost> UiTree<H> {
         } else if let Some(pos) = event_position(event) {
             // See the cached hit-test reuse note above.
             let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
-                self.hit_test_layers_cached(&active_layers, pos)
+                self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
 
             let hit = if matches!(event, Event::InternalDrag(_)) {
@@ -1160,8 +1340,13 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 hit
             };
+            pointer_hit = hit;
 
-            if let Event::Pointer(PointerEvent::Move { buttons, .. }) = event
+            if let Event::Pointer(PointerEvent::Move {
+                buttons,
+                pointer_id,
+                ..
+            }) = event
                 && !buttons.left
                 && !buttons.right
                 && !buttons.middle
@@ -1169,17 +1354,29 @@ impl<H: UiHost> UiTree<H> {
                 // When a modal barrier becomes active, the previous pointer-move hit may belong to
                 // an underlay layer that is now inactive. Do not synthesize hover-move events into
                 // the underlay in that case (e.g. Radix `disableOutsidePointerEvents`).
+                let mut last_pointer_move_hit = self
+                    .last_pointer_move_hit
+                    .get(pointer_id)
+                    .copied()
+                    .flatten();
                 if barrier_root.is_some()
-                    && self
-                        .last_pointer_move_hit
+                    && last_pointer_move_hit
                         .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
                 {
-                    self.last_pointer_move_hit = None;
+                    self.last_pointer_move_hit.remove(pointer_id);
+                    last_pointer_move_hit = None;
                 }
 
-                if hit != self.last_pointer_move_hit {
-                    synth_pointer_move_prev_target = self.last_pointer_move_hit;
-                    self.last_pointer_move_hit = hit;
+                if hit != last_pointer_move_hit {
+                    synth_pointer_move_prev_target = last_pointer_move_hit;
+                    match hit {
+                        Some(hit) => {
+                            self.last_pointer_move_hit.insert(*pointer_id, Some(hit));
+                        }
+                        None => {
+                            self.last_pointer_move_hit.remove(pointer_id);
+                        }
+                    }
                 }
             }
 
@@ -1229,224 +1426,735 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        if event_position(event).is_some() {
-            let chain = self.build_mapped_event_chain(node_id, event);
-            for (node_id, event_for_node) in chain {
-                let (
-                    invalidations,
-                    requested_focus,
-                    requested_capture,
-                    requested_cursor,
-                    notify_requested,
-                    stop_propagation,
-                ) = self.with_widget_mut(node_id, |widget, tree| {
-                    let (children, bounds) = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| (n.children.as_slice(), n.bounds))
-                        .unwrap_or((&[][..], Rect::default()));
-                    let mut cx = EventCx {
-                        app,
-                        services: &mut *services,
-                        node: node_id,
-                        window: tree.window,
-                        pointer_id: event_pointer_id_for_capture,
-                        input_ctx: input_ctx.clone(),
-                        children,
-                        focus: tree.focus,
-                        captured: event_pointer_id_for_capture
-                            .and_then(|p| tree.captured.get(&p).copied()),
-                        bounds,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
-                        notify_requested: false,
-                        stop_propagation: false,
+        if matches!(event, Event::Pointer(PointerEvent::Up { .. }))
+            && suppress_touch_up_outside_dispatch
+        {
+            if needs_redraw {
+                self.request_redraw_coalesced(app);
+            }
+            return;
+        }
+
+        if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
+            // Pointer occlusion blocks underlay pointer interaction. However, some overlays (e.g.
+            // Radix menus) still need global pointer movement to drive safe-hover corridors.
+            //
+            // When occlusion suppresses hit-tested pointer routing, deliver pointer-move observer
+            // events to interested overlay layers (DismissibleLayer observer pass), then return
+            // early to prevent any underlay dispatch.
+            if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+                let mut hit_barrier = false;
+                let captured_layer_for_pointer_move = event_pointer_id_for_capture
+                    .and_then(|pointer_id| self.captured.get(&pointer_id).copied())
+                    .and_then(|n| self.node_layer(n));
+                let pointer_move_occlusion_layer = captured_layer_for_pointer_move
+                    .is_none()
+                    .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
+                    .flatten()
+                    .map(|(layer, _)| layer);
+
+                for layer_id in layers.into_iter().rev() {
+                    let Some((layer_root, visible, wants_pointer_move_events)) = self
+                        .layers
+                        .get(layer_id)
+                        .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
+                    else {
+                        continue;
                     };
-                    widget.event(&mut cx, &event_for_node);
-                    (
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.requested_capture,
-                        cx.requested_cursor,
-                        cx.notify_requested,
-                        cx.stop_propagation,
-                    )
-                });
-
-                if !invalidations.is_empty()
-                    || requested_focus.is_some()
-                    || requested_capture.is_some()
-                    || notify_requested
-                {
-                    needs_redraw = true;
-                }
-
-                for (id, inv) in invalidations {
-                    self.mark_invalidation(id, inv);
-                }
-                if notify_requested {
-                    self.mark_invalidation_with_source(
-                        node_id,
-                        Invalidation::Paint,
-                        UiDebugInvalidationSource::Notify,
-                    );
-                }
-
-                if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                {
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
+                    if !visible {
+                        continue;
                     }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
-                    self.scroll_node_into_view(app, focus);
-                }
+                    if barrier_root.is_some() && hit_barrier {
+                        break;
+                    }
+                    if !wants_pointer_move_events {
+                        if barrier_root == Some(layer_root) {
+                            hit_barrier = true;
+                        }
+                        if pointer_move_occlusion_layer == Some(layer_id) {
+                            break;
+                        }
+                        continue;
+                    }
+                    if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
+                        if barrier_root == Some(layer_root) {
+                            hit_barrier = true;
+                        }
+                        continue;
+                    }
 
-                if let Some(capture) = requested_capture {
-                    if let Some(pointer_id) = event_pointer_id_for_capture {
-                        match capture {
-                            Some(node) => {
-                                self.captured.insert(pointer_id, node);
-                            }
-                            None => {
-                                self.captured.remove(&pointer_id);
+                    self.dispatch_event_to_node_chain_observer(
+                        app,
+                        services,
+                        &input_ctx,
+                        layer_root,
+                        event,
+                        &mut invalidation_visited,
+                    );
+
+                    if barrier_root == Some(layer_root) {
+                        hit_barrier = true;
+                    }
+                    if pointer_move_occlusion_layer == Some(layer_id) {
+                        break;
+                    }
+                }
+            }
+
+            if needs_redraw {
+                self.request_redraw_coalesced(app);
+            }
+            return;
+        }
+
+        if !suppress_pointer_dispatch
+            && matches!(
+                event,
+                Event::Pointer(_)
+                    | Event::PointerCancel(_)
+                    | Event::ExternalDrag(_)
+                    | Event::InternalDrag(_)
+            )
+        {
+            let chain = if event_position(event).is_some() {
+                self.build_mapped_event_chain(node_id, event)
+            } else {
+                self.build_unmapped_event_chain(node_id, event)
+            };
+            let should_run_capture_phase = match event {
+                Event::Pointer(PointerEvent::Down { .. })
+                | Event::Pointer(PointerEvent::Up { .. })
+                | Event::Pointer(PointerEvent::Wheel { .. })
+                | Event::Pointer(PointerEvent::PinchGesture { .. })
+                | Event::PointerCancel(..) => true,
+                Event::Pointer(PointerEvent::Move { buttons, .. }) => {
+                    captured.is_some() || buttons.left || buttons.right || buttons.middle
+                }
+                _ => false,
+            };
+            let mut stopped_in_capture = false;
+            if should_run_capture_phase {
+                let mut capture_ctx = input_ctx.clone();
+                capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
+
+                for (node_id, event_for_node) in chain.iter().rev() {
+                    let node_id = *node_id;
+                    let (
+                        invalidations,
+                        requested_focus,
+                        requested_capture,
+                        requested_cursor,
+                        notify_requested,
+                        stop_propagation,
+                    ) = self.with_widget_mut(node_id, |widget, tree| {
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            layer_root: tree.node_root(node_id),
+                            window: tree.window,
+                            pointer_id: event_pointer_id_for_capture,
+                            input_ctx: capture_ctx.clone(),
+                            prevented_default_actions: &mut prevented_default_actions,
+                            children,
+                            focus: tree.focus,
+                            captured: event_pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            stop_propagation: false,
+                        };
+                        widget.event_capture(&mut cx, event_for_node);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.requested_cursor,
+                            cx.notify_requested,
+                            cx.stop_propagation,
+                        )
+                    });
+
+                    if !invalidations.is_empty()
+                        || requested_focus.is_some()
+                        || requested_capture.is_some()
+                        || notify_requested
+                    {
+                        needs_redraw = true;
+                    }
+
+                    for (id, inv) in invalidations {
+                        self.mark_invalidation(id, inv);
+                    }
+                    if notify_requested {
+                        self.mark_invalidation_with_source(
+                            node_id,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Notify,
+                        );
+                    }
+
+                    if let Some(focus) = requested_focus
+                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    {
+                        focus_requested = true;
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                        self.scroll_node_into_view(app, focus);
+                    } else if requested_focus.is_some() {
+                        focus_requested = true;
+                    }
+
+                    if let Some(capture) = requested_capture {
+                        if let Some(pointer_id) = event_pointer_id_for_capture {
+                            match capture {
+                                Some(node) => {
+                                    let allow = !dock_drag_affects_window
+                                        || dock_drag_capture_anchor == Some(node);
+                                    if allow {
+                                        self.captured.insert(pointer_id, node);
+                                    }
+                                }
+                                None => {
+                                    self.captured.remove(&pointer_id);
+                                }
                             }
                         }
                     }
-                }
 
-                if requested_cursor.is_some() && cursor_choice.is_none() {
-                    cursor_choice = requested_cursor;
-                }
+                    if requested_cursor.is_some() && cursor_choice.is_none() {
+                        cursor_choice = requested_cursor;
+                    }
 
-                if stop_propagation {
-                    stop_propagation_requested = true;
-                    if is_wheel && wheel_stop_node.is_none() {
-                        wheel_stop_node = Some(node_id);
+                    if stop_propagation {
+                        stop_propagation_requested = true;
+                        if is_wheel && wheel_stop_node.is_none() {
+                            wheel_stop_node = Some(node_id);
+                        }
+                        stopped_in_capture = true;
+                        break;
                     }
                 }
+            }
 
-                let captured_now =
-                    event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
-                if captured_now.is_some() || stop_propagation {
-                    break;
+            if !stopped_in_capture {
+                let mut bubble_ctx = input_ctx.clone();
+                bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+
+                for (node_id, event_for_node) in chain {
+                    let (
+                        invalidations,
+                        requested_focus,
+                        requested_capture,
+                        requested_cursor,
+                        notify_requested,
+                        stop_propagation,
+                    ) = self.with_widget_mut(node_id, |widget, tree| {
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            layer_root: tree.node_root(node_id),
+                            window: tree.window,
+                            pointer_id: event_pointer_id_for_capture,
+                            input_ctx: bubble_ctx.clone(),
+                            prevented_default_actions: &mut prevented_default_actions,
+                            children,
+                            focus: tree.focus,
+                            captured: event_pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            stop_propagation: false,
+                        };
+                        widget.event(&mut cx, &event_for_node);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.requested_cursor,
+                            cx.notify_requested,
+                            cx.stop_propagation,
+                        )
+                    });
+
+                    if !invalidations.is_empty()
+                        || requested_focus.is_some()
+                        || requested_capture.is_some()
+                        || notify_requested
+                    {
+                        needs_redraw = true;
+                    }
+
+                    for (id, inv) in invalidations {
+                        self.mark_invalidation(id, inv);
+                    }
+                    if notify_requested {
+                        self.mark_invalidation_with_source(
+                            node_id,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Notify,
+                        );
+                    }
+
+                    if let Some(focus) = requested_focus
+                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    {
+                        focus_requested = true;
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                        self.scroll_node_into_view(app, focus);
+                    } else if requested_focus.is_some() {
+                        focus_requested = true;
+                    }
+
+                    if let Some(capture) = requested_capture {
+                        if let Some(pointer_id) = event_pointer_id_for_capture {
+                            match capture {
+                                Some(node) => {
+                                    let allow = !dock_drag_affects_window
+                                        || dock_drag_capture_anchor == Some(node);
+                                    if allow {
+                                        self.captured.insert(pointer_id, node);
+                                    }
+                                }
+                                None => {
+                                    self.captured.remove(&pointer_id);
+                                }
+                            }
+                        }
+                    }
+
+                    if requested_cursor.is_some() && cursor_choice.is_none() {
+                        cursor_choice = requested_cursor;
+                    }
+
+                    if stop_propagation {
+                        stop_propagation_requested = true;
+                        if is_wheel && wheel_stop_node.is_none() {
+                            wheel_stop_node = Some(node_id);
+                        }
+                    }
+
+                    let captured_now =
+                        event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+                    if captured_now.is_some() || stop_propagation {
+                        break;
+                    }
                 }
             }
         } else {
-            loop {
-                let (
-                    invalidations,
-                    requested_focus,
-                    requested_capture,
-                    requested_cursor,
-                    notify_requested,
-                    stop_propagation,
-                    parent,
-                ) = self.with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let (children, bounds) = tree
-                        .nodes
-                        .get(node_id)
-                        .map(|n| (n.children.as_slice(), n.bounds))
-                        .unwrap_or((&[][..], Rect::default()));
-                    let mut cx = EventCx {
-                        app,
-                        services: &mut *services,
-                        node: node_id,
-                        window: tree.window,
-                        pointer_id: event_pointer_id_for_capture,
-                        input_ctx: input_ctx.clone(),
-                        children,
-                        focus: tree.focus,
-                        captured: event_pointer_id_for_capture
-                            .and_then(|p| tree.captured.get(&p).copied()),
-                        bounds,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
-                        notify_requested: false,
-                        stop_propagation: false,
-                    };
-                    widget.event(&mut cx, event);
-                    (
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.requested_capture,
-                        cx.requested_cursor,
-                        cx.notify_requested,
-                        cx.stop_propagation,
-                        parent,
-                    )
-                });
+            if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
+                let mut chain: Vec<NodeId> = Vec::new();
+                let mut cur = Some(node_id);
+                while let Some(id) = cur {
+                    chain.push(id);
+                    cur = self.nodes.get(id).and_then(|n| n.parent);
+                }
 
-                if !invalidations.is_empty()
-                    || requested_focus.is_some()
-                    || requested_capture.is_some()
-                    || notify_requested
+                let mut stopped_in_capture = false;
                 {
-                    needs_redraw = true;
-                }
+                    let mut capture_ctx = input_ctx.clone();
+                    capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
-                for (id, inv) in invalidations {
-                    self.mark_invalidation(id, inv);
-                }
-                if notify_requested {
-                    self.mark_invalidation_with_source(
-                        node_id,
-                        Invalidation::Paint,
-                        UiDebugInvalidationSource::Notify,
-                    );
-                }
+                    for &node_id in chain.iter().rev() {
+                        let (
+                            invalidations,
+                            requested_focus,
+                            requested_capture,
+                            requested_cursor,
+                            notify_requested,
+                            stop_propagation,
+                        ) = self.with_widget_mut(node_id, |widget, tree| {
+                            let (children, bounds) = tree
+                                .nodes
+                                .get(node_id)
+                                .map(|n| (n.children.as_slice(), n.bounds))
+                                .unwrap_or((&[][..], Rect::default()));
+                            let mut cx = EventCx {
+                                app,
+                                services: &mut *services,
+                                node: node_id,
+                                layer_root: tree.node_root(node_id),
+                                window: tree.window,
+                                pointer_id: event_pointer_id_for_capture,
+                                input_ctx: capture_ctx.clone(),
+                                prevented_default_actions: &mut prevented_default_actions,
+                                children,
+                                focus: tree.focus,
+                                captured: event_pointer_id_for_capture
+                                    .and_then(|p| tree.captured.get(&p).copied()),
+                                bounds,
+                                invalidations: Vec::new(),
+                                requested_focus: None,
+                                requested_capture: None,
+                                requested_cursor: None,
+                                notify_requested: false,
+                                stop_propagation: false,
+                            };
+                            widget.event_capture(&mut cx, event);
+                            (
+                                cx.invalidations,
+                                cx.requested_focus,
+                                cx.requested_capture,
+                                cx.requested_cursor,
+                                cx.notify_requested,
+                                cx.stop_propagation,
+                            )
+                        });
 
-                if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
-                {
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
-                    }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
-                    self.scroll_node_into_view(app, focus);
-                }
+                        if !invalidations.is_empty()
+                            || requested_focus.is_some()
+                            || requested_capture.is_some()
+                            || notify_requested
+                        {
+                            needs_redraw = true;
+                        }
 
-                if let Some(capture) = requested_capture {
-                    if let Some(pointer_id) = event_pointer_id_for_capture {
-                        match capture {
-                            Some(node) => {
-                                self.captured.insert(pointer_id, node);
+                        for (id, inv) in invalidations {
+                            self.mark_invalidation(id, inv);
+                        }
+                        if notify_requested {
+                            self.mark_invalidation_with_source(
+                                node_id,
+                                Invalidation::Paint,
+                                UiDebugInvalidationSource::Notify,
+                            );
+                        }
+
+                        if let Some(focus) = requested_focus
+                            && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                &active_layers,
+                                focus,
+                            )
+                        {
+                            focus_requested = true;
+                            if let Some(prev) = self.focus {
+                                self.mark_invalidation(prev, Invalidation::Paint);
                             }
-                            None => {
-                                self.captured.remove(&pointer_id);
+                            self.focus = Some(focus);
+                            self.mark_invalidation(focus, Invalidation::Paint);
+                            self.scroll_node_into_view(app, focus);
+                        } else if requested_focus.is_some() {
+                            focus_requested = true;
+                        }
+
+                        if let Some(capture) = requested_capture {
+                            if let Some(pointer_id) = event_pointer_id_for_capture {
+                                match capture {
+                                    Some(node) => {
+                                        let allow = !dock_drag_affects_window
+                                            || dock_drag_capture_anchor == Some(node);
+                                        if allow {
+                                            self.captured.insert(pointer_id, node);
+                                        }
+                                    }
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
+                                }
                             }
                         }
+
+                        if requested_cursor.is_some() && cursor_choice.is_none() {
+                            cursor_choice = requested_cursor;
+                        }
+
+                        if stop_propagation {
+                            stop_propagation_requested = true;
+                            stopped_in_capture = true;
+                            break;
+                        }
                     }
-                };
-
-                if requested_cursor.is_some() && cursor_choice.is_none() {
-                    cursor_choice = requested_cursor;
                 }
+                if !stopped_in_capture {
+                    let mut bubble_ctx = input_ctx.clone();
+                    bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
-                if stop_propagation {
-                    stop_propagation_requested = true;
-                    if is_wheel && wheel_stop_node.is_none() {
-                        wheel_stop_node = Some(node_id);
+                    for node_id in chain {
+                        let (
+                            invalidations,
+                            requested_focus,
+                            requested_capture,
+                            requested_cursor,
+                            notify_requested,
+                            stop_propagation,
+                        ) = self.with_widget_mut(node_id, |widget, tree| {
+                            let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                            let _ = parent;
+                            let (children, bounds) = tree
+                                .nodes
+                                .get(node_id)
+                                .map(|n| (n.children.as_slice(), n.bounds))
+                                .unwrap_or((&[][..], Rect::default()));
+                            let mut cx = EventCx {
+                                app,
+                                services: &mut *services,
+                                node: node_id,
+                                layer_root: tree.node_root(node_id),
+                                window: tree.window,
+                                pointer_id: event_pointer_id_for_capture,
+                                input_ctx: bubble_ctx.clone(),
+                                prevented_default_actions: &mut prevented_default_actions,
+                                children,
+                                focus: tree.focus,
+                                captured: event_pointer_id_for_capture
+                                    .and_then(|p| tree.captured.get(&p).copied()),
+                                bounds,
+                                invalidations: Vec::new(),
+                                requested_focus: None,
+                                requested_capture: None,
+                                requested_cursor: None,
+                                notify_requested: false,
+                                stop_propagation: false,
+                            };
+                            widget.event(&mut cx, event);
+                            (
+                                cx.invalidations,
+                                cx.requested_focus,
+                                cx.requested_capture,
+                                cx.requested_cursor,
+                                cx.notify_requested,
+                                cx.stop_propagation,
+                            )
+                        });
+
+                        if !invalidations.is_empty()
+                            || requested_focus.is_some()
+                            || requested_capture.is_some()
+                            || notify_requested
+                        {
+                            needs_redraw = true;
+                        }
+
+                        for (id, inv) in invalidations {
+                            self.mark_invalidation(id, inv);
+                        }
+                        if notify_requested {
+                            self.mark_invalidation_with_source(
+                                node_id,
+                                Invalidation::Paint,
+                                UiDebugInvalidationSource::Notify,
+                            );
+                        }
+
+                        if let Some(focus) = requested_focus
+                            && self.focus_request_is_allowed(
+                                app,
+                                self.window,
+                                &active_layers,
+                                focus,
+                            )
+                        {
+                            focus_requested = true;
+                            if let Some(prev) = self.focus {
+                                self.mark_invalidation(prev, Invalidation::Paint);
+                            }
+                            self.focus = Some(focus);
+                            self.mark_invalidation(focus, Invalidation::Paint);
+                            self.scroll_node_into_view(app, focus);
+                        } else if requested_focus.is_some() {
+                            focus_requested = true;
+                        }
+
+                        if let Some(capture) = requested_capture {
+                            if let Some(pointer_id) = event_pointer_id_for_capture {
+                                match capture {
+                                    Some(node) => {
+                                        let allow = !dock_drag_affects_window
+                                            || dock_drag_capture_anchor == Some(node);
+                                        if allow {
+                                            self.captured.insert(pointer_id, node);
+                                        }
+                                    }
+                                    None => {
+                                        self.captured.remove(&pointer_id);
+                                    }
+                                }
+                            }
+                        }
+
+                        if requested_cursor.is_some() && cursor_choice.is_none() {
+                            cursor_choice = requested_cursor;
+                        }
+
+                        if stop_propagation {
+                            stop_propagation_requested = true;
+                            break;
+                        }
                     }
                 }
+            } else {
+                loop {
+                    let (
+                        invalidations,
+                        requested_focus,
+                        requested_capture,
+                        requested_cursor,
+                        notify_requested,
+                        stop_propagation,
+                        parent,
+                    ) = self.with_widget_mut(node_id, |widget, tree| {
+                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            layer_root: tree.node_root(node_id),
+                            window: tree.window,
+                            pointer_id: event_pointer_id_for_capture,
+                            input_ctx: input_ctx.clone(),
+                            prevented_default_actions: &mut prevented_default_actions,
+                            children,
+                            focus: tree.focus,
+                            captured: event_pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            stop_propagation: false,
+                        };
+                        widget.event(&mut cx, event);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.requested_cursor,
+                            cx.notify_requested,
+                            cx.stop_propagation,
+                            parent,
+                        )
+                    });
+                    if !invalidations.is_empty()
+                        || requested_focus.is_some()
+                        || requested_capture.is_some()
+                        || notify_requested
+                    {
+                        needs_redraw = true;
+                    }
 
-                let captured_now =
-                    event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
-                if captured_now.is_some() || stop_propagation {
-                    break;
+                    for (id, inv) in invalidations {
+                        self.mark_invalidation(id, inv);
+                    }
+                    if notify_requested {
+                        self.mark_invalidation_with_source(
+                            node_id,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Notify,
+                        );
+                    }
+
+                    if let Some(focus) = requested_focus
+                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    {
+                        focus_requested = true;
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                        self.scroll_node_into_view(app, focus);
+                    } else if requested_focus.is_some() {
+                        focus_requested = true;
+                    }
+
+                    if let Some(capture) = requested_capture {
+                        if let Some(pointer_id) = event_pointer_id_for_capture {
+                            match capture {
+                                Some(node) => {
+                                    let allow = !dock_drag_affects_window
+                                        || dock_drag_capture_anchor == Some(node);
+                                    if allow {
+                                        self.captured.insert(pointer_id, node);
+                                    }
+                                }
+                                None => {
+                                    self.captured.remove(&pointer_id);
+                                }
+                            }
+                        }
+                    };
+
+                    if requested_cursor.is_some() && cursor_choice.is_none() {
+                        cursor_choice = requested_cursor;
+                    }
+
+                    if stop_propagation {
+                        stop_propagation_requested = true;
+                        if is_wheel && wheel_stop_node.is_none() {
+                            wheel_stop_node = Some(node_id);
+                        }
+                    }
+
+                    let captured_now =
+                        event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+                    if captured_now.is_some() || stop_propagation {
+                        break;
+                    }
+
+                    node_id = match parent {
+                        Some(parent) => parent,
+                        None => break,
+                    };
                 }
+            }
+        }
 
-                node_id = match parent {
-                    Some(parent) => parent,
-                    None => break,
-                };
+        if let Event::Pointer(PointerEvent::Down { button, .. }) = event
+            && *button == fret_core::MouseButton::Left
+            && !focus_requested
+            && !prevented_default_actions.contains(fret_runtime::DefaultAction::FocusOnPointerDown)
+            && captured.is_none()
+            && internal_drag_target.is_none()
+            && let Some(window) = self.window
+            && let Some(hit) = pointer_hit
+        {
+            let candidate = self.first_focusable_ancestor_including_declarative(app, window, hit);
+            if let Some(focus) = candidate
+                && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+            {
+                if let Some(prev) = self.focus {
+                    self.mark_invalidation(prev, Invalidation::Paint);
+                }
+                self.focus = Some(focus);
+                self.mark_invalidation(focus, Invalidation::Paint);
+                self.scroll_node_into_view(app, focus);
+                needs_redraw = true;
             }
         }
 
@@ -1552,13 +2260,15 @@ impl<H: UiHost> UiTree<H> {
                         window,
                         element: root_element,
                     };
+                    let mut req =
+                        crate::action::DismissRequestCx::new(crate::action::DismissReason::Scroll);
                     hook(
                         &mut host,
                         crate::action::ActionCx {
                             window,
                             target: root_element,
                         },
-                        crate::action::DismissReason::Scroll,
+                        &mut req,
                     );
                     dismissed_any = true;
                 }
@@ -1573,6 +2283,52 @@ impl<H: UiHost> UiTree<H> {
             && let Some(pointer_id) = event_pointer_id_for_capture
         {
             self.captured.remove(&pointer_id);
+        }
+
+        if let Event::PointerCancel(e) = event
+            && let Some(window) = self.window
+            && pointer_type_supports_hover(e.pointer_type)
+        {
+            let (prev_element, prev_node, _next_element, _next_node) =
+                crate::elements::update_hovered_pressable(app, window, None);
+            if prev_node.is_some() {
+                needs_redraw = true;
+                self.debug_record_hover_edge_pressable();
+                if let Some(node) = prev_node {
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
+                }
+            }
+
+            if let Some(element) = prev_element
+                && prev_node.is_some()
+            {
+                Self::run_pressable_hover_hook(app, window, element, false);
+            }
+
+            let (_prev_element, prev_node, _next_element, _next_node) =
+                crate::elements::update_hovered_hover_region(app, window, None);
+            if prev_node.is_some() {
+                needs_redraw = true;
+                self.debug_record_hover_edge_hover_region();
+                if let Some(node) = prev_node {
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
+                }
+            }
+        }
+
+        if let Event::PointerCancel(e) = event {
+            self.touch_pointer_down_outside_candidates
+                .remove(&e.pointer_id);
         }
 
         if defer_keydown_shortcuts_until_after_dispatch
@@ -1619,6 +2375,7 @@ impl<H: UiHost> UiTree<H> {
 
         if let Event::Pointer(PointerEvent::Move { .. }) = event
             && let Some(prev) = synth_pointer_move_prev_target
+            && captured.is_none()
             && self.node_in_any_layer(prev, &active_layers)
         {
             // Forward a synthetic hover-move to the previously hovered target so retained
@@ -1648,7 +2405,26 @@ impl<H: UiHost> UiTree<H> {
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
-        if let Event::Pointer(PointerEvent::Move { .. }) = event {
+        if let Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            pointer_type,
+            ..
+        }) = event
+        {
+            let captured_layer_for_pointer_move = self
+                .captured
+                .get(pointer_id)
+                .copied()
+                .and_then(|n| self.node_layer(n));
+            let pointer_move_occlusion_layer = captured_layer_for_pointer_move
+                .is_none()
+                .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
+                .flatten()
+                .filter(|(_, occlusion)| {
+                    pointer_type_supports_hover(*pointer_type)
+                        && *occlusion != PointerOcclusion::None
+                })
+                .map(|(layer, _)| layer);
             let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
             let mut hit_barrier = false;
             for layer_id in layers.into_iter().rev() {
@@ -1669,6 +2445,20 @@ impl<H: UiHost> UiTree<H> {
                     if barrier_root == Some(layer_root) {
                         hit_barrier = true;
                     }
+                    if pointer_move_occlusion_layer == Some(layer_id) {
+                        break;
+                    }
+                    continue;
+                }
+                if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
+                    // Pointer-move observer hooks are used by overlay policies (e.g. Radix menu safe
+                    // corridor). When a pointer is captured by a different layer (viewport tools,
+                    // docking drags, etc.), do not let unrelated overlay layers observe that move
+                    // stream. This keeps captured interactions stable and avoids cross-layer
+                    // arbitration fights during drags.
+                    if barrier_root == Some(layer_root) {
+                        hit_barrier = true;
+                    }
                     continue;
                 }
                 let _ = self.dispatch_event_to_node_chain(
@@ -1682,6 +2472,9 @@ impl<H: UiHost> UiTree<H> {
                 );
                 if barrier_root == Some(layer_root) {
                     hit_barrier = true;
+                }
+                if pointer_move_occlusion_layer == Some(layer_id) {
+                    break;
                 }
             }
         }
@@ -1705,7 +2498,7 @@ impl<H: UiHost> UiTree<H> {
                 focus_is_text_input,
                 edit_can_undo: true,
                 edit_can_redo: true,
-                dispatch_phase: InputDispatchPhase::Normal,
+                dispatch_phase: InputDispatchPhase::Bubble,
             };
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()
@@ -1718,9 +2511,42 @@ impl<H: UiHost> UiTree<H> {
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
-                    svc.set_snapshot(window, input_ctx);
+                    svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
+                let snapshot = self.input_arbitration_snapshot();
+                svc.set_snapshot(
+                    window,
+                    WindowInputArbitrationSnapshot {
+                        modal_barrier_root: snapshot.modal_barrier_root,
+                        pointer_occlusion: match snapshot.pointer_occlusion {
+                            PointerOcclusion::None => WindowPointerOcclusion::None,
+                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
+                            PointerOcclusion::BlockMouseExceptScroll => {
+                                WindowPointerOcclusion::BlockMouseExceptScroll
+                            }
+                        },
+                        pointer_occlusion_root: snapshot
+                            .pointer_occlusion_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_active: snapshot.pointer_capture_active,
+                        pointer_capture_root: snapshot
+                            .pointer_capture_layer
+                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
+                            || (snapshot.pointer_capture_active
+                                && snapshot.pointer_capture_layer.is_none()),
+                    },
+                );
+            });
+
+            // Keep "is action available?" snapshots up to date for menu/command-palette gating.
+            //
+            // This publishes the retained-runtime baseline (all widget-scoped commands) so
+            // consumers that only have access to data-only services can still render disabled
+            // states without depending on `fret-ui` internals.
+            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
 
@@ -1757,8 +2583,8 @@ impl<H: UiHost> UiTree<H> {
                             .map(|n| (n.children.as_slice(), n.bounds))
                             .unwrap_or((&[][..], Rect::default()));
                         let mut observer_ctx = input_ctx.clone();
-                        observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
-                        let mut cx = EventCx {
+                        observer_ctx.dispatch_phase = InputDispatchPhase::Preview;
+                        let mut cx = crate::widget::ObserverCx {
                             app,
                             services: &mut *services,
                             node: node_id,
@@ -1771,16 +2597,10 @@ impl<H: UiHost> UiTree<H> {
                                 .and_then(|p| tree.captured.get(&p).copied()),
                             bounds,
                             invalidations: Vec::new(),
-                            requested_focus: None,
-                            requested_capture: None,
-                            requested_cursor: None,
                             notify_requested: false,
-                            stop_propagation: false,
                         };
-                        widget.event(&mut cx, &event_for_node);
+                        widget.event_observer(&mut cx, &event_for_node);
 
-                        // Observer dispatch must not mutate routing state (capture/focus/propagation). It
-                        // exists to allow click-through outside-press policies, not to intercept input.
                         (cx.invalidations, cx.notify_requested, parent)
                     });
 
@@ -1822,8 +2642,8 @@ impl<H: UiHost> UiTree<H> {
                         .map(|n| (n.children.as_slice(), n.bounds))
                         .unwrap_or((&[][..], Rect::default()));
                     let mut observer_ctx = input_ctx.clone();
-                    observer_ctx.dispatch_phase = InputDispatchPhase::Observer;
-                    let mut cx = EventCx {
+                    observer_ctx.dispatch_phase = InputDispatchPhase::Preview;
+                    let mut cx = crate::widget::ObserverCx {
                         app,
                         services: &mut *services,
                         node: node_id,
@@ -1836,16 +2656,10 @@ impl<H: UiHost> UiTree<H> {
                             .and_then(|p| tree.captured.get(&p).copied()),
                         bounds,
                         invalidations: Vec::new(),
-                        requested_focus: None,
-                        requested_capture: None,
-                        requested_cursor: None,
                         notify_requested: false,
-                        stop_propagation: false,
                     };
-                    widget.event(&mut cx, event);
+                    widget.event_observer(&mut cx, event);
 
-                    // Observer dispatch must not mutate routing state (capture/focus/propagation). It
-                    // exists to allow click-through outside-press policies, not to intercept input.
                     (cx.invalidations, cx.notify_requested, parent)
                 });
 
@@ -1921,6 +2735,7 @@ impl<H: UiHost> UiTree<H> {
                         pointer_id,
                         button,
                         modifiers,
+                        is_click,
                         click_count,
                         pointer_type,
                         ..
@@ -1929,6 +2744,7 @@ impl<H: UiHost> UiTree<H> {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        is_click: *is_click,
                         click_count: *click_count,
                         pointer_type: *pointer_type,
                     },
@@ -1970,6 +2786,11 @@ impl<H: UiHost> UiTree<H> {
                 kind: e.kind.clone(),
                 modifiers: e.modifiers,
             }),
+            Event::PointerCancel(e) => {
+                let mut e = e.clone();
+                e.position = Some(position);
+                Event::PointerCancel(e)
+            }
             _ => event.clone(),
         }
     }
@@ -2043,6 +2864,16 @@ impl<H: UiHost> UiTree<H> {
         }
 
         out.reverse();
+        out
+    }
+
+    fn build_unmapped_event_chain(&self, start: NodeId, event: &Event) -> Vec<(NodeId, Event)> {
+        let mut out: Vec<(NodeId, Event)> = Vec::new();
+        let mut cur = Some(start);
+        while let Some(id) = cur {
+            out.push((id, event.clone()));
+            cur = self.nodes.get(id).and_then(|n| n.parent);
+        }
         out
     }
 }

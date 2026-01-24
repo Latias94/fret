@@ -6,15 +6,32 @@ pub(super) struct PaintCacheKey {
     height_bits: u32,
     scale_factor_bits: u32,
     theme_revision: u64,
+    child_a_bits: u32,
+    child_b_bits: u32,
+    child_c_bits: u32,
+    child_d_bits: u32,
+    child_tx_bits: u32,
+    child_ty_bits: u32,
 }
 
 impl PaintCacheKey {
-    pub(super) fn new(bounds: Rect, scale_factor: f32, theme_revision: u64) -> Self {
+    pub(super) fn new(
+        bounds: Rect,
+        scale_factor: f32,
+        theme_revision: u64,
+        child_transform: Transform2D,
+    ) -> Self {
         Self {
             width_bits: bounds.size.width.0.to_bits(),
             height_bits: bounds.size.height.0.to_bits(),
             scale_factor_bits: scale_factor.to_bits(),
             theme_revision,
+            child_a_bits: child_transform.a.to_bits(),
+            child_b_bits: child_transform.b.to_bits(),
+            child_c_bits: child_transform.c.to_bits(),
+            child_d_bits: child_transform.d.to_bits(),
+            child_tx_bits: child_transform.tx.to_bits(),
+            child_ty_bits: child_transform.ty.to_bits(),
         }
     }
 }

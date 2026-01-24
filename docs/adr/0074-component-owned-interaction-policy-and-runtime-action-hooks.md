@@ -67,7 +67,7 @@ Identifiers (locked):
 - Handler context type: `ActionCx`
 - Pressable handler: `on_activate`
 - Dismissible handler: `on_dismiss_request`
-- Dismiss reasons: `DismissReason::{Escape, OutsidePress}`
+- Dismiss reasons: `DismissReason::{Escape, OutsidePress { pointer: Option<OutsidePressCx> }}`
 
 ### 2) Introduce runtime “action hooks” (mechanism) for component-owned policies
 

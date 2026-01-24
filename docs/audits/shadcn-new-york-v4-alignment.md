@@ -14,6 +14,19 @@ for the `new-york-v4` preset, without expanding `fret-ui` mechanism scope.
 - Validate controls at multiple DPIs and with a “weird metrics” UI font (e.g. a Nerd Font) to catch
   baseline/centering issues.
 
+## Infra notes (golden + scroll + paint cache)
+
+- Scroll offsets are applied as a children-only render transform. `PaintCx::paint()` must see the
+  parent node's children transform even while the widget is temporarily removed from the node
+  (during `with_widget_mut`).
+- `PaintCacheKey` includes the node's children render transform so cache replay cannot cross
+  scroll/transform changes without invalidation.
+- Regression test: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs`
+  (`scroll_offset_changes_do_not_replay_paint_cache`).
+- Web golden extractor notes:
+  - `goldens/shadcn-web/scripts/extract-golden.mts` exports `aria-invalid` and supports scripted
+    attribute injection steps for variant snapshots (e.g. `*.invalid.json`).
+
 ## Global baseline rules (new-york-v4)
 
 These patterns appear repeatedly across upstream components:
@@ -57,10 +70,12 @@ Recent fixes:
 - Trigger sizing now matches new-york-v4 defaults (no forced `w-full`/`min-w` on the trigger; dropdown min width defaults to `8rem`).
 - Trigger chrome/content width now tracks the trigger width mode (auto vs fixed), preventing “ellipsis even when there is space” cases.
 - `fret-icons-radix` now vendors `chevron-up.svg`, so Radix-backed semantic `ui.chevron.up` resolves correctly.
+- Trigger `aria-invalid` border + focus ring (including shadcn's invalid ring override colors) now match shadcn-web (`select-demo.invalid`, `select-demo.invalid-focus`).
 
 Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_select_panel_chrome_matches`).
+- Trigger chrome + focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`, `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_overlay_placement_matches`, `web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches`).
 - Scroll buttons + viewport inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_select_scrollable_listbox_option_insets_match`, `web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match`).
 
@@ -84,8 +99,16 @@ Recent fixes:
 Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_dropdown_menu_panel_chrome_matches`).
-- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches`).
+- Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`).
+- SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`).
+- Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_checkboxes_overlay_placement_matches`, `web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches`).
 - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches`).
+- Item row padding + shortcut alignment: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_dropdown_menu_demo_profile_item_padding_and_shortcut_match`).
+- Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_web`, `web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web`).
 - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_match`).
 
 ### `Command` / `CommandDialog`
@@ -120,8 +143,16 @@ Recent fixes:
 - Panel chrome now matches upstream `rounded-md` (radius token) and `shadow-md` / `shadow-lg` split.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
+  - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_shadow_matches_web`, `web_vs_fret_context_menu_demo_shadow_matches_web_dark`).
+  - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_context_menu_demo_submenu_shadow_matches_web_dark`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_overlay_placement_matches`, `web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matches`).
   - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches`).
+  - Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_context_menu_demo_checkbox_indicator_slot_inset_matches_web`, `web_vs_fret_context_menu_demo_radio_indicator_slot_inset_matches_web`).
+  - Item row padding + shortcut/chevron alignment: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_context_menu_demo_back_item_padding_and_shortcut_match`).
   - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_match`).
 
 ### `Menubar`
@@ -137,11 +168,26 @@ Recent fixes:
 
 - Root panel chrome now matches upstream `rounded-md` + `shadow-xs` (new-york-v4 baseline).
 - Menu panels now match upstream `rounded-md` + `p-1` and `shadow-md` / `shadow-lg` split.
+- Menu panel width now grows beyond the `min-w-[12rem]` baseline when long checkbox/radio labels
+  require it (e.g. View/Profiles menus), matching upstream sizing behavior.
+- Note: The current "grow to fit" sizing path uses a deterministic text-width heuristic. If we need
+  stronger 1:1 guarantees across font stacks, we should expose a text measurement service and use
+  real glyph metrics instead of a character-count estimate.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
-  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`, `web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches`).
-  - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches`).
-  - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match`).
+  - Root shadow (`shadow-xs`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_root_shadow_matches_web`, `web_vs_fret_menubar_root_shadow_matches_web_dark`).
+  - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_shadow_matches_web`, `web_vs_fret_menubar_demo_shadow_matches_web_dark`).
+  - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_submenu_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_shadow_matches_web_dark`).
+  - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`, `web_vs_fret_menubar_demo_view_overlay_placement_matches`, `web_vs_fret_menubar_demo_profiles_overlay_placement_matches`, `web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches`).
+  - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_menu_item_height_matches`, `web_vs_fret_menubar_demo_view_menu_item_height_matches`, `web_vs_fret_menubar_demo_profiles_menu_item_height_matches`, `web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches`).
+  - Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_menubar_demo_view_checkbox_indicator_slot_inset_matches_web`, `web_vs_fret_menubar_demo_profiles_radio_indicator_slot_inset_matches_web`).
+  - Item row padding + shortcut/chevron alignment: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    (`web_vs_fret_menubar_demo_item_padding_and_shortcut_match`).
+  - Menu content insets: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_menu_content_insets_match`, `web_vs_fret_menubar_demo_view_menu_content_insets_match`, `web_vs_fret_menubar_demo_profiles_menu_content_insets_match`, `web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match`, `web_vs_fret_menubar_demo_submenu_small_viewport_menu_content_insets_match`).
 
 Note: for menu-like overlays (DropdownMenu / ContextMenu / Menubar), the placement gate also asserts
 the portal panel `w/h` against the shadcn-web portal wrapper geometry (so “menu height” regressions
@@ -170,6 +216,80 @@ Recent fixes:
   - Ensure `min-w-0` equivalent for flex layouts.
   - Focus ring thickness (`3px`) and border color keys.
   - Placeholder color and selection colors.
+- Recent fixes:
+  - `aria-invalid=true` border color now matches shadcn-web (`input-demo.invalid`) and is gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_demo_aria_invalid_border_color_matches`).
+  - Focus ring (`ring-[3px]`) and ring color overrides now match shadcn-web focus variants
+    (`input-demo.focus`, `input-demo.invalid-focus`) and are gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_demo_focus_ring_matches`, `web_vs_fret_input_demo_aria_invalid_focus_ring_matches`).
+- Note: shadcn's `aria-invalid:ring-*` is a ring color override; the ring only becomes visible when
+  `focus-visible:ring-[3px]` is also active.
+
+### `InputGroup`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/input-group.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/input_group.rs`
+- Notes:
+  - Upstream draws chrome (border + `shadow-xs`) on the group root and makes the inner control
+    borderless (`border-0`, `rounded-none`, `bg-transparent`, `shadow-none`).
+  - The group root uses `has-[[data-slot=input-group-control]:focus-visible]...` for focus-within
+    ring/border. Fret maps this via container-level focus-within chrome:
+    `ContainerProps.focus_within=true` + `focus_border_color` + `focus_ring`.
+- Recent fixes:
+  - Inline addon layout now matches shadcn-web geometry: addons participate in normal flex flow
+    instead of absolute slots; input padding switches to `pl-2` / `pr-2` when an inline addon is
+    present.
+  - `aria-invalid=true` border color now matches shadcn-web (`input-group-demo.invalid`) and is
+    gated via `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_group_demo_aria_invalid_border_color_matches`).
+  - Focus ring (`ring-[3px]`) and ring color overrides now match shadcn-web focus variants
+    (`input-group-demo.focus`, `input-group-demo.invalid-focus`) and are gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_input_group_demo_focus_ring_matches`, `web_vs_fret_input_group_demo_aria_invalid_focus_ring_matches`).
+  - Block-end addons (`align=block-end`) are now supported for textarea-driven input groups, and
+    `ml-auto` on flex children now produces the expected "push to end" outcome in declarative flex.
+  - Kbd-in-addon negative margin outcomes (v4 `has-[>kbd]`) now match upstream via explicit hints.
+  - Block addon dividers (`border-b`/`border-t`) now match upstream padding outcomes for block-start
+    and block-end addons.
+  - `InputGroupText` is now available as a first-class shadcn surface for spacing-focused tests.
+  - `InputGroupButton` is now available (xs/sm/icon sizes) to support input-group compositions.
+  - `InputGroupButton` no longer forces a fill-width content row for text buttons, matching the
+    upstream shrink-to-fit behavior.
+- Conformance gates:
+  - Layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    (`web_vs_fret_layout_input_group_dropdown_height`, `web_vs_fret_layout_input_group_icon_geometry_matches`,
+    `web_vs_fret_layout_input_group_spinner_geometry_matches`, `web_vs_fret_layout_input_group_button_geometry_matches`,
+    `web_vs_fret_layout_input_group_tooltip_geometry_matches`, `web_vs_fret_layout_spinner_input_group_geometry_matches`,
+    `web_vs_fret_layout_empty_input_group_geometry_matches`, `web_vs_fret_layout_kbd_input_group_geometry_matches`,
+    `web_vs_fret_layout_input_group_textarea_geometry_matches`,
+    `web_vs_fret_layout_input_group_custom_geometry_matches`,
+    `web_vs_fret_layout_input_group_demo_block_end_geometry_matches`,
+    `web_vs_fret_layout_input_group_text_currency_geometry_matches`,
+    `web_vs_fret_layout_input_group_text_url_geometry_matches`,
+    `web_vs_fret_layout_input_group_text_email_geometry_matches`,
+    `web_vs_fret_layout_input_group_text_textarea_count_geometry_matches`).
+- Gaps to check next:
+  - Placeholder + selection colors for group control content (ensure they match upstream shadcn tokens).
+
+### `Textarea`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/textarea.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/textarea.rs`
+- Notes:
+  - Upstream uses the same control chrome taxonomy as `Input` (`border-input`, `shadow-xs`, `focus-visible:ring-[3px]`),
+    including `aria-invalid:border-destructive` and `aria-invalid:ring-destructive/*` overrides.
+- Recent fixes:
+  - `aria-invalid=true` border color now matches shadcn-web (`textarea-demo.invalid`) and is gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_textarea_demo_aria_invalid_border_color_matches`).
+  - Focus ring (`ring-[3px]`) and ring color overrides now match shadcn-web focus variants
+    (`textarea-demo.focus`, `textarea-demo.invalid-focus`) and are gated via
+    `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_textarea_demo_focus_ring_matches`, `web_vs_fret_textarea_demo_aria_invalid_focus_ring_matches`).
+  - Note: shadcn's `aria-invalid:ring-*` is a ring color override; the ring only becomes visible when
+    `focus-visible:ring-[3px]` is also active.
 
 ### `Breadcrumb`
 
@@ -203,6 +323,51 @@ Recent fixes:
   - Size: `h-9` baseline, icon-only sizing (`size-9`) behavior.
   - Variant mapping: outline uses border + shadow-xs; destructive uses dedicated ring color.
   - Focus ring thickness (`3px`) and ring/border keys.
+
+Recent fixes:
+
+- Focus ring (`ring-[3px]`) now matches shadcn-web focus variant (`button-demo.focus`) and is gated via
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+  (`web_vs_fret_button_demo_focus_ring_matches`).
+
+Conformance gates:
+
+- Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_control_chrome_matches`).
+- Focus ring: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_button_demo_focus_ring_matches`).
+
+### `ButtonGroup`
+
+- Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/button_group.rs`
+- Gaps to check:
+  - Nested group spacing: `has-[>[data-slot=button-group]]:gap-2` (8px) should be reflected in Fret flex gap.
+  - Border merge: `border-l-0` on non-first buttons (avoids double borders).
+  - Radius merge: `rounded-l-none` / `rounded-r-none` on middle buttons (keeps only outer corners rounded).
+  - Input/select compositions: group-style merges that include non-button controls require per-edge border and per-corner radius overrides without introducing generic slot/asChild (see ADR 0117).
+  - Scope: do not introduce generic slot/asChild support (see ADR 0117).
+- Conformance gates:
+  - Chrome + layout gap: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_demo_button_chrome_matches`).
+  - Split button separator: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_split_chrome_matches`).
+  - Vertical orientation: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_orientation_vertical_chrome_matches`).
+  - Nested groups: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_nested_geometry_and_chrome_match`).
+  - Group separators: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_separator_geometry_and_chrome_match`).
+  - Size variants: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_size_geometry_and_chrome_match`).
+  - Dropdown split: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_dropdown_geometry_and_chrome_match`).
+  - Popover split: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_popover_geometry_and_chrome_match`).
+  - Input + button: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_input_geometry_and_chrome_match`).
+  - Select + input: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_select_geometry_and_chrome_match`).
+  - Input group: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
+    (`web_vs_fret_button_group_input_group_geometry_matches`).
 
 ### `Tabs`
 

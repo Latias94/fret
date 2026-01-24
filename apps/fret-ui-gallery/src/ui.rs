@@ -1680,15 +1680,18 @@ fn preview_select(
         .placeholder("Pick a fruit")
         .items(
             [
-                shadcn::SelectItem::new("apple", "Apple"),
-                shadcn::SelectItem::new("banana", "Banana"),
-                shadcn::SelectItem::new("orange", "Orange"),
+                shadcn::SelectItem::new("apple", "Apple").test_id("ui-gallery-select-item-apple"),
+                shadcn::SelectItem::new("banana", "Banana")
+                    .test_id("ui-gallery-select-item-banana"),
+                shadcn::SelectItem::new("orange", "Orange")
+                    .test_id("ui-gallery-select-item-orange"),
             ]
             .into_iter()
             .chain((1..=40).map(|i| {
                 let value: Arc<str> = Arc::from(format!("item-{i:02}"));
                 let label: Arc<str> = Arc::from(format!("Item {i:02}"));
-                shadcn::SelectItem::new(value, label)
+                let test_id: Arc<str> = Arc::from(format!("ui-gallery-select-item-{value}"));
+                shadcn::SelectItem::new(value, label).test_id(test_id)
             })),
         )
         .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))

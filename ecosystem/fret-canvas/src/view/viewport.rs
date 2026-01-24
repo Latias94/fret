@@ -2,7 +2,7 @@ use fret_core::{Point, Rect, Transform2D};
 
 use crate::scale::{canvas_units_from_screen_px, effective_scale_factor};
 
-use super::PanZoom2D;
+use super::{PanZoom2D, visible_canvas_rect};
 
 /// A lightweight 2D canvas viewport mapping helper.
 ///
@@ -34,6 +34,11 @@ impl CanvasViewport2D {
 
     pub fn canvas_to_screen(&self, canvas: Point) -> Point {
         self.view.canvas_to_screen(self.bounds, canvas)
+    }
+
+    /// Returns the visible canvas-space rectangle for this viewport.
+    pub fn visible_canvas_rect(&self) -> Rect {
+        visible_canvas_rect(self.bounds, self.view)
     }
 
     /// Converts a screen-space logical pixel length into canvas-space units under this viewport.

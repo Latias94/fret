@@ -4,7 +4,6 @@ use std::sync::Arc;
 use fret_core::ViewportFit;
 use fret_kit::interop::embedded_viewport as embedded;
 use fret_kit::prelude::*;
-use fret_launch::EngineFrameUpdate;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
 use fret_ui::element::AnyElementIterExt as _;
@@ -67,9 +66,7 @@ impl embedded::EmbeddedViewportRecord for TodoInteropKitState {
 
 pub fn run() -> anyhow::Result<()> {
     fret_kit::app_with_hooks("todo-interop-kit-demo", init_window, view, |d| {
-        d.on_command(on_command)
-            .viewport_input(on_viewport_input)
-            .record_engine_frame(record_engine_frame)
+        d.on_command(on_command).drive_embedded_viewport()
     })?
     .with_main_window("todo_interop_kit_demo", (980.0, 640.0))
     .init_app(|app| {
@@ -349,32 +346,4 @@ fn on_command(
             }
         }
     }
-}
-
-fn on_viewport_input(app: &mut App, event: fret_core::ViewportInputEvent) {
-    embedded::handle_viewport_input(app, event);
-}
-
-fn record_engine_frame(
-    app: &mut App,
-    window: AppWindowId,
-    _ui: &mut UiTree<App>,
-    st: &mut TodoInteropKitState,
-    context: &WgpuContext,
-    renderer: &mut Renderer,
-    _scale_factor: f32,
-    tick_id: TickId,
-    frame_id: FrameId,
-) -> EngineFrameUpdate {
-    embedded::record_engine_frame(
-        app,
-        window,
-        _ui,
-        st,
-        context,
-        renderer,
-        _scale_factor,
-        tick_id,
-        frame_id,
-    )
 }

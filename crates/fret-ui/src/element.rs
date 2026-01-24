@@ -3,8 +3,8 @@ use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, NodeId, Px, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle, TextWrap,
-    UvRect, ViewportFit,
+    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle,
+    TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -289,6 +289,15 @@ pub struct ContainerProps {
     pub shadow: Option<ShadowStyle>,
     pub border: Edges,
     pub border_color: Option<Color>,
+    /// Optional focus-visible ring decoration.
+    pub focus_ring: Option<RingStyle>,
+    /// Optional border-color override applied when focus-visible is active.
+    ///
+    /// This is primarily used for shadcn-style `focus-visible:border-ring` outcomes without
+    /// requiring a dedicated "border state" API at the layout layer.
+    pub focus_border_color: Option<Color>,
+    /// When true, focus state is derived from any focused descendant (focus-within).
+    pub focus_within: bool,
     pub corner_radii: Corners,
 }
 
@@ -301,6 +310,9 @@ impl Default for ContainerProps {
             shadow: None,
             border: Edges::all(Px(0.0)),
             border_color: None,
+            focus_ring: None,
+            focus_border_color: None,
+            focus_within: false,
             corner_radii: Corners::all(Px(0.0)),
         }
     }
@@ -573,20 +585,29 @@ impl Default for AnchoredProps {
     }
 }
 
-/// A low-level drop shadow primitive for component-level elevation recipes.
+/// One `box-shadow` layer (CSS-style) for component-level elevation recipes.
 ///
-/// This intentionally does not require a dedicated blur pipeline: the runtime can approximate
-/// softness by drawing multiple expanded quads with alpha falloff (see ADR 0060).
+/// This is renderer-friendly: runtimes can approximate blur by drawing multiple expanded quads with
+/// alpha falloff (ADR 0060) until we have a true blur pipeline.
 #[derive(Debug, Clone, Copy)]
-pub struct ShadowStyle {
+pub struct ShadowLayerStyle {
     pub color: Color,
     pub offset_x: Px,
     pub offset_y: Px,
+    /// Blur radius in pixels.
+    pub blur: Px,
+    /// Spread radius in pixels (can be negative).
     pub spread: Px,
-    /// Additional "soft" layers to draw around the shadow.
-    ///
-    /// `0` draws a single hard-edge quad. Higher values approximate blur via multiple layers.
-    pub softness: u8,
+}
+
+/// A low-level drop shadow primitive for component-level elevation recipes.
+///
+/// Many Tailwind/shadcn recipes are multi-layer shadows (e.g. `shadow-md`), so we support up to two
+/// layers without forcing heap allocation (keeps `ContainerProps` `Copy`).
+#[derive(Debug, Clone, Copy)]
+pub struct ShadowStyle {
+    pub primary: ShadowLayerStyle,
+    pub secondary: Option<ShadowLayerStyle>,
     pub corner_radii: Corners,
 }
 
@@ -600,6 +621,14 @@ pub struct PressableProps {
     /// but it is skipped by the default focus traversal.
     pub focusable: bool,
     pub focus_ring: Option<RingStyle>,
+    /// Optional override for the bounds used when painting the focus ring.
+    ///
+    /// Coordinates are **local** to the pressable's origin (i.e. `0,0` is the pressable's top-left),
+    /// and are translated into absolute coordinates at paint time.
+    ///
+    /// This is useful when the pressable is wider than the visual control chrome (e.g. a "row"
+    /// pressable that should paint focus ring only around an icon-sized control).
+    pub focus_ring_bounds: Option<Rect>,
     pub a11y: PressableA11y,
 }
 
@@ -611,6 +640,7 @@ impl std::fmt::Debug for PressableProps {
             .field("focusable", &self.focusable);
 
         out.field("focus_ring", &self.focus_ring)
+            .field("focus_ring_bounds", &self.focus_ring_bounds)
             .field("a11y", &self.a11y)
             .finish()
     }
@@ -623,6 +653,7 @@ impl Default for PressableProps {
             enabled: true,
             focusable: true,
             focus_ring: None,
+            focus_ring_bounds: None,
             a11y: PressableA11y::default(),
         }
     }

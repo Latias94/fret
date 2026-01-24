@@ -47,7 +47,9 @@ pub enum PressablePointerUpResult {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DismissReason {
     Escape,
-    OutsidePress,
+    OutsidePress {
+        pointer: Option<OutsidePressCx>,
+    },
     /// Focus moved outside the dismissable layer subtree (Radix `onFocusOutside` outcome).
     FocusOutside,
     /// The trigger (or another registered subtree) was scrolled.
@@ -55,6 +57,67 @@ pub enum DismissReason {
     /// This is used for Radix-aligned tooltip semantics: a tooltip should close when its trigger
     /// is inside the scroll target that received a wheel/scroll gesture.
     Scroll,
+}
+
+/// Context passed to overlay dismissal handlers.
+///
+/// This mirrors the DOM/Radix contract where `onInteractOutside` / `onPointerDownOutside` /
+/// `onFocusOutside` may "prevent default" to keep the overlay open.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DismissRequestCx {
+    pub reason: DismissReason,
+    default_prevented: bool,
+}
+
+impl DismissRequestCx {
+    pub fn new(reason: DismissReason) -> Self {
+        Self {
+            reason,
+            default_prevented: false,
+        }
+    }
+
+    pub fn prevent_default(&mut self) {
+        self.default_prevented = true;
+    }
+
+    pub fn default_prevented(&self) -> bool {
+        self.default_prevented
+    }
+}
+
+/// Context passed to auto-focus handlers.
+///
+/// This mirrors the DOM/Radix contract where `onOpenAutoFocus` / `onCloseAutoFocus` may "prevent
+/// default" to take full control of focus movement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AutoFocusRequestCx {
+    default_prevented: bool,
+}
+
+impl AutoFocusRequestCx {
+    pub fn new() -> Self {
+        Self {
+            default_prevented: false,
+        }
+    }
+
+    pub fn prevent_default(&mut self) {
+        self.default_prevented = true;
+    }
+
+    pub fn default_prevented(&self) -> bool {
+        self.default_prevented
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OutsidePressCx {
+    pub pointer_id: PointerId,
+    pub pointer_type: PointerType,
+    pub button: MouseButton,
+    pub modifiers: Modifiers,
+    pub click_count: u8,
 }
 
 /// Pointer down payload for component-owned pointer handlers.
@@ -97,6 +160,7 @@ pub struct WheelCx {
     pub pixels_per_point: f32,
     pub delta: Point,
     pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
 }
 
 /// Pinch (magnify) gesture payload for component-owned pinch handlers.
@@ -115,6 +179,21 @@ pub struct PinchGestureCx {
     pub pointer_type: PointerType,
 }
 
+/// Pointer cancel payload for component-owned pointer handlers.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PointerCancelCx {
+    pub pointer_id: PointerId,
+    /// When provided by the platform, this is the last known pointer position (logical pixels).
+    pub position: Option<Point>,
+    pub tick_id: TickId,
+    /// Pixels-per-point (a.k.a. window scale factor) for `position`.
+    pub pixels_per_point: f32,
+    pub buttons: fret_core::MouseButtons,
+    pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
+    pub reason: fret_core::PointerCancelReason,
+}
+
 /// Pointer up payload for component-owned pointer handlers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointerUpCx {
@@ -125,6 +204,11 @@ pub struct PointerUpCx {
     pub pixels_per_point: f32,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    /// Whether this pointer-up completes a "true click" (press + release without exceeding click
+    /// slop).
+    ///
+    /// See `PointerEvent::Up.is_click` for normalization rules.
+    pub is_click: bool,
     /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
     pub click_count: u8,
     pub pointer_type: PointerType,
@@ -337,7 +421,14 @@ pub(crate) struct PressableHoverActionHooks {
     pub on_hover_change: Option<OnHoverChange>,
 }
 
-pub type OnDismissRequest = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static>;
+pub type OnDismissRequest =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &mut DismissRequestCx) + 'static>;
+
+pub type OnOpenAutoFocus =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
+
+pub type OnCloseAutoFocus =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, &mut AutoFocusRequestCx) + 'static>;
 
 /// Pointer move observer hook for `DismissibleLayer`.
 ///
@@ -366,6 +457,9 @@ pub type OnPinchGesture =
 pub type OnPointerUp =
     Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerUpCx) -> bool + 'static>;
 
+pub type OnPointerCancel =
+    Arc<dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerCancelCx) -> bool + 'static>;
+
 #[derive(Default)]
 pub(crate) struct PointerActionHooks {
     pub on_pointer_down: Option<OnPointerDown>,
@@ -373,6 +467,7 @@ pub(crate) struct PointerActionHooks {
     pub on_wheel: Option<OnWheel>,
     pub on_pinch_gesture: Option<OnPinchGesture>,
     pub on_pointer_up: Option<OnPointerUp>,
+    pub on_pointer_cancel: Option<OnPointerCancel>,
 }
 
 pub type OnKeyDown = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, KeyDownCx) -> bool + 'static>;
@@ -387,6 +482,34 @@ pub type OnCommand = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, CommandId)
 #[derive(Default)]
 pub(crate) struct CommandActionHooks {
     pub on_command: Option<OnCommand>,
+}
+
+pub trait UiCommandAvailabilityActionHost {
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore;
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandAvailabilityActionCx {
+    pub window: fret_core::AppWindowId,
+    pub target: crate::GlobalElementId,
+    pub node: fret_core::NodeId,
+    pub focus: Option<fret_core::NodeId>,
+    pub focus_in_subtree: bool,
+    pub input_ctx: fret_runtime::InputContext,
+}
+
+pub type OnCommandAvailability = Arc<
+    dyn Fn(
+            &mut dyn UiCommandAvailabilityActionHost,
+            CommandAvailabilityActionCx,
+            CommandId,
+        ) -> crate::widget::CommandAvailability
+        + 'static,
+>;
+
+#[derive(Default)]
+pub(crate) struct CommandAvailabilityActionHooks {
+    pub on_command_availability: Option<OnCommandAvailability>,
 }
 
 pub type OnTimer = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;

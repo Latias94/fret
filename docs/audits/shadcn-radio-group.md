@@ -38,12 +38,15 @@ examples in `repo-ref/ui`.
 - Pass: Item border defaults to `border-input` and switches to `border-ring` on focus.
 - Pass: Selected indicator uses `primary` (dot fill), matching shadcn’s `CircleIcon fill-primary`.
 - Pass: The item icon uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
+- Pass: Focus ring thickness (`ring-[3px]`) matches shadcn-web focus variant (`radio-group-demo.focus`).
 
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib radio_group`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_radio_group_demo_row_geometry`).
+- Focus ring gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
+  (`web_vs_fret_radio_group_demo_focus_ring_matches`).
 
 ## Follow-ups (recommended)
 

@@ -66,16 +66,19 @@ fn event_cx<'a>(
     node: fret_core::NodeId,
     window: fret_core::AppWindowId,
     bounds: Rect,
+    prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
 ) -> crate::widget::EventCx<'a, TestHost> {
     crate::widget::EventCx {
         app,
         services,
         node,
+        layer_root: None,
         window: Some(window),
         input_ctx: fret_runtime::InputContext {
             caps: PlatformCapabilities::default(),
             ..Default::default()
         },
+        prevented_default_actions,
         pointer_id: None,
         children: &[],
         focus: Some(node),
@@ -187,13 +190,21 @@ fn ime_commit_replaces_original_selection_after_preedit_starts() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
     let mut input = TextInput::new();
     input.text = "hello world".to_string();
     input.caret = 5;
     input.selection_anchor = 0;
 
-    let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     input.event(
         &mut cx,

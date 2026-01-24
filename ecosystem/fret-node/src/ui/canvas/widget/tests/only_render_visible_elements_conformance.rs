@@ -48,6 +48,7 @@ fn paint_once(
         bounds,
         scale_factor: 1.0,
         accumulated_transform: Transform2D::IDENTITY,
+        children_render_transform: None,
         services,
         observe_model: &mut observe_model,
         observe_global: &mut observe_global,

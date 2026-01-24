@@ -66,6 +66,9 @@ pub fn input_chrome_container_props(
         shadow: None,
         border: Edges::all(chrome.border_width),
         border_color: Some(border_color),
+        focus_ring: None,
+        focus_border_color: None,
+        focus_within: false,
         corner_radii: Corners::all(chrome.radius),
     }
 }

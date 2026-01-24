@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_core::{TextOverflow, TextWrap};
+use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space, ui,
+};
 
 use fret_ui_kit::declarative::stack;
 
@@ -114,38 +116,27 @@ fn empty_with_patch<H: UiHost>(
                 .items(Items::Start),
             |cx| {
                 let mut out = Vec::new();
-                out.push(cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: title,
-                    style: Some(TextStyle {
-                        font: FontId::default(),
-                        size: title_px,
-                        weight: FontWeight::SEMIBOLD,
-                        slant: Default::default(),
-                        line_height: Some(title_lh),
-                        letter_spacing_em: None,
-                    }),
-                    color: Some(fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                }));
+                out.push(
+                    ui::text(cx, title)
+                        .text_size_px(title_px)
+                        .line_height_px(title_lh)
+                        .font_semibold()
+                        .nowrap()
+                        .text_color(ColorRef::Color(fg))
+                        .into_element(cx),
+                );
 
                 if let Some(desc) = description {
-                    out.push(cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: desc,
-                        style: Some(TextStyle {
-                            font: FontId::default(),
-                            size: desc_px,
-                            weight: FontWeight::NORMAL,
-                            slant: Default::default(),
-                            line_height: Some(desc_lh),
-                            letter_spacing_em: None,
-                        }),
-                        color: Some(muted_fg),
-                        wrap: TextWrap::Word,
-                        overflow: TextOverflow::Clip,
-                    }));
+                    out.push(
+                        ui::text(cx, desc)
+                            .text_size_px(desc_px)
+                            .line_height_px(desc_lh)
+                            .font_normal()
+                            .wrap(TextWrap::Word)
+                            .overflow(TextOverflow::Clip)
+                            .text_color(ColorRef::Color(muted_fg))
+                            .into_element(cx),
+                    );
                 }
 
                 out

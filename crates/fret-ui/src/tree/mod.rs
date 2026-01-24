@@ -356,6 +356,37 @@ pub struct UiDebugInvalidationWalk {
     pub truncated_at: Option<NodeId>,
 }
 
+/// Controls whether an overlay layer prevents pointer interactions from reaching layers beneath it.
+///
+/// This is a *mechanism* only. Policy lives in ecosystem crates (e.g. `fret-ui-kit`), which decide
+/// when to enable occlusion (Radix `disableOutsidePointerEvents` outcomes, editor interaction
+/// arbitration, etc.).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PointerOcclusion {
+    /// No occlusion; pointer events route normally via hit-testing across layers.
+    #[default]
+    None,
+    /// Blocks pointer interaction (hover/move/down/up) for layers beneath the occluding layer.
+    BlockMouse,
+    /// Blocks pointer interaction for layers beneath the occluding layer, but allows scroll wheel
+    /// to route to underlay scroll targets.
+    BlockMouseExceptScroll,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct UiInputArbitrationSnapshot {
+    pub modal_barrier_root: Option<NodeId>,
+    pub pointer_occlusion: PointerOcclusion,
+    pub pointer_occlusion_layer: Option<UiLayerId>,
+    pub pointer_capture_active: bool,
+    /// When all captured pointers belong to the same layer, this reports that layer.
+    ///
+    /// If captures span multiple layers (or a captured node cannot be mapped to a layer), this is
+    /// `None` and `pointer_capture_multiple_layers=true`.
+    pub pointer_capture_layer: Option<UiLayerId>,
+    pub pointer_capture_multiple_layers: bool,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugLayerInfo {
     pub id: UiLayerId,
@@ -363,6 +394,7 @@ pub struct UiDebugLayerInfo {
     pub visible: bool,
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
+    pub pointer_occlusion: PointerOcclusion,
     pub wants_pointer_down_outside_events: bool,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
@@ -742,7 +774,8 @@ pub struct UiTree<H: UiHost> {
     base_layer: Option<UiLayerId>,
     focus: Option<NodeId>,
     captured: HashMap<PointerId, NodeId>,
-    last_pointer_move_hit: Option<NodeId>,
+    last_pointer_move_hit: HashMap<PointerId, Option<NodeId>>,
+    touch_pointer_down_outside_candidates: HashMap<PointerId, TouchPointerDownOutsideCandidate>,
     hit_test_path_cache: Option<HitTestPathCache>,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
@@ -801,6 +834,16 @@ pub struct UiTree<H: UiHost> {
     deferred_cleanup: Vec<Box<dyn Widget<H>>>,
 }
 
+#[derive(Clone)]
+struct TouchPointerDownOutsideCandidate {
+    layer_id: UiLayerId,
+    root: NodeId,
+    consume: bool,
+    down_event: Event,
+    start_pos: Point,
+    moved: bool,
+}
+
 impl<H: UiHost> Default for UiTree<H> {
     fn default() -> Self {
         Self {
@@ -811,7 +854,8 @@ impl<H: UiHost> Default for UiTree<H> {
             base_layer: None,
             focus: None,
             captured: HashMap::new(),
-            last_pointer_move_hit: None,
+            last_pointer_move_hit: HashMap::new(),
+            touch_pointer_down_outside_candidates: HashMap::new(),
             hit_test_path_cache: None,
             last_internal_drag_target: None,
             window: None,
@@ -909,13 +953,16 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
-    fn invalidation_source_marks_view_dirty(source: UiDebugInvalidationSource) -> bool {
+    fn invalidation_marks_view_dirty(
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) -> bool {
         matches!(
             source,
             UiDebugInvalidationSource::Notify
                 | UiDebugInvalidationSource::ModelChange
                 | UiDebugInvalidationSource::GlobalChange
-        )
+        ) || detail == UiDebugInvalidationDetail::ScrollHandle
     }
 
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
@@ -1655,6 +1702,51 @@ impl<H: UiHost> UiTree<H> {
         self.captured_for(PointerId(0))
     }
 
+    pub fn any_captured_node(&self) -> Option<NodeId> {
+        self.captured.values().copied().next()
+    }
+
+    pub fn input_arbitration_snapshot(&self) -> UiInputArbitrationSnapshot {
+        let (_active, barrier_root) = self.active_input_layers();
+
+        let (pointer_occlusion_layer, pointer_occlusion) = self
+            .topmost_pointer_occlusion_layer(barrier_root)
+            .map(|(layer, occlusion)| (Some(layer), occlusion))
+            .unwrap_or((None, PointerOcclusion::None));
+
+        let mut pointer_capture_active = false;
+        let mut pointer_capture_layer: Option<UiLayerId> = None;
+        let mut pointer_capture_multiple_layers = false;
+        for &node in self.captured.values() {
+            pointer_capture_active = true;
+            let Some(layer) = self.node_layer(node) else {
+                pointer_capture_layer = None;
+                pointer_capture_multiple_layers = true;
+                break;
+            };
+
+            match pointer_capture_layer {
+                None => pointer_capture_layer = Some(layer),
+                Some(prev) => {
+                    if prev != layer {
+                        pointer_capture_layer = None;
+                        pointer_capture_multiple_layers = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        UiInputArbitrationSnapshot {
+            modal_barrier_root: barrier_root,
+            pointer_occlusion,
+            pointer_occlusion_layer,
+            pointer_capture_active,
+            pointer_capture_layer,
+            pointer_capture_multiple_layers,
+        }
+    }
+
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
     }
@@ -1740,6 +1832,7 @@ impl<H: UiHost> UiTree<H> {
                     visible: layer.visible,
                     blocks_underlay_input: layer.blocks_underlay_input,
                     hit_testable: layer.hit_testable,
+                    pointer_occlusion: layer.pointer_occlusion,
                     wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
                     wants_pointer_move_events: layer.wants_pointer_move_events,
                     wants_timer_events: layer.wants_timer_events,
@@ -1771,6 +1864,25 @@ impl<H: UiHost> UiTree<H> {
             self.ime_composing = false;
         }
         self.focus = focus;
+    }
+
+    const TOUCH_POINTER_DOWN_OUTSIDE_SLOP_PX: f32 = 6.0;
+
+    fn update_touch_pointer_down_outside_move(&mut self, pointer_id: PointerId, position: Point) {
+        let Some(candidate) = self
+            .touch_pointer_down_outside_candidates
+            .get_mut(&pointer_id)
+        else {
+            return;
+        };
+        if candidate.moved {
+            return;
+        }
+        let dx = position.x.0 - candidate.start_pos.x.0;
+        let dy = position.y.0 - candidate.start_pos.y.0;
+        if (dx * dx + dy * dy).sqrt() > Self::TOUCH_POINTER_DOWN_OUTSIDE_SLOP_PX {
+            candidate.moved = true;
+        }
     }
 
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
@@ -2167,6 +2279,39 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).and_then(|n| n.parent)
     }
 
+    pub fn first_focusable_ancestor_including_declarative(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        start: NodeId,
+    ) -> Option<NodeId> {
+        let mut node = Some(start);
+        while let Some(id) = node {
+            let focusable = if let Some(record) =
+                crate::declarative::element_record_for_node(app, window, id)
+            {
+                match &record.instance {
+                    crate::declarative::ElementInstance::TextInput(_) => true,
+                    crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
+                    _ => false,
+                }
+            } else {
+                self.nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.is_focusable())
+            };
+
+            if focusable {
+                return Some(id);
+            }
+
+            node = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        None
+    }
+
     pub fn first_focusable_descendant(&self, root: NodeId) -> Option<NodeId> {
         let mut stack = vec![root];
         while let Some(id) = stack.pop() {
@@ -2323,6 +2468,28 @@ impl<H: UiHost> UiTree<H> {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
 
+        let (event_pointer_id, touch_candidate): (
+            Option<PointerId>,
+            Option<(PointerId, Point, Event)>,
+        ) = match params.event {
+            Event::Pointer(PointerEvent::Down {
+                pointer_id,
+                position,
+                pointer_type: fret_core::PointerType::Touch,
+                ..
+            }) => (
+                Some(*pointer_id),
+                Some((*pointer_id, *position, params.event.clone())),
+            ),
+            Event::Pointer(PointerEvent::Down { pointer_id, .. }) => (Some(*pointer_id), None),
+            _ => (None, None),
+        };
+
+        if let Some((pointer_id, _, _)) = touch_candidate {
+            self.touch_pointer_down_outside_candidates
+                .remove(&pointer_id);
+        }
+
         // Only the topmost "dismissable" non-modal overlay should observe outside presses.
         // This mirrors Radix-style DismissableLayer semantics while staying click-through:
         // the observer pass must not block the underlying hit-tested dispatch.
@@ -2342,6 +2509,22 @@ impl<H: UiHost> UiTree<H> {
             }
             if !params.active_layer_roots.contains(&layer.root) {
                 continue;
+            }
+
+            // If another pointer is captured by a different UI layer, treat the active capture as
+            // exclusive for outside-press dismissal.
+            //
+            // This avoids accidental multi-pointer dismissal while editor-style interactions
+            // (viewport tools, drags) are in progress (ADR 0049).
+            if let Some(event_pointer_id) = event_pointer_id
+                && self.captured.iter().any(|(pid, node)| {
+                    *pid != event_pointer_id
+                        && self
+                            .node_layer(*node)
+                            .is_some_and(|layer| layer != layer_id)
+                })
+            {
+                return PointerDownOutsideOutcome::default();
             }
 
             // If the pointer event is inside this layer, it will be handled by the normal hit-test
@@ -2368,6 +2551,24 @@ impl<H: UiHost> UiTree<H> {
 
             let root = layer.root;
             let consume = layer.consume_pointer_down_outside_events;
+
+            if let Some((pointer_id, position, down_event)) = touch_candidate {
+                // Radix-aligned touch behavior: delay outside-press dismissal until pointer-up,
+                // and cancel it when the touch turns into a scroll/drag gesture.
+                self.touch_pointer_down_outside_candidates.insert(
+                    pointer_id,
+                    TouchPointerDownOutsideCandidate {
+                        layer_id,
+                        root,
+                        consume,
+                        down_event,
+                        start_pos: position,
+                        moved: false,
+                    },
+                );
+                return PointerDownOutsideOutcome::default();
+            }
+
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
@@ -2744,7 +2945,16 @@ impl<H: UiHost> UiTree<H> {
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
                     || (n.view_cache.contained_layout
                         && n.view_cache.layout_definite
-                        && n.bounds.size != Size::default());
+                        && n.bounds.size != Size::default())
+                    // For auto-sized cache roots, allow descendant invalidations to truncate at
+                    // the first cache boundary we hit. A separate repair step
+                    // (`propagate_auto_sized_view_cache_root_invalidations`) will propagate a
+                    // single invalidation from the cache root to its ancestors so the root can be
+                    // placed before running contained relayouts.
+                    //
+                    // Importantly, do *not* truncate when the invalidation originates at the
+                    // cache root itself (e.g. the repair step), so it can still reach ancestors.
+                    || (n.view_cache.contained_layout && !n.view_cache.layout_definite && id != node);
                 if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
@@ -2754,7 +2964,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                     hit_cache_root = Some(id);
                     did_stop = true;
-                    if Self::invalidation_source_marks_view_dirty(source) {
+                    if Self::invalidation_marks_view_dirty(source, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -2798,7 +3008,7 @@ impl<H: UiHost> UiTree<H> {
                     && n.view_cache.enabled
                 {
                     n.invalidation.mark(inv);
-                    if Self::invalidation_source_marks_view_dirty(source) {
+                    if Self::invalidation_marks_view_dirty(source, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -2861,7 +3071,7 @@ impl<H: UiHost> UiTree<H> {
             let already = visited.get(&id).copied().unwrap_or_default();
             if source != UiDebugInvalidationSource::Notify
                 && (already & needed) == needed
-                && !(stop_at_view_cache && Self::invalidation_source_marks_view_dirty(source))
+                && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, detail))
             {
                 break;
             }
@@ -2882,7 +3092,10 @@ impl<H: UiHost> UiTree<H> {
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
                     || (n.view_cache.contained_layout
                         && n.view_cache.layout_definite
-                        && n.bounds.size != Size::default());
+                        && n.bounds.size != Size::default())
+                    || (n.view_cache.contained_layout
+                        && !n.view_cache.layout_definite
+                        && id != node);
                 if stop_at_view_cache && n.view_cache.enabled && can_truncate_at_cache_root {
                     if self.debug_enabled {
                         self.debug_stats.view_cache_invalidation_truncations = self
@@ -2890,7 +3103,7 @@ impl<H: UiHost> UiTree<H> {
                             .view_cache_invalidation_truncations
                             .saturating_add(1);
                     }
-                    if Self::invalidation_source_marks_view_dirty(source) {
+                    if Self::invalidation_marks_view_dirty(source, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -2935,7 +3148,7 @@ impl<H: UiHost> UiTree<H> {
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
                     if let Some(n) = self.nodes.get_mut(id) {
-                        if Self::invalidation_source_marks_view_dirty(source) {
+                        if Self::invalidation_marks_view_dirty(source, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
                         }
@@ -3726,6 +3939,21 @@ fn event_position(event: &Event) -> Option<Point> {
         Event::InternalDrag(e) => Some(e.position),
         _ => None,
     }
+}
+
+fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {
+    // Hover is a cursor-driven affordance (Mouse/Pen). Touch pointers must not perturb hover state,
+    // otherwise multi-pointer input can cause spurious hover exits while a mouse cursor remains in
+    // place.
+    //
+    // `Unknown` is treated as hover-capable to keep desktop backends usable when pointer
+    // classification is incomplete.
+    matches!(
+        pointer_type,
+        fret_core::PointerType::Mouse
+            | fret_core::PointerType::Pen
+            | fret_core::PointerType::Unknown
+    )
 }
 
 #[cfg(test)]

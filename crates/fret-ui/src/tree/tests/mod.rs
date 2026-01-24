@@ -198,9 +198,13 @@ impl<H: UiHost> Widget<H> for ClickCounter {
 }
 
 mod children;
+mod command_availability;
 mod command_enabled_service;
+mod dispatch_phase;
+mod dock_drag;
 mod escape_dismiss;
 mod focus_scope;
+mod focus_traversal_availability;
 mod globals;
 mod hit_test;
 mod interactivity_gate;
@@ -209,11 +213,16 @@ mod models;
 mod outside_press;
 mod paint_cache;
 mod pointer_move_hover;
+mod pointer_move_layers;
+mod pointer_occlusion;
 mod prepaint;
+mod prevent_default;
 mod scroll_into_view;
 mod scroll_invalidation;
 mod semantics_focus_shortcuts;
 mod stack_safety;
 mod transforms;
 mod view_cache;
+mod window_command_action_availability_snapshot;
+mod window_input_arbitration_snapshot;
 mod window_input_context_snapshot;

@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use fret_core::geometry::Edges;
-use fret_core::{Axis, Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Axis, Color, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, TextProps};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
     TableRowMeasureMode, TableViewOutput, TableViewProps, table_virtualized,
 };
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 
@@ -220,26 +220,36 @@ impl DataTable {
                         },
                         move |cx| {
                             let mut pieces: Vec<AnyElement> = Vec::new();
-                            pieces.push(cx.text_props(TextProps {
-                                layout: Default::default(),
-                                text: label.clone(),
-                                style: Some(style.clone()),
-                                color: Some(header_fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                            }));
+                            {
+                                let mut text = ui::label(cx, label.clone())
+                                    .text_size_px(style.size)
+                                    .font_weight(style.weight)
+                                    .text_color(ColorRef::Color(header_fg))
+                                    .nowrap();
+                                if let Some(line_height) = style.line_height {
+                                    text = text.line_height_px(line_height);
+                                }
+                                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                    text = text.letter_spacing_em(letter_spacing_em);
+                                }
+                                pieces.push(text.into_element(cx));
+                            }
 
                             if let Some(desc) = sort_state {
                                 let indicator: Arc<str> =
                                     Arc::from(if desc { " ▼" } else { " ▲" });
-                                pieces.push(cx.text_props(TextProps {
-                                    layout: Default::default(),
-                                    text: indicator,
-                                    style: Some(style.clone()),
-                                    color: Some(sort_fg),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                }));
+                                let mut text = ui::label(cx, indicator)
+                                    .text_size_px(style.size)
+                                    .font_weight(style.weight)
+                                    .text_color(ColorRef::Color(sort_fg))
+                                    .nowrap();
+                                if let Some(line_height) = style.line_height {
+                                    text = text.line_height_px(line_height);
+                                }
+                                if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                    text = text.letter_spacing_em(letter_spacing_em);
+                                }
+                                pieces.push(text.into_element(cx));
                             }
 
                             pieces

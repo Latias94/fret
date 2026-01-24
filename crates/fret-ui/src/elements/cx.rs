@@ -9,12 +9,13 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
 use crate::action::{
-    CommandActionHooks, DismissibleActionHooks, KeyActionHooks, OnActivate, OnCommand,
-    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerDown,
-    OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
-    OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer,
-    OnWheel, PointerActionHooks, PressableActionHooks, PressableHoverActionHooks,
-    PressablePointerUpResult, RovingActionHooks, TimerActionHooks,
+    CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks, KeyActionHooks,
+    OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest, OnDismissiblePointerMove,
+    OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp,
+    OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange,
+    OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel, PointerActionHooks,
+    PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
+    TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -970,10 +971,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
-    pub fn pressable_with_id_props(
+    pub fn pressable_with_id_props<I>(
         &mut self,
-        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> (PressableProps, Vec<AnyElement>),
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self, PressableState, GlobalElementId) -> (PressableProps, I),
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
@@ -991,6 +995,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 },
                 id,
             );
+            let children = children.into_iter().collect();
             cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
@@ -1406,6 +1411,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    /// Register a component-owned pointer cancel handler for the current pointer region element.
+    ///
+    /// This hook is invoked when the runtime receives `Event::PointerCancel` for a pointer stream
+    /// that was previously interacting with this region (typically via pointer capture).
+    pub fn pointer_region_on_pointer_cancel(&mut self, handler: OnPointerCancel) {
+        self.with_state(PointerActionHooks::default, |hooks| {
+            hooks.on_pointer_cancel = Some(handler);
+        });
+    }
+
     pub fn pointer_region_on_wheel(&mut self, handler: OnWheel) {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_wheel = Some(handler);
@@ -1558,6 +1573,66 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn command_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = Some(handler);
+        });
+    }
+
+    pub fn command_add_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = match hooks.on_command_availability.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        let availability = prev(host, cx.clone(), command.clone());
+                        if availability != crate::widget::CommandAvailability::NotHandled {
+                            return availability;
+                        }
+                        next(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_prepend_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = match hooks.on_command_availability.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        let availability = next(host, cx.clone(), command.clone());
+                        if availability != crate::widget::CommandAvailability::NotHandled {
+                            return availability;
+                        }
+                        prev(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_clear_on_command_availability_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = None;
+        });
+    }
+
     pub fn timer_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
         self.with_state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = Some(handler);
@@ -1611,9 +1686,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 None => Some(handler),
                 Some(prev) => {
                     let next = handler.clone();
-                    Some(Arc::new(move |host, cx, reason| {
-                        prev(host, cx, reason);
-                        next(host, cx, reason);
+                    Some(Arc::new(move |host, cx, req| {
+                        prev(host, cx, req);
+                        next(host, cx, req);
                     }))
                 }
             };

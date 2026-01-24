@@ -3,6 +3,9 @@
 use super::*;
 use std::sync::OnceLock;
 
+#[cfg(feature = "diag-screenshots")]
+use slotmap::Key as _;
+
 #[derive(Debug, Clone, Copy)]
 struct RedrawHitchConfig {
     hitch_ms: u64,
@@ -68,12 +71,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         _device_id: Option<winit::event::DeviceId>,
         event: DeviceEvent,
     ) {
-        if !self
-            .app
-            .drag(fret_core::PointerId(0))
-            .is_some_and(|d| d.cross_window_hover)
-            && self.dock_tearoff_follow.is_none()
-        {
+        let dock_drag_pointer_id = self.dock_drag_pointer_id();
+        if dock_drag_pointer_id.is_none() && self.dock_tearoff_follow.is_none() {
             return;
         }
 
@@ -109,6 +108,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 state: ElementState::Released,
                 ..
             } => {
+                // This fallback path is only for releases that occur outside all windows, where
+                // winit may not emit `WindowEvent::MouseInput`.
+                if dock_drag_pointer_id != Some(fret_core::PointerId(0)) {
+                    return;
+                }
+
                 #[cfg(target_os = "windows")]
                 if let Some(p) = win32::cursor_pos_physical() {
                     self.cursor_screen_pos = Some(p);
@@ -312,7 +317,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
                 #[cfg(target_os = "macos")]
                 RunnerUserEvent::MacosMenuWillOpen => {
-                    macos_menu::sync_input_context_from_app(&self.app);
+                    macos_menu::sync_command_gating_from_app(&self.app);
                 }
             }
         }
@@ -357,9 +362,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     );
                 }
 
-                if self.app.drag(fret_core::PointerId(0)).is_some_and(|d| {
-                    d.cross_window_hover && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
-                }) {
+                if self.dock_drag_pointer_id().is_some() {
                     self.route_internal_drag_hover_from_cursor();
                     self.drain_effects(event_loop);
                 }
@@ -548,20 +551,20 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                     let pos = state.platform.input.cursor_pos;
                     let external_drag_token = state.external_drag_token;
-                    let screen_pos =
-                        state
-                            .platform
-                            .input
-                            .cursor_pos_physical
-                            .and_then(|position| {
-                                state.window.outer_position().ok().map(|outer| {
-                                    let surface = state.window.surface_position();
-                                    PhysicalPosition::new(
-                                        outer.x as f64 + surface.x as f64 + position.x,
-                                        outer.y as f64 + surface.y as f64 + position.y,
-                                    )
-                                })
-                            });
+                    let screen_pos = match ev {
+                        WindowEvent::PointerMoved {
+                            position, source, ..
+                        } if !matches!(source, winit::event::PointerSource::Touch { .. }) => {
+                            state.window.outer_position().ok().map(|outer| {
+                                let surface = state.window.surface_position();
+                                PhysicalPosition::new(
+                                    outer.x as f64 + surface.x as f64 + position.x,
+                                    outer.y as f64 + surface.y as f64 + position.y,
+                                )
+                            })
+                        }
+                        _ => None,
+                    };
 
                     (mapped, pos, external_drag_token, screen_pos)
                 };
@@ -607,6 +610,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 let mut saw_left_down = false;
                 let mut saw_left_up = false;
+                let mut left_up_pointer_id: Option<fret_core::PointerId> = None;
                 for evt in &mapped {
                     let Event::Pointer(pointer) = evt else {
                         continue;
@@ -614,12 +618,19 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     match pointer {
                         fret_core::PointerEvent::Down {
                             button: fret_core::MouseButton::Left,
+                            pointer_id: _,
                             ..
-                        } => saw_left_down = true,
+                        } => {
+                            saw_left_down = true;
+                        }
                         fret_core::PointerEvent::Up {
                             button: fret_core::MouseButton::Left,
+                            pointer_id,
                             ..
-                        } => saw_left_up = true,
+                        } => {
+                            saw_left_up = true;
+                            left_up_pointer_id = Some(*pointer_id);
+                        }
                         _ => {}
                     }
                 }
@@ -631,16 +642,20 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 if saw_left_up {
                     self.left_mouse_down = false;
                     self.saw_left_mouse_release_this_turn = true;
-                    self.route_internal_drag_drop_from_cursor();
-                    self.stop_dock_tearoff_follow(Instant::now(), true);
+                    if left_up_pointer_id == Some(fret_core::PointerId(0)) {
+                        self.route_internal_drag_drop_from_cursor();
+                        self.stop_dock_tearoff_follow(Instant::now(), true);
+                    }
+
                     // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
                     // drag session cannot get "stuck" if no widget ends it.
-                    if self
-                        .app
-                        .drag(fret_core::PointerId(0))
-                        .is_some_and(|d| d.cross_window_hover)
+                    if let Some(released) = left_up_pointer_id
+                        && self
+                            .app
+                            .drag(released)
+                            .is_some_and(|d| d.cross_window_hover)
                     {
-                        self.app.cancel_drag(fret_core::PointerId(0));
+                        self.app.cancel_drag(released);
                         let _ = self.clear_internal_drag_hover_if_needed();
                     }
                 }
@@ -669,6 +684,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 // Drain effects before rendering so dock ops, invalidation bumps, and window
                 // requests apply deterministically to the frame being drawn (ADR 0013).
                 self.drain_effects(event_loop);
+
+                #[cfg(feature = "diag-screenshots")]
+                if let Some(diag) = self.diag_screenshots.as_mut() {
+                    diag.poll();
+                }
 
                 {
                     let (Some(context), Some(renderer)) =
@@ -798,7 +818,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_started = hitch_config.map(|_| Instant::now());
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
-                    let draw_result = state.surface.present_with(&context.queue, |view| {
+
+                    let draw_result: Result<(), fret_render::RenderError> = (|| {
+                        let (frame, view) =
+                            state.surface.get_current_frame_view().map_err(|source| {
+                                fret_render::RenderError::SurfaceAcquireFailed { source }
+                            })?;
+
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
                         let ui_cmd = renderer.render_scene(
@@ -806,7 +832,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             &context.queue,
                             fret_render::RenderSceneParams {
                                 format: state.surface.format(),
-                                target_view: view,
+                                target_view: &view,
                                 scene: &state.scene,
                                 clear: self.config.clear_color,
                                 scale_factor,
@@ -816,8 +842,45 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let mut cmd_buffers = engine_frame.command_buffers;
                         cmd_buffers.push(ui_cmd);
-                        cmd_buffers
-                    });
+
+                        #[cfg(feature = "diag-screenshots")]
+                        let mut screenshot_inflight: Option<
+                            diag_screenshots::InFlightCapture,
+                        > = None;
+                        #[cfg(feature = "diag-screenshots")]
+                        if let Some(diag) = self.diag_screenshots.as_mut() {
+                            let window_ffi = app_window.data().as_ffi();
+                            if let Some((cmd, inflight)) = diag.begin_capture_for_window(
+                                &context.device,
+                                window_ffi,
+                                &frame.texture,
+                                state.surface.format(),
+                                state.surface.size(),
+                            ) {
+                                cmd_buffers.push(cmd);
+                                screenshot_inflight = Some(inflight);
+                            }
+                        }
+
+                        context.queue.submit(cmd_buffers);
+                        frame.present();
+
+                        #[cfg(feature = "diag-screenshots")]
+                        if let (Some(diag), Some(inflight)) =
+                            (self.diag_screenshots.as_mut(), screenshot_inflight)
+                        {
+                            if let Err(err) = diag.finish_capture(&context.device, inflight) {
+                                tracing::warn!(
+                                    error = %err,
+                                    window = ?app_window,
+                                    "diag screenshot: capture failed"
+                                );
+                            }
+                        }
+
+                        Ok(())
+                    })(
+                    );
                     if let Some(started) = present_started {
                         hitch_present_ms = Some(started.elapsed().as_millis() as u64);
                     }
@@ -944,10 +1007,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             ..
                         }
                     )
-                }) && self.app.drag(fret_core::PointerId(0)).is_some_and(|d| {
-                    d.cross_window_hover && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
-                }) {
-                    self.app.cancel_drag(fret_core::PointerId(0));
+                }) && self.dock_drag_pointer_id().is_some()
+                {
+                    if let Some(pointer_id) = self.dock_drag_pointer_id() {
+                        self.app.cancel_drag(pointer_id);
+                    }
                     let _ = self.clear_internal_drag_hover_if_needed();
                     if self.dock_tearoff_follow.is_some() {
                         self.stop_dock_tearoff_follow(Instant::now(), true);
@@ -1126,10 +1190,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        let drag_poll = self
-            .app
-            .drag(fret_core::PointerId(0))
-            .is_some_and(|d| d.cross_window_hover);
+        let drag_poll = self.dock_drag_pointer_id().is_some();
         let follow_poll = self.dock_tearoff_follow.is_some();
         let wants_poll = drag_poll || follow_poll;
 

@@ -3,7 +3,9 @@ use fret_core::{
     AppWindowId, Corners, Event, NodeId, Point, Rect, Scene, SemanticsFlags, SemanticsRole, Size,
     Transform2D, UiServices,
 };
-use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
+use fret_runtime::{
+    CommandId, DefaultAction, DefaultActionSet, Effect, InputContext, Model, ModelId,
+};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
@@ -26,9 +28,11 @@ pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub services: &'a mut dyn UiServices,
     pub node: NodeId,
+    pub layer_root: Option<NodeId>,
     pub window: Option<AppWindowId>,
     pub pointer_id: Option<fret_core::PointerId>,
     pub input_ctx: InputContext,
+    pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
@@ -83,6 +87,14 @@ impl<'a, H: UiHost> EventCx<'a, H> {
         self.stop_propagation = true;
     }
 
+    pub fn prevent_default(&mut self, action: DefaultAction) {
+        self.prevented_default_actions.insert(action);
+    }
+
+    pub fn default_prevented(&self, action: DefaultAction) -> bool {
+        self.prevented_default_actions.contains(action)
+    }
+
     /// Request a window redraw (one-shot).
     ///
     /// Use this for one-shot updates after state changes (e.g. responding to input).
@@ -117,6 +129,62 @@ impl<'a, H: UiHost> EventCx<'a, H> {
             return;
         }
         self.requested_cursor = Some(icon);
+    }
+}
+
+/// Observer-only event context for the `InputDispatchPhase::Preview` pass.
+///
+/// This pass exists to support "click-through outside-press" policies (ADR 0069) without allowing
+/// widgets to mutate input routing state (focus / capture / propagation / default actions).
+pub struct ObserverCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub services: &'a mut dyn UiServices,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub pointer_id: Option<fret_core::PointerId>,
+    pub input_ctx: InputContext,
+    pub children: &'a [NodeId],
+    pub focus: Option<NodeId>,
+    pub captured: Option<NodeId>,
+    pub bounds: Rect,
+    pub invalidations: Vec<(NodeId, Invalidation)>,
+    pub notify_requested: bool,
+}
+
+impl<'a, H: UiHost> ObserverCx<'a, H> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
+    pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
+        self.invalidations.push((node, kind));
+    }
+
+    pub fn invalidate_self(&mut self, kind: Invalidation) {
+        self.invalidate(self.node, kind);
+    }
+
+    pub fn dispatch_command(&mut self, command: CommandId) {
+        self.app.push_effect(Effect::Command {
+            window: self.window,
+            command,
+        });
+    }
+
+    /// Request a window redraw (one-shot).
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
+
+    /// Mark the current view as dirty and schedule a redraw.
+    ///
+    /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
+    /// and prevents paint replay of stale recorded ranges.
+    pub fn notify(&mut self) {
+        self.notify_requested = true;
     }
 }
 
@@ -164,6 +232,32 @@ impl<'a, H: UiHost> CommandCx<'a, H> {
         };
         self.app.request_redraw(window);
     }
+}
+
+/// Command availability query result used by `UiTree::is_command_available` (ADR 1157).
+///
+/// This is a pure query signal (no side effects). Consumers typically interpret:
+/// - `Available`: command should be treated as enabled for the current dispatch path.
+/// - `Blocked`: command must not bubble further to ancestors for availability purposes.
+/// - `NotHandled`: this node does not participate in availability for this command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandAvailability {
+    NotHandled,
+    Available,
+    Blocked,
+}
+
+/// Context passed to `Widget::command_availability`.
+///
+/// This is intentionally read-only (no `UiServices`, no invalidations) to keep availability a pure
+/// query.
+pub struct CommandAvailabilityCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub tree: &'a crate::tree::UiTree<H>,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub input_ctx: InputContext,
+    pub focus: Option<NodeId>,
 }
 
 pub struct LayoutCx<'a, H: UiHost> {
@@ -422,6 +516,7 @@ pub struct PaintCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub scale_factor: f32,
     pub accumulated_transform: Transform2D,
+    pub children_render_transform: Option<Transform2D>,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
     pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
@@ -476,7 +571,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
-        let child_transform = self.tree.node_children_render_transform(self.node);
+        let child_transform = self.children_render_transform;
         if let Some(transform) = child_transform {
             self.scene
                 .push(fret_core::SceneOp::PushTransform { transform });
@@ -669,9 +764,30 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 }
 
 pub trait Widget<H: UiHost> {
+    /// Capture-phase event dispatch (root → target).
+    ///
+    /// Default is no-op so existing widgets keep their current bubble-only behavior.
+    fn event_capture(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
+
+    /// Observer-phase event dispatch (`InputDispatchPhase::Preview`).
+    ///
+    /// This pass must not mutate input routing state (focus / capture / propagation / default
+    /// actions). It exists to support outside-press dismissal and click-through overlay policies
+    /// (ADR 0069).
+    fn event_observer(&mut self, _cx: &mut ObserverCx<'_, H>, _event: &Event) {}
+
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
+    }
+
+    /// Pure query: does this node participate in availability for `command`?
+    fn command_availability(
+        &self,
+        _cx: &mut CommandAvailabilityCx<'_, H>,
+        _command: &CommandId,
+    ) -> CommandAvailability {
+        CommandAvailability::NotHandled
     }
     fn cleanup_resources(&mut self, _services: &mut dyn UiServices) {}
     /// Optional affine transform applied to both paint and input for the subtree rooted at this node.

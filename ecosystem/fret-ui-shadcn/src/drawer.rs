@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, Transform2D};
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, MarginEdge, MarginEdges, PointerRegionProps,
     RenderTransformProps, SemanticsProps, SizeStyle,
@@ -253,6 +253,7 @@ impl DrawerContent {
                     border: Edges::all(Px(0.0)),
                     border_color: None,
                     corner_radii: Corners::all(Px(4.0)),
+                    ..Default::default()
                 },
                 |_cx| Vec::new(),
             );
@@ -461,10 +462,21 @@ impl Drawer {
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
     /// When set, Escape dismissals (overlay root) and overlay-click dismissals (barrier press) are
-    /// routed through this handler. To "prevent default", do not close the `open` model inside the
-    /// handler.
+    /// routed through this handler. To prevent default dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.inner = self.inner.on_dismiss_request(on_dismiss_request);
+        self
+    }
+
+    /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.inner = self.inner.on_open_auto_focus(hook);
+        self
+    }
+
+    /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.inner = self.inner.on_close_auto_focus(hook);
         self
     }
 
@@ -1007,8 +1019,9 @@ mod tests {
 
         let dismiss_reason: Rc<Cell<Option<DismissReason>>> = Rc::new(Cell::new(None));
         let dismiss_reason_cell = dismiss_reason.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            dismiss_reason_cell.set(Some(reason));
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            dismiss_reason_cell.set(Some(req.reason));
+            req.prevent_default();
         });
 
         let mut services = FakeServices::default();
@@ -1125,6 +1138,7 @@ mod tests {
                 position: point,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1136,7 +1150,18 @@ mod tests {
             Some(false),
             "underlay should not activate while drawer is open"
         );
-        assert_eq!(dismiss_reason.get(), Some(DismissReason::OutsidePress));
+        let reason = dismiss_reason.get();
+        let Some(DismissReason::OutsidePress { pointer }) = reason else {
+            panic!("expected outside-press dismissal, got {reason:?}");
+        };
+        let Some(cx) = pointer else {
+            panic!("expected pointer payload for outside-press dismissal");
+        };
+        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+        assert_eq!(cx.button, fret_core::MouseButton::Left);
+        assert_eq!(cx.modifiers, fret_core::Modifiers::default());
+        assert_eq!(cx.click_count, 1);
     }
 
     #[test]
@@ -1252,6 +1277,7 @@ mod tests {
                 position: end,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1373,6 +1399,7 @@ mod tests {
                 position: end,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1529,6 +1556,7 @@ mod tests {
                 position: end,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1681,6 +1709,7 @@ mod tests {
                 position: point,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

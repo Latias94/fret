@@ -8,11 +8,15 @@
 //! In Fret, modal dismissal via outside press is modeled at the recipe layer (e.g. the overlay
 //! barrier click handler). This module focuses on the Radix-specific focus preference: choosing
 //! the cancel action as the default initial focus target when present.
+//!
+//! For parity with Radix `FocusScope`, alert dialogs also allow customizing open/close auto focus
+//! via `AlertDialogOptions` (forwarded into `DialogOptions`).
 
 use std::collections::HashMap;
 
 use fret_runtime::Model;
 use fret_runtime::ModelId;
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -77,7 +81,7 @@ impl AlertDialogRoot {
     }
 
     pub fn options(&self) -> AlertDialogOptions {
-        self.options
+        self.options.clone()
     }
 
     /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
@@ -106,7 +110,7 @@ impl AlertDialogRoot {
 
     pub fn dialog_options<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> DialogOptions {
         let open_id = self.open_id(cx);
-        dialog_options_for_alert_dialog(cx, open_id, self.options)
+        dialog_options_for_alert_dialog(cx, open_id, self.options.clone())
     }
 
     pub fn modal_request<H: UiHost>(
@@ -179,14 +183,46 @@ impl Default for AlertDialogInitialFocus {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone)]
 pub struct AlertDialogOptions {
     pub initial_focus: AlertDialogInitialFocus,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+}
+
+impl std::fmt::Debug for AlertDialogOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AlertDialogOptions")
+            .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .finish()
+    }
+}
+
+impl Default for AlertDialogOptions {
+    fn default() -> Self {
+        Self {
+            initial_focus: AlertDialogInitialFocus::default(),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+        }
+    }
 }
 
 impl AlertDialogOptions {
     pub fn initial_focus(mut self, initial_focus: AlertDialogInitialFocus) -> Self {
         self.initial_focus = initial_focus;
+        self
+    }
+
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 }
@@ -206,6 +242,8 @@ pub fn dialog_options_for_alert_dialog<H: UiHost>(
     DialogOptions::default()
         .dismiss_on_overlay_press(false)
         .initial_focus(initial_focus)
+        .on_open_auto_focus(options.on_open_auto_focus.clone())
+        .on_close_auto_focus(options.on_close_auto_focus.clone())
 }
 
 /// Layout used for a Radix-like alert dialog modal barrier element.

@@ -1911,10 +1911,10 @@ pub fn build_app() -> App {
     cmds.save = Some(CommandId::new(CMD_APP_SAVE));
     cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
     cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
-    cmds.cut = Some(CommandId::new(fret_app::core_commands::TEXT_CUT));
-    cmds.copy = Some(CommandId::new(fret_app::core_commands::TEXT_COPY));
-    cmds.paste = Some(CommandId::new(fret_app::core_commands::TEXT_PASTE));
-    cmds.select_all = Some(CommandId::new(fret_app::core_commands::TEXT_SELECT_ALL));
+    cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
+    cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
+    cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
+    cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
     cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
 
     if Platform::current() == Platform::Macos {

@@ -269,16 +269,19 @@ fn event_cx<'a>(
     node: fret_core::NodeId,
     window: fret_core::AppWindowId,
     bounds: Rect,
+    prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
 ) -> EventCx<'a, TestHost> {
     EventCx {
         app,
         services,
         node,
+        layer_root: None,
         window: Some(window),
         input_ctx: fret_runtime::InputContext {
             caps: PlatformCapabilities::default(),
             ..Default::default()
         },
+        prevented_default_actions,
         pointer_id: None,
         children: &[],
         focus: Some(node),
@@ -305,9 +308,17 @@ fn ime_commit_normalizes_newlines_to_lf() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
     let mut area = TextArea::default();
-    let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     area.event(
         &mut cx,
@@ -331,12 +342,20 @@ fn ime_commit_replaces_selection_and_clears_it() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
     let mut area = TextArea::new("hello world");
     area.caret = 5;
     area.selection_anchor = 0;
 
-    let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     area.event(
         &mut cx,
@@ -361,12 +380,20 @@ fn preedit_does_not_mutate_buffer_until_commit() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
     let mut area = TextArea::new("abc");
     area.caret = 1;
     area.selection_anchor = 1;
 
-    let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     area.event(
         &mut cx,
@@ -401,12 +428,20 @@ fn ime_commit_replaces_original_selection_after_preedit_starts() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
     let mut area = TextArea::new("hello world");
     area.caret = 5;
     area.selection_anchor = 0;
 
-    let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     area.event(
         &mut cx,
@@ -438,9 +473,17 @@ fn clipboard_text_normalizes_newlines_to_lf() {
     let mut app = TestHost::new();
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
 
     let mut area = TextArea::default();
-    let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
 
     let token = fret_runtime::ClipboardToken(1);
     area.pending_clipboard_token = Some(token);
@@ -559,6 +602,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
             bounds,
             scale_factor: 1.0,
             accumulated_transform: fret_core::Transform2D::IDENTITY,
+            children_render_transform: None,
             services,
             observe_model: &mut observe_model,
             observe_global: &mut observe_global,
@@ -582,7 +626,15 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
         .0;
 
     {
-        let mut cx = event_cx(&mut app, &mut services, node, window, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut app,
+            &mut services,
+            node,
+            window,
+            bounds,
+            &mut prevented_default_actions,
+        );
         area.event(
             &mut cx,
             &Event::Pointer(fret_core::PointerEvent::Wheel {

@@ -44,6 +44,11 @@ pub use fret;
 ///
 /// Recommended: `use fret_kit::prelude::*;`
 pub mod prelude {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::interop::embedded_viewport::{
+        EmbeddedViewportForeignMvuUiAppDriverExt, EmbeddedViewportForeignUiAppDriverExt,
+        EmbeddedViewportMvuUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
+    };
     #[cfg(feature = "shadcn")]
     pub use crate::shadcn;
     #[cfg(feature = "shadcn")]
@@ -58,7 +63,9 @@ pub mod prelude {
     pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, UiServices};
     pub use fret_runtime::CommandId;
     pub use fret_runtime::Model;
-    pub use fret_ui::element::{AnyElement, HoverRegionProps, Length, SemanticsProps, TextProps};
+    pub use fret_ui::element::{
+        AnyElement, AnyElementIterExt, HoverRegionProps, Length, SemanticsProps, TextProps,
+    };
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]

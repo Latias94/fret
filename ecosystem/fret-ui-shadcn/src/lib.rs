@@ -24,6 +24,7 @@ pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
 pub mod command;
+mod command_gating;
 pub mod context_menu;
 mod data_grid;
 pub mod data_grid_canvas;
@@ -96,9 +97,7 @@ pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonSize, ButtonVariant};
-pub use button_group::{
-    ButtonGroup, ButtonGroupItem, ButtonGroupKind, button_group_multiple, button_group_single,
-};
+pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use calendar::Calendar;
 pub use calendar_range::CalendarRange;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
@@ -163,7 +162,10 @@ pub use hover_card::{
     HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,
 };
 pub use input::{Input, input};
-pub use input_group::{InputGroup, input_group};
+pub use input_group::{
+    InputGroup, InputGroupButton, InputGroupButtonSize, InputGroupText, InputGroupTextSize,
+    input_group,
+};
 pub use input_otp::{InputOtp, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
@@ -245,8 +247,10 @@ pub use ::fret_ui_kit::declarative::style as decl_style;
 /// In Fret, the closest analogue lives in `fret-ui-kit::declarative`. Re-exporting these keeps
 /// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
 pub use ::fret_ui_kit::declarative::{icon, stack};
+pub use ::fret_ui_kit::ui;
 pub use ::fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt, UiExt,
+    ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
+    ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
 };
 pub use ui_builder_ext::*;
 
@@ -259,13 +263,13 @@ pub mod prelude {
         AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt,
         CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt,
         DataGridElementUiBuilderExt, DataTableUiBuilderExt, DialogUiBuilderExt, DrawerUiBuilderExt,
-        DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt,
+        DropdownMenuUiBuilderExt, PopoverUiBuilderExt, SheetUiBuilderExt, SurfaceUiBuilderExt,
     };
     pub use crate::{
-        ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
-        UiExt,
+        ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
+        Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
     };
-    pub use crate::{decl_style, icon, stack};
+    pub use crate::{decl_style, icon, stack, ui};
 
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_icons::IconId;

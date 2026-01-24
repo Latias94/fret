@@ -1,6 +1,10 @@
 use super::*;
 use std::any::TypeId;
 
+use fret_runtime::{
+    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
+};
+
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
     pub fn paint_all(
@@ -51,7 +55,7 @@ impl<H: UiHost> UiTree<H> {
                     .and_then(|svc| svc.snapshot(window))
                     .map(|s| s.edit_can_redo)
                     .unwrap_or(true),
-                dispatch_phase: InputDispatchPhase::Normal,
+                dispatch_phase: InputDispatchPhase::Bubble,
             };
             let needs_update = app
                 .global::<fret_runtime::WindowInputContextService>()
@@ -65,7 +69,47 @@ impl<H: UiHost> UiTree<H> {
                     },
                 );
             }
+
+            let snapshot = self.input_arbitration_snapshot();
+            let arbitration = WindowInputArbitrationSnapshot {
+                modal_barrier_root: snapshot.modal_barrier_root,
+                pointer_occlusion: match snapshot.pointer_occlusion {
+                    PointerOcclusion::None => WindowPointerOcclusion::None,
+                    PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
+                    PointerOcclusion::BlockMouseExceptScroll => {
+                        WindowPointerOcclusion::BlockMouseExceptScroll
+                    }
+                },
+                pointer_occlusion_root: snapshot
+                    .pointer_occlusion_layer
+                    .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                pointer_capture_active: snapshot.pointer_capture_active,
+                pointer_capture_root: snapshot
+                    .pointer_capture_layer
+                    .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
+                    || (snapshot.pointer_capture_active
+                        && snapshot.pointer_capture_layer.is_none()),
+            };
+            let needs_update = app
+                .global::<WindowInputArbitrationService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &arbitration);
+            if needs_update {
+                app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
+                    svc.set_snapshot(window, arbitration);
+                });
+            }
         }
+
+        // Scroll offsets can change without triggering layout invalidations (e.g. wheel deltas that
+        // only affect hit-testing/paint, or programmatic scroll handle updates in frames that skip
+        // layout). Ensure we consume scroll-handle change invalidations before paint-cache replay
+        // so cached ancestors cannot replay stale ops.
+        self.invalidate_scroll_handle_bindings_for_changed_handles(
+            app,
+            crate::layout_pass::LayoutPassKind::Final,
+        );
 
         let cache_enabled = self.paint_cache_enabled();
         if cache_enabled {
@@ -177,7 +221,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let theme_revision = Theme::global(&*app).revision();
-        let key = PaintCacheKey::new(bounds, sf, theme_revision);
+        let children_render_transform = self.node_children_render_transform(node);
+        let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
+        let key = PaintCacheKey::new(bounds, sf, theme_revision, child_transform);
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
@@ -257,6 +303,9 @@ impl<H: UiHost> UiTree<H> {
 
         let start = scene.ops_len();
         self.with_widget_mut(node, |widget, tree| {
+            let children_render_transform = widget
+                .children_render_transform(bounds)
+                .filter(|t| t.inverse().is_some());
             let mut children_buf = SmallNodeList::<32>::default();
             if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
                 children_buf.set(children);
@@ -272,6 +321,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 scale_factor: sf,
                 accumulated_transform: current_transform,
+                children_render_transform,
                 services: &mut *services,
                 observe_model: &mut observe_model,
                 observe_global: &mut observe_global,

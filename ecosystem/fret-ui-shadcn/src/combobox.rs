@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, TextProps,
+    PressableA11y, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -16,7 +14,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size, Space, ui};
 
 use crate::{CommandItem, CommandList, CommandPalette, Popover, PopoverContent};
 
@@ -433,6 +431,7 @@ fn combobox_with_patch<H: UiHost>(
                                 border: Edges::all(border_w),
                                 border_color: Some(border),
                                 corner_radii: Corners::all(radius),
+                                ..Default::default()
                             },
                             move |cx| {
                                 vec![cx.flex(
@@ -446,19 +445,27 @@ fn combobox_with_patch<H: UiHost>(
                                         wrap: false,
                                     },
                                     move |cx| {
+                                        let label_style = text_style.clone();
                                         vec![
-                                            cx.text_props(TextProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout
-                                                },
-                                                text: resolved_label.clone(),
-                                                style: Some(text_style.clone()),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Ellipsis,
-                                                color: Some(fg),
-                                            }),
+                                            {
+                                                let mut label =
+                                                    ui::label(cx, resolved_label.clone())
+                                                        .w_full()
+                                                        .text_size_px(label_style.size)
+                                                        .font_weight(label_style.weight)
+                                                        .text_color(ColorRef::Color(fg))
+                                                        .truncate();
+                                                if let Some(line_height) = label_style.line_height {
+                                                    label = label.line_height_px(line_height);
+                                                }
+                                                if let Some(letter_spacing_em) =
+                                                    label_style.letter_spacing_em
+                                                {
+                                                    label =
+                                                        label.letter_spacing_em(letter_spacing_em);
+                                                }
+                                                label.into_element(cx)
+                                            },
                                             decl_icon::icon_with(
                                                 cx,
                                                 ids::ui::CHEVRON_DOWN,
@@ -580,6 +587,7 @@ fn combobox_with_patch<H: UiHost>(
                                 });
 
                             let label_text = item.label.clone();
+                            let label_style = item_text_style.clone();
                             let icon = decl_icon::icon_with(
                                 cx,
                                 ids::ui::CHECK,
@@ -595,14 +603,24 @@ fn combobox_with_patch<H: UiHost>(
                                     vec![icon]
                                 });
 
-                            let text = cx.text_props(TextProps {
-                                layout: LayoutStyle::default(),
-                                text: label_text.clone(),
-                                style: Some(item_text_style.clone()),
-                                color: Some(if item_disabled { fg_disabled } else { fg }),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Ellipsis,
-                            });
+                            let text = {
+                                let mut label = ui::label(cx, label_text.clone())
+                                    .text_size_px(label_style.size)
+                                    .font_weight(label_style.weight)
+                                    .text_color(ColorRef::Color(if item_disabled {
+                                        fg_disabled
+                                    } else {
+                                        fg
+                                    }))
+                                    .truncate();
+                                if let Some(line_height) = label_style.line_height {
+                                    label = label.line_height_px(line_height);
+                                }
+                                if let Some(letter_spacing_em) = label_style.letter_spacing_em {
+                                    label = label.letter_spacing_em(letter_spacing_em);
+                                }
+                                label.into_element(cx)
+                            };
 
                             command_items.push(
                                 CommandItem::new(label_text)

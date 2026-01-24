@@ -58,10 +58,15 @@ examples in `repo-ref/ui`.
   overflowing lists and scroll the viewport without dismissing the overlay.
 - Pass: Supports both Radix positioning modes (`SelectPosition::ItemAligned` and
   `SelectPosition::Popper`). Arrow rendering is only available in popper mode.
+- Pass: `aria-invalid=true` border and focus ring (including shadcn's invalid ring color overrides) match
+  shadcn-web (`select-demo.invalid`, `select-demo.invalid-focus`).
 
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib select`
+- Trigger chrome + focus ring gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
+  (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`,
+  `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
 - Web goldens (placement + scroll-button geometry): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   - Evidence:
     - `goldens/shadcn-web/v4/new-york-v4/select-demo.open.json`

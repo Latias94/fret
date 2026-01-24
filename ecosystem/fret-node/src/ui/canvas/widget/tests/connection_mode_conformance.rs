@@ -220,7 +220,13 @@ fn strict_rejects_out_to_out_but_loose_commits_out_to_out_when_forced() {
             pos: Point::new(Px(10.0), Px(10.0)),
         });
         let mut services = NullServices::default();
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         assert!(handle_wire_left_up_with_forced_target(
             &mut canvas,
             &mut cx,
@@ -249,7 +255,13 @@ fn strict_rejects_out_to_out_but_loose_commits_out_to_out_when_forced() {
             pos: Point::new(Px(10.0), Px(10.0)),
         });
         let mut services = NullServices::default();
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         assert!(handle_wire_left_up_with_forced_target(
             &mut canvas,
             &mut cx,

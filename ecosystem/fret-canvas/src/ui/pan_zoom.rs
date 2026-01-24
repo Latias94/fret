@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Modifiers, MouseButton, Point, Px};
+use fret_core::{Modifiers, MouseButton, Point};
 use fret_runtime::Model;
 use fret_ui::action::{OnPinchGesture, OnPointerDown, OnPointerMove, OnPointerUp, OnWheel};
 use fret_ui::canvas::CanvasPainter;
@@ -174,9 +174,7 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
             let dy = mv.position.y.0 - drag.last_pos.y.0;
 
             let _ = host.models_mut().update(&view_c, |view| {
-                let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0);
-                view.pan.x = Px(view.pan.x.0 + dx / zoom);
-                view.pan.y = Px(view.pan.y.0 + dy / zoom);
+                view.pan_by_screen_delta(dx, dy);
             });
             let _ = host.models_mut().update(&drag_c, |st| {
                 if let Some(st) = st.as_mut() {
@@ -354,4 +352,63 @@ pub fn pan_zoom_canvas_surface_panel<H: UiHost>(
         };
         paint(p, paint_cx);
     })
+}
+
+/// A common editor-friendly preset:
+/// - Wheel pans (consumed).
+/// - Ctrl/Cmd + wheel zooms about the pointer (consumed by the base pan/zoom policy).
+/// - Middle-drag pans.
+///
+/// This is intentionally conservative for embedding:
+/// - plain wheel does not zoom (to avoid fighting scroll containers),
+/// - zoom stays behind the modifier gate.
+#[track_caller]
+pub fn editor_pan_zoom_canvas_surface_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    mut props: PanZoomCanvasSurfacePanelProps,
+    paint: impl for<'p> Fn(&mut CanvasPainter<'p>, PanZoomCanvasPaintCx) + 'static,
+) -> AnyElement {
+    let view = use_controllable_model(cx, props.view.take(), || props.default_view).model();
+    props.view = Some(view.clone());
+
+    props.preset = PanZoomInputPreset::DefaultSafe;
+    props.pan_button = MouseButton::Middle;
+
+    let view_pan = view.clone();
+    let on_wheel_pan: OnWheel = Arc::new(
+        move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+              action_cx: fret_ui::action::ActionCx,
+              wheel: fret_ui::action::WheelCx| {
+            if wheel.modifiers.ctrl || wheel.modifiers.meta {
+                return false;
+            }
+
+            let dx = wheel.delta.x.0;
+            let dy = wheel.delta.y.0;
+            if !dx.is_finite() || !dy.is_finite() || (dx.abs() <= 1.0e-9 && dy.abs() <= 1.0e-9) {
+                return false;
+            }
+
+            let _ = host.models_mut().update(&view_pan, |view| {
+                let mut tmp = *view;
+                tmp.pan_by_screen_delta(-dx, -dy);
+                *view = tmp;
+            });
+
+            host.request_redraw(action_cx.window);
+            true
+        },
+    );
+
+    if let Some(extra) = props.on_wheel.take() {
+        let inner = on_wheel_pan.clone();
+        props.on_wheel = Some(Arc::new(move |host, cx, wheel| {
+            let used = inner(host, cx, wheel);
+            used || extra(host, cx, wheel)
+        }));
+    } else {
+        props.on_wheel = Some(on_wheel_pan);
+    }
+
+    pan_zoom_canvas_surface_panel(cx, props, paint)
 }

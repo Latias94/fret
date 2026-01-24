@@ -18,6 +18,36 @@ use crate::primitives::dismissable_layer;
 use crate::primitives::menu::sub;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
+/// Menu initial focus targets (Radix `onOpenAutoFocus` outcomes).
+///
+/// When menu overlays open, Radix distinguishes between pointer-open and keyboard-open:
+/// - Pointer-open: focus the content container and prevent “entry focus”.
+/// - Keyboard-open: allow entry focus (typically the first enabled menu item).
+///
+/// In Fret, we encode this as a pair of optional element targets and choose between them based on
+/// the last observed input modality (ADR 0095).
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MenuInitialFocusTargets {
+    pub keyboard_entry_focus: Option<GlobalElementId>,
+    pub pointer_content_focus: Option<GlobalElementId>,
+}
+
+impl MenuInitialFocusTargets {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn keyboard_entry_focus(mut self, id: Option<GlobalElementId>) -> Self {
+        self.keyboard_entry_focus = id;
+        self
+    }
+
+    pub fn pointer_content_focus(mut self, id: Option<GlobalElementId>) -> Self {
+        self.pointer_content_focus = id;
+        self
+    }
+}
+
 fn base_menu_overlay_request(
     id: GlobalElementId,
     trigger: GlobalElementId,
@@ -89,8 +119,7 @@ pub fn submenu_pointer_move_handler(
     cfg: sub::MenuSubmenuConfig,
 ) -> OnDismissiblePointerMove {
     dismissable_layer::pointer_move_handler(move |host, acx, mv| {
-        let _ = sub::handle_dismissible_pointer_move(host, acx, mv, &models, cfg);
-        false
+        sub::handle_dismissible_pointer_move(host, acx, mv, &models, cfg)
     })
 }
 
@@ -109,7 +138,7 @@ pub fn dismissible_menu_request<H: UiHost>(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
     root_name: String,
-    content_focus: Option<GlobalElementId>,
+    initial_focus: MenuInitialFocusTargets,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
 ) -> OverlayRequest {
     dismissible_menu_request_with_modal(
@@ -120,7 +149,7 @@ pub fn dismissible_menu_request<H: UiHost>(
         presence,
         children,
         root_name,
-        content_focus,
+        initial_focus,
         dismissible_on_pointer_move,
         true,
     )
@@ -136,7 +165,7 @@ pub fn dismissible_menu_request_with_dismiss_handler<H: UiHost>(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
     root_name: String,
-    content_focus: Option<GlobalElementId>,
+    initial_focus: MenuInitialFocusTargets,
     on_dismiss_request: Option<OnDismissRequest>,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
 ) -> OverlayRequest {
@@ -148,7 +177,7 @@ pub fn dismissible_menu_request_with_dismiss_handler<H: UiHost>(
         presence,
         children,
         root_name,
-        content_focus,
+        initial_focus,
         on_dismiss_request,
         dismissible_on_pointer_move,
         true,
@@ -169,7 +198,7 @@ pub fn dismissible_menu_request_with_modal<H: UiHost>(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
     root_name: String,
-    content_focus: Option<GlobalElementId>,
+    initial_focus: MenuInitialFocusTargets,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     modal: bool,
 ) -> OverlayRequest {
@@ -181,7 +210,7 @@ pub fn dismissible_menu_request_with_modal<H: UiHost>(
         presence,
         children,
         root_name,
-        content_focus,
+        initial_focus,
         None,
         dismissible_on_pointer_move,
         modal,
@@ -198,7 +227,7 @@ pub fn dismissible_menu_request_with_modal_and_dismiss_handler<H: UiHost>(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
     root_name: String,
-    content_focus: Option<GlobalElementId>,
+    initial_focus: MenuInitialFocusTargets,
     on_dismiss_request: Option<OnDismissRequest>,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     modal: bool,
@@ -207,9 +236,13 @@ pub fn dismissible_menu_request_with_modal_and_dismiss_handler<H: UiHost>(
     request.root_name = Some(root_name);
     request.dismissible_on_dismiss_request = on_dismiss_request;
     request.dismissible_on_pointer_move = dismissible_on_pointer_move;
-    if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
-        request.initial_focus = content_focus;
-    }
+
+    let keyboard = fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window));
+    request.initial_focus = if keyboard {
+        initial_focus.keyboard_entry_focus
+    } else {
+        initial_focus.pointer_content_focus
+    };
     request
 }
 
@@ -220,8 +253,10 @@ mod tests {
     use std::sync::Arc;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::action::DismissReason;
+    use fret_core::{
+        AppWindowId, Event, KeyCode, Modifiers, MouseButtons, Point, PointerEvent, PointerId,
+        PointerType, Px, Rect, Size,
+    };
 
     #[test]
     fn menu_modal_controls_underlay_pointer_blocking_and_click_through() {
@@ -258,7 +293,8 @@ mod tests {
 
         let window = AppWindowId::default();
         let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
-        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let handler: OnDismissRequest =
+            Arc::new(|_host, _cx, _req: &mut fret_ui::action::DismissRequestCx| {});
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let req = dismissible_menu_request_with_modal_and_dismiss_handler(
@@ -269,12 +305,79 @@ mod tests {
                 OverlayPresence::hidden(),
                 Vec::new(),
                 "menu".to_string(),
-                None,
+                MenuInitialFocusTargets::new(),
                 Some(handler.clone()),
                 None,
                 true,
             );
             assert!(req.dismissible_on_dismiss_request.is_some());
+        });
+    }
+
+    #[test]
+    fn menu_request_gates_initial_focus_by_modality() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+
+        let pointer_focus = GlobalElementId(0x111);
+        let keyboard_focus = GlobalElementId(0x222);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            // Pointer modality: choose pointer content focus.
+            fret_ui::input_modality::update_for_event(
+                cx.app,
+                window,
+                &Event::Pointer(PointerEvent::Move {
+                    position: Point::new(Px(1.0), Px(2.0)),
+                    buttons: MouseButtons::default(),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+
+            let req = dismissible_menu_request(
+                cx,
+                GlobalElementId(1),
+                GlobalElementId(2),
+                open.clone(),
+                OverlayPresence::hidden(),
+                Vec::new(),
+                "menu".to_string(),
+                MenuInitialFocusTargets::new()
+                    .pointer_content_focus(Some(pointer_focus))
+                    .keyboard_entry_focus(Some(keyboard_focus)),
+                None,
+            );
+            assert_eq!(req.initial_focus, Some(pointer_focus));
+
+            // Keyboard modality: choose keyboard entry focus.
+            fret_ui::input_modality::update_for_event(
+                cx.app,
+                window,
+                &Event::KeyDown {
+                    key: KeyCode::KeyA,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            let req = dismissible_menu_request(
+                cx,
+                GlobalElementId(1),
+                GlobalElementId(2),
+                open.clone(),
+                OverlayPresence::hidden(),
+                Vec::new(),
+                "menu".to_string(),
+                MenuInitialFocusTargets::new()
+                    .pointer_content_focus(Some(pointer_focus))
+                    .keyboard_entry_focus(Some(keyboard_focus)),
+                None,
+            );
+            assert_eq!(req.initial_focus, Some(keyboard_focus));
         });
     }
 }

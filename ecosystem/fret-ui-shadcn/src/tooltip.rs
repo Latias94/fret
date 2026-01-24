@@ -12,15 +12,15 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space, ui,
 };
 use std::sync::Arc;
 
 use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Overflow, PointerRegionProps,
-    SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
+    AnyElement, ElementKind, HoverRegionProps, Overflow, PointerRegionProps, SemanticsProps,
+    SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -829,14 +829,18 @@ impl TooltipContent {
         let text_style = tooltip_text_style(&theme);
         let fg = tooltip_text_fg(&theme);
 
-        cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text,
-            style: Some(text_style),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, text)
+            .text_size_px(text_style.size)
+            .line_height_px(
+                text_style
+                    .line_height
+                    .unwrap_or_else(|| theme.metric_required("font.line_height")),
+            )
+            .font_weight(text_style.weight)
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -1025,7 +1029,7 @@ mod tests {
                     },
                 );
 
-                let content = TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                let content = TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
 
@@ -1186,7 +1190,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -1439,8 +1443,9 @@ mod tests {
                         },
                     );
 
-                    let content = TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
-                        .into_element(cx);
+                    let content =
+                        TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                            .into_element(cx);
                     content_id_out.set(Some(content.id));
 
                     vec![
@@ -1536,6 +1541,7 @@ mod tests {
                 position: trigger_center,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1756,13 +1762,13 @@ mod tests {
                                     );
 
                                     let content_1 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip_1")),
+                                        ui::raw_text(cx, "tip_1").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_1_id_out.set(Some(content_1.id));
 
                                     let content_2 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip_2")),
+                                        ui::raw_text(cx, "tip_2").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_2_id_out.set(Some(content_2.id));
@@ -1952,7 +1958,7 @@ mod tests {
                                         },
                                     );
                                     let content_1 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip1")),
+                                        ui::raw_text(cx, "tip1").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_1_id_out.set(Some(content_1.id));
@@ -1981,7 +1987,7 @@ mod tests {
                                         },
                                     );
                                     let content_2 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip2")),
+                                        ui::raw_text(cx, "tip2").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_2_id_out.set(Some(content_2.id));
@@ -2221,7 +2227,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -2315,6 +2321,7 @@ mod tests {
                 position: Point::new(Px(700.0), Px(500.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -2410,7 +2417,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -2616,7 +2623,7 @@ mod tests {
                                     );
 
                                     let content = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip")),
+                                        ui::raw_text(cx, "tip").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_id_out.set(Some(content.id));
@@ -2859,7 +2866,7 @@ mod tests {
                                             );
 
                                             let content = TooltipContent::new(vec![
-                                                cx.text_props(TextProps::new("tip")),
+                                                ui::raw_text(cx, "tip").into_element(cx),
                                             ])
                                             .into_element(cx);
                                             content_id_out.set(Some(content.id));
@@ -3107,7 +3114,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -3311,13 +3318,13 @@ mod tests {
                                     );
 
                                     let content_1 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip1")),
+                                        ui::raw_text(cx, "tip1").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_1_id_out.set(Some(content_1.id));
 
                                     let content_2 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip2")),
+                                        ui::raw_text(cx, "tip2").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_2_id_out.set(Some(content_2.id));
@@ -3520,7 +3527,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -3757,7 +3764,7 @@ mod tests {
                         },
                         |cx| {
                             vec![
-                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
                                     .into_element(cx),
                             ]
                         },

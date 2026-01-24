@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_icons::{IconId, ids};
-use fret_runtime::CommandId;
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};
+use fret_runtime::{CommandId, WindowCommandGatingSnapshot};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BreadcrumbItemKind {
@@ -115,6 +115,8 @@ fn breadcrumb_with_patch<H: UiHost>(
     let fg = theme.color_required("foreground");
     let muted = theme.color_required("muted-foreground");
 
+    let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
+
     let style = TextStyle {
         font: FontId::default(),
         size: text_px,
@@ -134,7 +136,7 @@ fn breadcrumb_with_patch<H: UiHost>(
             _ => BreadcrumbItemKind::Link,
         };
 
-        children.push(item.render(cx, &style, muted, fg));
+        children.push(item.render(cx, &gating, &style, muted, fg));
         if !is_last {
             children.push(breadcrumb_separator(cx, &style, muted, &separator));
         }
@@ -199,6 +201,7 @@ impl BreadcrumbItem {
     fn render<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
+        gating: &WindowCommandGatingSnapshot,
         base_style: &TextStyle,
         muted: Color,
         fg: Color,
@@ -207,7 +210,14 @@ impl BreadcrumbItem {
             BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted),
             BreadcrumbItemKind::Page => breadcrumb_text(cx, self.label, base_style, fg),
             BreadcrumbItemKind::Link => {
-                if self.disabled {
+                let disabled = self.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        gating,
+                        self.command.as_ref(),
+                    );
+
+                if disabled {
                     return breadcrumb_text(cx, self.label, base_style, muted);
                 }
 
@@ -217,7 +227,7 @@ impl BreadcrumbItem {
                 };
 
                 cx.pressable(PressableProps::default(), move |cx, st| {
-                    cx.pressable_dispatch_command(command.clone());
+                    cx.pressable_dispatch_command_if_enabled(command.clone());
                     vec![breadcrumb_link_text(
                         cx, self.label, base_style, muted, fg, st.hovered,
                     )]
@@ -233,14 +243,22 @@ fn breadcrumb_text<H: UiHost>(
     base_style: &TextStyle,
     color: Color,
 ) -> AnyElement {
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text,
-        style: Some(base_style.clone()),
-        color: Some(color),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-    })
+    let mut el = ui::text(cx, text)
+        .text_size_px(base_style.size)
+        .font_weight(base_style.weight)
+        .text_color(ColorRef::Color(color))
+        .wrap(TextWrap::Word)
+        .overflow(TextOverflow::Clip);
+
+    if let Some(line_height) = base_style.line_height {
+        el = el.line_height_px(line_height);
+    }
+
+    if let Some(letter_spacing_em) = base_style.letter_spacing_em {
+        el = el.letter_spacing_em(letter_spacing_em);
+    }
+
+    el.into_element(cx)
 }
 
 fn breadcrumb_link_text<H: UiHost>(
@@ -548,16 +566,29 @@ pub mod primitives {
             let theme = Theme::global(&*cx.app).clone();
             let style = text_style(&theme);
             let (fg, muted) = colors(&theme);
+            let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
             let label = self.label.clone();
+            let text_px = style.size;
+            let font_weight = style.weight;
+            let line_height = style.line_height;
+            let letter_spacing_em = style.letter_spacing_em;
             let (wrap, overflow) = if self.truncate {
                 (TextWrap::None, TextOverflow::Ellipsis)
             } else {
                 (TextWrap::Word, TextOverflow::Clip)
             };
 
-            if let Some(command) = self.command {
+            let disabled_by_gating = crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &gating,
+                self.command.as_ref(),
+            );
+
+            if let Some(command) = self.command
+                && !disabled_by_gating
+            {
                 cx.pressable(PressableProps::default(), move |cx, st| {
-                    cx.pressable_dispatch_command(command.clone());
+                    cx.pressable_dispatch_command_if_enabled(command.clone());
                     let color = if st.hovered { fg } else { muted };
                     vec![cx.container(
                         decl_style::container_props(
@@ -566,14 +597,22 @@ pub mod primitives {
                             self.layout.clone(),
                         ),
                         move |cx| {
-                            vec![cx.text_props(TextProps {
-                                layout: Default::default(),
-                                text: label.clone(),
-                                style: Some(style.clone()),
-                                color: Some(color),
-                                wrap,
-                                overflow,
-                            })]
+                            let mut text = ui::text(cx, label.clone())
+                                .text_size_px(text_px)
+                                .font_weight(font_weight)
+                                .text_color(ColorRef::Color(color))
+                                .wrap(wrap)
+                                .overflow(overflow);
+
+                            if let Some(line_height) = line_height {
+                                text = text.line_height_px(line_height);
+                            }
+
+                            if let Some(letter_spacing_em) = letter_spacing_em {
+                                text = text.letter_spacing_em(letter_spacing_em);
+                            }
+
+                            vec![text.into_element(cx)]
                         },
                     )]
                 })
@@ -581,14 +620,22 @@ pub mod primitives {
                 cx.container(
                     decl_style::container_props(&theme, self.chrome, self.layout),
                     move |cx| {
-                        vec![cx.text_props(TextProps {
-                            layout: Default::default(),
-                            text: label,
-                            style: Some(style),
-                            color: Some(muted),
-                            wrap,
-                            overflow,
-                        })]
+                        let mut text = ui::text(cx, label)
+                            .text_size_px(text_px)
+                            .font_weight(font_weight)
+                            .text_color(ColorRef::Color(muted))
+                            .wrap(wrap)
+                            .overflow(overflow);
+
+                        if let Some(line_height) = line_height {
+                            text = text.line_height_px(line_height);
+                        }
+
+                        if let Some(letter_spacing_em) = letter_spacing_em {
+                            text = text.letter_spacing_em(letter_spacing_em);
+                        }
+
+                        vec![text.into_element(cx)]
                     },
                 )
             }
@@ -634,6 +681,10 @@ pub mod primitives {
             let style = text_style(&theme);
             let (fg, _muted) = colors(&theme);
             let label = self.label;
+            let text_px = style.size;
+            let font_weight = style.weight;
+            let line_height = style.line_height;
+            let letter_spacing_em = style.letter_spacing_em;
             let (wrap, overflow) = if self.truncate {
                 (TextWrap::None, TextOverflow::Ellipsis)
             } else {
@@ -642,14 +693,22 @@ pub mod primitives {
             cx.container(
                 decl_style::container_props(&theme, self.chrome, self.layout),
                 move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: label,
-                        style: Some(style),
-                        color: Some(fg),
-                        wrap,
-                        overflow,
-                    })]
+                    let mut text = ui::text(cx, label)
+                        .text_size_px(text_px)
+                        .font_weight(font_weight)
+                        .text_color(ColorRef::Color(fg))
+                        .wrap(wrap)
+                        .overflow(overflow);
+
+                    if let Some(line_height) = line_height {
+                        text = text.line_height_px(line_height);
+                    }
+
+                    if let Some(letter_spacing_em) = letter_spacing_em {
+                        text = text.letter_spacing_em(letter_spacing_em);
+                    }
+
+                    vec![text.into_element(cx)]
                 },
             )
         }

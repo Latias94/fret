@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
+    TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -320,6 +323,10 @@ impl RadioGroup {
                                         enabled: item_enabled,
                                         focusable: tab_stop,
                                         focus_ring: Some(ring_style),
+                                        focus_ring_bounds: Some(Rect::new(
+                                            Point::new(Px(0.0), Px(0.0)),
+                                            Size::new(icon, icon),
+                                        )),
                                         ..Default::default()
                                     },
                                     move |cx, st, checked| {
@@ -354,6 +361,7 @@ impl RadioGroup {
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border_color),
                                             corner_radii: Corners::all(radius),
+                                            ..Default::default()
                                         };
 
                                         let row_layout = LayoutStyle {
@@ -381,6 +389,7 @@ impl RadioGroup {
                                             corner_radii: Corners::all(Px(
                                                 (indicator.0 * 0.5).max(0.0),
                                             )),
+                                            ..Default::default()
                                         };
 
                                         let label = a11y_label.clone();

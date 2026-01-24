@@ -1,4 +1,4 @@
-use crate::element::{RingPlacement, RingStyle, ShadowStyle};
+use crate::element::{RingPlacement, RingStyle, ShadowLayerStyle, ShadowStyle};
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, Scene, SceneOp, Size};
 
 fn corners_inflate(mut corners: Corners, delta: Px) -> Corners {
@@ -40,39 +40,74 @@ fn rect_deflate(rect: Rect, delta: Px) -> Rect {
     )
 }
 
+fn rect_expand(rect: Rect, delta: Px) -> Rect {
+    if delta.0 >= 0.0 {
+        rect_inflate(rect, delta)
+    } else {
+        rect_deflate(rect, Px(-delta.0))
+    }
+}
+
+fn corners_expand(corners: Corners, delta: Px) -> Corners {
+    if delta.0 >= 0.0 {
+        corners_inflate(corners, delta)
+    } else {
+        corners_deflate(corners, Px(-delta.0))
+    }
+}
+
 fn color_with_alpha(mut color: Color, alpha: f32) -> Color {
     color.a = alpha.clamp(0.0, 1.0);
     color
 }
 
-/// Paint a low-level drop shadow for an elevated surface.
-///
-/// The baseline implementation approximates softness by drawing multiple expanded quads with alpha
-/// falloff (ADR 0060). Backends are free to implement a true blur later without changing this API.
-pub fn paint_shadow(scene: &mut Scene, order: DrawOrder, bounds: Rect, shadow: ShadowStyle) {
+fn paint_shadow_layer(
+    scene: &mut Scene,
+    order: DrawOrder,
+    bounds: Rect,
+    layer: ShadowLayerStyle,
+    corner_radii: Corners,
+) {
     if bounds.size.width.0 <= 0.0 || bounds.size.height.0 <= 0.0 {
         return;
     }
-    if !shadow.offset_x.0.is_finite()
-        || !shadow.offset_y.0.is_finite()
-        || !shadow.spread.0.is_finite()
+    if !layer.offset_x.0.is_finite()
+        || !layer.offset_y.0.is_finite()
+        || !layer.blur.0.is_finite()
+        || !layer.spread.0.is_finite()
     {
         return;
     }
 
-    let base_spread = Px(shadow.spread.0.max(0.0));
-    let softness = shadow.softness.min(8) as usize;
+    let blur = layer.blur.0.max(0.0);
+    let spread = layer.spread.0;
 
-    // Draw from the largest layer inward so tighter layers sit on top.
-    for i in (0..=softness).rev() {
-        let layer_spread = Px(base_spread.0 + i as f32);
-        let mut rect = rect_inflate(bounds, layer_spread);
-        rect.origin.x = Px(rect.origin.x.0 + shadow.offset_x.0);
-        rect.origin.y = Px(rect.origin.y.0 + shadow.offset_y.0);
+    // Approximate blur by drawing multiple expanded quads with alpha falloff. Keep the number of
+    // steps bounded, but preserve the correct outer footprint (`spread + blur`) by using fractional
+    // expansion steps when `blur` exceeds the cap.
+    let max_steps = 32_f32;
+    let steps = blur.ceil().clamp(0.0, max_steps) as usize;
+    let denom = (steps as f32).max(1.0);
 
-        let denom = 1.0 + i as f32;
-        let alpha = shadow.color.a / denom;
-        let background = color_with_alpha(shadow.color, alpha);
+    for i in (0..=steps).rev() {
+        let t = i as f32 / denom;
+        let layer_spread = spread + blur * t;
+        let rect = {
+            let mut rect = rect_expand(bounds, Px(layer_spread));
+            rect.origin.x = Px(rect.origin.x.0 + layer.offset_x.0);
+            rect.origin.y = Px(rect.origin.y.0 + layer.offset_y.0);
+            rect
+        };
+        if rect.size.width.0 <= 0.0 || rect.size.height.0 <= 0.0 {
+            continue;
+        }
+
+        let alpha = if steps == 0 {
+            layer.color.a
+        } else {
+            layer.color.a / (1.0 + i as f32)
+        };
+        let background = color_with_alpha(layer.color, alpha);
 
         scene.push(SceneOp::Quad {
             order,
@@ -80,8 +115,19 @@ pub fn paint_shadow(scene: &mut Scene, order: DrawOrder, bounds: Rect, shadow: S
             background,
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
-            corner_radii: corners_inflate(shadow.corner_radii, layer_spread),
+            corner_radii: corners_expand(corner_radii, Px(layer_spread)),
         });
+    }
+}
+
+/// Paint a low-level drop shadow for an elevated surface.
+///
+/// The baseline implementation approximates softness by drawing multiple expanded quads with alpha
+/// falloff (ADR 0060). Backends are free to implement a true blur later without changing this API.
+pub fn paint_shadow(scene: &mut Scene, order: DrawOrder, bounds: Rect, shadow: ShadowStyle) {
+    paint_shadow_layer(scene, order, bounds, shadow.primary, shadow.corner_radii);
+    if let Some(layer) = shadow.secondary {
+        paint_shadow_layer(scene, order, bounds, layer, shadow.corner_radii);
     }
 }
 

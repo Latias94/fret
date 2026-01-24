@@ -1,10 +1,20 @@
 use fret_app::App;
-use fret_core::{AppWindowId, Point, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize};
+use fret_core::{
+    AppWindowId, Color, Corners, Event, KeyCode, Modifiers, Point, Px, Rect, Scene, SceneOp,
+    SemanticsRole, Size as CoreSize,
+};
+use fret_icons::ids;
 use fret_ui::tree::UiTree;
+use fret_ui_kit::ChromeRefinement;
+use fret_ui_kit::Space;
+use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::stack as decl_stack;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+mod css_color;
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -88,6 +98,22 @@ fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Opt
     None
 }
 
+fn contains_text(node: &WebNode, needle: &str) -> bool {
+    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
+        return true;
+    }
+    node.children.iter().any(|c| contains_text(c, needle))
+}
+
+fn has_descendant_attr(node: &WebNode, key: &str, value: &str) -> bool {
+    if node.attrs.get(key).is_some_and(|v| v == value) {
+        return true;
+    }
+    node.children
+        .iter()
+        .any(|c| has_descendant_attr(c, key, value))
+}
+
 fn parse_px(s: &str) -> Option<f32> {
     let s = s.trim();
     let v = s.strip_suffix("px").unwrap_or(s);
@@ -97,6 +123,13 @@ fn parse_px(s: &str) -> Option<f32> {
 fn web_border_width_px(node: &WebNode) -> Option<f32> {
     node.computed_style
         .get("borderTopWidth")
+        .map(String::as_str)
+        .and_then(parse_px)
+}
+
+fn web_border_width_px_for(node: &WebNode, key: &str) -> Option<f32> {
+    node.computed_style
+        .get(key)
         .map(String::as_str)
         .and_then(parse_px)
 }
@@ -126,6 +159,9 @@ struct PaintedQuad {
     #[allow(dead_code)]
     rect: Rect,
     border: [f32; 4],
+    border_color: Color,
+    #[allow(dead_code)]
+    background: Color,
     corners: [f32; 4],
 }
 
@@ -136,8 +172,10 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
     for op in scene.ops() {
         let SceneOp::Quad {
             rect,
+            background,
             border,
             corner_radii,
+            border_color,
             ..
         } = *op
         else {
@@ -153,7 +191,9 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             best_score = score;
             best = Some(PaintedQuad {
                 rect,
+                background,
                 border: [border.top.0, border.right.0, border.bottom.0, border.left.0],
+                border_color,
                 corners: [
                     corner_radii.top_left.0,
                     corner_radii.top_right.0,
@@ -165,6 +205,16 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
     }
 
     best
+}
+
+fn assert_color_close(label: &str, actual: Color, expected_css: &str, tol: f32) {
+    let expected = css_color::parse_css_color(expected_css)
+        .unwrap_or_else(|| panic!("{label}: failed to parse css color: {expected_css}"));
+    let actual = css_color::color_to_rgba(actual);
+    assert_close(&format!("{label}.r"), actual.r, expected.r, tol);
+    assert_close(&format!("{label}.g"), actual.g, expected.g, tol);
+    assert_close(&format!("{label}.b"), actual.b, expected.b, tol);
+    assert_close(&format!("{label}.a"), actual.a, expected.a, tol);
 }
 
 struct FakeServices;
@@ -262,11 +312,2763 @@ fn render_and_paint_in_bounds(
     (snap, scene)
 }
 
+fn render_and_paint_with_focus_in_bounds(
+    size: CoreSize,
+    render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+    focus: impl FnOnce(&fret_core::SemanticsSnapshot) -> fret_core::NodeId,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-control-chrome",
+        render,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let focus_node = focus(&snap);
+
+    // Ensure focus-visible chrome is enabled (keyboard modality), then apply focus.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Tab,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.set_focus(Some(focus_node));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    (snap, scene)
+}
+
 fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
     let delta = (actual - expected).abs();
     assert!(
         delta <= tol,
         "{label}: expected≈{expected} (±{tol}) got={actual} (Δ={delta})"
+    );
+}
+
+fn split_box_shadow_layers(s: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut depth = 0_u32;
+    let mut start = 0_usize;
+    for (idx, ch) in s.char_indices() {
+        match ch {
+            '(' => depth = depth.saturating_add(1),
+            ')' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                out.push(s[start..idx].trim());
+                start = idx + 1;
+            }
+            _ => {}
+        }
+    }
+    if start < s.len() {
+        out.push(s[start..].trim());
+    }
+    out.into_iter().filter(|p| !p.is_empty()).collect()
+}
+
+fn parse_box_shadow_layer(layer: &str) -> Option<(String, f32, f32, f32, f32)> {
+    let layer = layer.trim();
+    if layer.is_empty() || layer == "none" {
+        return None;
+    }
+
+    let (color, rest) = if layer.starts_with('#') {
+        let mut it = layer.splitn(2, char::is_whitespace);
+        let color = it.next()?.trim().to_string();
+        (color, it.next().unwrap_or("").trim())
+    } else if let Some(paren) = layer.find('(') {
+        let mut depth = 0_u32;
+        let mut end = None;
+        for (idx, ch) in layer.char_indices().skip(paren) {
+            match ch {
+                '(' => depth = depth.saturating_add(1),
+                ')' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        end = Some(idx);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let end = end?;
+        let color = layer[..=end].trim().to_string();
+        (color, layer[end + 1..].trim())
+    } else {
+        let mut it = layer.splitn(2, char::is_whitespace);
+        let color = it.next()?.trim().to_string();
+        (color, it.next().unwrap_or("").trim())
+    };
+
+    let parts: Vec<&str> = rest.split_whitespace().filter(|p| !p.is_empty()).collect();
+    if parts.len() < 4 {
+        return None;
+    }
+    let x = parse_px(parts[0])?;
+    let y = parse_px(parts[1])?;
+    let blur = parse_px(parts[2])?;
+    let spread = parse_px(parts[3])?;
+    Some((color, x, y, blur, spread))
+}
+
+fn web_box_shadow_focus_ring(node: &WebNode) -> Option<(String, f32)> {
+    let box_shadow = node.computed_style.get("boxShadow").map(String::as_str)?;
+
+    for layer in split_box_shadow_layers(box_shadow) {
+        let Some((color, x, y, blur, spread)) = parse_box_shadow_layer(layer) else {
+            continue;
+        };
+        if x.abs() <= 0.01 && y.abs() <= 0.01 && blur.abs() <= 0.01 && spread > 0.01 {
+            return Some((color, spread));
+        }
+    }
+
+    None
+}
+
+fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<PaintedQuad> {
+    let expected = Rect::new(
+        Point::new(
+            Px(target.origin.x.0 - spread),
+            Px(target.origin.y.0 - spread),
+        ),
+        CoreSize::new(
+            Px(target.size.width.0 + spread * 2.0),
+            Px(target.size.height.0 + spread * 2.0),
+        ),
+    );
+
+    let mut best: Option<PaintedQuad> = None;
+    let mut best_score = f32::INFINITY;
+
+    for op in scene.ops() {
+        let SceneOp::Quad {
+            rect,
+            background,
+            border,
+            corner_radii,
+            border_color,
+            ..
+        } = *op
+        else {
+            continue;
+        };
+
+        if background != Color::TRANSPARENT {
+            continue;
+        }
+        let bw = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+        if bw.iter().any(|v| (*v - spread).abs() > 0.15) {
+            continue;
+        }
+
+        let score = (rect.origin.x.0 - expected.origin.x.0).abs()
+            + (rect.origin.y.0 - expected.origin.y.0).abs()
+            + (rect.size.width.0 - expected.size.width.0).abs()
+            + (rect.size.height.0 - expected.size.height.0).abs();
+
+        if score < best_score {
+            best_score = score;
+            best = Some(PaintedQuad {
+                rect,
+                background,
+                border: bw,
+                border_color,
+                corners: [
+                    corner_radii.top_left.0,
+                    corner_radii.top_right.0,
+                    corner_radii.bottom_right.0,
+                    corner_radii.bottom_left.0,
+                ],
+            });
+        }
+    }
+
+    best
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_button_chrome_matches() {
+    let web = read_web_golden("button-group-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_top_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "group")
+            && n.computed_style.get("gap").is_some_and(|v| v == "8px")
+    })
+    .expect("web top-level button group");
+    let web_gap = web_top_group
+        .computed_style
+        .get("gap")
+        .map(String::as_str)
+        .and_then(parse_px)
+        .expect("web button-group gap px");
+
+    let web_go_back = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Go Back")
+    })
+    .expect("web go back button");
+    let web_archive = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Archive")
+    })
+    .expect("web archive button");
+    let web_report = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Report")
+    })
+    .expect("web report button");
+    let web_snooze = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Snooze")
+    })
+    .expect("web snooze button");
+    let web_more_options = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "More Options")
+    })
+    .expect("web more options button");
+
+    let expected_archive_border_l = web_border_width_px_for(web_archive, "borderLeftWidth")
+        .expect("web Archive borderLeftWidth");
+    let expected_archive_r_tl =
+        web_corner_radius_effective_px_for(web_archive, "borderTopLeftRadius")
+            .expect("web Archive borderTopLeftRadius");
+    let expected_archive_r_tr =
+        web_corner_radius_effective_px_for(web_archive, "borderTopRightRadius")
+            .expect("web Archive borderTopRightRadius");
+
+    let expected_report_border_l =
+        web_border_width_px_for(web_report, "borderLeftWidth").expect("web Report borderLeftWidth");
+    let expected_report_r_tl =
+        web_corner_radius_effective_px_for(web_report, "borderTopLeftRadius")
+            .expect("web Report borderTopLeftRadius");
+    let expected_report_r_tr =
+        web_corner_radius_effective_px_for(web_report, "borderTopRightRadius")
+            .expect("web Report borderTopRightRadius");
+
+    let expected_snooze_border_l =
+        web_border_width_px_for(web_snooze, "borderLeftWidth").expect("web Snooze borderLeftWidth");
+
+    let expected_more_border_l = web_border_width_px_for(web_more_options, "borderLeftWidth")
+        .expect("web More Options borderLeftWidth");
+    let expected_more_r_tl =
+        web_corner_radius_effective_px_for(web_more_options, "borderTopLeftRadius")
+            .expect("web More Options borderTopLeftRadius");
+    let expected_more_r_tr =
+        web_corner_radius_effective_px_for(web_more_options, "borderTopRightRadius")
+            .expect("web More Options borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let go_back = fret_ui_shadcn::Button::new("Go Back")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .size(fret_ui_shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+            .into();
+
+        let archive = fret_ui_shadcn::Button::new("Archive")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+        let report = fret_ui_shadcn::Button::new("Report")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+
+        let snooze = fret_ui_shadcn::Button::new("Snooze")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+        let more_options = fret_ui_shadcn::Button::new("More Options")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .size(fret_ui_shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+            .into();
+
+        let top = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::ButtonGroup::new(vec![go_back]).into(),
+            fret_ui_shadcn::ButtonGroup::new(vec![archive, report]).into(),
+            fret_ui_shadcn::ButtonGroup::new(vec![snooze, more_options]).into(),
+        ]);
+
+        vec![top.into_element(cx)]
+    });
+
+    let go_back = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Go Back"))
+        .expect("fret Go Back button semantics node");
+    let archive = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Archive"))
+        .expect("fret Archive button semantics node");
+    let report = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Report"))
+        .expect("fret Report button semantics node");
+    let snooze = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Snooze"))
+        .expect("fret Snooze button semantics node");
+    let more_options = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("More Options"))
+        .expect("fret More Options button semantics node");
+
+    let actual_gap =
+        archive.bounds.origin.x.0 - (go_back.bounds.origin.x.0 + go_back.bounds.size.width.0);
+    assert_close(
+        "button-group-demo gap (go back → archive)",
+        actual_gap,
+        web_gap,
+        1.0,
+    );
+
+    assert_close(
+        "Go Back width",
+        go_back.bounds.size.width.0,
+        web_go_back.rect.w,
+        1.0,
+    );
+    assert_close(
+        "Go Back height",
+        go_back.bounds.size.height.0,
+        web_go_back.rect.h,
+        1.0,
+    );
+
+    let quad_archive = find_best_quad(&scene, archive.bounds).expect("painted quad for Archive");
+    assert_close(
+        "Archive border-left width",
+        quad_archive.border[3],
+        expected_archive_border_l,
+        0.2,
+    );
+    assert_close(
+        "Archive top-left radius",
+        quad_archive.corners[0],
+        expected_archive_r_tl,
+        1.0,
+    );
+    assert_close(
+        "Archive top-right radius",
+        quad_archive.corners[1],
+        expected_archive_r_tr,
+        1.0,
+    );
+
+    let quad_report = find_best_quad(&scene, report.bounds).expect("painted quad for Report");
+    assert_close(
+        "Report border-left width",
+        quad_report.border[3],
+        expected_report_border_l,
+        0.2,
+    );
+    assert_close(
+        "Report top-left radius",
+        quad_report.corners[0],
+        expected_report_r_tl,
+        1.0,
+    );
+    assert_close(
+        "Report top-right radius",
+        quad_report.corners[1],
+        expected_report_r_tr,
+        1.0,
+    );
+
+    let quad_snooze = find_best_quad(&scene, snooze.bounds).expect("painted quad for Snooze");
+    let quad_more =
+        find_best_quad(&scene, more_options.bounds).expect("painted quad for More Options");
+    assert_close(
+        "More Options border-left width",
+        quad_more.border[3],
+        expected_more_border_l,
+        0.2,
+    );
+    assert_close(
+        "More Options top-left radius",
+        quad_more.corners[0],
+        expected_more_r_tl,
+        1.0,
+    );
+    assert_close(
+        "More Options top-right radius",
+        quad_more.corners[1],
+        expected_more_r_tr,
+        1.0,
+    );
+
+    // The `button-group` recipe should merge borders inside the leaf group:
+    // - the last button removes the left border (`border-l-0`),
+    // - intermediate buttons remove both corner radii (`rounded-*-none`).
+    assert_close(
+        "Snooze border-left width",
+        quad_snooze.border[3],
+        expected_snooze_border_l,
+        0.2,
+    );
+    assert_close(
+        "More Options border-left width",
+        quad_more.border[3],
+        expected_more_border_l,
+        0.2,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_split_chrome_matches() {
+    let web = read_web_golden("button-group-split");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_primary = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Button")
+    })
+    .expect("web split primary button");
+    let web_sep = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "none")
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "vertical")
+            && (n.rect.w - 1.0).abs() <= 0.1
+    })
+    .expect("web split separator");
+    let web_icon = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.text.is_none() && (n.rect.w - 36.0).abs() <= 0.1
+    })
+    .expect("web split icon button");
+
+    let expected_primary_border_top =
+        web_border_width_px_for(web_primary, "borderTopWidth").expect("web primary borderTopWidth");
+    let expected_primary_r_tl =
+        web_corner_radius_effective_px_for(web_primary, "borderTopLeftRadius")
+            .expect("web primary borderTopLeftRadius");
+    let expected_primary_r_tr =
+        web_corner_radius_effective_px_for(web_primary, "borderTopRightRadius")
+            .expect("web primary borderTopRightRadius");
+
+    let expected_icon_border_top =
+        web_border_width_px_for(web_icon, "borderTopWidth").expect("web icon borderTopWidth");
+    let expected_icon_r_tl = web_corner_radius_effective_px_for(web_icon, "borderTopLeftRadius")
+        .expect("web icon borderTopLeftRadius");
+    let expected_icon_r_tr = web_corner_radius_effective_px_for(web_icon, "borderTopRightRadius")
+        .expect("web icon borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let split = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .into(),
+            fret_ui_shadcn::Separator::new()
+                .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            fret_ui_shadcn::Button::new("Menu")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
+                .into(),
+        ]);
+
+        vec![split.into_element(cx)]
+    });
+
+    let primary = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+        .expect("fret split primary semantics node");
+    let icon = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Menu"))
+        .expect("fret split icon semantics node");
+
+    assert_close(
+        "split primary height",
+        primary.bounds.size.height.0,
+        web_primary.rect.h,
+        1.0,
+    );
+    assert_close(
+        "split icon width",
+        icon.bounds.size.width.0,
+        web_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "split icon height",
+        icon.bounds.size.height.0,
+        web_icon.rect.h,
+        1.0,
+    );
+
+    let quad_primary = find_best_quad(&scene, primary.bounds).expect("painted quad for primary");
+    assert_close(
+        "split primary border-top width",
+        quad_primary.border[0],
+        expected_primary_border_top,
+        0.2,
+    );
+    assert_close(
+        "split primary top-left radius",
+        quad_primary.corners[0],
+        expected_primary_r_tl,
+        1.0,
+    );
+    assert_close(
+        "split primary top-right radius",
+        quad_primary.corners[1],
+        expected_primary_r_tr,
+        1.0,
+    );
+
+    let quad_icon = find_best_quad(&scene, icon.bounds).expect("painted quad for icon");
+    assert_close(
+        "split icon border-top width",
+        quad_icon.border[0],
+        expected_icon_border_top,
+        0.2,
+    );
+    assert_close(
+        "split icon top-left radius",
+        quad_icon.corners[0],
+        expected_icon_r_tl,
+        1.0,
+    );
+    assert_close(
+        "split icon top-right radius",
+        quad_icon.corners[1],
+        expected_icon_r_tr,
+        1.0,
+    );
+
+    // Text shaping is intentionally stubbed in `FakeServices`, so we can't reliably assert the
+    // intrinsic text-driven width of the primary button. Instead, gate:
+    // - separator thickness,
+    // - separator/chevron button placement (no gap),
+    // - merged border/corner radii outcomes.
+    let sep_w = web_sep.rect.w;
+    let sep_h = web_sep.rect.h;
+    let sep_target = Rect::new(
+        Point::new(
+            Px(primary.bounds.origin.x.0 + primary.bounds.size.width.0),
+            primary.bounds.origin.y,
+        ),
+        CoreSize::new(Px(sep_w), Px(sep_h)),
+    );
+    let quad_sep = find_best_quad(&scene, sep_target).expect("painted quad for separator");
+    assert_close(
+        "split separator width",
+        quad_sep.rect.size.width.0,
+        sep_w,
+        0.2,
+    );
+    assert_close(
+        "split separator height",
+        quad_sep.rect.size.height.0,
+        sep_h,
+        0.2,
+    );
+
+    let actual_icon_gap =
+        icon.bounds.origin.x.0 - (quad_sep.rect.origin.x.0 + quad_sep.rect.size.width.0);
+    assert_close("split separator → icon gap", actual_icon_gap, 0.0, 0.5);
+}
+
+#[test]
+fn web_vs_fret_button_group_orientation_vertical_chrome_matches() {
+    let web = read_web_golden("button-group-orientation");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "vertical")
+    })
+    .expect("web vertical button group");
+
+    let web_top = find_first(web_group, &|n| {
+        n.tag == "button" && (n.rect.y - 0.0).abs() <= 0.1
+    })
+    .expect("web top button");
+    let web_bottom = find_first(web_group, &|n| {
+        n.tag == "button" && (n.rect.y - 36.0).abs() <= 0.1
+    })
+    .expect("web bottom button");
+
+    let expected_top_border_bottom =
+        web_border_width_px_for(web_top, "borderBottomWidth").expect("web top borderBottomWidth");
+    let expected_top_r_tl = web_corner_radius_effective_px_for(web_top, "borderTopLeftRadius")
+        .expect("web top borderTopLeftRadius");
+    let expected_top_r_bl = web_corner_radius_effective_px_for(web_top, "borderBottomLeftRadius")
+        .expect("web top borderBottomLeftRadius");
+
+    let expected_bottom_border_top =
+        web_border_width_px_for(web_bottom, "borderTopWidth").expect("web bottom borderTopWidth");
+    let expected_bottom_r_tl =
+        web_corner_radius_effective_px_for(web_bottom, "borderTopLeftRadius")
+            .expect("web bottom borderTopLeftRadius");
+    let expected_bottom_r_bl =
+        web_corner_radius_effective_px_for(web_bottom, "borderBottomLeftRadius")
+            .expect("web bottom borderBottomLeftRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Play")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::PLAY)])
+                .into(),
+            fret_ui_shadcn::Button::new("Stop")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::CLOSE)])
+                .into(),
+        ])
+        .a11y_label("Media controls")
+        .orientation(fret_ui_shadcn::ButtonGroupOrientation::Vertical);
+
+        vec![group.into_element(cx)]
+    });
+
+    let top = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Play"))
+        .expect("fret top button semantics node");
+    let bottom = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Stop"))
+        .expect("fret bottom button semantics node");
+
+    assert_close(
+        "vertical top width",
+        top.bounds.size.width.0,
+        web_top.rect.w,
+        1.0,
+    );
+    assert_close(
+        "vertical top height",
+        top.bounds.size.height.0,
+        web_top.rect.h,
+        1.0,
+    );
+    assert_close(
+        "vertical bottom width",
+        bottom.bounds.size.width.0,
+        web_bottom.rect.w,
+        1.0,
+    );
+    assert_close(
+        "vertical bottom height",
+        bottom.bounds.size.height.0,
+        web_bottom.rect.h,
+        1.0,
+    );
+    assert_close(
+        "vertical button stacking y",
+        bottom.bounds.origin.y.0 - top.bounds.origin.y.0,
+        web_bottom.rect.y - web_top.rect.y,
+        1.0,
+    );
+
+    let quad_top = find_best_quad(&scene, top.bounds).expect("painted quad for top button");
+    assert_close(
+        "vertical top border-bottom width",
+        quad_top.border[2],
+        expected_top_border_bottom,
+        0.2,
+    );
+    assert_close(
+        "vertical top top-left radius",
+        quad_top.corners[0],
+        expected_top_r_tl,
+        1.0,
+    );
+    assert_close(
+        "vertical top bottom-left radius",
+        quad_top.corners[3],
+        expected_top_r_bl,
+        1.0,
+    );
+
+    let quad_bottom =
+        find_best_quad(&scene, bottom.bounds).expect("painted quad for bottom button");
+    assert_close(
+        "vertical bottom border-top width",
+        quad_bottom.border[0],
+        expected_bottom_border_top,
+        0.2,
+    );
+    assert_close(
+        "vertical bottom top-left radius",
+        quad_bottom.corners[0],
+        expected_bottom_r_tl,
+        1.0,
+    );
+    assert_close(
+        "vertical bottom bottom-left radius",
+        quad_bottom.corners[3],
+        expected_bottom_r_bl,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_nested_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-nested");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_outer = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "group")
+            && n.computed_style.get("gap").is_some_and(|v| v == "8px")
+            && (n.rect.h - 32.0).abs() <= 0.1
+    })
+    .expect("web outer button group");
+
+    let web_groups: Vec<&WebNode> = web_outer
+        .children
+        .iter()
+        .filter(|c| c.tag == "div" && c.attrs.get("role").is_some_and(|v| v == "group"))
+        .collect();
+    assert!(
+        web_groups.len() >= 2,
+        "expected at least 2 nested groups, got {}",
+        web_groups.len()
+    );
+    let web_group_a = web_groups[0];
+    let web_group_b = web_groups[1];
+    let expected_gap = web_group_b.rect.x - (web_group_a.rect.x + web_group_a.rect.w);
+
+    let web_one = find_first(web_group_a, &|n| n.tag == "button" && contains_text(n, "1"))
+        .expect("web button 1");
+    let web_two = find_first(web_group_a, &|n| n.tag == "button" && contains_text(n, "2"))
+        .expect("web button 2");
+    let web_prev = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Previous")
+    })
+    .expect("web previous button");
+    let web_next = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Next")
+    })
+    .expect("web next button");
+
+    let expected_one_border_l =
+        web_border_width_px_for(web_one, "borderLeftWidth").expect("web 1 borderLeftWidth");
+    let expected_one_r_tl = web_corner_radius_effective_px_for(web_one, "borderTopLeftRadius")
+        .expect("web 1 borderTopLeftRadius");
+    let expected_one_r_tr = web_corner_radius_effective_px_for(web_one, "borderTopRightRadius")
+        .expect("web 1 borderTopRightRadius");
+
+    let expected_two_border_l =
+        web_border_width_px_for(web_two, "borderLeftWidth").expect("web 2 borderLeftWidth");
+    let expected_two_r_tl = web_corner_radius_effective_px_for(web_two, "borderTopLeftRadius")
+        .expect("web 2 borderTopLeftRadius");
+    let expected_two_r_tr = web_corner_radius_effective_px_for(web_two, "borderTopRightRadius")
+        .expect("web 2 borderTopRightRadius");
+
+    let expected_prev_border_l =
+        web_border_width_px_for(web_prev, "borderLeftWidth").expect("web Previous borderLeftWidth");
+    let expected_prev_r_tr = web_corner_radius_effective_px_for(web_prev, "borderTopRightRadius")
+        .expect("web Previous borderTopRightRadius");
+    let expected_next_border_l =
+        web_border_width_px_for(web_next, "borderLeftWidth").expect("web Next borderLeftWidth");
+    let expected_next_r_tl = web_corner_radius_effective_px_for(web_next, "borderTopLeftRadius")
+        .expect("web Next borderTopLeftRadius");
+    let expected_next_r_tr = web_corner_radius_effective_px_for(web_next, "borderTopRightRadius")
+        .expect("web Next borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group_a = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("1")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("2")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("3")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("4")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Button::new("5")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+        ])
+        .a11y_label("NestedGroupA")
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group_a.rect.w))),
+        );
+
+        let group_b = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Previous")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconSm)
+                .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+                .into(),
+            fret_ui_shadcn::Button::new("Next")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconSm)
+                .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+                .into(),
+        ])
+        .a11y_label("NestedGroupB")
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group_b.rect.w))),
+        );
+
+        let outer = fret_ui_shadcn::ButtonGroup::new(vec![group_a.into(), group_b.into()])
+            .a11y_label("OuterGroup");
+
+        vec![outer.into_element(cx)]
+    });
+
+    let group_a = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("NestedGroupA"))
+        .expect("fret nested group A semantics node");
+    let group_b = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("NestedGroupB"))
+        .expect("fret nested group B semantics node");
+
+    let actual_gap =
+        group_b.bounds.origin.x.0 - (group_a.bounds.origin.x.0 + group_a.bounds.size.width.0);
+    assert_close("button-group-nested gap", actual_gap, expected_gap, 1.0);
+
+    let one = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("1"))
+        .expect("fret button 1 semantics node");
+    let two = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("2"))
+        .expect("fret button 2 semantics node");
+    let prev = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Previous"))
+        .expect("fret previous semantics node");
+    let next = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Next"))
+        .expect("fret next semantics node");
+
+    let quad_one = find_best_quad(&scene, one.bounds).expect("painted quad for 1");
+    assert_close(
+        "button-group-nested 1 border-left",
+        quad_one.border[3],
+        expected_one_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested 1 radius tl",
+        quad_one.corners[0],
+        expected_one_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-nested 1 radius tr",
+        quad_one.corners[1],
+        expected_one_r_tr,
+        1.0,
+    );
+
+    let quad_two = find_best_quad(&scene, two.bounds).expect("painted quad for 2");
+    assert_close(
+        "button-group-nested 2 border-left",
+        quad_two.border[3],
+        expected_two_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested 2 radius tl",
+        quad_two.corners[0],
+        expected_two_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-nested 2 radius tr",
+        quad_two.corners[1],
+        expected_two_r_tr,
+        1.0,
+    );
+
+    let quad_prev = find_best_quad(&scene, prev.bounds).expect("painted quad for Previous");
+    assert_close(
+        "button-group-nested Previous border-left",
+        quad_prev.border[3],
+        expected_prev_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested Previous radius tr",
+        quad_prev.corners[1],
+        expected_prev_r_tr,
+        1.0,
+    );
+
+    let quad_next = find_best_quad(&scene, next.bounds).expect("painted quad for Next");
+    assert_close(
+        "button-group-nested Next border-left",
+        quad_next.border[3],
+        expected_next_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-nested Next radius tl",
+        quad_next.corners[0],
+        expected_next_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-nested Next radius tr",
+        quad_next.corners[1],
+        expected_next_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_separator_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-separator");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_copy = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Copy")
+    })
+    .expect("web Copy button");
+    let web_paste = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_text(n, "Paste")
+    })
+    .expect("web Paste button");
+    let web_sep = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "none")
+            && n.attrs
+                .get("data-orientation")
+                .is_some_and(|v| v == "vertical")
+            && (n.rect.w - 1.0).abs() <= 0.1
+    })
+    .expect("web separator node");
+
+    let expected_copy_border_top =
+        web_border_width_px_for(web_copy, "borderTopWidth").expect("web Copy borderTopWidth");
+    let expected_copy_r_tl = web_corner_radius_effective_px_for(web_copy, "borderTopLeftRadius")
+        .expect("web Copy borderTopLeftRadius");
+    let expected_copy_r_tr = web_corner_radius_effective_px_for(web_copy, "borderTopRightRadius")
+        .expect("web Copy borderTopRightRadius");
+
+    let expected_paste_border_top =
+        web_border_width_px_for(web_paste, "borderTopWidth").expect("web Paste borderTopWidth");
+    let expected_paste_r_tl = web_corner_radius_effective_px_for(web_paste, "borderTopLeftRadius")
+        .expect("web Paste borderTopLeftRadius");
+    let expected_paste_r_tr = web_corner_radius_effective_px_for(web_paste, "borderTopRightRadius")
+        .expect("web Paste borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Copy")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+            fret_ui_shadcn::Separator::new()
+                .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            fret_ui_shadcn::Button::new("Paste")
+                .variant(fret_ui_shadcn::ButtonVariant::Secondary)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into(),
+        ]);
+        vec![group.into_element(cx)]
+    });
+
+    let copy = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Copy"))
+        .expect("fret Copy button semantics node");
+    let paste = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Paste"))
+        .expect("fret Paste button semantics node");
+
+    let quad_copy = find_best_quad(&scene, copy.bounds).expect("painted quad for Copy");
+    assert_close(
+        "button-group-separator Copy border-top",
+        quad_copy.border[0],
+        expected_copy_border_top,
+        0.2,
+    );
+    assert_close(
+        "button-group-separator Copy radius tl",
+        quad_copy.corners[0],
+        expected_copy_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-separator Copy radius tr",
+        quad_copy.corners[1],
+        expected_copy_r_tr,
+        1.0,
+    );
+
+    let quad_paste = find_best_quad(&scene, paste.bounds).expect("painted quad for Paste");
+    assert_close(
+        "button-group-separator Paste border-top",
+        quad_paste.border[0],
+        expected_paste_border_top,
+        0.2,
+    );
+    assert_close(
+        "button-group-separator Paste radius tl",
+        quad_paste.corners[0],
+        expected_paste_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-separator Paste radius tr",
+        quad_paste.corners[1],
+        expected_paste_r_tr,
+        1.0,
+    );
+
+    let sep_w = web_sep.rect.w;
+    let sep_h = web_sep.rect.h;
+    let sep_target = Rect::new(
+        Point::new(
+            Px(copy.bounds.origin.x.0 + copy.bounds.size.width.0),
+            copy.bounds.origin.y,
+        ),
+        CoreSize::new(Px(sep_w), Px(sep_h)),
+    );
+    let quad_sep = find_best_quad(&scene, sep_target).expect("painted quad for separator");
+    assert_close(
+        "button-group-separator sep width",
+        quad_sep.rect.size.width.0,
+        sep_w,
+        0.2,
+    );
+    assert_close(
+        "button-group-separator sep height",
+        quad_sep.rect.size.height.0,
+        sep_h,
+        0.2,
+    );
+    let actual_paste_gap =
+        paste.bounds.origin.x.0 - (quad_sep.rect.origin.x.0 + quad_sep.rect.size.width.0);
+    assert_close(
+        "button-group-separator sep → paste gap",
+        actual_paste_gap,
+        0.0,
+        0.5,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_size_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-size");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let mut web_groups: Vec<&WebNode> = Vec::new();
+    fn collect_groups<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if node.tag == "div" && node.attrs.get("role").is_some_and(|v| v == "group") {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect_groups(child, out);
+        }
+    }
+    collect_groups(&theme.root, &mut web_groups);
+    web_groups.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    assert_eq!(web_groups.len(), 3, "expected 3 button groups in golden");
+
+    let web_sm = web_groups[0];
+    let web_md = web_groups[1];
+    let web_lg = web_groups[2];
+
+    fn collect_buttons<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if node.tag == "button" {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect_buttons(child, out);
+        }
+    }
+
+    let mut web_sm_buttons = Vec::new();
+    collect_buttons(web_sm, &mut web_sm_buttons);
+    assert_eq!(
+        web_sm_buttons.len(),
+        4,
+        "expected 4 buttons in small button group golden"
+    );
+    let web_sm_first = web_sm_buttons[0];
+    let web_sm_mid = web_sm_buttons[1];
+    let web_sm_icon = web_sm_buttons[3];
+
+    let mut web_md_buttons = Vec::new();
+    collect_buttons(web_md, &mut web_md_buttons);
+    assert_eq!(
+        web_md_buttons.len(),
+        4,
+        "expected 4 buttons in default button group golden"
+    );
+    let web_md_first = web_md_buttons[0];
+    let web_md_mid = web_md_buttons[1];
+    let web_md_icon = web_md_buttons[3];
+
+    let mut web_lg_buttons = Vec::new();
+    collect_buttons(web_lg, &mut web_lg_buttons);
+    assert_eq!(
+        web_lg_buttons.len(),
+        4,
+        "expected 4 buttons in large button group golden"
+    );
+    let web_lg_first = web_lg_buttons[0];
+    let web_lg_mid = web_lg_buttons[1];
+    let web_lg_icon = web_lg_buttons[3];
+
+    let expected_gap_sm_to_md = web_md.rect.y - (web_sm.rect.y + web_sm.rect.h);
+    let expected_gap_md_to_lg = web_lg.rect.y - (web_md.rect.y + web_md.rect.h);
+
+    let expected_sm_first_r_tl =
+        web_corner_radius_effective_px_for(web_sm_first, "borderTopLeftRadius")
+            .expect("web small first borderTopLeftRadius");
+    let expected_sm_first_r_tr =
+        web_corner_radius_effective_px_for(web_sm_first, "borderTopRightRadius")
+            .expect("web small first borderTopRightRadius");
+    let expected_sm_icon_r_tr =
+        web_corner_radius_effective_px_for(web_sm_icon, "borderTopRightRadius")
+            .expect("web small icon borderTopRightRadius");
+
+    let expected_md_first_r_tl =
+        web_corner_radius_effective_px_for(web_md_first, "borderTopLeftRadius")
+            .expect("web default first borderTopLeftRadius");
+    let expected_md_first_r_tr =
+        web_corner_radius_effective_px_for(web_md_first, "borderTopRightRadius")
+            .expect("web default first borderTopRightRadius");
+    let expected_md_icon_r_tr =
+        web_corner_radius_effective_px_for(web_md_icon, "borderTopRightRadius")
+            .expect("web default icon borderTopRightRadius");
+
+    let expected_lg_first_r_tl =
+        web_corner_radius_effective_px_for(web_lg_first, "borderTopLeftRadius")
+            .expect("web large first borderTopLeftRadius");
+    let expected_lg_first_r_tr =
+        web_corner_radius_effective_px_for(web_lg_first, "borderTopRightRadius")
+            .expect("web large first borderTopRightRadius");
+    let expected_lg_icon_r_tr =
+        web_corner_radius_effective_px_for(web_lg_icon, "borderTopRightRadius")
+            .expect("web large icon borderTopRightRadius");
+
+    let expected_sm_mid_border_l =
+        web_border_width_px_for(web_sm_mid, "borderLeftWidth").expect("web small mid borderLeft");
+    let expected_sm_icon_border_l =
+        web_border_width_px_for(web_sm_icon, "borderLeftWidth").expect("web small icon borderLeft");
+
+    let expected_md_mid_border_l =
+        web_border_width_px_for(web_md_mid, "borderLeftWidth").expect("web default mid borderLeft");
+    let expected_md_icon_border_l = web_border_width_px_for(web_md_icon, "borderLeftWidth")
+        .expect("web default icon borderLeft");
+
+    let expected_lg_mid_border_l =
+        web_border_width_px_for(web_lg_mid, "borderLeftWidth").expect("web large mid borderLeft");
+    let expected_lg_icon_border_l =
+        web_border_width_px_for(web_lg_icon, "borderLeftWidth").expect("web large icon borderLeft");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let group_sm = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Small")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .test_id("button-group-size.sm.first")
+                .into(),
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .test_id("button-group-size.sm.mid")
+                .into(),
+            fret_ui_shadcn::Button::new("Group")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .test_id("button-group-size.sm.last_text")
+                .into(),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconSm)
+                .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+                .test_id("button-group-size.sm.icon")
+                .into(),
+        ])
+        .a11y_label("ButtonGroupSizeSm");
+
+        let group_md = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Default")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Default)
+                .test_id("button-group-size.md.first")
+                .into(),
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Default)
+                .test_id("button-group-size.md.mid")
+                .into(),
+            fret_ui_shadcn::Button::new("Group")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Default)
+                .test_id("button-group-size.md.last_text")
+                .into(),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Icon)
+                .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+                .test_id("button-group-size.md.icon")
+                .into(),
+        ])
+        .a11y_label("ButtonGroupSizeMd");
+
+        let group_lg = fret_ui_shadcn::ButtonGroup::new(vec![
+            fret_ui_shadcn::Button::new("Large")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Lg)
+                .test_id("button-group-size.lg.first")
+                .into(),
+            fret_ui_shadcn::Button::new("Button")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Lg)
+                .test_id("button-group-size.lg.mid")
+                .into(),
+            fret_ui_shadcn::Button::new("Group")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Lg)
+                .test_id("button-group-size.lg.last_text")
+                .into(),
+            fret_ui_shadcn::Button::new("")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::IconLg)
+                .children(vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)])
+                .test_id("button-group-size.lg.icon")
+                .into(),
+        ])
+        .a11y_label("ButtonGroupSizeLg");
+
+        vec![decl_stack::vstack(
+            cx,
+            decl_stack::VStackProps::default()
+                .gap(Space::N8)
+                .items_start(),
+            move |cx| {
+                vec![
+                    group_sm.into_element(cx),
+                    group_md.into_element(cx),
+                    group_lg.into_element(cx),
+                ]
+            },
+        )]
+    });
+
+    let group_sm = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupSizeSm"))
+        .expect("missing semantics for small button group");
+    let group_md = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupSizeMd"))
+        .expect("missing semantics for default button group");
+    let group_lg = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupSizeLg"))
+        .expect("missing semantics for large button group");
+
+    assert_close(
+        "button-group-size small group y",
+        group_sm.bounds.origin.y.0,
+        web_sm.rect.y,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small group height",
+        group_sm.bounds.size.height.0,
+        web_sm.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default group y",
+        group_md.bounds.origin.y.0,
+        web_md.rect.y,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default group height",
+        group_md.bounds.size.height.0,
+        web_md.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large group y",
+        group_lg.bounds.origin.y.0,
+        web_lg.rect.y,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large group height",
+        group_lg.bounds.size.height.0,
+        web_lg.rect.h,
+        1.0,
+    );
+
+    let actual_gap_sm_to_md =
+        group_md.bounds.origin.y.0 - (group_sm.bounds.origin.y.0 + group_sm.bounds.size.height.0);
+    assert_close(
+        "button-group-size gap (small → default)",
+        actual_gap_sm_to_md,
+        expected_gap_sm_to_md,
+        1.0,
+    );
+    let actual_gap_md_to_lg =
+        group_lg.bounds.origin.y.0 - (group_md.bounds.origin.y.0 + group_md.bounds.size.height.0);
+    assert_close(
+        "button-group-size gap (default → large)",
+        actual_gap_md_to_lg,
+        expected_gap_md_to_lg,
+        1.0,
+    );
+
+    let by_id = |id: &str| {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(id))
+            .unwrap_or_else(|| panic!("missing semantics node {id}"))
+            .bounds
+    };
+
+    let sm_first_bounds = by_id("button-group-size.sm.first");
+    let sm_mid_bounds = by_id("button-group-size.sm.mid");
+    let sm_icon_bounds = by_id("button-group-size.sm.icon");
+
+    let md_first_bounds = by_id("button-group-size.md.first");
+    let md_mid_bounds = by_id("button-group-size.md.mid");
+    let md_icon_bounds = by_id("button-group-size.md.icon");
+
+    let lg_first_bounds = by_id("button-group-size.lg.first");
+    let lg_mid_bounds = by_id("button-group-size.lg.mid");
+    let lg_icon_bounds = by_id("button-group-size.lg.icon");
+
+    assert_close(
+        "button-group-size small icon width",
+        sm_icon_bounds.size.width.0,
+        web_sm_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small icon height",
+        sm_icon_bounds.size.height.0,
+        web_sm_icon.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default icon width",
+        md_icon_bounds.size.width.0,
+        web_md_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default icon height",
+        md_icon_bounds.size.height.0,
+        web_md_icon.rect.h,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large icon width",
+        lg_icon_bounds.size.width.0,
+        web_lg_icon.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large icon height",
+        lg_icon_bounds.size.height.0,
+        web_lg_icon.rect.h,
+        1.0,
+    );
+
+    let quad_sm_first = find_best_quad(&scene, sm_first_bounds).expect("painted quad for sm first");
+    let quad_sm_mid = find_best_quad(&scene, sm_mid_bounds).expect("painted quad for sm mid");
+    let quad_sm_icon = find_best_quad(&scene, sm_icon_bounds).expect("painted quad for sm icon");
+
+    assert_close(
+        "button-group-size small first radius tl",
+        quad_sm_first.corners[0],
+        expected_sm_first_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small first radius tr",
+        quad_sm_first.corners[1],
+        expected_sm_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small icon radius tr",
+        quad_sm_icon.corners[1],
+        expected_sm_icon_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size small mid border-left",
+        quad_sm_mid.border[3],
+        expected_sm_mid_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-size small icon border-left",
+        quad_sm_icon.border[3],
+        expected_sm_icon_border_l,
+        0.2,
+    );
+
+    let quad_md_first = find_best_quad(&scene, md_first_bounds).expect("painted quad for md first");
+    let quad_md_mid = find_best_quad(&scene, md_mid_bounds).expect("painted quad for md mid");
+    let quad_md_icon = find_best_quad(&scene, md_icon_bounds).expect("painted quad for md icon");
+
+    assert_close(
+        "button-group-size default first radius tl",
+        quad_md_first.corners[0],
+        expected_md_first_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default first radius tr",
+        quad_md_first.corners[1],
+        expected_md_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default icon radius tr",
+        quad_md_icon.corners[1],
+        expected_md_icon_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default mid border-left",
+        quad_md_mid.border[3],
+        expected_md_mid_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-size default icon border-left",
+        quad_md_icon.border[3],
+        expected_md_icon_border_l,
+        0.2,
+    );
+
+    let quad_lg_first = find_best_quad(&scene, lg_first_bounds).expect("painted quad for lg first");
+    let quad_lg_mid = find_best_quad(&scene, lg_mid_bounds).expect("painted quad for lg mid");
+    let quad_lg_icon = find_best_quad(&scene, lg_icon_bounds).expect("painted quad for lg icon");
+
+    assert_close(
+        "button-group-size large first radius tl",
+        quad_lg_first.corners[0],
+        expected_lg_first_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large first radius tr",
+        quad_lg_first.corners[1],
+        expected_lg_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large icon radius tr",
+        quad_lg_icon.corners[1],
+        expected_lg_icon_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large mid border-left",
+        quad_lg_mid.border[3],
+        expected_lg_mid_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-size large icon border-left",
+        quad_lg_icon.border[3],
+        expected_lg_icon_border_l,
+        0.2,
+    );
+
+    assert_close(
+        "button-group-size small first radius tr (merged)",
+        quad_sm_first.corners[1],
+        expected_sm_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size default first radius tr (merged)",
+        quad_md_first.corners[1],
+        expected_md_first_r_tr,
+        1.0,
+    );
+    assert_close(
+        "button-group-size large first radius tr (merged)",
+        quad_lg_first.corners[1],
+        expected_lg_first_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-dropdown");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div" && n.attrs.get("role").is_some_and(|v| v == "group")
+    })
+    .expect("web button-group node");
+
+    let web_follow = find_first(web_group, &|n| {
+        n.tag == "button" && contains_text(n, "Follow")
+    })
+    .expect("web Follow button");
+    let web_trigger = find_first(web_group, &|n| {
+        n.tag == "button" && n.attrs.get("aria-expanded").is_some()
+    })
+    .expect("web dropdown trigger button");
+
+    let expected_group_h = web_group.rect.h;
+    let expected_trigger_w = web_trigger.rect.w;
+    let expected_trigger_border_l = web_border_width_px_for(web_trigger, "borderLeftWidth")
+        .expect("web trigger borderLeftWidth");
+
+    let expected_follow_r_tl =
+        web_corner_radius_effective_px_for(web_follow, "borderTopLeftRadius")
+            .expect("web Follow borderTopLeftRadius");
+    let expected_follow_r_tr =
+        web_corner_radius_effective_px_for(web_follow, "borderTopRightRadius")
+            .expect("web Follow borderTopRightRadius");
+    let expected_trigger_r_tr =
+        web_corner_radius_effective_px_for(web_trigger, "borderTopRightRadius")
+            .expect("web trigger borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let follow = fret_ui_shadcn::Button::new("Follow")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .into();
+
+        // Upstream `button-group-dropdown` uses asymmetric padding (`pl-2 pr-3`) for the trigger.
+        // We express that via `ChromeRefinement` without changing global button sizing rules.
+        let trigger = fret_ui_shadcn::Button::new("")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .refine_style(ChromeRefinement::default().pl(Space::N2))
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
+            .test_id("button-group-dropdown.trigger")
+            .into();
+
+        let group = fret_ui_shadcn::ButtonGroup::new(vec![follow, trigger])
+            .a11y_label("ButtonGroupDropdown");
+        vec![group.into_element(cx)]
+    });
+
+    let group = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupDropdown")
+        })
+        .expect("missing semantics for dropdown button group");
+
+    assert_close(
+        "button-group-dropdown group height",
+        group.bounds.size.height.0,
+        expected_group_h,
+        1.0,
+    );
+
+    let trigger_bounds = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-dropdown.trigger"))
+        .expect("missing semantics for dropdown trigger")
+        .bounds;
+
+    assert_close(
+        "button-group-dropdown trigger width",
+        trigger_bounds.size.width.0,
+        expected_trigger_w,
+        1.0,
+    );
+
+    let follow_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Follow"))
+        .expect("missing semantics for Follow button");
+    let quad_follow = find_best_quad(&scene, follow_node.bounds).expect("painted quad for Follow");
+    assert_close(
+        "button-group-dropdown Follow radius tl",
+        quad_follow.corners[0],
+        expected_follow_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-dropdown Follow radius tr",
+        quad_follow.corners[1],
+        expected_follow_r_tr,
+        1.0,
+    );
+
+    let quad_trigger =
+        find_best_quad(&scene, trigger_bounds).expect("painted quad for dropdown trigger");
+    assert_close(
+        "button-group-dropdown trigger border-left",
+        quad_trigger.border[3],
+        expected_trigger_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-dropdown trigger radius tr",
+        quad_trigger.corners[1],
+        expected_trigger_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_popover_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-popover");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div" && n.attrs.get("role").is_some_and(|v| v == "group")
+    })
+    .expect("web button-group node");
+
+    let web_lead = find_first(web_group, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_none()
+    })
+    .expect("web lead button");
+    let web_trigger = find_first(web_group, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Open Popover")
+    })
+    .expect("web popover trigger button");
+
+    let expected_lead_border_l =
+        web_border_width_px_for(web_lead, "borderLeftWidth").expect("web lead borderLeftWidth");
+    let expected_lead_r_tl = web_corner_radius_effective_px_for(web_lead, "borderTopLeftRadius")
+        .expect("web lead borderTopLeftRadius");
+    let expected_lead_r_tr = web_corner_radius_effective_px_for(web_lead, "borderTopRightRadius")
+        .expect("web lead borderTopRightRadius");
+
+    let expected_trigger_border_l = web_border_width_px_for(web_trigger, "borderLeftWidth")
+        .expect("web trigger borderLeftWidth");
+    let expected_trigger_r_tl =
+        web_corner_radius_effective_px_for(web_trigger, "borderTopLeftRadius")
+            .expect("web trigger borderTopLeftRadius");
+    let expected_trigger_r_tr =
+        web_corner_radius_effective_px_for(web_trigger, "borderTopRightRadius")
+            .expect("web trigger borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let lead = fret_ui_shadcn::Button::new("")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+            .test_id("button-group-popover.lead")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_lead.rect.w)))
+                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_lead.rect.h))),
+            )
+            .into();
+
+        let trigger = fret_ui_shadcn::Button::new("Open Popover")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .size(fret_ui_shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
+            .test_id("button-group-popover.trigger")
+            .into();
+
+        let group =
+            fret_ui_shadcn::ButtonGroup::new(vec![lead, trigger]).a11y_label("ButtonGroupPopover");
+        vec![group.into_element(cx)]
+    });
+
+    let group = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupPopover")
+        })
+        .expect("missing semantics for popover button group");
+
+    assert_close(
+        "button-group-popover group height",
+        group.bounds.size.height.0,
+        web_group.rect.h,
+        1.0,
+    );
+
+    let lead_bounds = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-popover.lead"))
+        .expect("missing lead semantics node")
+        .bounds;
+    let trigger_bounds = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-popover.trigger"))
+        .expect("missing trigger semantics node")
+        .bounds;
+
+    let actual_gap =
+        trigger_bounds.origin.x.0 - (lead_bounds.origin.x.0 + lead_bounds.size.width.0);
+    assert_close(
+        "button-group-popover lead → trigger gap",
+        actual_gap,
+        0.0,
+        0.5,
+    );
+
+    let quad_lead = find_best_quad(&scene, lead_bounds).expect("painted quad for lead");
+    assert_close(
+        "button-group-popover lead border-left",
+        quad_lead.border[3],
+        expected_lead_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-popover lead radius tl",
+        quad_lead.corners[0],
+        expected_lead_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-popover lead radius tr",
+        quad_lead.corners[1],
+        expected_lead_r_tr,
+        1.0,
+    );
+
+    let quad_trigger = find_best_quad(&scene, trigger_bounds).expect("painted quad for trigger");
+    assert_close(
+        "button-group-popover trigger border-left",
+        quad_trigger.border[3],
+        expected_trigger_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-popover trigger radius tl",
+        quad_trigger.corners[0],
+        expected_trigger_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-popover trigger radius tr",
+        quad_trigger.corners[1],
+        expected_trigger_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_input_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-input");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div" && n.attrs.get("role").is_some_and(|v| v == "group")
+    })
+    .expect("web button-group node");
+
+    let web_input = find_first(web_group, &|n| n.tag == "input").expect("web input node");
+    let web_button = find_first(web_group, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Search")
+    })
+    .expect("web search button");
+
+    let expected_input_border_l =
+        web_border_width_px_for(web_input, "borderLeftWidth").expect("web input borderLeftWidth");
+    let expected_input_r_tr = web_corner_radius_effective_px_for(web_input, "borderTopRightRadius")
+        .expect("web input borderTopRightRadius");
+
+    let expected_button_border_l =
+        web_border_width_px_for(web_button, "borderLeftWidth").expect("web button borderLeftWidth");
+    let expected_button_r_tl =
+        web_corner_radius_effective_px_for(web_button, "borderTopLeftRadius")
+            .expect("web button borderTopLeftRadius");
+    let expected_button_r_tr =
+        web_corner_radius_effective_px_for(web_button, "borderTopRightRadius")
+            .expect("web button borderTopRightRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+        let input = fret_ui_shadcn::Input::new(model)
+            .a11y_label("ButtonGroupInputInput")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w))),
+            )
+            .corner_radii_override(Corners {
+                top_left: Px(8.0),
+                bottom_left: Px(8.0),
+                top_right: Px(0.0),
+                bottom_right: Px(0.0),
+            })
+            .into_element(cx);
+
+        let button = fret_ui_shadcn::Button::new("Search")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .border_left_width_override(Px(0.0))
+            .corner_radii_override(Corners {
+                top_left: Px(0.0),
+                bottom_left: Px(0.0),
+                top_right: Px(8.0),
+                bottom_right: Px(8.0),
+            })
+            .children(vec![decl_icon::icon(cx, ids::ui::SEARCH)])
+            .test_id("button-group-input.search")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.w)))
+                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.h))),
+            )
+            .into_element(cx);
+
+        let group = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Group,
+                label: Some(Arc::from("ButtonGroupInput")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: fret_ui::element::LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |_cx| vec![input, button],
+                )]
+            },
+        );
+
+        vec![group]
+    });
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField
+                && n.label.as_deref() == Some("ButtonGroupInputInput")
+        })
+        .expect("missing semantics for input");
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-input.search"))
+        .expect("missing semantics for button");
+
+    let actual_gap =
+        button.bounds.origin.x.0 - (input.bounds.origin.x.0 + input.bounds.size.width.0);
+    assert_close("button-group-input gap", actual_gap, 0.0, 0.5);
+
+    let quad_input = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_close(
+        "button-group-input input border-left",
+        quad_input.border[3],
+        expected_input_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-input input radius tr",
+        quad_input.corners[1],
+        expected_input_r_tr,
+        1.0,
+    );
+
+    let quad_button = find_best_quad(&scene, button.bounds).expect("painted quad for button");
+    assert_close(
+        "button-group-input button border-left",
+        quad_button.border[3],
+        expected_button_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-input button radius tl",
+        quad_button.corners[0],
+        expected_button_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-input button radius tr",
+        quad_button.corners[1],
+        expected_button_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_demo_focus_ring_matches() {
+    let web = read_web_golden("input-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_input).expect("web input focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Input::new(model)
+                    .a11y_label("InputDemoInput")
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputDemoInput")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input semantics node")
+        },
+    );
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField && n.label.as_deref() == Some("InputDemoInput")
+        })
+        .expect("missing semantics for input");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, input.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("input-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_input).expect("web input invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Input::new(model)
+                    .a11y_label("InputDemoInputInvalid")
+                    .aria_invalid(true)
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputDemoInputInvalid")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input semantics node")
+        },
+    );
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField
+                && n.label.as_deref() == Some("InputDemoInputInvalid")
+        })
+        .expect("missing semantics for input");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, input.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_focus_ring_matches() {
+    let web = read_web_golden("input-group-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("data-slot").is_some_and(|v| v == "input-group")
+            && n.computed_style
+                .get("boxShadow")
+                .is_some_and(|v| v.contains(" 3px"))
+    })
+    .expect("web focused input-group node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_group).expect("web input-group focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+            let leading =
+                vec![cx.opacity(0.5, move |cx| vec![decl_icon::icon(cx, ids::ui::SEARCH)])];
+            let trailing = vec![cx.text_props(fret_ui::element::TextProps {
+                layout: fret_ui::element::LayoutStyle::default(),
+                text: Arc::from("12 results"),
+                style: None,
+                color: None,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+            })];
+
+            let group = fret_ui_shadcn::InputGroup::new(model)
+                .a11y_label("InputGroupControl")
+                .leading(leading)
+                .trailing(trailing)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.h))),
+                )
+                .into_element(cx);
+
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Group,
+                    label: Some(Arc::from("InputGroupRoot")),
+                    ..Default::default()
+                },
+                move |_cx| vec![group],
+            )]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputGroupControl")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input-group control semantics node")
+        },
+    );
+
+    let root = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Group && n.label.as_deref() == Some("InputGroupRoot"))
+        .expect("missing semantics for group root");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, root.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-group-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("input-group-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("data-slot").is_some_and(|v| v == "input-group")
+            && n.computed_style
+                .get("boxShadow")
+                .is_some_and(|v| v.contains(" 3px"))
+    })
+    .expect("web focused invalid input-group node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_group).expect("web input-group invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+            let leading =
+                vec![cx.opacity(0.5, move |cx| vec![decl_icon::icon(cx, ids::ui::SEARCH)])];
+            let trailing = vec![cx.text_props(fret_ui::element::TextProps {
+                layout: fret_ui::element::LayoutStyle::default(),
+                text: Arc::from("12 results"),
+                style: None,
+                color: None,
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
+            })];
+
+            let group = fret_ui_shadcn::InputGroup::new(model)
+                .a11y_label("InputGroupControlInvalid")
+                .aria_invalid(true)
+                .leading(leading)
+                .trailing(trailing)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.h))),
+                )
+                .into_element(cx);
+
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Group,
+                    label: Some(Arc::from("InputGroupRootInvalid")),
+                    ..Default::default()
+                },
+                move |_cx| vec![group],
+            )]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("InputGroupControlInvalid")
+                })
+                .map(|n| n.id)
+                .expect("missing fret input-group control semantics node")
+        },
+    );
+
+    let root = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group && n.label.as_deref() == Some("InputGroupRootInvalid")
+        })
+        .expect("missing semantics for group root");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, root.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "input-group-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
+    let web = read_web_golden("button-group-select");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div" && n.attrs.get("role").is_some_and(|v| v == "group")
+    })
+    .expect("web button-group node");
+
+    let web_combobox = find_first(web_group, &|n| {
+        n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web combobox button");
+    let web_input = find_first(web_group, &|n| n.tag == "input").expect("web input node");
+    let web_send = find_first(web_group, &|n| {
+        n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == "Send")
+    })
+    .expect("web Send button");
+
+    let expected_combobox_r_tr =
+        web_corner_radius_effective_px_for(web_combobox, "borderTopRightRadius")
+            .expect("web combobox borderTopRightRadius");
+    let expected_input_border_l =
+        web_border_width_px_for(web_input, "borderLeftWidth").expect("web input borderLeftWidth");
+    let expected_input_r_tl = web_corner_radius_effective_px_for(web_input, "borderTopLeftRadius")
+        .expect("web input borderTopLeftRadius");
+    let expected_input_r_tr = web_corner_radius_effective_px_for(web_input, "borderTopRightRadius")
+        .expect("web input borderTopRightRadius");
+
+    let expected_gap = web_send.rect.x - (web_input.rect.x + web_input.rect.w);
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let select_value: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let select_open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+        let input_model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+        let radius = Px(8.0);
+
+        let select = fret_ui_shadcn::Select::new(select_value, select_open)
+            .placeholder(Arc::from(""))
+            .a11y_label("ButtonGroupSelectCombobox")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_combobox.rect.w)))
+                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_combobox.rect.h))),
+            )
+            .corner_radii_override(Corners {
+                top_left: radius,
+                bottom_left: radius,
+                top_right: Px(0.0),
+                bottom_right: Px(0.0),
+            })
+            .into_element(cx);
+
+        let input = fret_ui_shadcn::Input::new(input_model)
+            .a11y_label("ButtonGroupSelectInput")
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
+                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+            )
+            .border_left_width_override(Px(0.0))
+            .corner_radii_override(Corners {
+                top_left: Px(0.0),
+                bottom_left: Px(0.0),
+                top_right: radius,
+                bottom_right: radius,
+            })
+            .into_element(cx);
+
+        let left = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Group,
+                label: Some(Arc::from("ButtonGroupSelectLeft")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: fret_ui::element::LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |_cx| vec![select, input],
+                )]
+            },
+        );
+
+        let send = fret_ui_shadcn::Button::new("Send")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .size(fret_ui_shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+            .test_id("button-group-select.send")
+            .into_element(cx);
+
+        let group = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Group,
+                label: Some(Arc::from("ButtonGroupSelect")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: fret_ui::element::LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(8.0),
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |_cx| vec![left, send],
+                )]
+            },
+        );
+
+        vec![group]
+    });
+
+    let left_group = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupSelectLeft")
+        })
+        .expect("missing semantics for left group");
+    let send = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-select.send"))
+        .expect("missing semantics for Send button");
+
+    let actual_gap =
+        send.bounds.origin.x.0 - (left_group.bounds.origin.x.0 + left_group.bounds.size.width.0);
+    assert_close(
+        "button-group-select gap (left → send)",
+        actual_gap,
+        expected_gap,
+        1.0,
+    );
+
+    let combobox = snap
+        .nodes
+        .iter()
+        .find(|n| n.label.as_deref() == Some("ButtonGroupSelectCombobox"))
+        .expect("missing semantics for combobox");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField
+                && n.label.as_deref() == Some("ButtonGroupSelectInput")
+        })
+        .expect("missing semantics for input");
+
+    assert_close(
+        "button-group-select combobox width",
+        combobox.bounds.size.width.0,
+        web_combobox.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-select input width",
+        input.bounds.size.width.0,
+        web_input.rect.w,
+        1.0,
+    );
+
+    let quad_combobox = find_best_quad(&scene, combobox.bounds).expect("painted quad for combobox");
+    assert_close(
+        "button-group-select combobox radius tr",
+        quad_combobox.corners[1],
+        expected_combobox_r_tr,
+        1.0,
+    );
+
+    let quad_input = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_close(
+        "button-group-select input border-left",
+        quad_input.border[3],
+        expected_input_border_l,
+        0.2,
+    );
+    assert_close(
+        "button-group-select input radius tl",
+        quad_input.corners[0],
+        expected_input_r_tl,
+        1.0,
+    );
+    assert_close(
+        "button-group-select input radius tr",
+        quad_input.corners[1],
+        expected_input_r_tr,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_button_group_input_group_geometry_matches() {
+    let web = read_web_golden("button-group-input-group");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_outer = find_first(&theme.root, &|n| {
+        n.tag == "div" && n.attrs.get("role").is_some_and(|v| v == "group")
+    })
+    .expect("web outer group");
+
+    let web_left_button = find_first(web_outer, &|n| {
+        n.tag == "button" && (n.rect.w - 36.0).abs() <= 0.1
+    })
+    .expect("web left icon button");
+    let web_wrapper = find_first(web_outer, &|n| {
+        n.tag == "div"
+            && n.attrs.get("role").is_some_and(|v| v == "group")
+            && (n.rect.x - 44.0).abs() <= 0.2
+            && n.computed_style
+                .get("borderTopWidth")
+                .is_some_and(|v| v == "1px")
+    })
+    .expect("web wrapper group");
+    let web_input = find_first(web_wrapper, &|n| n.tag == "input").expect("web input node");
+
+    let expected_gap = web_wrapper.rect.x - (web_left_button.rect.x + web_left_button.rect.w);
+    let expected_wrapper_border_top =
+        web_border_width_px_for(web_wrapper, "borderTopWidth").expect("web wrapper borderTopWidth");
+    let expected_wrapper_r_tl =
+        web_corner_radius_effective_px_for(web_wrapper, "borderTopLeftRadius")
+            .expect("web wrapper borderTopLeftRadius");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let theme = fret_ui::Theme::global(&*cx.app).clone();
+        let border = theme.color_required("border");
+        let bg = theme.color_required("background");
+
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+
+        let left = fret_ui_shadcn::Button::new("")
+            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+            .size(fret_ui_shadcn::ButtonSize::Icon)
+            .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
+            .corner_radii_override(Corners::all(Px(9999.0)))
+            .test_id("button-group-input-group.left")
+            .into_element(cx);
+
+        let input = fret_ui_shadcn::Input::new(model)
+            .a11y_label("ButtonGroupInputGroupInput")
+            .refine_style(
+                ChromeRefinement {
+                    border_width: Some(fret_ui_kit::MetricRef::Px(Px(0.0))),
+                    radius: Some(fret_ui_kit::MetricRef::Px(Px(0.0))),
+                    ..Default::default()
+                }
+                .pr(Space::N2),
+            )
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
+                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+            )
+            .into_element(cx);
+
+        let tiny = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Button,
+                test_id: Some(Arc::from("button-group-input-group.tiny")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.width = fret_ui::element::Length::Px(Px(24.0));
+                            layout.size.height = fret_ui::element::Length::Px(Px(24.0));
+                            layout
+                        },
+                        background: Some(bg),
+                        border: fret_core::Edges::all(Px(0.0)),
+                        border_color: None,
+                        corner_radii: Corners::all(Px(9999.0)),
+                        ..Default::default()
+                    },
+                    |cx| vec![decl_icon::icon(cx, ids::ui::MORE_HORIZONTAL)],
+                )]
+            },
+        );
+
+        let right = cx.container(
+            fret_ui::element::ContainerProps {
+                layout: {
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.size.width = fret_ui::element::Length::Px(Px(36.0));
+                    layout.size.height = fret_ui::element::Length::Px(Px(36.0));
+                    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(-7.2));
+                    layout
+                },
+                padding: fret_core::Edges {
+                    top: Px(0.0),
+                    right: Px(12.0),
+                    bottom: Px(0.0),
+                    left: Px(0.0),
+                },
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: fret_ui::element::LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: fret_ui::element::MainAlign::Center,
+                        align: fret_ui::element::CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| vec![tiny],
+                )]
+            },
+        );
+
+        let wrapper = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Group,
+                label: Some(Arc::from("ButtonGroupInputGroupPill")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.width =
+                                fret_ui::element::Length::Px(Px(web_wrapper.rect.w));
+                            layout.size.height =
+                                fret_ui::element::Length::Px(Px(web_wrapper.rect.h));
+                            layout
+                        },
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        background: Some(bg),
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: Some(border),
+                        corner_radii: Corners::all(Px(9999.0)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.flex(
+                            fret_ui::element::FlexProps {
+                                layout: fret_ui::element::LayoutStyle::default(),
+                                direction: fret_core::Axis::Horizontal,
+                                gap: Px(0.0),
+                                padding: fret_core::Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::Start,
+                                align: fret_ui::element::CrossAlign::Stretch,
+                                wrap: false,
+                            },
+                            move |_cx| vec![input, right],
+                        )]
+                    },
+                )]
+            },
+        );
+
+        let group = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Group,
+                label: Some(Arc::from("ButtonGroupInputGroup")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.flex(
+                    fret_ui::element::FlexProps {
+                        layout: fret_ui::element::LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(8.0),
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: fret_ui::element::MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Stretch,
+                        wrap: false,
+                    },
+                    move |_cx| vec![left, wrapper],
+                )]
+            },
+        );
+
+        vec![group]
+    });
+
+    let group = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group && n.label.as_deref() == Some("ButtonGroupInputGroup")
+        })
+        .expect("missing semantics for outer group");
+    assert_close(
+        "button-group-input-group group width",
+        group.bounds.size.width.0,
+        web_outer.rect.w,
+        1.0,
+    );
+    assert_close(
+        "button-group-input-group group height",
+        group.bounds.size.height.0,
+        web_outer.rect.h,
+        1.0,
+    );
+
+    let left = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-input-group.left"))
+        .expect("missing left button semantics");
+    let wrapper = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Group
+                && n.label.as_deref() == Some("ButtonGroupInputGroupPill")
+        })
+        .expect("missing wrapper semantics");
+
+    let actual_gap =
+        wrapper.bounds.origin.x.0 - (left.bounds.origin.x.0 + left.bounds.size.width.0);
+    assert_close(
+        "button-group-input-group gap",
+        actual_gap,
+        expected_gap,
+        1.0,
+    );
+
+    let quad_wrapper = find_best_quad(&scene, wrapper.bounds).expect("painted quad for wrapper");
+    assert_close(
+        "button-group-input-group wrapper border-top",
+        quad_wrapper.border[0],
+        expected_wrapper_border_top,
+        0.2,
+    );
+    assert_close(
+        "button-group-input-group wrapper radius tl",
+        quad_wrapper.corners[0],
+        expected_wrapper_r_tl,
+        1.0,
+    );
+
+    let tiny = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("button-group-input-group.tiny"))
+        .expect("missing tiny control semantics");
+    assert_close(
+        "button-group-input-group tiny width",
+        tiny.bounds.size.width.0,
+        24.0,
+        0.5,
+    );
+    assert_close(
+        "button-group-input-group tiny height",
+        tiny.bounds.size.height.0,
+        24.0,
+        0.5,
     );
 }
 
@@ -314,6 +3116,108 @@ fn web_vs_fret_input_demo_control_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("input radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_input_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("input-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && n.attrs.get("aria-invalid").is_some_and(|v| v == "true")
+    })
+    .or_else(|| {
+        find_first(&theme.root, &|n| {
+            n.tag == "input" && (n.rect.h - 36.0).abs() <= 0.1
+        })
+    })
+    .expect("web input node");
+
+    let web_border_color = web_input
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Input::new(model)
+                .a11y_label("Input")
+                .aria_invalid(true)
+                .into_element(cx),
+        ]
+    });
+
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::TextField && n.label.as_deref() == Some("Input"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::TextField)
+        })
+        .expect("fret input semantics node");
+
+    let quad = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_color_close(
+        "input aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_input_group_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("input-group-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_group = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && n.attrs.get("data-slot").is_some_and(|v| v == "input-group")
+            && has_descendant_attr(n, "aria-invalid", "true")
+    })
+    .expect("web input-group node");
+
+    let web_border_color = web_group
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let web_w = web_group.rect.w;
+    let web_h = web_group.rect.h;
+
+    let (_snap, scene) = render_and_paint_in_bounds(CoreSize::new(Px(web_w), Px(web_h)), |cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::InputGroup::new(model)
+                .aria_invalid(true)
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for input-group");
+    assert_color_close(
+        "input-group aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
 }
 
 #[test]
@@ -439,6 +3343,59 @@ fn web_vs_fret_badge_outline_chrome_matches() {
         "Outline",
         fret_ui_shadcn::BadgeVariant::Outline,
     );
+}
+
+#[test]
+fn web_vs_fret_card_demo_chrome_matches() {
+    let web = read_web_golden("card-demo");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_card = find_first(&theme.root, &|n| {
+        if n.tag != "div" {
+            return false;
+        }
+        if !contains_text(n, "Login to your account") {
+            return false;
+        }
+        let border = web_border_width_px(n);
+        let radius = web_corner_radius_effective_px(n);
+        border.is_some_and(|v| (v - 1.0).abs() <= 0.1) && radius.is_some_and(|v| v >= 8.0)
+    })
+    .expect("web card container");
+
+    let web_border = web_border_width_px(web_card).expect("web borderTopWidth px");
+    let web_radius = web_corner_radius_effective_px(web_card).expect("web radius px");
+    let web_w = web_card.rect.w;
+    let web_h = web_card.rect.h;
+
+    let (_snap, scene) = render_and_paint(|cx| {
+        vec![
+            fret_ui_shadcn::Card::new(Vec::new())
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
+                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let target = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_w), Px(web_h)),
+    );
+    let quad = find_best_quad(&scene, target).expect("painted quad for card");
+
+    for (idx, edge) in quad.border.iter().enumerate() {
+        assert_close(&format!("card border[{idx}]"), *edge, web_border, 0.6);
+    }
+    for (idx, corner) in quad.corners.iter().enumerate() {
+        assert_close(&format!("card radius[{idx}]"), *corner, web_radius, 1.0);
+    }
 }
 
 #[test]
@@ -766,6 +3723,62 @@ fn web_vs_fret_button_demo_control_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("button radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_button_demo_focus_ring_matches() {
+    let web = read_web_golden("button-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_button = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.text.as_deref() == Some("Button")
+    })
+    .expect("web button node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_button).expect("web button focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            vec![
+                fret_ui_shadcn::Button::new("Button")
+                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+                .map(|n| n.id)
+                .expect("missing fret button semantics node")
+        },
+    );
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Button"))
+        .expect("missing semantics for button");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, button.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "button-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
 }
 
 #[test]
@@ -1188,6 +4201,175 @@ fn web_vs_fret_textarea_demo_control_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_textarea_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("textarea-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_textarea = find_first(&theme.root, &|n| {
+        n.tag == "textarea" && n.attrs.get("aria-invalid").is_some_and(|v| v == "true")
+    })
+    .expect("web textarea node");
+
+    let web_border_color = web_textarea
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+        vec![
+            fret_ui_shadcn::Textarea::new(model)
+                .a11y_label("TextareaInvalid")
+                .aria_invalid(true)
+                .into_element(cx),
+        ]
+    });
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField && n.label.as_deref() == Some("TextareaInvalid")
+        })
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::TextField)
+        })
+        .expect("fret textarea semantics node");
+
+    let quad = find_best_quad(&scene, textarea.bounds).expect("painted quad for textarea");
+    assert_color_close(
+        "textarea aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_textarea_demo_focus_ring_matches() {
+    let web = read_web_golden("textarea-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_textarea =
+        find_first(&theme.root, &|n| n.tag == "textarea").expect("web textarea node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_textarea).expect("web textarea focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Textarea::new(model)
+                    .a11y_label("TextareaFocus")
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("TextareaFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret textarea semantics node")
+        },
+    );
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::TextField && n.label.as_deref() == Some("TextareaFocus"))
+        .expect("missing semantics for textarea");
+
+    let ring_quad = find_focus_ring_quad(&scene, textarea.bounds, expected_ring_spread)
+        .expect("focus ring quad");
+    assert_color_close(
+        "textarea-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_textarea_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("textarea-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_textarea =
+        find_first(&theme.root, &|n| n.tag == "textarea").expect("web textarea node");
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_textarea).expect("web textarea invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<String> = cx.app.models_mut().insert(String::new());
+            vec![
+                fret_ui_shadcn::Textarea::new(model)
+                    .a11y_label("TextareaInvalidFocus")
+                    .aria_invalid(true)
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::TextField
+                        && n.label.as_deref() == Some("TextareaInvalidFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret textarea semantics node")
+        },
+    );
+
+    let textarea = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::TextField && n.label.as_deref() == Some("TextareaInvalidFocus")
+        })
+        .expect("missing semantics for textarea");
+
+    let ring_quad = find_focus_ring_quad(&scene, textarea.bounds, expected_ring_spread)
+        .expect("focus ring quad");
+    assert_color_close(
+        "textarea-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
 fn web_vs_fret_select_scrollable_trigger_chrome_matches() {
     let web = read_web_golden("select-scrollable");
     let theme = web
@@ -1240,6 +4422,189 @@ fn web_vs_fret_select_scrollable_trigger_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_select_demo_aria_invalid_border_color_matches() {
+    let web = read_web_golden("select-demo.invalid");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|v| v == "combobox")
+            && n.attrs.get("aria-invalid").is_some_and(|v| v == "true")
+    })
+    .expect("web select trigger node");
+
+    let web_border_color = web_trigger
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web borderTopColor");
+
+    let (snap, scene) = render_and_paint(|cx| {
+        let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            fret_ui_shadcn::Select::new(model, open)
+                .a11y_label("SelectInvalid")
+                .aria_invalid(true)
+                .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                .into_element(cx),
+        ]
+    });
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectInvalid"))
+        .or_else(|| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::ComboBox)
+        })
+        .expect("fret select semantics node");
+
+    let quad = find_best_quad(&scene, select.bounds).expect("painted quad for select trigger");
+    assert_color_close(
+        "select aria-invalid border color",
+        quad.border_color,
+        web_border_color,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_focus_ring_matches() {
+    let web = read_web_golden("select-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web select trigger node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_trigger).expect("web select focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Select::new(model, open)
+                    .a11y_label("SelectFocus")
+                    .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                    .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret select semantics node")
+        },
+    );
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectFocus"))
+        .expect("missing semantics for select");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, select.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "select-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_aria_invalid_focus_ring_matches() {
+    let web = read_web_golden("select-demo.invalid-focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web select trigger node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_trigger).expect("web select invalid focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let open: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Select::new(model, open)
+                    .a11y_label("SelectInvalidFocus")
+                    .aria_invalid(true)
+                    .item(fret_ui_shadcn::SelectItem::new("one", "One"))
+                    .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
+                    .refine_layout(
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.w)))
+                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.h))),
+                    )
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::ComboBox
+                        && n.label.as_deref() == Some("SelectInvalidFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret select semantics node")
+        },
+    );
+
+    let select = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some("SelectInvalidFocus")
+        })
+        .expect("missing semantics for select");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, select.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "select-demo invalid focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
 fn web_vs_fret_switch_demo_track_chrome_matches() {
     let web = read_web_golden("switch-demo");
     let theme = web
@@ -1282,6 +4647,62 @@ fn web_vs_fret_switch_demo_track_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("switch radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_switch_demo_focus_ring_matches() {
+    let web = read_web_golden("switch-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_switch = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.id.as_deref() == Some("airplane-mode")
+            && n.attrs.get("role").is_some_and(|v| v == "switch")
+    })
+    .expect("web switch track node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_switch).expect("web switch focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Switch::new(model)
+                    .a11y_label("SwitchFocus")
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::Switch && n.label.as_deref() == Some("SwitchFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret switch semantics node")
+        },
+    );
+
+    let switch = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Switch && n.label.as_deref() == Some("SwitchFocus"))
+        .expect("missing semantics for switch");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, switch.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "switch-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
 }
 
 #[test]
@@ -1331,6 +4752,62 @@ fn web_vs_fret_checkbox_demo_control_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("checkbox radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_checkbox_demo_focus_ring_matches() {
+    let web = read_web_golden("checkbox-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_checkbox = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.id.as_deref() == Some("terms")
+            && n.attrs.get("role").is_some_and(|v| v == "checkbox")
+    })
+    .expect("web checkbox node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_checkbox).expect("web checkbox focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let model: fret_runtime::Model<bool> = cx.app.models_mut().insert(false);
+            vec![
+                fret_ui_shadcn::Checkbox::new(model)
+                    .a11y_label("CheckboxFocus")
+                    .into_element(cx),
+            ]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::Checkbox && n.label.as_deref() == Some("CheckboxFocus")
+                })
+                .map(|n| n.id)
+                .expect("missing fret checkbox semantics node")
+        },
+    );
+
+    let checkbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Checkbox && n.label.as_deref() == Some("CheckboxFocus"))
+        .expect("missing semantics for checkbox");
+
+    let ring_quad = find_focus_ring_quad(&scene, checkbox.bounds, expected_ring_spread)
+        .expect("focus ring quad");
+    assert_color_close(
+        "checkbox-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
 }
 
 #[test]
@@ -1446,7 +4923,9 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
         for op in scene.ops() {
             let SceneOp::Quad {
                 rect,
+                background,
                 border,
+                border_color,
                 corner_radii,
                 ..
             } = *op
@@ -1461,6 +4940,8 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
                 candidates.push(PaintedQuad {
                     rect,
                     border: [border.top.0, border.right.0, border.bottom.0, border.left.0],
+                    border_color,
+                    background,
                     corners: [
                         corner_radii.top_left.0,
                         corner_radii.top_right.0,
@@ -1502,6 +4983,70 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
     for (idx, corner) in quad.corners.iter().enumerate() {
         assert_close(&format!("radio radius[{idx}]"), *corner, web_radius, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_radio_group_demo_focus_ring_matches() {
+    let web = read_web_golden("radio-group-demo.focus");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_radio = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|v| v == "radio")
+            && n.id.as_deref() == Some("r2")
+    })
+    .expect("web radio control node");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_radio).expect("web radio focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            let items = vec![
+                fret_ui_shadcn::RadioGroupItem::new("default", "Default"),
+                fret_ui_shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
+                fret_ui_shadcn::RadioGroupItem::new("compact", "Compact"),
+            ];
+
+            let group = items.into_iter().fold(
+                fret_ui_shadcn::RadioGroup::uncontrolled(Some("comfortable")).a11y_label("Options"),
+                |group, item| group.item(item),
+            );
+
+            vec![group.into_element(cx)]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::RadioButton
+                        && n.label.as_deref() == Some("Comfortable")
+                })
+                .map(|n| n.id)
+                .expect("missing fret radio semantics node")
+        },
+    );
+
+    let radio_row = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Comfortable"))
+        .expect("missing semantics for radio");
+
+    let target = Rect::new(radio_row.bounds.origin, CoreSize::new(Px(16.0), Px(16.0)));
+    let ring_quad =
+        find_focus_ring_quad(&scene, target, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "radio-group-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
 }
 
 #[test]

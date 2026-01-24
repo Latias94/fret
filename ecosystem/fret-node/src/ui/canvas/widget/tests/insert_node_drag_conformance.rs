@@ -24,7 +24,13 @@ fn insert_node_drag_does_not_start_until_threshold() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let window = AppWindowId::default();
     let pointer_id = PointerId(0);
     cx.window = Some(window);
@@ -73,7 +79,13 @@ fn insert_node_drag_starts_after_threshold() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let window = AppWindowId::default();
     let pointer_id = PointerId(0);
     cx.window = Some(window);

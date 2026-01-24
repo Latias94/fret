@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, RowProps,
-    TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
 fn muted_foreground(theme: &Theme) -> fret_core::Color {
     theme
@@ -373,21 +372,13 @@ impl FieldLegend {
             }
         };
 
-        let text = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size,
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        });
+        let text = ui::label(cx, self.text)
+            .text_size_px(size)
+            .line_height_px(line_height)
+            .font_medium()
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx);
 
         // Upstream has `mb-3` on the legend.
         let layout = decl_style::layout_style(
@@ -553,21 +544,13 @@ impl FieldTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        ui::label(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_medium()
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx)
     }
 }
 
@@ -609,21 +592,14 @@ impl FieldLabel {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: decl_style::layout_style(&theme, self.layout),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })
+        ui::label(cx, self.text)
+            .layout(self.layout)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_medium()
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx)
     }
 }
 
@@ -650,21 +626,15 @@ impl FieldDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .w_full()
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .into_element(cx)
     }
 }
 
@@ -691,21 +661,14 @@ impl FieldError {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        })
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .into_element(cx)
     }
 }
 

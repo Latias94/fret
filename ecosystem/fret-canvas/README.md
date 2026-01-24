@@ -93,6 +93,7 @@ behind an opt-in feature:
 
 - Enable: `fret-canvas/ui`
 - Provides: `fret_canvas::ui::{canvas_surface_panel, pan_zoom_canvas_surface_panel, canvas_tool_router_panel, ...}`
+- Includes a convenience preset: `fret_canvas::ui::editor_pan_zoom_canvas_surface_panel` (wheel pan + Ctrl/Cmd+wheel zoom).
 
 This keeps the default crate portable and lightweight while allowing users to depend on a single
 canvas crate when building editor-grade interactive surfaces.

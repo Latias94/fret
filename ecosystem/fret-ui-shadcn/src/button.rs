@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
-use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, PressableProps, TextProps};
+use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
 };
 
 fn contains_svg_icon_like(el: &AnyElement) -> bool {
@@ -164,6 +165,17 @@ pub struct Button {
     size: ButtonSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    border_override: Option<Edges>,
+    border_width_override: BorderWidthOverride,
+    corner_radii_override: Option<Corners>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct BorderWidthOverride {
+    pub top: Option<Px>,
+    pub right: Option<Px>,
+    pub bottom: Option<Px>,
+    pub left: Option<Px>,
 }
 
 impl std::fmt::Debug for Button {
@@ -180,6 +192,9 @@ impl std::fmt::Debug for Button {
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("border_override", &self.border_override)
+            .field("border_width_override", &self.border_width_override)
+            .field("corner_radii_override", &self.corner_radii_override)
             .finish()
     }
 }
@@ -199,6 +214,9 @@ impl Button {
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
             layout: fret_ui_kit::LayoutRefinement::default(),
+            border_override: None,
+            border_width_override: BorderWidthOverride::default(),
+            corner_radii_override: None,
         }
     }
 
@@ -252,6 +270,48 @@ impl Button {
         self
     }
 
+    pub fn border_width_override(mut self, border: BorderWidthOverride) -> Self {
+        self.border_width_override = border;
+        self
+    }
+
+    pub fn border_top_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.top = Some(border);
+        self
+    }
+
+    pub fn border_right_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.right = Some(border);
+        self
+    }
+
+    pub fn border_bottom_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.bottom = Some(border);
+        self
+    }
+
+    pub fn border_left_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.left = Some(border);
+        self
+    }
+
+    /// Overrides per-edge border widths (in px) for this button's chrome.
+    ///
+    /// This is primarily used by shadcn recipes like `button-group` (`border-l-0`).
+    pub fn border_override(mut self, border: Edges) -> Self {
+        self.border_override = Some(border);
+        self
+    }
+
+    /// Overrides per-corner radii (in px) for this button's chrome.
+    ///
+    /// This is primarily used by shadcn recipes like `button-group` (`rounded-l-none`,
+    /// `rounded-r-none`).
+    pub fn corner_radii_override(mut self, corners: Corners) -> Self {
+        self.corner_radii_override = Some(corners);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -300,19 +360,31 @@ impl Button {
             let on_activate = self.on_activate;
             let toggle_model = self.toggle_model;
             let a11y_label = self.label.clone();
-            let disabled = self.disabled;
+            let disabled_explicit = self.disabled;
+            let disabled = disabled_explicit
+                || command
+                    .as_ref()
+                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
             let variant = self.variant;
+            let border_override = self.border_override;
+            let border_width_override = self.border_width_override;
+            let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(&theme, self.size);
+            let text_px = text_style.size;
+            let text_weight = text_style.weight;
+            let text_line_height = text_style
+                .line_height
+                .unwrap_or_else(|| theme.metric_required("font.line_height"));
             let is_icon = is_icon_button;
             let has_svg_icon_like_children =
                 !is_icon_button && self.children.iter().any(contains_svg_icon_like);
             let children = self.children;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-                cx.pressable_dispatch_command_opt(command);
+                cx.pressable_dispatch_command_if_enabled_opt(command);
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate(on_activate);
                 }
@@ -377,6 +449,24 @@ impl Button {
                     decl_style::container_props(&theme, chrome, LayoutRefinement::default());
                 chrome_props.shadow = shadow;
                 chrome_props.layout.size = pressable_layout.size;
+                if let Some(border) = border_override {
+                    chrome_props.border = border;
+                }
+                if let Some(border) = border_width_override.top {
+                    chrome_props.border.top = border;
+                }
+                if let Some(border) = border_width_override.right {
+                    chrome_props.border.right = border;
+                }
+                if let Some(border) = border_width_override.bottom {
+                    chrome_props.border.bottom = border;
+                }
+                if let Some(border) = border_width_override.left {
+                    chrome_props.border.left = border;
+                }
+                if let Some(corners) = corner_radii_override {
+                    chrome_props.corner_radii = corners;
+                }
 
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
@@ -402,14 +492,15 @@ impl Button {
                     };
 
                     let content = if children.is_empty() {
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: a11y_label.clone(),
-                            style: Some(text_style),
-                            color: Some(fg),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                        })]
+                        vec![
+                            ui::text(cx, a11y_label.clone())
+                                .text_size_px(text_px)
+                                .line_height_px(text_line_height)
+                                .font_weight(text_weight)
+                                .nowrap()
+                                .text_color(ColorRef::Color(fg))
+                                .into_element(cx),
+                        ]
                     } else {
                         children.clone()
                     };
@@ -446,11 +537,16 @@ mod tests {
         Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_runtime::{
+        CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
+        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
+    };
     use fret_ui::SvgSource;
     use fret_ui::Theme;
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
+    use std::collections::HashMap;
 
     struct FakeServices;
 
@@ -728,5 +824,187 @@ mod tests {
             panic!("expected chrome container element");
         };
         assert_eq!(props.border_color, Some(ring));
+    }
+
+    #[test]
+    fn command_gating_button_is_disabled_by_window_command_enabled_service() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.disabled-command");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Disabled Command").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-button-enabled-service",
+            |cx| {
+                vec![
+                    Button::new("Hello")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-button")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-button"))
+            .expect("expected a semantics node for the button test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_button_is_disabled_when_widget_action_is_unavailable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-button-action-availability",
+            |cx| {
+                vec![
+                    Button::new("Hello")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-button")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-button"))
+            .expect("expected a semantics node for the button test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_button_prefers_window_command_gating_snapshot_when_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        app.set_global(WindowCommandGatingService::default());
+        app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
+            let input_ctx = crate::command_gating::default_input_context(app);
+            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut availability: HashMap<CommandId, bool> = HashMap::new();
+            availability.insert(cmd.clone(), false);
+            let _token = svc.push_snapshot(
+                window,
+                WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                    .with_action_availability(Some(Arc::new(availability))),
+            );
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-button-gating-snapshot",
+            |cx| {
+                vec![
+                    Button::new("Hello")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-button")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-button"))
+            .expect("expected a semantics node for the button test_id");
+        assert!(node.flags.disabled);
     }
 }

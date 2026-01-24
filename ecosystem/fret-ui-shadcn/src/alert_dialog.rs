@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
-};
+use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    RenderTransformProps, SemanticsProps, SizeStyle, TextProps,
+    RenderTransformProps, SemanticsProps, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -15,7 +13,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    Radius, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -41,6 +39,8 @@ pub struct AlertDialog {
     open: Model<bool>,
     overlay_color: Option<Color>,
     window_padding: Space,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for AlertDialog {
@@ -49,6 +49,8 @@ impl std::fmt::Debug for AlertDialog {
             .field("open", &"<model>")
             .field("overlay_color", &self.overlay_color)
             .field("window_padding", &self.window_padding)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -59,6 +61,8 @@ impl AlertDialog {
             open,
             overlay_color: None,
             window_padding: Space::N6,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -86,6 +90,18 @@ impl AlertDialog {
 
     pub fn window_padding(mut self, padding: Space) -> Self {
         self.window_padding = padding;
+        self
+    }
+
+    /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -157,6 +173,7 @@ impl AlertDialog {
                             border: Edges::all(Px(0.0)),
                             border_color: None,
                             corner_radii: Corners::all(Px(0.0)),
+                            ..Default::default()
                         },
                         |_cx| Vec::new(),
                     );
@@ -254,7 +271,9 @@ impl AlertDialog {
                 let options = radix_alert_dialog::dialog_options_for_alert_dialog(
                     cx,
                     open_id,
-                    radix_alert_dialog::AlertDialogOptions::default(),
+                    radix_alert_dialog::AlertDialogOptions::default()
+                        .on_open_auto_focus(self.on_open_auto_focus.clone())
+                        .on_close_auto_focus(self.on_close_auto_focus.clone()),
                 );
                 let initial_focus = is_open.then_some(options.initial_focus).flatten();
                 let options = options.initial_focus(initial_focus);
@@ -450,21 +469,14 @@ impl AlertDialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let title = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::SEMIBOLD,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: Some(-0.02),
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        });
+        let title = ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_semibold()
+            .letter_spacing_em(-0.02)
+            .text_color(ColorRef::Color(fg))
+            .nowrap()
+            .into_element(cx);
         crate::a11y_modal::register_modal_title(cx.app, title.id);
         title
     }
@@ -497,21 +509,14 @@ impl AlertDialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let description = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: px,
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        });
+        let description = ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .text_color(ColorRef::Color(fg))
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .into_element(cx);
         crate::a11y_modal::register_modal_description(cx.app, description.id);
         description
     }
@@ -625,9 +630,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{
-        Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
@@ -838,6 +841,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -883,6 +887,7 @@ mod tests {
                 position: Point::new(Px(4.0), Px(4.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1028,6 +1033,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1151,6 +1157,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

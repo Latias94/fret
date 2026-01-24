@@ -63,6 +63,10 @@ Extract open overlay states that require non-click input (the script infers the 
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo command-dialog --modes=open --update --baseUrl=http://localhost:4020`
 
+DropdownMenu open-state examples (checkboxes / radio group):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-checkboxes dropdown-menu-radio-group --modes=open --update --baseUrl=http://localhost:4020`
+
 Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --openSelector=\"[data-fret-golden-target] button[role='combobox']\"`
@@ -102,6 +106,10 @@ For keyboard-driven submenus, prefer `keys=<selector>@<keys>` (no global `--open
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo --modes=open --update --baseUrl=http://localhost:4020 --openVariants="submenu-kbd=[data-fret-golden-target] [data-slot='context-menu-trigger']" --openSteps="keys=[data-slot='context-menu-sub-trigger']@ArrowRight"`
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts menubar-demo --modes=open --update --baseUrl=http://localhost:4020 --openVariants="submenu-kbd=[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']" --openSteps="keys=[data-slot='menubar-sub-trigger']@ArrowRight"`
+
+Extract Menubar top-level open variants (useful for checkbox/radio item gates):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts menubar-demo --modes=open --update --baseUrl=http://localhost:4020 --openAction=click --openVariants="view=[data-fret-golden-target] button[data-slot='menubar-trigger']:nth-of-type(3);profiles=[data-fret-golden-target] button[data-slot='menubar-trigger']:nth-of-type(4)"`
 
 Extract a constrained-viewport open variant (useful for max-height/clamp/scroll behavior):
 
@@ -319,3 +327,10 @@ Current layout gates include:
 - `--outDir=<path>`
 - `--update` (overwrite existing files; env: `UPDATE_GOLDENS=1`)
 - `--timeoutMs=60000` (env: `TIMEOUT_MS=60000`)
+
+## Coverage quick check
+
+To see which shadcn web golden keys are referenced by Rust tests (rough heuristic, but useful for
+planning):
+
+`powershell -ExecutionPolicy Bypass -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowMissing`

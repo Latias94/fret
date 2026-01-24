@@ -22,7 +22,16 @@ This audit compares Fret’s shadcn-aligned `Textarea` against the upstream shad
 
 - Pass: Exposes `SemanticsRole::TextField` and supports `a11y_label`.
 
+### States (`aria-invalid`)
+
+- Pass: `aria-invalid=true` border color matches shadcn-web (`textarea-demo.invalid`).
+- Pass: Focus ring thickness (`ring-[3px]`) and invalid ring color overrides match shadcn-web focus variants
+  (`textarea-demo.focus`, `textarea-demo.invalid-focus`).
+
 ## Validation
 
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_textarea_demo_geometry`).
+- Chrome + focus ring gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
+  (`web_vs_fret_textarea_demo_control_chrome_matches`, `web_vs_fret_textarea_demo_aria_invalid_border_color_matches`,
+  `web_vs_fret_textarea_demo_focus_ring_matches`, `web_vs_fret_textarea_demo_aria_invalid_focus_ring_matches`).

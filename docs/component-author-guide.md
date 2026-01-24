@@ -90,6 +90,29 @@ Practical note:
 - Consider gating this behind a feature (e.g. `app-integration`) so pure UI crates can remain `fret-ui`-only.
   Feature names are a convention, not a requirement.
 
+### 2.1) (Recommended) Opt into the unified `ui()` builder surface
+
+If your component type is meant to be consumed by third-party crates and apps, prefer opting into
+the ecosystem-level fluent authoring surface (ADR 0175):
+
+- `value.ui().px_3().py_2().w_full().into_element(cx)`
+
+This keeps styling/layout composition consistent across the ecosystem and reduces “one-off” wrapper
+utilities that fragment authoring.
+
+Minimal integration contract (ecosystem-level, stable-ish):
+
+- Implement `fret_ui_kit::UiPatchTarget` so `.ui()` becomes available via `fret_ui_kit::UiExt`.
+- Implement `fret_ui_kit::UiIntoElement` so `.into_element(cx)` is available from `UiBuilder`.
+- Optionally implement `fret_ui_kit::UiSupportsChrome` / `UiSupportsLayout` to enable the full
+  fluent method set (padding, sizing, radius, etc.).
+
+Guidance:
+
+- Keep your public constructor surface “policy-free” (no implicit theme install, no global hooks).
+- Accept children as `impl IntoIterator<Item = AnyElement>` and store them as `Vec<AnyElement>`
+  internally (call-site flexibility; internal stability).
+
 ## 3) Commands + shortcuts: always go through `CommandId` + keymap
 
 If an action can be triggered by keyboard/menu/palette, it should be a `CommandId`.

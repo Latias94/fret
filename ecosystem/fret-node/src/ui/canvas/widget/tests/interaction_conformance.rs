@@ -187,8 +187,13 @@ fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Try moving the node to x=80 (right edge would be 160), should clamp to max_x=20.
     assert!(node_drag::handle_node_drag_move(
         &mut canvas,
@@ -309,8 +314,13 @@ fn child_node_drag_expands_group_when_expand_parent_is_true() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Move the node to x=80 (right edge would be 160): group should expand to include it.
     assert!(node_drag::handle_node_drag_move(
         &mut canvas,
@@ -437,8 +447,13 @@ fn node_drag_respects_per_node_extent_rect() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Attempt to move to x=80 (right edge would be 160); extent allows max_x=20.
     assert!(node_drag::handle_node_drag_move(
         &mut canvas,
@@ -577,8 +592,13 @@ fn multi_node_drag_clamps_by_selection_bounds_in_node_extent_rect() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(node_drag::handle_node_drag_move(
         &mut canvas,
         &mut cx,
@@ -723,8 +743,13 @@ fn node_resize_expands_group_when_expand_parent_is_true() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Attempt to resize width by +80 (right edge would be at x=170): group should expand.
     assert!(node_resize::handle_node_resize_move(
         &mut canvas,
@@ -853,8 +878,13 @@ fn group_resize_is_previewed_and_committed_on_pointer_up() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(group_resize::handle_group_resize_move(
         &mut canvas,
         &mut cx,
@@ -917,8 +947,13 @@ fn background_click_does_not_start_marquee_when_elements_not_selectable() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(600.0), Px(500.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -969,8 +1004,13 @@ fn background_click_starts_pending_marquee_and_clears_selection_on_up() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(600.0), Px(500.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1021,8 +1061,13 @@ fn shift_clicking_a_node_does_not_clear_selection() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(20.0), Px(10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1081,8 +1126,13 @@ fn marquee_replace_mode_replaces_selection_even_with_ctrl_pressed() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1148,8 +1198,13 @@ fn marquee_selects_connected_edges_for_selected_nodes() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1216,8 +1271,13 @@ fn marquee_selects_connected_edges_for_selected_nodes_with_store() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1284,8 +1344,13 @@ fn marquee_does_not_select_edges_when_edge_selectable_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1347,8 +1412,13 @@ fn marquee_does_not_select_edges_when_box_select_edges_is_none() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1424,8 +1494,13 @@ fn marquee_selects_edges_only_when_both_endpoints_selected_in_both_endpoints_mod
     // Cover only node A (exclude B) -> edge should not be selected.
     {
         let snapshot = canvas.sync_view_state(&mut host);
-        let mut cx = event_cx(&mut host, &mut services, bounds);
-
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         let start = Point::new(Px(-10.0), Px(-10.0));
         assert!(left_click::handle_left_click_pointer_down(
             &mut canvas,
@@ -1459,8 +1534,13 @@ fn marquee_selects_edges_only_when_both_endpoints_selected_in_both_endpoints_mod
     // Cover both A and B -> edge should be selected.
     {
         let snapshot = canvas.sync_view_state(&mut host);
-        let mut cx = event_cx(&mut host, &mut services, bounds);
-
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         let start = Point::new(Px(-10.0), Px(-10.0));
         assert!(left_click::handle_left_click_pointer_down(
             &mut canvas,
@@ -1523,8 +1603,13 @@ fn multi_selection_active_does_not_clear_edge_selection_when_clicking_node() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Click inside node B with multi-selection key held.
     // (In `make_test_graph_edge_reconnect`, node B is at (320, 0) with size (220, 80).)
     let pos = Point::new(Px(330.0), Px(10.0));
@@ -1608,8 +1693,13 @@ fn edge_click_clears_node_selection_when_not_in_multi_select_mode() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -1692,8 +1782,13 @@ fn edge_click_does_not_select_edge_when_edge_selectable_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -1764,8 +1859,13 @@ fn node_click_does_not_select_node_when_node_selectable_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     // Node A is at (0, 0) with size (220, 80).
     let pos = Point::new(Px(110.0), Px(40.0));
     assert!(left_click::handle_left_click_pointer_down(
@@ -1821,8 +1921,13 @@ fn node_drag_does_not_start_when_node_draggable_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(5.0), Px(2.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1875,8 +1980,13 @@ fn node_drag_does_not_start_when_nodes_draggable_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(5.0), Px(2.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -1952,8 +2062,13 @@ fn marquee_does_not_select_nodes_when_node_selectable_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let start = Point::new(Px(-10.0), Px(-10.0));
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
@@ -2010,8 +2125,13 @@ fn port_click_does_not_start_wire_drag_when_nodes_connectable_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -2058,8 +2178,13 @@ fn port_click_starts_wire_drag_when_node_connectable_true_even_if_nodes_connecta
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -2101,8 +2226,13 @@ fn port_click_does_not_start_wire_drag_when_port_connectable_start_is_false() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -2144,8 +2274,13 @@ fn ctrl_click_port_yanks_edges_and_starts_reconnect_with_store() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -2203,8 +2338,13 @@ fn port_connectable_override_allows_start_even_when_nodes_connectable_is_false()
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
@@ -2362,8 +2502,13 @@ fn connectable_false_prevents_connecting_to_target_port() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
         kind: WireDragKind::New {
             from: out,
@@ -2403,8 +2548,13 @@ fn edge_reconnect_requires_drag_threshold_before_starting_wire_drag() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.interaction.edge_drag = Some(EdgeDrag {
         edge,
         start_pos: from_center,
@@ -2477,8 +2627,13 @@ fn edge_reconnect_drag_cancels_when_endpoint_not_reconnectable() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.interaction.edge_drag = Some(EdgeDrag {
         edge,
         start_pos: from_center,
@@ -2768,8 +2923,13 @@ fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     assert!(super::super::wire_drag::handle_wire_left_up(
         &mut canvas,
         &mut cx,
@@ -2805,8 +2965,13 @@ fn window_focus_lost_cancels_wire_drag() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.event(&mut cx, &fret_core::Event::WindowFocusChanged(false));
     assert!(canvas.interaction.wire_drag.is_none());
 
@@ -2844,8 +3009,13 @@ fn pointer_left_cancels_wire_drag() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.event(
         &mut cx,
         &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
@@ -2894,8 +3064,13 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.interaction.node_drag = Some(super::super::super::state::NodeDrag {
         primary: a,
         node_ids: vec![a],
@@ -2962,8 +3137,13 @@ fn right_click_cancels_wire_drag_and_opens_context_menu() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     canvas.event(
         &mut cx,
         &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
@@ -2997,8 +3177,13 @@ fn right_pan_defers_context_menu_until_pointer_up() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let pos = Point::new(Px(400.0), Px(300.0));
     canvas.event(
         &mut cx,
@@ -3022,6 +3207,7 @@ fn right_pan_defers_context_menu_until_pointer_up() {
             position: pos,
             button: fret_core::MouseButton::Right,
             modifiers: Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
@@ -3049,8 +3235,13 @@ fn right_pan_drag_does_not_open_context_menu() {
         Size::new(Px(800.0), Px(600.0)),
     );
     let mut services = NullServices::default();
-    let mut cx = event_cx(&mut host, &mut services, bounds);
-
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
     let mut snapshot = canvas.sync_view_state(cx.app);
     let start_screen = Point::new(Px(100.0), Px(100.0));
     let start_local = start_screen;
@@ -3122,6 +3313,7 @@ fn right_pan_drag_does_not_open_context_menu() {
             position: Point::new(Px(0.0), Px(0.0)),
             button: fret_core::MouseButton::Right,
             modifiers: Modifiers::default(),
+            is_click: false,
             click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),

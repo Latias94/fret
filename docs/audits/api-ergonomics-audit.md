@@ -29,6 +29,53 @@ However, ergonomics are currently limited by:
 - inconsistent use of the unified builder surface in examples/templates,
 - lack of a single “default” composition path that third-party crates can implement once and reuse everywhere.
 
+## Progress (Living Checklist)
+
+This document is meant to stay “live” while we iterate. Update this section whenever we land meaningful ergonomics work.
+
+- [x] ADR 0189 clarifies the policy: foreign UI integration is isolated surfaces only.
+- [x] `fret-kit` provides an ecosystem-level golden-path helper for embedded viewports:
+  - host-recorded surface: `EmbeddedViewportRecord` + `drive_embedded_viewport()`
+  - foreign-hosted surface: `EmbeddedViewportForeignUi` + `set_foreign_ui(...)` + `drive_embedded_viewport_foreign()`
+  - Evidence: `ecosystem/fret-kit/src/interop/embedded_viewport.rs`
+- [x] Examples for both integration styles exist:
+  - `apps/fret-examples/src/todo_interop_kit_demo.rs`
+  - `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`
+- [x] Command palette gating consumes the data-only snapshots:
+  - `WindowCommandEnabledService` (explicit overrides) and `InputContext`/`WhenExpr` (catalog gating).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`, `ecosystem/fret-ui-shadcn/src/command.rs`.
+- [x] Desktop system menus consume the data-only snapshots (Windows/macOS):
+  - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs`, `crates/fret-launch/src/runner/desktop/macos_menu.rs`.
+- [x] A consumption-focused per-window gating snapshot aggregates all data-only inputs (P0):
+  - `WindowCommandGatingSnapshot` unifies `InputContext` + overrides (+ optional dispatch-path availability snapshot).
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs`,
+    `crates/fret-runtime/src/window_command_action_availability.rs`,
+    `crates/fret-ui/src/tree/commands.rs`,
+    `crates/fret-launch/src/runner/desktop/windows_menu.rs`,
+    `crates/fret-launch/src/runner/desktop/macos_menu.rs`,
+    `ecosystem/fret-bootstrap/src/ui_app_driver.rs`.
+- [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
+- [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
+  - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{collapsible,command,input_group,table,tabs,toggle_group}.rs`
+- [x] Consolidate third-party “component integration contract” guidance (P2) with a short checklist.
+  - Evidence: `docs/component-authoring-contracts.md`
+  - Evidence: `docs/component-author-guide.md`
+
+## Comparison Matrix (Iced vs GPUI vs Fret)
+
+This table is intentionally focused on “what an app author experiences” and “how an ecosystem author plugs in”.
+
+| Dimension | Iced | GPUI | Fret (current) | Fret (direction) |
+| --- | --- | --- | --- | --- |
+| Default authoring loop | `update/view` MVU | `Render` rebuild per frame | declarative element tree, explicit invalidation + models | GPUI-like rebuild + externalized state, but with explicit invalidation tooling |
+| Message routing | typed `Message` everywhere | typed actions / callbacks | commands + effects; MVU helper exists in `fret-kit` | typed MVU/program surfaces in ecosystem, keep kernel minimal |
+| UI tree model | immediate rebuild | immediate rebuild | long-term goal is rebuild; today has retained prototype + declarative elements | unify around declarative rebuild with stable identity |
+| State ownership | user `State` | framework entities | app-owned models + element state scopes | keep app-owned models; improve sugar to make it “feel like one way” |
+| Layout & styling | framework-provided widgets, theme | framework styling + components | mechanism in `fret-ui`, policy/taxonomy in ecosystem | keep policy in ecosystem; improve density + defaults |
+| Ecosystem integration | widget crates, renderer backends | component crates, entities | ecosystem crates (`fret-ui-kit` / `fret-ui-shadcn` / `fret-kit`) | strengthen a single integration contract for third-party crates |
+| Mixing other runtimes | possible but complex | not typical | supported via isolated surfaces only (ADR 0189) | keep this boundary explicit and ergonomic |
+
 ## Evidence (Current State)
 
 ### `Vec<AnyElement>` friction hotspots
@@ -122,6 +169,17 @@ This should be source-compatible for callers passing `Vec`, while enabling:
 - iterators,
 - incremental composition without intermediate allocations.
 
+Practical rollout plan (to avoid a “flag day”):
+
+- P1.1 (kernel-friendly, low risk): update `crates/fret-ui` authoring helpers so closures return `impl IntoIterator<Item = AnyElement>` consistently.
+- P1.2 (ecosystem surface): update `fret-ui-shadcn` public constructors/setters to accept `impl IntoIterator<Item = AnyElement>` and internally `collect()` into stored `Vec` fields.
+- Keep `AnyElementIterExt::elements()` as the escape hatch for iterator-heavy call sites until all APIs are migrated.
+
+Acceptance:
+
+- examples can compose children using iterators without `vec![...]` at call sites,
+- third-party crates can expose `fn into_elements(...) -> impl Iterator<Item = AnyElement>` patterns naturally.
+
 ### P2 — Standardize “third-party component integration contract”
 
 Define and document a small set of traits a third-party component should implement once:
@@ -137,7 +195,17 @@ Make this guidance part of:
 
 ### P3 — Formalize “foreign UI embedding” as isolated surfaces
 
-Add an ADR (or update existing integration docs) stating:
+ADR 0189 formalizes the policy (and the kernel already supports the mechanism). The recommended ecosystem entrypoint is `fret-kit`’s embedded viewport helper surface.
+
+Supported surface (ecosystem-level):
+
+- `EmbeddedViewportSurface` owned by window state
+- `EmbeddedViewportForeignUi` (object-safe boundary) registered per window via `set_foreign_ui(...)`
+- single-call driver wiring: `drive_embedded_viewport_foreign()`
+
+This enables “reuse other ecosystems” without collapsing focus/IME/a11y contracts.
+
+Policy statement (keep):
 
 - Supported: embed foreign UI as a render target surface + event forwarding.
 - Not supported: mixing foreign widget trees as first-class Fret elements (no shared a11y/focus/IME semantics).
@@ -207,7 +275,7 @@ authoring surface polish (density, defaults, unified patterns), not core capabil
 ## Prototype: `fret_kit::mvu` (Typed Commands Without String Parsing)
 
 To test how much of the Iced “typed message” ergonomics we can adopt without changing kernel
-contracts, this worktree adds a small ecosystem-level MVU helper:
+contracts, `fret-kit` provides a small ecosystem-level MVU helper:
 
 - `ecosystem/fret-kit/src/mvu.rs`
   - `Program` trait (`init/update/view`) with `State` + `Message`.
@@ -227,12 +295,14 @@ Limitations (current):
 
 ## Code Size Snapshot (TODO demo family)
 
-Line counts (worktree):
+Line counts (snapshot):
 
 - `apps/fret-examples/src/todo_demo.rs`: 536
 - `apps/fret-examples/src/todo_mvu_demo.rs`: 518
+- `apps/fret-examples/src/todo_mvu_interop_demo.rs`: 313
 - `apps/fret-examples/src/todo_interop_demo.rs`: 512
-- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 336
+- `apps/fret-examples/src/todo_interop_kit_demo.rs`: 306
+- `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`: 271
 
 Interpretation:
 
@@ -244,3 +314,5 @@ Recent ergonomic improvement:
 
 - `fret-kit` now includes `interop::embedded_viewport` to reduce “isolated embedding” boilerplate
   (publish target id as models + global viewport input filtering + surface panel helper).
+- `interop::embedded_viewport::{EmbeddedViewportUiAppDriverExt, EmbeddedViewportMvuUiAppDriverExt}`
+  further reduce wiring boilerplate (install input + frame recording in one call).

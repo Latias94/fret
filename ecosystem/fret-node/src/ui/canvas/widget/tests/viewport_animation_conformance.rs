@@ -44,7 +44,13 @@ fn frame_view_animates_over_timer_ticks_and_reaches_target() {
             break;
         }
         let snap = canvas.sync_view_state(&mut host);
-        let mut cx = event_cx(&mut host, &mut services, bounds);
+        let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+        let mut cx = event_cx(
+            &mut host,
+            &mut services,
+            bounds,
+            &mut prevented_default_actions,
+        );
         canvas.handle_timer(&mut cx, &snap, token);
     }
     assert!(

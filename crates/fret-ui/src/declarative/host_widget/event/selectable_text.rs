@@ -54,9 +54,9 @@ pub(super) fn handle_selectable_text<H: UiHost>(
 
             let command: Option<&'static str> = match *key {
                 fret_core::KeyCode::KeyA if modifiers.ctrl || modifiers.meta => {
-                    Some("text.select_all")
+                    Some("edit.select_all")
                 }
-                fret_core::KeyCode::KeyC if modifiers.ctrl || modifiers.meta => Some("text.copy"),
+                fret_core::KeyCode::KeyC if modifiers.ctrl || modifiers.meta => Some("edit.copy"),
                 fret_core::KeyCode::ArrowLeft => {
                     let word = modifiers.ctrl || modifiers.alt;
                     Some(match (modifiers.shift, word) {

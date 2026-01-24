@@ -14,7 +14,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
@@ -497,14 +497,18 @@ fn calendar_icon_button<H: UiHost>(
 
         let style = crate::button::button_text_style(&theme, size);
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![cx.text_props(TextProps {
-                layout: Default::default(),
-                text: text.clone(),
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })]
+            let mut label = ui::label(cx, text.clone())
+                .text_size_px(style.size)
+                .font_weight(style.weight)
+                .text_color(ColorRef::Color(fg))
+                .nowrap();
+            if let Some(line_height) = style.line_height {
+                label = label.line_height_px(line_height);
+            }
+            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                label = label.letter_spacing_em(letter_spacing_em);
+            }
+            vec![label.into_element(cx)]
         };
 
         (pressable, chrome_props, children)
@@ -566,14 +570,6 @@ fn calendar_range_day_cell<H: UiHost>(
     let text_sm_line_height = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
         .unwrap_or_else(|| theme.metric_required("font.line_height"));
-
-    let text_style = TextStyle {
-        font: Default::default(),
-        size: text_sm_px,
-        weight: FontWeight::MEDIUM,
-        line_height: Some(text_sm_line_height),
-        ..Default::default()
-    };
 
     control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
         if focus_candidate
@@ -660,14 +656,15 @@ fn calendar_range_day_cell<H: UiHost>(
         };
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![cx.text_props(TextProps {
-                layout: Default::default(),
-                text: day_text.clone(),
-                style: Some(text_style),
-                color: Some(if disabled { muted_fg } else { fg }),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })]
+            vec![
+                ui::label(cx, day_text.clone())
+                    .text_size_px(text_sm_px)
+                    .line_height_px(text_sm_line_height)
+                    .font_medium()
+                    .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                    .nowrap()
+                    .into_element(cx),
+            ]
         };
 
         (pressable, chrome_props, children)

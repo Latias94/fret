@@ -59,6 +59,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -88,10 +89,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -131,7 +129,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
 
     impl<H: UiHost> Widget<H> for CountNormalDown {
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Bubble {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
@@ -233,6 +231,545 @@ fn outside_press_observer_respects_overlay_render_transform() {
 }
 
 #[test]
+fn outside_press_observer_is_delayed_for_touch_until_pointer_up() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let clicks = app.models_mut().insert(0u32);
+    let observer = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&observer), Some(0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&observer), Some(1));
+    assert_eq!(app.models().get_copied(&clicks), Some(1));
+}
+
+#[test]
+fn dock_drag_suppresses_outside_press_observer_dispatch_window_globally() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct CountNormalDown {
+        normal: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for CountNormalDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            true
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Bubble {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.normal, |v: &mut u32| *v += 1);
+                cx.stop_propagation();
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_down = app.models_mut().insert(0u32);
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CountNormalDown {
+        normal: underlay_down.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Baseline: without dock drag, outside-press observer should run (click-through).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&observer_down), Some(1));
+    assert_eq!(app.models().get_copied(&underlay_down), Some(1));
+
+    // Start a dock drag session for a different pointer id: suppression is window-global.
+    app.begin_cross_window_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(1),
+        "expected dock drag to suppress observer outside-press dispatch"
+    );
+    assert_eq!(app.models().get_copied(&underlay_down), Some(2));
+}
+
+#[test]
+fn outside_press_observer_is_canceled_for_touch_drags() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let clicks = app.models_mut().insert(0u32);
+    let observer = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(ClickCounter {
+        clicks: clicks.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(30.0), Px(10.0)),
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..fret_core::MouseButtons::default()
+            },
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(30.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Touch,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&observer), Some(0));
+}
+
+#[test]
+fn outside_press_observer_is_suppressed_during_dock_drag() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let underlay_clicks = app.models_mut().insert(0u32);
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(ClickCounter {
+        clicks: underlay_clicks.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Establish baseline: without a dock drag, outside-press observer should run and still allow
+    // click-through to reach the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&underlay_clicks), Some(1));
+    assert_eq!(app.models().get_copied(&observer_down), Some(1));
+
+    // Start a dock drag session for this window (different pointer id).
+    app.begin_drag_with_kind(
+        fret_core::PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // With an active dock drag, outside-press observer must not run (ADR 0072), but hit-tested
+    // dispatch should still reach the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(20.0), Px(20.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(20.0), Px(20.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&underlay_clicks), Some(2));
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(1),
+        "expected outside-press observer to be suppressed during dock drag"
+    );
+}
+
+#[test]
+fn outside_press_observer_is_suppressed_while_other_pointer_is_captured_in_different_layer() {
+    struct CaptureOnDown;
+
+    impl<H: UiHost> Widget<H> for CaptureOnDown {
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                cx.capture_pointer(cx.node);
+            }
+        }
+    }
+
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+    }
+
+    let window = AppWindowId::default();
+    let mut app = crate::test_host::TestHost::new();
+    let observer_down = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CaptureOnDown);
+    ui.set_root(base);
+
+    let overlay_root = ui.create_node(RecordObserverDown {
+        observer: observer_down.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+    ui.set_layer_visible(layer, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // First pointer establishes capture in the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    // Reset the observer counter; we only care about the second pointer while capture is active.
+    let _ = app
+        .models_mut()
+        .update(&observer_down, |v: &mut u32| *v = 0);
+
+    // Second pointer should not dismiss overlays while the first pointer is captured elsewhere.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(20.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&observer_down),
+        Some(0),
+        "expected outside-press observer dispatch to be suppressed while another pointer is captured"
+    );
+}
+
+#[test]
 fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
     struct RecordObserverDown {
         observer: Model<u32>,
@@ -243,10 +780,7 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -286,7 +820,7 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
 
     impl<H: UiHost> Widget<H> for CountNormalDown {
         fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Normal {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Bubble {
                 return;
             }
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
@@ -415,7 +949,7 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -449,10 +983,10 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
     let mut app = crate::test_host::TestHost::new();
     let observer_phase = app
         .models_mut()
-        .insert(fret_runtime::InputDispatchPhase::Normal);
+        .insert(fret_runtime::InputDispatchPhase::Bubble);
     let normal_phase = app
         .models_mut()
-        .insert(fret_runtime::InputDispatchPhase::Observer);
+        .insert(fret_runtime::InputDispatchPhase::Preview);
 
     let mut ui = UiTree::new();
     ui.set_window(window);
@@ -490,12 +1024,12 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
 
     assert_eq!(
         app.models().get_copied(&observer_phase),
-        Some(fret_runtime::InputDispatchPhase::Observer),
+        Some(fret_runtime::InputDispatchPhase::Preview),
         "observer pass should tag InputContext as Observer"
     );
     assert_eq!(
         app.models().get_copied(&normal_phase),
-        Some(fret_runtime::InputDispatchPhase::Normal),
+        Some(fret_runtime::InputDispatchPhase::Bubble),
         "normal hit-tested dispatch should tag InputContext as Normal"
     );
 }
@@ -511,10 +1045,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -608,6 +1139,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -637,10 +1169,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
             false
         }
 
-        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Observer {
-                return;
-            }
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
                 let _ = cx
                     .app
@@ -735,6 +1264,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,

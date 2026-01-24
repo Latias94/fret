@@ -1,3 +1,4 @@
+use crate::scale::canvas_units_from_screen_px;
 use fret_core::{Point, Px, Rect, Transform2D};
 
 /// Default zoom base used by canvas wheel zoom curves (ADR 0159).
@@ -76,6 +77,26 @@ impl PanZoom2D {
         t.inverse().is_some().then_some(t)
     }
 
+    /// Converts a screen-space delta in logical pixels into a canvas-space delta under this view.
+    #[inline]
+    pub fn canvas_delta_from_screen_delta(&self, dx_screen_px: f32, dy_screen_px: f32) -> Point {
+        let zoom = Self::sanitize_zoom(self.zoom, 1.0);
+        Point::new(
+            Px(canvas_units_from_screen_px(dx_screen_px, zoom)),
+            Px(canvas_units_from_screen_px(dy_screen_px, zoom)),
+        )
+    }
+
+    /// Applies a screen-space delta (logical pixels) as a canvas-space pan delta.
+    ///
+    /// Positive deltas move the content in the same direction as pointer dragging.
+    #[inline]
+    pub fn pan_by_screen_delta(&mut self, dx_screen_px: f32, dy_screen_px: f32) {
+        let delta = self.canvas_delta_from_screen_delta(dx_screen_px, dy_screen_px);
+        self.pan.x = Px(self.pan.x.0 + delta.x.0);
+        self.pan.y = Px(self.pan.y.0 + delta.y.0);
+    }
+
     /// Maps a window-space point into canvas space.
     pub fn screen_to_canvas(&self, bounds: Rect, screen: Point) -> Point {
         let zoom = Self::sanitize_zoom(self.zoom, 1.0);
@@ -146,5 +167,17 @@ mod tests {
 
         assert!((before.x.0 - after.x.0).abs() <= 1.0e-6);
         assert!((before.y.0 - after.y.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn pan_by_screen_delta_scales_by_zoom() {
+        let mut view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+
+        view.pan_by_screen_delta(10.0, -6.0);
+        assert!((view.pan.x.0 - 5.0).abs() <= 1.0e-9);
+        assert!((view.pan.y.0 - (-3.0)).abs() <= 1.0e-9);
     }
 }
