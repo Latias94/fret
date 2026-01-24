@@ -67,6 +67,7 @@ pub mod prelude {
         AnyElement, AnyElementIterExt, HoverRegionProps, Length, SemanticsProps, TextProps,
     };
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+    pub use fret_ui_kit::declarative::ModelWatchExt;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::mvu::{MessageRouter, Program as MvuProgram};
