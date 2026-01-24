@@ -94,6 +94,44 @@ fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
     }
 }
 
+fn apply_non_modal_dismissible_layer_policy<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    open: bool,
+    dismissable_branches: Vec<NodeId>,
+    consume_outside_pointer_events: bool,
+    disable_outside_pointer_events: bool,
+) {
+    ui.set_layer_pointer_down_outside_branches(
+        layer,
+        if open {
+            dismissable_branches
+        } else {
+            Vec::new()
+        },
+    );
+    ui.set_layer_consume_pointer_down_outside_events(layer, consume_outside_pointer_events && open);
+    ui.set_layer_pointer_occlusion(
+        layer,
+        if open && disable_outside_pointer_events {
+            PointerOcclusion::BlockMouseExceptScroll
+        } else {
+            PointerOcclusion::None
+        },
+    );
+
+    // Non-modal overlays are click-through during close transitions: when `present=true` but
+    // `open=false`, they must not participate in hit-testing or the outside-press observer pass.
+    OverlayLayer::non_modal_dismissible(true, open).apply(ui, layer);
+}
+
+fn clear_non_modal_dismissible_layer_policy<H: UiHost>(ui: &mut UiTree<H>, layer: UiLayerId) {
+    OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
+}
+
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -615,34 +653,14 @@ pub fn render<H: UiHost>(
                     .unwrap_or(open_now);
             }
 
-            let dismissable_branches = if open_now {
-                dismissable_branch_nodes.clone()
-            } else {
-                Vec::new()
-            };
-            ui.set_layer_pointer_down_outside_branches(entry.layer, dismissable_branches);
-            ui.set_layer_consume_pointer_down_outside_events(
+            apply_non_modal_dismissible_layer_policy(
+                ui,
                 entry.layer,
-                consume_outside_pointer_events && effective_interactive,
+                effective_interactive,
+                dismissable_branch_nodes.clone(),
+                consume_outside_pointer_events,
+                disable_outside_pointer_events,
             );
-
-            // Non-modal overlays are click-through during close transitions:
-            // when `present=true` but `open=false`, they must not participate in hit-testing or
-            // the outside-press observer pass.
-            OverlayLayer::non_modal_dismissible(true, effective_interactive).apply(ui, entry.layer);
-
-            // Radix `disableOutsidePointerEvents` outcome: prevent pointer interactions from
-            // reaching the underlay while the overlay is open, but allow scroll wheel routing to
-            // the underlay scroll target.
-            let occlusion = if open_now
-                && disable_outside_pointer_events
-                && !suspend_pointer_gating_for_capture
-            {
-                fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
-            } else {
-                fret_ui::tree::PointerOcclusion::None
-            };
-            ui.set_layer_pointer_occlusion(entry.layer, occlusion);
 
             // Radix-aligned focus restore: when a non-modal overlay closes but remains mounted for
             // a close transition (`present=true`), restore focus deterministically if focus is
@@ -796,11 +814,7 @@ pub fn render<H: UiHost>(
                 || (!focus_cleared_by_modal_scope
                     && focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer)))
         {
-            OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
-            ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
-            ui.set_layer_consume_pointer_down_outside_events(layer, false);
-            ui.set_layer_pointer_occlusion(layer, fret_ui::tree::PointerOcclusion::None);
-
+            clear_non_modal_dismissible_layer_policy(ui, layer);
             let mut req = AutoFocusRequestCx::new();
             if let Some(hook) = hook.as_ref() {
                 let mut host = OverlayAutoFocusHost { ui, app, window };
@@ -816,7 +830,6 @@ pub fn render<H: UiHost>(
             if req.default_prevented() {
                 continue;
             }
-
             if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                 ui,
                 app,
@@ -827,10 +840,7 @@ pub fn render<H: UiHost>(
                 ui.set_focus(Some(node));
             }
         } else {
-            OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
-            ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
-            ui.set_layer_consume_pointer_down_outside_events(layer, false);
-            ui.set_layer_pointer_occlusion(layer, fret_ui::tree::PointerOcclusion::None);
+            clear_non_modal_dismissible_layer_policy(ui, layer);
         }
     }
 

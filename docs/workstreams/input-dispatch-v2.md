@@ -94,6 +94,20 @@ shortcuts scoped to itself via its own keymap/handlers.
 
 This requires a stable, explicit integration seam (either a dedicated service snapshot, or a “command target” concept).
 
+### Overlay + Pointer Occlusion (P0, ui-kit policy)
+
+See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed overlay arbitration plan.
+
+- Popovers use `PointerOcclusion::BlockMouseExceptScroll` for Radix `disableOutsidePointerEvents`.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- Dock-drag overlay hygiene does not assume `PointerId(0)`; it scopes to active drag sessions (ADR 0072).
+  - Evidence: `crates/fret-runtime/src/ui_host.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- Desktop runner internal-drag routing uses the active drag session's `PointerId` for cross-window docking tear-off.
+  - Evidence: `crates/fret-launch/src/runner/desktop/{mod.rs,app_handler.rs}`
+- Policy normalization: factor non-modal dismissible overlay input policy (outside-press branches, consume-outside flags,
+  and pointer occlusion) into shared helpers to keep `present` vs `interactive` invariants consistent across overlays.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+
 ## Compatibility with “per-frame rebuilt” UI
 
 Fret can migrate from a retained `UiTree` to a per-frame rebuilt element tree over time, but this contract remains valid
