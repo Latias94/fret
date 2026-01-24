@@ -94,6 +94,14 @@ shortcuts scoped to itself via its own keymap/handlers.
 
 This requires a stable, explicit integration seam (either a dedicated service snapshot, or a “command target” concept).
 
+Implementation notes:
+
+- `WindowCommandGatingService` supports a per-window override stack so nested overlays can publish gating snapshots
+  without clobbering each other.
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs`
+- The ui-app command palette pushes a snapshot on open and pops it when closed (including “close via UI” paths).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+
 ### Overlay + Pointer Occlusion (P0, ui-kit policy)
 
 See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed overlay arbitration plan.
