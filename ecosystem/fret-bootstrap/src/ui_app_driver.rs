@@ -1745,6 +1745,10 @@ fn ui_app_render<S>(
         });
         if drive.request_redraw {
             app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
         let mut injected_any = false;
