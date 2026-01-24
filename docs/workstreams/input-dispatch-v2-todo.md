@@ -96,9 +96,11 @@ Keep this list short and evidence-backed:
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
 - [x] IDV2-ovl-051 Stabilize submenu safe-hover + timer routing (menu hover intent under caching/multi-layer routing).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/*`, shadcn tests in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
-- [~] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract. (branch: `feat/menu-open-modality-entry-focus`)
+- [x] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (`MenuInitialFocusTargets`, modality-gated `initial_focus`),
     `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (wires focus targets).
+  - Conformance: shadcn tests cover keyboard-open entry focus and pointer-open “focus content, not first item” for
+    DropdownMenu / Menubar / ContextMenu.
   - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers).
 - [x] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
   - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
