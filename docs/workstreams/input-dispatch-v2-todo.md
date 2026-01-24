@@ -96,7 +96,7 @@ Keep this list short and evidence-backed:
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
 - [x] IDV2-ovl-051 Stabilize submenu safe-hover + timer routing (menu hover intent under caching/multi-layer routing).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/*`, shadcn tests in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
-- [~] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract. (branch: `feat/menu-open-modality-entry-focus`)
+- [x] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (`MenuInitialFocusTargets`, modality-gated `initial_focus`),
     `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (wires focus targets).
   - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers).
