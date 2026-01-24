@@ -367,6 +367,46 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return CommandAvailability::NotHandled;
         };
 
+        let hook = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::action::CommandAvailabilityActionHooks::default,
+            |hooks| hooks.on_command_availability.clone(),
+        );
+        if let Some(hook) = hook {
+            struct AvailabilityHookHost<'a, H: UiHost> {
+                app: &'a mut H,
+            }
+
+            impl<H: UiHost> crate::action::UiCommandAvailabilityActionHost for AvailabilityHookHost<'_, H> {
+                fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                    self.app.models_mut()
+                }
+            }
+
+            let focus_in_subtree = cx
+                .focus
+                .map(|focus| cx.tree.is_descendant(cx.node, focus))
+                .unwrap_or(false);
+            let mut host = AvailabilityHookHost { app: &mut *cx.app };
+            let availability = hook(
+                &mut host,
+                crate::action::CommandAvailabilityActionCx {
+                    window,
+                    target: self.element,
+                    node: cx.node,
+                    focus: cx.focus,
+                    focus_in_subtree,
+                    input_ctx: cx.input_ctx.clone(),
+                },
+                command.clone(),
+            );
+            if availability != CommandAvailability::NotHandled {
+                return availability;
+            }
+        }
+
         match instance {
             ElementInstance::SelectableText(props) => {
                 if cx.focus != Some(cx.node) {

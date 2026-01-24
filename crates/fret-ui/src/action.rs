@@ -484,6 +484,34 @@ pub(crate) struct CommandActionHooks {
     pub on_command: Option<OnCommand>,
 }
 
+pub trait UiCommandAvailabilityActionHost {
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore;
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandAvailabilityActionCx {
+    pub window: fret_core::AppWindowId,
+    pub target: crate::GlobalElementId,
+    pub node: fret_core::NodeId,
+    pub focus: Option<fret_core::NodeId>,
+    pub focus_in_subtree: bool,
+    pub input_ctx: fret_runtime::InputContext,
+}
+
+pub type OnCommandAvailability = Arc<
+    dyn Fn(
+            &mut dyn UiCommandAvailabilityActionHost,
+            CommandAvailabilityActionCx,
+            CommandId,
+        ) -> crate::widget::CommandAvailability
+        + 'static,
+>;
+
+#[derive(Default)]
+pub(crate) struct CommandAvailabilityActionHooks {
+    pub on_command_availability: Option<OnCommandAvailability>,
+}
+
 pub type OnTimer = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;
 
 #[derive(Default)]

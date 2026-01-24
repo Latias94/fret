@@ -95,6 +95,11 @@ Keep this list short and evidence-backed:
 - [x] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
   - Evidence: `crates/fret-runtime/src/window_menu_bar_focus.rs`, `crates/fret-ui/src/tree/commands.rs`, `ecosystem/fret-kit/src/workspace_shell.rs`
   - Tests: `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs` (`action_availability_snapshot_publishes_focus_menu_bar_gating`)
+- [x] IDV2-avail-043 Allow declarative components to report command availability via policy hooks.
+  - Evidence: `crates/fret-ui/src/action.rs` (`OnCommandAvailability`, `CommandAvailabilityActionCx`),
+    `crates/fret-ui/src/elements/cx.rs` (`command_on_command_availability_for`),
+    `crates/fret-ui/src/declarative/host_widget.rs` (invokes hook during `command_availability`)
+  - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`declarative_command_availability_hooks_participate_in_dispatch_path_queries`)
 
 ## MVP5 — Overlay / Menu Parity (Radix-shadcn Hand Feel)
 

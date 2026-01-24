@@ -13,6 +13,8 @@ Scope: this document focuses on `CommandScope::Widget` commands and the question
 
 - `UiTree::command_availability` and `UiTree::is_command_available`
 - GPUI naming parity aliases: `UiTree::action_availability` and `UiTree::is_action_available`
+- Declarative policy hook: `ElementContext::command_on_command_availability_for` (lets component-layer
+  surfaces participate in dispatch-path availability without adding new core widget types).
 
 ### Snapshot API (runner / menus / command palette)
 

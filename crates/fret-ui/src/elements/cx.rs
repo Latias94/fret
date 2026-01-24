@@ -9,12 +9,13 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
 use crate::action::{
-    CommandActionHooks, DismissibleActionHooks, KeyActionHooks, OnActivate, OnCommand,
-    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel,
-    OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
-    OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer,
-    OnWheel, PointerActionHooks, PressableActionHooks, PressableHoverActionHooks,
-    PressablePointerUpResult, RovingActionHooks, TimerActionHooks,
+    CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks, KeyActionHooks,
+    OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest, OnDismissiblePointerMove,
+    OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp,
+    OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange,
+    OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel, PointerActionHooks,
+    PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
+    TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -1569,6 +1570,66 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn command_clear_on_command_for(&mut self, element: GlobalElementId) {
         self.with_state_for(element, CommandActionHooks::default, |hooks| {
             hooks.on_command = None;
+        });
+    }
+
+    pub fn command_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = Some(handler);
+        });
+    }
+
+    pub fn command_add_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = match hooks.on_command_availability.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        let availability = prev(host, cx.clone(), command.clone());
+                        if availability != crate::widget::CommandAvailability::NotHandled {
+                            return availability;
+                        }
+                        next(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_prepend_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = match hooks.on_command_availability.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        let availability = next(host, cx.clone(), command.clone());
+                        if availability != crate::widget::CommandAvailability::NotHandled {
+                            return availability;
+                        }
+                        prev(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_clear_on_command_availability_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = None;
         });
     }
 
