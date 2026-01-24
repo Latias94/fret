@@ -2391,6 +2391,23 @@ fn preview_overlay(
                                 .on_select(CMD_MENU_DROPDOWN_APPLE),
                         ),
                         shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("More")
+                                .test_id("ui-gallery-dropdown-item-more")
+                                .close_on_select(false)
+                                .submenu(vec![
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Nested action")
+                                            .test_id("ui-gallery-dropdown-submenu-item-nested")
+                                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                                    ),
+                                    shadcn::DropdownMenuEntry::Separator,
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Nested disabled")
+                                            .disabled(true),
+                                    ),
+                                ]),
+                        ),
+                        shadcn::DropdownMenuEntry::Item(
                             shadcn::DropdownMenuItem::new("Orange")
                                 .on_select(CMD_MENU_DROPDOWN_ORANGE),
                         ),

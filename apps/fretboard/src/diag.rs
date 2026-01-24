@@ -636,6 +636,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     "tools/diag-scripts/ui-gallery-overlay-torture.json",
                     "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
                     "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+                    "tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json",
                     "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
                     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
                     "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
