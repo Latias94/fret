@@ -446,9 +446,10 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    let notify_target = self.notify_target_for_node(node_id);
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
-                        node_id,
+                        notify_target,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Notify,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -579,9 +580,10 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                let notify_target = self.notify_target_for_node(node_id);
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
-                    node_id,
+                    notify_target,
                     Invalidation::Paint,
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -1597,8 +1599,9 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            node_id,
+                            notify_target,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -1712,8 +1715,9 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            node_id,
+                            notify_target,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -1840,8 +1844,9 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            let notify_target = self.notify_target_for_node(node_id);
                             self.mark_invalidation_with_source(
-                                node_id,
+                                notify_target,
                                 Invalidation::Paint,
                                 UiDebugInvalidationSource::Notify,
                             );
@@ -1958,8 +1963,9 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            let notify_target = self.notify_target_for_node(node_id);
                             self.mark_invalidation_with_source(
-                                node_id,
+                                notify_target,
                                 Invalidation::Paint,
                                 UiDebugInvalidationSource::Notify,
                             );
@@ -2072,8 +2078,9 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            node_id,
+                            notify_target,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -2615,9 +2622,10 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    let notify_target = self.notify_target_for_node(node_id);
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
-                        node_id,
+                        notify_target,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Notify,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -2674,9 +2682,10 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                let notify_target = self.notify_target_for_node(node_id);
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
-                    node_id,
+                    notify_target,
                     Invalidation::Paint,
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),

@@ -2770,7 +2770,7 @@ impl UiDirtyViewV1 {
         };
 
         Self {
-            root_node: key_to_u64(dirty.root),
+            root_node: key_to_u64(dirty.view.0),
             root_element: dirty.element.map(|e| e.0),
             source: Some(source.to_string()),
             detail: dirty.detail.as_str().map(|s| s.to_string()),

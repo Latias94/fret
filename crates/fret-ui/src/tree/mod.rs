@@ -7,7 +7,7 @@ use fret_core::time::{Duration, Instant};
 use fret_core::{
     AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
     SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
-    UiServices,
+    UiServices, ViewId,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
@@ -339,7 +339,7 @@ impl UiDebugInvalidationDetail {
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugDirtyView {
-    pub root: NodeId,
+    pub view: ViewId,
     pub element: Option<GlobalElementId>,
     pub source: UiDebugInvalidationSource,
     pub detail: UiDebugInvalidationDetail,
@@ -1055,7 +1055,7 @@ impl<H: UiHost> UiTree<H> {
                     UiDebugInvalidationDetail::Unknown,
                 ));
             self.debug_dirty_views.push(UiDebugDirtyView {
-                root,
+                view: ViewId(root),
                 element,
                 source,
                 detail,
@@ -1550,6 +1550,11 @@ impl<H: UiHost> UiTree<H> {
             current = n.parent;
         }
         None
+    }
+
+    fn notify_target_for_node(&self, node: NodeId) -> NodeId {
+        self.nearest_view_cache_root(node)
+            .unwrap_or_else(|| self.node_root(node).unwrap_or(node))
     }
 
     fn collapse_observation_index_to_view_cache_roots(
