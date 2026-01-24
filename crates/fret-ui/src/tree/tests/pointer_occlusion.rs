@@ -83,6 +83,32 @@ impl<H: UiHost> Widget<H> for OutsidePressObserverCounter {
     }
 }
 
+struct PointerMoveObserverCounter {
+    observer_moves: Model<u32>,
+}
+
+impl<H: UiHost> Widget<H> for PointerMoveObserverCounter {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+        if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+            return;
+        }
+        if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&self.observer_moves, |v: &mut u32| *v += 1);
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
 struct CornerCaptureOverlay {
     moves: Model<u32>,
     downs: Model<u32>,
@@ -419,6 +445,73 @@ fn pointer_occlusion_does_not_suppress_outside_press_observer_dispatch() {
         app.models().get_copied(&counts.downs).unwrap_or(0),
         0,
         "expected pointer occlusion to block underlay pointer-down dispatch"
+    );
+}
+
+#[test]
+fn pointer_occlusion_allows_pointer_move_observer_dispatch_while_suppressing_underlay_hit_dispatch() {
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let counts = Counts {
+        moves: app.models_mut().insert(0u32),
+        downs: app.models_mut().insert(0u32),
+        wheels: app.models_mut().insert(0u32),
+    };
+    let observer_moves = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CounterWidget {
+        counts: counts.clone(),
+    });
+    ui.set_root(base);
+
+    let overlay_root = ui.create_node(PointerMoveObserverCounter {
+        observer_moves: observer_moves.clone(),
+    });
+    let overlay_layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_wants_pointer_move_events(overlay_layer, true);
+    ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouseExceptScroll);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.focus(), None);
+    assert_eq!(ui.captured(), None);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: Point::new(Px(10.0), Px(10.0)),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&counts.moves).unwrap_or(0),
+        0,
+        "expected pointer occlusion to suppress underlay pointer-move dispatch"
+    );
+    assert_eq!(
+        app.models().get_copied(&observer_moves).unwrap_or(0),
+        1,
+        "expected pointer occlusion to still dispatch pointer-move observer events to overlays"
+    );
+    assert_eq!(ui.focus(), None, "observer pass must not change focus");
+    assert_eq!(
+        ui.captured(),
+        None,
+        "observer pass must not capture pointers"
     );
 }
 
