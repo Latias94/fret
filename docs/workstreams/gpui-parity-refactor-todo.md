@@ -39,6 +39,12 @@ Each TODO is labeled:
 - ID: `GPUI-MVP{n}-{area}-{nnn}`
 - Status: `[ ]` (open), `[~]` (in progress), `[x]` (done), `[!]` (blocked)
 
+## Near-term Focus (keep tight)
+
+- **MVP2-cache-005**: remove the “skip sweep under reuse” stopgap by relying on explicit cache-root liveness (reachability-based).
+- **MVP5-virt-001**: move VirtualList window derivation toward prepaint so window shifts do not necessarily imply cache-root rerender.
+- **MVP5-perf-002**: turn “notify hotspots no longer dominated by Pressable” into a repeatable perf gate (top bundles + callsites).
+
 ## Baseline (Verified Existing Building Blocks)
 
 Keep this list short and evidence-backed:
@@ -145,20 +151,26 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     On the first cache-hit frame, stale-but-live overlay nodes (e.g. `ui-gallery-dialog-trigger`) could be swept, which then removed overlay semantics roots and broke scripted clicks.
   - Fix (v1):
     - When a cache root transitions into reuse, touch the existing retained subtree (`last_seen_frame`) and (re-)record subtree elements so cache-hit frames keep liveness/identity consistent.
-    - Note: early iterations used a global "skip sweep while reuse exists" safety gate; MVP2-cache-005 replaces this with re-enabled sweeping under reuse.
+    - Note: early iterations used a global "skip sweep while reuse exists" safety gate; MVP2-cache-005 aims to remove this by making liveness explicit under reuse.
   - Diagnostics: export `removed_subtrees` records in bundles to make sweeping behavior explainable from a single run.
   - Evidence (pass):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
-  - Follow-up: reintroduce declarative GC under cache-root reuse with explicit, GPUI-aligned liveness (dirty views + notify + cache key gates) rather than the global "skip sweep when reuse exists" stopgap.
+  - Follow-up: remove the global "skip sweep when reuse exists" stopgap by relying on explicit liveness under cache-root reuse (dirty views + notify + cache key gates).
 
 - [~] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
   - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Root cause: `node_layer` (and cache-root discovery) relies on parent pointers; a reachable subtree can retain correct child edges but have a broken parent chain,
     causing GC to mis-classify it as detached and sweep it on a cache-hit frame.
-  - Fix (v1):
+  - Progress (v1):
     - Repair parent pointers for nodes reachable from layer roots before running the declarative GC sweep (`UiTree::repair_parent_pointers_from_layer_roots`).
-    - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness), rather than a global "skip sweep when reuse exists" gate.
+    - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness) as the foundation for removing the global stopgap gate.
+  - Remaining:
+    - The GC sweep still has a conservative global stopgap: if any cache root is in reuse, stale/detached nodes are not swept this frame.
+      Remove this once parent-pointer repair + reachability + explicit view-cache subtree liveness is proven sufficient under reuse.
+      - Anchor: `crates/fret-ui/src/declarative/mount.rs` (`view_cache_has_reuse_roots` guard in the GC retain pass).
+  - Done when:
+    - The `view_cache_has_reuse_roots` stopgap is removed and both overlay regression harnesses remain green under cache+shell reuse.
   - Diagnostics: `removed_subtrees` now include `root_parent_element`, a `root_path` sample, and `root_parent_children_last_set_location` (when available), plus `root_element_path` when resolvable.
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
@@ -176,7 +188,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Touches: `crates/fret-ui/src/element.rs` (`ViewCacheProps.cache_key`), `crates/fret-ui/src/elements/cx.rs` (reuse gating),
     `crates/fret-ui/src/elements/runtime.rs` (per-root key storage), `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`.
   - Goal: prevent reusing a view-cache root when key inputs like theme/bounds/text style/content mask changed.
-  - v1 key: `hash(theme_revision, scale_factor, window_bounds, ViewCacheProps.cache_key)`.
+  - v1 key: `hash(theme_revision, scale_factor, cache_root_bounds.size, ViewCacheProps.cache_key)` (currently width/height only).
     - Notes: this is a coarse proxy for GPUI's `bounds/content_mask/text_style` key and will be refined as more inputs become explicit.
     - Helpers: `fret_ui::cache_key::{text_style_key, rect_key, corners_key}`; `fret_ui_kit::declarative::CachedSubtreeProps::{cache_key_text_style, cache_key_clip_rect, cache_key_clip_rrect}`.
   - Reference: `repo-ref/zed/crates/gpui/src/view.rs` (`ViewCacheKey`: bounds/content_mask/text_style).
@@ -599,11 +611,11 @@ topics (if/when we implement them):
   - Touches: `ecosystem/fret-ui-ai/src/*`.
   - Done when: append-heavy transcript updates no longer rebuild/relayout the entire history while scrolling, and the harness
     proves stable paint under view-cache reuse.
-- [ ] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
+- [~] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
-  - Baseline note: current worst-tick bundles remain layout-dominated and frequently attribute dirty views to
-    `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:417`.
+  - Baseline note (pre-v1): worst-tick bundles were layout-dominated and frequently attributed dirty views to
+    `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:*`.
   - Progress (v1):
     - `Pressable` no longer implicitly calls `notify()` after invoking `on_activate`. If a hook mutates non-model state
       that must be reflected in declarative render under view-cache reuse, it should call `host.notify(action_cx)`
@@ -613,6 +625,9 @@ topics (if/when we implement them):
       - Perf evidence (cache+shell, release): `target/fret-diag-perf-explicit-notify/1769155887844-script-step-0011-click/bundle.json`
         - Note: the worst “steady-state” tick in this bundle is layout-dominated, but `diag stats --sort time` no longer reports a dirty-view source
           attributed to `UiDebugInvalidationDetail::notify_call` from `pressable.rs:*`.
+  - Done when:
+    - VirtualList torture no longer lists `pressable.rs:*` as a top `notify_call` dirtiness source in warmup-ranked top bundles,
+      and the remaining `notify_call` sources are either required (explicit hooks) or attributable to a smaller cache boundary.
 - [x] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
   - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
   - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).

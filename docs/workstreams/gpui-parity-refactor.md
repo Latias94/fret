@@ -525,8 +525,9 @@ Implementation note (current state):
 - The declarative element GC in `render_root`/`render_dismissible_root_impl` is keyed off “was this element mounted
   recently” (`last_seen_frame`), which conflicts with view-cache reuse (cached subtrees can remain present and
   interactive while skipping re-mounting for many frames).
-- Until we have GPUI-style “view liveness” represented explicitly (dirty views + notify), stale-node sweeping is
-  disabled when `UiTree::view_cache_enabled()` is on to avoid deleting live cached subtrees.
+- Current stopgap: while any cache root is in reuse, stale-node sweeping is conservatively disabled (a global gate)
+  to avoid deleting live cached subtrees. MVP2-cache-005 removes this by relying on parent-pointer repair +
+  reachability-based detachment checks + explicit view-cache subtree liveness.
 
 Proposed ecosystem-facing API surface (runtime internal may differ):
 
@@ -711,7 +712,7 @@ Behavior:
    - `cx.cached(key_inputs, |cx| children)`
 2) The runtime creates/uses a dedicated `NodeId` boundary for the cached subtree root.
 3) Cache key includes:
-   - v1: `hash(theme_revision, scale_factor, window_bounds, explicit_cache_key)` (implemented as `ViewCacheProps.cache_key`)
+   - v1: `hash(theme_revision, scale_factor, cache_root_bounds.size, explicit_cache_key)` (implemented as `ViewCacheProps.cache_key`; currently width/height only)
    - v2+: extend toward GPUI’s `bounds/content_mask/text_style` key as those inputs become explicit at the cache boundary.
    - Helpers: `fret_ui::cache_key::{CacheKeyBuilder, text_style_key, rect_key, corners_key}` (ecosystem sugar: `CachedSubtreeProps::{cache_key_text_style, cache_key_clip_rect, cache_key_clip_rrect}`).
 4) Dependency sets:
