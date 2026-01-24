@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
+use fret_core::{Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::element::{
@@ -19,6 +19,23 @@ use crate::layout as shadcn_layout;
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
     c
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SidebarMenuButtonSize {
+    Sm,
+    #[default]
+    Default,
+    Lg,
+}
+
+fn sidebar_menu_button_h(theme: &Theme, size: SidebarMenuButtonSize) -> Px {
+    let (key, fallback) = match size {
+        SidebarMenuButtonSize::Sm => ("component.sidebar.menu_button.h_sm", Px(28.0)), // `h-7`
+        SidebarMenuButtonSize::Default => ("component.sidebar.menu_button.h", Px(32.0)), // `h-8`
+        SidebarMenuButtonSize::Lg => ("component.sidebar.menu_button.h_lg", Px(48.0)), // `h-12`
+    };
+    theme.metric_by_key(key).unwrap_or(fallback)
 }
 
 fn sidebar_width(theme: &Theme) -> Px {
@@ -376,6 +393,7 @@ pub struct SidebarMenuButton {
     active: bool,
     disabled: bool,
     collapsed: bool,
+    size: SidebarMenuButtonSize,
     on_click: Option<CommandId>,
 }
 
@@ -387,6 +405,7 @@ impl SidebarMenuButton {
             active: false,
             disabled: false,
             collapsed: false,
+            size: SidebarMenuButtonSize::Default,
             on_click: None,
         }
     }
@@ -411,6 +430,11 @@ impl SidebarMenuButton {
         self
     }
 
+    pub fn size(mut self, size: SidebarMenuButtonSize) -> Self {
+        self.size = size;
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.on_click = Some(command.into());
         self
@@ -422,18 +446,29 @@ impl SidebarMenuButton {
         let radius = decl_style::radius(&theme, Radius::Md);
         let ring = sidebar_ring(&theme, radius);
 
+        let label = self.label.clone();
+        let h = sidebar_menu_button_h(&theme, self.size);
+
         let pressable = PressableProps {
             enabled: !self.disabled,
             focus_ring: Some(ring),
-            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().h_px(MetricRef::Px(h)),
+            ),
+            a11y: fret_ui::element::PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: Some(label.clone()),
+                ..Default::default()
+            },
             ..Default::default()
         };
 
-        let label = self.label.clone();
         let icon = self.icon.clone();
         let active = self.active;
         let disabled = self.disabled;
         let collapsed = self.collapsed;
+        let size = self.size;
         let on_click = self.on_click.clone();
 
         cx.pressable(pressable, move |cx, st| {
@@ -467,11 +502,11 @@ impl SidebarMenuButton {
                 chrome,
                 LayoutRefinement::default()
                     .w_full()
-                    .min_h(fret_ui_kit::MetricRef::Px(Px(32.0))),
+                    .h_px(MetricRef::Px(sidebar_menu_button_h(&theme, size))),
             );
             props.layout.overflow = Overflow::Clip;
 
-            let inner_gap = decl_style::space(&theme, Space::N2);
+            let inner_gap = decl_style::space(&theme, Space::N2); // `gap-2`
 
             vec![cx.container(props, move |cx| {
                 let row = FlexProps {
@@ -479,12 +514,7 @@ impl SidebarMenuButton {
                     gap: inner_gap,
                     align: CrossAlign::Center,
                     justify: MainAlign::Start,
-                    padding: Edges {
-                        top: Px(0.0),
-                        right: inner_gap,
-                        bottom: Px(0.0),
-                        left: inner_gap,
-                    },
+                    padding: Edges::all(inner_gap), // `p-2`
                     layout: fret_ui::element::LayoutStyle {
                         size: fret_ui::element::SizeStyle {
                             width: fret_ui::element::Length::Fill,

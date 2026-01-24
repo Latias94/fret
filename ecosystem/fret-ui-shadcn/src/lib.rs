@@ -210,7 +210,7 @@ pub use sheet::{
 };
 pub use sidebar::{
     Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
-    SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+    SidebarMenu, SidebarMenuButton, SidebarMenuButtonSize, SidebarMenuItem,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
