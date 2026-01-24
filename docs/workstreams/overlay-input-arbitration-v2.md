@@ -112,7 +112,8 @@ Related ADRs:
     `viewport_capture_is_canceled_when_pointer_occlusion_revokes_capture`)
 - Policy-level capture suppression conformance:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`pointer_capture_hides_hover_overlays_in_same_window`,
-    `pointer_capture_hides_tooltips_in_same_window`)
+    `pointer_capture_hides_tooltips_in_same_window`, `pointer_capture_restores_hover_overlays_after_release`,
+    `pointer_capture_restores_tooltips_after_release`)
 - Policy-level close-transition observer invariants:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_while_closing`,
     `hover_overlay_is_click_through_while_closing`)
