@@ -449,7 +449,8 @@ fn pointer_occlusion_does_not_suppress_outside_press_observer_dispatch() {
 }
 
 #[test]
-fn pointer_occlusion_allows_pointer_move_observer_dispatch_while_suppressing_underlay_hit_dispatch() {
+fn pointer_occlusion_allows_pointer_move_observer_dispatch_while_suppressing_underlay_hit_dispatch()
+{
     let window = AppWindowId::default();
 
     let mut app = crate::test_host::TestHost::new();
