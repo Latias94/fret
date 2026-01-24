@@ -118,6 +118,7 @@ Related ADRs:
 - Shadcn parity regression:
   - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_outside_press_click_through_closes_without_overriding_underlay_focus`)
   - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_remains_click_through`)
+  - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_submenu_safe_hover_corridor_cancels_close_timer`)
   - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_click_through_outside_press_closes_and_focuses_underlay`)
   - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_modal_outside_press_closes_without_activating_underlay`)
   - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_submenu_safe_hover_corridor_observes_pointer_move_under_pointer_occlusion`)

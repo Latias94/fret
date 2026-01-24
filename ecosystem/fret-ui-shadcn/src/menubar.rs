@@ -4028,4 +4028,238 @@ mod tests {
             "submenu should unmount after the close transition completes"
         );
     }
+
+    #[test]
+    fn menubar_submenu_safe_hover_corridor_cancels_close_timer() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(700.0), Px(320.0)),
+        );
+
+        // Frame 1: render and open the "File" menu (so the "More" submenu trigger is visible).
+        render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file_pos = center(menu_trigger_bounds(&snap0, "File"));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
+
+        // Hover "More" to arm the submenu open-delay timer.
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More submenu trigger");
+        let more_bounds = more.bounds;
+        let more_center = Point::new(
+            Px(more_bounds.origin.x.0 + more_bounds.size.width.0 / 2.0),
+            Px(more_bounds.origin.y.0 + more_bounds.size.height.0 / 2.0),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: more_center,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let open_delay = menu::sub::MenuSubmenuConfig::default().open_delay;
+        let open_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == open_delay => Some(*token),
+            _ => None,
+        });
+        let Some(open_timer) = open_timer else {
+            panic!("expected submenu open-delay timer effect; effects={effects:?}");
+        };
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: open_timer },
+        );
+
+        // Frame 3: after open timer fires, the submenu opens.
+        render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha")
+            }),
+            "submenu items should render after open-delay fires"
+        );
+
+        let cfg = menu::sub::MenuSubmenuConfig::default();
+        let close_delay = cfg.close_delay;
+        let overlay_id = OverlayController::stack_snapshot_for_window(&ui, &mut app, window)
+            .topmost_popover
+            .expect("expected an open menubar menu overlay");
+        let overlay_root_name = menu::menubar_root_name(overlay_id);
+        let submenu_models = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            &overlay_root_name,
+            |cx| menu::sub::ensure_models(cx),
+        );
+        let geometry = app
+            .models_mut()
+            .read(&submenu_models.geometry, |v| *v)
+            .ok()
+            .flatten();
+        let Some(geometry) = geometry else {
+            panic!("expected submenu geometry to be available after open");
+        };
+        let grace_geometry = menu::pointer_grace_intent::PointerGraceIntentGeometry {
+            reference: geometry.reference,
+            floating: geometry.floating,
+        };
+
+        // Pick a safe corridor point on the submenu side (to the right) so moving towards it can
+        // cancel a pending close timer (Radix pointer-grace intent).
+        let reference_right =
+            grace_geometry.reference.origin.x.0 + grace_geometry.reference.size.width.0;
+        let mut safe_point: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(2) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(2) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                if pos.x.0 <= reference_right {
+                    continue;
+                }
+                if grace_geometry.reference.contains(pos) || grace_geometry.floating.contains(pos) {
+                    continue;
+                }
+                if !menu::pointer_grace_intent::last_pointer_is_safe(
+                    pos,
+                    grace_geometry,
+                    cfg.safe_hover_buffer,
+                ) {
+                    continue;
+                }
+                safe_point = Some(pos);
+                break;
+            }
+            if safe_point.is_some() {
+                break;
+            }
+        }
+        let safe_point = safe_point.unwrap_or_else(|| {
+            panic!("failed to find safe corridor point; geometry={grace_geometry:?}")
+        });
+
+        // Pick an unsafe point to the left of the safe point, so moving to `safe_point` is
+        // directionally towards the submenu (x increases).
+        let mut unsafe_point: Option<Point> = None;
+        for y in (0..=bounds.size.height.0 as i32).step_by(4) {
+            for x in (0..=bounds.size.width.0 as i32).step_by(4) {
+                let pos = Point::new(Px(x as f32), Px(y as f32));
+                if pos.x.0 >= safe_point.x.0 {
+                    continue;
+                }
+                if grace_geometry.reference.contains(pos) || grace_geometry.floating.contains(pos) {
+                    continue;
+                }
+                if menu::pointer_grace_intent::last_pointer_is_safe(
+                    pos,
+                    grace_geometry,
+                    cfg.safe_hover_buffer,
+                ) {
+                    continue;
+                }
+                unsafe_point = Some(pos);
+                break;
+            }
+            if unsafe_point.is_some() {
+                break;
+            }
+        }
+        let unsafe_point = unsafe_point.unwrap_or_else(|| {
+            panic!(
+                "failed to find unsafe point; safe_point={safe_point:?} geometry={grace_geometry:?}",
+            )
+        });
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: unsafe_point,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        let close_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == close_delay => Some(*token),
+            _ => None,
+        });
+        let Some(close_timer) = close_timer else {
+            panic!(
+                "expected unsafe pointer move to arm close-delay timer; effects={effects:?} unsafe_point={unsafe_point:?} close_delay={close_delay:?}"
+            );
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: safe_point,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::CancelTimer { token } if *token == close_timer)),
+            "expected safe corridor pointer move to cancel close-delay timer; effects={effects:?} safe_point={safe_point:?} close_timer={close_timer:?}"
+        );
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::SetTimer { after, .. } if *after == close_delay)),
+            "expected safe corridor pointer move to not arm a new close-delay timer; effects={effects:?} safe_point={safe_point:?} close_delay={close_delay:?}"
+        );
+    }
 }
