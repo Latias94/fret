@@ -134,6 +134,9 @@ impl Tabs {
             let selected = cx
                 .get_model_cloned(&model, Invalidation::Layout)
                 .unwrap_or_else(|| Arc::<str>::from(""));
+            let selected_idx = items
+                .iter()
+                .position(|it| it.value.as_ref() == selected.as_ref());
 
             let tab_stop = items
                 .iter()
@@ -181,100 +184,119 @@ impl Tabs {
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![cx.roving_flex(props, move |cx| {
-                            let values_for_roving = values.clone();
-                            let model_for_roving = model.clone();
+                        let now_frame = cx.frame_id.0;
+                        let tab_count = items.len();
+                        let indicator = primary_tab_list_indicator(
+                            cx,
+                            &theme,
+                            now_frame,
+                            tab_count,
+                            selected_idx,
+                        );
 
-                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                use fret_ui::action::RovingNavigateResult;
+                        vec![
+                            indicator,
+                            cx.roving_flex(props, move |cx| {
+                                let values_for_roving = values.clone();
+                                let model_for_roving = model.clone();
 
-                                let is_disabled = |idx: usize| -> bool {
-                                    it.disabled.get(idx).copied().unwrap_or(false)
-                                };
+                                cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                    use fret_ui::action::RovingNavigateResult;
 
-                                let forward = match (it.axis, it.key) {
-                                    (Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
-                                    (Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
-                                    _ => None,
-                                };
+                                    let is_disabled = |idx: usize| -> bool {
+                                        it.disabled.get(idx).copied().unwrap_or(false)
+                                    };
 
-                                if it.key == KeyCode::Home {
-                                    let target = (0..it.len).find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-                                if it.key == KeyCode::End {
-                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
+                                    let forward = match (it.axis, it.key) {
+                                        (Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
+                                        (Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+                                        _ => None,
+                                    };
 
-                                let Some(forward) = forward else {
-                                    return RovingNavigateResult::NotHandled;
-                                };
-
-                                let current = it
-                                    .current
-                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                let Some(current) = current else {
-                                    return RovingNavigateResult::Handled { target: None };
-                                };
-
-                                let len = it.len;
-                                let mut target: Option<usize> = None;
-                                if it.wrap {
-                                    for step in 1..=len {
-                                        let idx = if forward {
-                                            (current + step) % len
-                                        } else {
-                                            (current + len - (step % len)) % len
-                                        };
-                                        if !is_disabled(idx) {
-                                            target = Some(idx);
-                                            break;
-                                        }
+                                    if it.key == KeyCode::Home {
+                                        let target = (0..it.len).find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
                                     }
-                                } else if forward {
-                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
-                                } else if current > 0 {
-                                    target = (0..current).rev().find(|&i| !is_disabled(i));
-                                }
+                                    if it.key == KeyCode::End {
+                                        let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                        return RovingNavigateResult::Handled { target };
+                                    }
 
-                                RovingNavigateResult::Handled { target }
-                            }));
+                                    let Some(forward) = forward else {
+                                        return RovingNavigateResult::NotHandled;
+                                    };
 
-                            cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {
-                                let Some(value) = values_for_roving.get(idx).cloned() else {
-                                    return;
-                                };
-                                let already_selected = host
-                                    .models_mut()
-                                    .read(&model_for_roving, |v| v.as_ref() == value.as_ref())
-                                    .ok()
-                                    .unwrap_or(false);
-                                if already_selected {
-                                    return;
-                                }
-                                let _ = host.update_model(&model_for_roving, |v| *v = value);
-                                host.request_redraw(action_cx.window);
-                            }));
+                                    let current = it
+                                        .current
+                                        .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                    let Some(current) = current else {
+                                        return RovingNavigateResult::Handled { target: None };
+                                    };
 
-                            items
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, it)| {
-                                    let tab_stop = tab_stop.is_some_and(|t| t == idx);
-                                    material_primary_tab(
-                                        cx,
-                                        &theme,
-                                        model.clone(),
-                                        it,
-                                        idx,
-                                        items.len(),
-                                        tab_stop,
-                                        disabled,
-                                    )
-                                })
-                                .collect::<Vec<_>>()
-                        })]
+                                    let len = it.len;
+                                    let mut target: Option<usize> = None;
+                                    if it.wrap {
+                                        for step in 1..=len {
+                                            let idx = if forward {
+                                                (current + step) % len
+                                            } else {
+                                                (current + len - (step % len)) % len
+                                            };
+                                            if !is_disabled(idx) {
+                                                target = Some(idx);
+                                                break;
+                                            }
+                                        }
+                                    } else if forward {
+                                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                    } else if current > 0 {
+                                        target = (0..current).rev().find(|&i| !is_disabled(i));
+                                    }
+
+                                    RovingNavigateResult::Handled { target }
+                                }));
+
+                                cx.roving_on_active_change(Arc::new(
+                                    move |host, action_cx, idx| {
+                                        let Some(value) = values_for_roving.get(idx).cloned()
+                                        else {
+                                            return;
+                                        };
+                                        let already_selected = host
+                                            .models_mut()
+                                            .read(&model_for_roving, |v| {
+                                                v.as_ref() == value.as_ref()
+                                            })
+                                            .ok()
+                                            .unwrap_or(false);
+                                        if already_selected {
+                                            return;
+                                        }
+                                        let _ =
+                                            host.update_model(&model_for_roving, |v| *v = value);
+                                        host.request_redraw(action_cx.window);
+                                    },
+                                ));
+
+                                items
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(idx, it)| {
+                                        let tab_stop = tab_stop.is_some_and(|t| t == idx);
+                                        material_primary_tab(
+                                            cx,
+                                            &theme,
+                                            model.clone(),
+                                            it,
+                                            idx,
+                                            items.len(),
+                                            tab_stop,
+                                            disabled,
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            }),
+                        ]
                     },
                 )]
             })
@@ -432,7 +454,6 @@ fn material_primary_tab<H: UiHost>(
                     indication.want_frames,
                 );
                 let label_el = primary_tab_label(cx, theme, &label, label_color);
-                let indicator = primary_tab_indicator(cx, theme, pressable_id, now_frame, selected);
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
@@ -443,7 +464,7 @@ fn material_primary_tab<H: UiHost>(
                 row.align = CrossAlign::Center;
                 row.padding = Edges::all(Px(0.0));
 
-                vec![cx.flex(row, move |_cx| vec![indicator.clone(), ink, label_el])]
+                vec![cx.flex(row, move |_cx| vec![ink, label_el])]
             })
         });
 
@@ -469,82 +490,115 @@ fn primary_tab_label<H: UiHost>(
     cx.text_props(props)
 }
 
-fn primary_tab_indicator<H: UiHost>(
+fn primary_tab_list_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
-    pressable_id: fret_ui::elements::GlobalElementId,
     now_frame: u64,
-    active: bool,
+    tab_count: usize,
+    selected_idx: Option<usize>,
 ) -> AnyElement {
-    let target_height = if active {
-        theme
-            .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
-            .unwrap_or(Px(3.0))
-    } else {
-        Px(0.0)
-    };
-    let color = if active {
-        MaterialTokenResolver::new(theme).color_comp_or_sys(
-            "md.comp.primary-navigation-tab.active-indicator.color",
-            "md.sys.color.primary",
-        )
-    } else {
-        Color::TRANSPARENT
-    };
-    let corner_radii = theme
-        .corners_by_key("md.comp.primary-navigation-tab.active-indicator.shape")
-        .unwrap_or(Corners {
-            top_left: Px(3.0),
-            top_right: Px(3.0),
-            bottom_right: Px(0.0),
-            bottom_left: Px(0.0),
-        });
-
     #[derive(Debug, Default, Clone)]
-    struct TabIndicatorRuntime {
-        spring: SpringAnimator,
+    struct TabListIndicatorRuntime {
+        x: SpringAnimator,
+        width: SpringAnimator,
+        height: SpringAnimator,
     }
 
-    let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-    let (height, want_frames) =
-        cx.with_state_for(pressable_id, TabIndicatorRuntime::default, |rt| {
-            if !rt.spring.is_initialized() {
-                rt.spring.reset(now_frame, target_height.0);
+    cx.named("primary_tab_indicator", move |cx| {
+        let id = cx.root_id();
+        let last_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
+
+        let (target_x, target_width, target_height, color) = if tab_count > 0 {
+            let tab_width_px = last_bounds.size.width.0 / (tab_count as f32);
+            if let Some(idx) = selected_idx {
+                let height = theme
+                    .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
+                    .unwrap_or(Px(3.0));
+                let color = MaterialTokenResolver::new(theme).color_comp_or_sys(
+                    "md.comp.primary-navigation-tab.active-indicator.color",
+                    "md.sys.color.primary",
+                );
+                (tab_width_px * (idx as f32), tab_width_px, height.0, color)
+            } else {
+                (0.0, 0.0, 0.0, Color::TRANSPARENT)
             }
-            rt.spring.set_target(now_frame, target_height.0, spring);
-            rt.spring.advance(now_frame);
-            (Px(rt.spring.value()), rt.spring.is_active())
-        });
+        } else {
+            (0.0, 0.0, 0.0, Color::TRANSPARENT)
+        };
 
-    let mut props = fret_ui::element::CanvasProps::default();
-    props.layout.position = fret_ui::element::PositionStyle::Absolute;
-    props.layout.inset.top = Some(Px(0.0));
-    props.layout.inset.right = Some(Px(0.0));
-    props.layout.inset.bottom = Some(Px(0.0));
-    props.layout.inset.left = Some(Px(0.0));
+        let corner_radii = theme
+            .corners_by_key("md.comp.primary-navigation-tab.active-indicator.shape")
+            .unwrap_or(Corners {
+                top_left: Px(3.0),
+                top_right: Px(3.0),
+                bottom_right: Px(0.0),
+                bottom_left: Px(0.0),
+            });
 
-    cx.canvas(props, move |p| {
-        if height.0 > 0.0 && color.a > 0.0 {
-            let bounds = p.bounds();
-            let top = Px(bounds.origin.y.0 + bounds.size.height.0 - height.0);
-            let rect = fret_core::Rect::new(
-                fret_core::Point::new(bounds.origin.x, top),
-                fret_core::Size::new(bounds.size.width, height),
-            );
+        let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+        let (x, width, height, want_frames) =
+            cx.with_state_for(id, TabListIndicatorRuntime::default, |rt| {
+                if !rt.x.is_initialized() {
+                    rt.x.reset(now_frame, target_x);
+                }
+                if !rt.width.is_initialized() {
+                    rt.width.reset(now_frame, target_width);
+                }
+                if !rt.height.is_initialized() {
+                    rt.height.reset(now_frame, target_height);
+                }
 
-            fret_ui::paint::paint_state_layer(
-                p.scene(),
-                fret_core::DrawOrder(0),
-                rect,
-                color,
-                1.0,
-                corner_radii,
-            );
-        }
+                rt.x.set_target(now_frame, target_x, spring);
+                rt.width.set_target(now_frame, target_width, spring);
+                rt.height.set_target(now_frame, target_height, spring);
 
-        if want_frames {
-            p.request_animation_frame();
-        }
+                rt.x.advance(now_frame);
+                rt.width.advance(now_frame);
+                rt.height.advance(now_frame);
+
+                (
+                    Px(rt.x.value()),
+                    Px(rt.width.value()),
+                    Px(rt.height.value()),
+                    rt.x.is_active() || rt.width.is_active() || rt.height.is_active(),
+                )
+            });
+
+        let mut props = fret_ui::element::CanvasProps::default();
+        props.layout.position = fret_ui::element::PositionStyle::Absolute;
+        props.layout.inset.top = Some(Px(0.0));
+        props.layout.inset.right = Some(Px(0.0));
+        props.layout.inset.bottom = Some(Px(0.0));
+        props.layout.inset.left = Some(Px(0.0));
+
+        cx.canvas(props, move |p| {
+            if height.0 > 0.0 && width.0 > 0.0 && color.a > 0.0 {
+                let bounds = p.bounds();
+
+                let x_px = x.0.clamp(0.0, bounds.size.width.0);
+                let max_width = (bounds.size.width.0 - x_px).max(0.0);
+                let width_px = width.0.clamp(0.0, max_width);
+
+                let top = Px(bounds.origin.y.0 + bounds.size.height.0 - height.0);
+                let rect = fret_core::Rect::new(
+                    fret_core::Point::new(Px(bounds.origin.x.0 + x_px), top),
+                    fret_core::Size::new(Px(width_px), height),
+                );
+
+                fret_ui::paint::paint_state_layer(
+                    p.scene(),
+                    fret_core::DrawOrder(0),
+                    rect,
+                    color,
+                    1.0,
+                    corner_radii,
+                );
+            }
+
+            if want_frames {
+                p.request_animation_frame();
+            }
+        })
     })
 }
 

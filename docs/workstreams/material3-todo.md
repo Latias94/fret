@@ -168,8 +168,12 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [ ] Decide whether we need a hoistable interaction source surface (Compose
   `MutableInteractionSource` analogue) or whether `PressableState` + foundation runtime state is
   sufficient for our current authoring model.
-- [ ] Implement a first-class MotionScheme mapping (6 canonical specs; standard vs expressive), and
-  decide how to represent spring configs (ecosystem-only vs core mechanism).
+- [x] Implement a MotionScheme mapping for the 6 canonical specs (standard) and expose it via the
+  tree-local Material context override.
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`,
+    `ecosystem/fret-ui-material3/src/foundation/context.rs`
+- [ ] Extend MotionScheme mapping for Expressive tokens (when available in the token source of truth).
+- [ ] Decide how to represent spring configs long-term (ecosystem-only vs core mechanism).
 - [ ] Introduce typed token modules per component to reduce raw string key usage and centralize
   derived token math (disabled alpha, state-layer alpha selection).
 

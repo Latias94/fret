@@ -12,6 +12,7 @@ use crate::foundation::context::{MaterialMotionScheme, resolved_motion_scheme};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::SpringSpec;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MotionSchemeKey {
     DefaultSpatial,
