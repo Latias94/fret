@@ -499,11 +499,14 @@ impl std::fmt::Debug for Command {
 }
 
 impl Command {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new<I>(children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            children,
+            children: children.into_iter().collect(),
         }
     }
 
