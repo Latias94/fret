@@ -7760,11 +7760,6 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
     assert!(ui.is_layer_visible(hover_layer));
     assert!(ui.is_layer_visible(tooltip_layer));
 
-    // Ensure the base underlay can still initiate viewport-like captures while hover/tooltips are
-    // visible: this test is about multi-layer capture arbitration, not overlay hit-testing.
-    ui.set_layer_hit_testable(hover_layer, false);
-    ui.set_layer_hit_testable(tooltip_layer, false);
-
     // Begin capture in the base layer (viewport-like) and in the foreign overlay layer (second pointer).
     ui.dispatch_event(
         &mut app,
