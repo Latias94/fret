@@ -337,6 +337,35 @@ let bar = m3::NavigationBar::new(value)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_NAVIGATION_DRAWER: &str = r#"
+## Material 3 Navigation Drawer (MVP)
+
+This page validates a Material 3 navigation drawer surface:
+
+- roving focus + automatic activation (selection follows focus)
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
+- selected item pill uses `active-indicator.color` (Compose parity)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_NAVIGATION_DRAWER: &str = r#"
+```rust
+use fret_icons::ids;
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let value = app.models_mut().insert(Arc::<str>::from("search"));
+let drawer = m3::NavigationDrawer::new(value)
+    .a11y_label("Demo navigation drawer")
+    .items(vec![
+        m3::NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH),
+        m3::NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS),
+        m3::NavigationDrawerItem::new("play", "Play", ids::ui::PLAY),
+    ])
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_MENU: &str = r#"
 ## Material 3 Menu (MVP)
 

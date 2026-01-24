@@ -14,6 +14,7 @@ pub mod interaction;
 pub mod menu;
 pub mod motion;
 pub mod navigation_bar;
+pub mod navigation_drawer;
 pub mod radio;
 pub mod switch;
 pub mod tabs;
@@ -27,6 +28,7 @@ pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
 pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
 pub use menu::{Menu, MenuEntry, MenuItem};
 pub use navigation_bar::{NavigationBar, NavigationBarItem};
+pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation};
 pub use switch::Switch;
 pub use tabs::{TabItem, Tabs};
@@ -73,6 +75,7 @@ mod tests {
             include_str!("icon_button.rs"),
             include_str!("menu.rs"),
             include_str!("navigation_bar.rs"),
+            include_str!("navigation_drawer.rs"),
             include_str!("radio.rs"),
             include_str!("switch.rs"),
             include_str!("tabs.rs"),
