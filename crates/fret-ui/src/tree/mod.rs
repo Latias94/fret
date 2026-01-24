@@ -1257,6 +1257,10 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    pub(crate) fn node_needs_layout(&self, node: NodeId) -> bool {
+        self.nodes.get(node).is_some_and(|n| n.invalidation.layout)
+    }
+
     pub(crate) fn set_node_element(&mut self, node: NodeId, element: Option<GlobalElementId>) {
         if let Some(n) = self.nodes.get_mut(node) {
             n.element = element;

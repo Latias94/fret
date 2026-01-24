@@ -4,6 +4,9 @@ use std::sync::Arc;
 use crate::element::VirtualListMeasureMode;
 use crate::scroll::ScrollStrategy;
 
+#[cfg(test)]
+use std::cell::Cell;
+
 const VIRTUALIZER_PX_SCALE: f32 = 64.0;
 
 fn px_to_units_u32(px: Px) -> u32 {
@@ -59,6 +62,7 @@ pub struct VirtualListMetrics {
     mode: VirtualListMeasureMode,
     inner: virtualizer::Virtualizer<crate::ItemKey>,
     keys_signature: (u64, usize),
+    measured_cross_extent_units: u32,
     fixed: FixedMetrics,
 }
 
@@ -80,6 +84,7 @@ impl Default for VirtualListMetrics {
             mode: VirtualListMeasureMode::Measured,
             inner: virtualizer::Virtualizer::new(options),
             keys_signature: (0, 0),
+            measured_cross_extent_units: 0,
             fixed: FixedMetrics {
                 count: 0,
                 estimate_units: 0,
@@ -236,6 +241,34 @@ impl VirtualListMetrics {
 
     pub fn scroll_margin(&self) -> Px {
         self.scroll_margin
+    }
+
+    pub fn is_measured(&self, index: usize) -> bool {
+        match self.mode {
+            VirtualListMeasureMode::Measured => {
+                if index >= self.inner.options().count {
+                    return false;
+                }
+                self.inner.is_measured(index)
+            }
+            VirtualListMeasureMode::Fixed => index < self.fixed.count,
+        }
+    }
+
+    pub fn reset_measured_cache_if_cross_extent_changed(&mut self, cross_extent: Px) -> bool {
+        if self.mode != VirtualListMeasureMode::Measured {
+            return false;
+        }
+
+        let units = px_to_units_u32(Px(cross_extent.0.max(0.0)));
+        if self.measured_cross_extent_units == units {
+            return false;
+        }
+
+        self.measured_cross_extent_units = units;
+        let options = self.inner.options().clone();
+        self.inner = virtualizer::Virtualizer::new(options);
+        true
     }
 
     pub fn height_at(&self, index: usize) -> Px {
@@ -508,6 +541,27 @@ impl VirtualListMetrics {
         }
         self.inner.import_measurement_cache(entries);
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    static VIRTUAL_LIST_ITEM_MEASURE_CALLS: Cell<usize> = const { Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn debug_record_virtual_list_item_measure() {
+    VIRTUAL_LIST_ITEM_MEASURE_CALLS.with(|calls| {
+        calls.set(calls.get().saturating_add(1));
+    });
+}
+
+#[cfg(test)]
+pub(crate) fn debug_take_virtual_list_item_measures() -> usize {
+    VIRTUAL_LIST_ITEM_MEASURE_CALLS.with(|calls| {
+        let value = calls.get();
+        calls.set(0);
+        value
+    })
 }
 
 #[cfg(test)]

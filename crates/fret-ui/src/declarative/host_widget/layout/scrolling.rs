@@ -12,6 +12,7 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::VirtualListProps,
     ) -> Size {
+        let axis = props.axis;
         let mut metrics = crate::elements::with_element_state(
             &mut *cx.app,
             window,
@@ -30,7 +31,6 @@ impl ElementHostWidget {
         );
         let content_extent = metrics.total_height();
 
-        let axis = props.axis;
         let desired_w = match props.layout.size.width {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill => cx.available.width,
@@ -59,6 +59,14 @@ impl ElementHostWidget {
             fret_core::Axis::Horizontal => Px(size.width.0.max(0.0)),
         };
         let mut needs_redraw = false;
+
+        let cross_extent = match axis {
+            fret_core::Axis::Vertical => size.width,
+            fret_core::Axis::Horizontal => size.height,
+        };
+        if metrics.reset_measured_cache_if_cross_extent_changed(cross_extent) {
+            needs_redraw = true;
+        }
 
         props.scroll_handle.set_items_count(props.len);
 
@@ -149,10 +157,19 @@ impl ElementHostWidget {
 
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
-                    let measured = cx.measure_in(child, item_constraints);
-                    let measured_extent = match axis {
-                        fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
-                        fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
+                    let should_measure = !metrics.is_measured(idx)
+                        || (cx.pass_kind == crate::layout_pass::LayoutPassKind::Final
+                            && cx.tree.node_needs_layout(child));
+                    let measured_extent = if should_measure {
+                        #[cfg(test)]
+                        crate::virtual_list::debug_record_virtual_list_item_measure();
+                        let measured = cx.measure_in(child, item_constraints);
+                        match axis {
+                            fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
+                            fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
+                        }
+                    } else {
+                        metrics.height_at(idx)
                     };
 
                     measured_updates.push((child, idx, measured_extent));

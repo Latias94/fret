@@ -203,8 +203,11 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
 
 Goal: make caching a closed loop across paint + interaction (+ semantics later), not “paint-only” (ADR 0182).
 
-- [ ] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
+- [~] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
   - Motivation: `ui-gallery-virtual-list-torture.json` remains layout-dominated even with view-cache + shell reuse.
+  - Progress: measured-mode virtual lists skip redundant per-frame `measure_in` passes for already-measured, clean visible rows.
+  - Progress: re-measure is forced when the cross-axis viewport extent changes or when a row is layout-invalidated.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (measurement gate), `crates/fret-ui/src/virtual_list.rs` (cross-extent measurement reset), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_skips_redundant_measures_for_clean_measured_rows`).
   - Perf snapshot (release, `--warmup-frames 5`, `--sort time`):
     - Baseline: `sum.total_time_us=225911` / 10 frames; `max.total_time_us=30585` (layout `29252`).
     - ViewCache+Shell: `sum.total_time_us=214260` / 10 frames; `max.total_time_us=28999` (layout `27545`).
