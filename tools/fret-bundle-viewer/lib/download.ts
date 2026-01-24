@@ -274,3 +274,183 @@ export function downloadMarkdown(content: string, fileName: string): void {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+
+function downloadJson(content: unknown, fileName: string): void {
+  const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function parseOutDirContext(outDir: string | undefined): {
+  kind: 'script_step' | 'label' | 'unknown'
+  timestampPrefix?: string
+  stepIndex?: number
+  action?: string
+  label?: string
+} {
+  if (!outDir) return { kind: 'unknown' }
+
+  // Examples:
+  // - 1769177393463-script-step-0000-press_key
+  // - 1769177364221-ui-gallery-alert-dialog-open
+  const m = outDir.match(/^(\d+)-(.*)$/)
+  const timestampPrefix = m?.[1]
+  const tail = m?.[2] ?? outDir
+
+  const sm = tail.match(/^script-step-(\d+)-(.+)$/)
+  if (sm) {
+    return {
+      kind: 'script_step',
+      timestampPrefix,
+      stepIndex: Number(sm[1]),
+      action: sm[2],
+    }
+  }
+
+  return {
+    kind: 'label',
+    timestampPrefix,
+    label: tail,
+  }
+}
+
+export function exportTriageJson(
+  bundle: BundleModel,
+  selectedWindow: number,
+  selectedSnapshotA: number,
+  selectedSnapshotB: number | null,
+  selectedNodeId: string | null
+): void {
+  const window = bundle.windows[selectedWindow]
+  const snapshotA = window?.snapshots[selectedSnapshotA]
+  const snapshotB = selectedSnapshotB !== null ? window?.snapshots[selectedSnapshotB] : null
+
+  const triage: Array<{ level: 'info' | 'warn'; kind: string; message: string; evidence?: unknown }> = []
+
+  if (snapshotA?.perf?.totalUs !== undefined) {
+    const us = snapshotA.perf.totalUs
+    if (us >= 1_000_000) {
+      triage.push({ level: 'warn', kind: 'slow_frame', message: `Severe slow frame (${us}us)`, evidence: { total_us: us } })
+    } else if (us >= 33_000) {
+      triage.push({ level: 'warn', kind: 'slow_frame', message: `Slow frame (${us}us)`, evidence: { total_us: us } })
+    } else {
+      triage.push({ level: 'info', kind: 'frame_time', message: `Frame time (${us}us)`, evidence: { total_us: us } })
+    }
+  }
+
+  if (snapshotA?.overlay?.barrierRootId) {
+    triage.push({
+      level: 'info',
+      kind: 'barrier_root',
+      message: `Barrier root active (${snapshotA.overlay.barrierRootId})`,
+      evidence: { barrier_root: snapshotA.overlay.barrierRootId },
+    })
+  }
+
+  const blockingRoots = snapshotA?.overlay?.layerRoots?.filter((r) => r.blocksUnderlay).map((r) => r.nodeId).filter(Boolean)
+  if (blockingRoots && blockingRoots.length > 0) {
+    triage.push({
+      level: 'warn',
+      kind: 'blocks_underlay',
+      message: `Underlay input may be blocked (count=${blockingRoots.length})`,
+      evidence: { blocking_roots: blockingRoots },
+    })
+  }
+
+  const inv = snapshotA?.perf?.invalidations as any
+  const invCalls = typeof inv?.count === 'number' ? inv.count : undefined
+  const invNodes = typeof inv?.nodes === 'number' ? inv.nodes : undefined
+  if (invCalls !== undefined || invNodes !== undefined) {
+    const level: 'info' | 'warn' = (invCalls ?? 0) >= 1000 ? 'warn' : 'info'
+    triage.push({
+      level,
+      kind: 'invalidation_walks',
+      message: `Invalidation walks (calls=${invCalls ?? '—'}, nodes=${invNodes ?? '—'})`,
+      evidence: { calls: invCalls, nodes: invNodes },
+    })
+  }
+
+  if (snapshotA?.perf?.layoutUs !== undefined || snapshotA?.perf?.prepaintUs !== undefined || snapshotA?.perf?.paintUs !== undefined) {
+    triage.push({
+      level: 'info',
+      kind: 'phase_breakdown',
+      message: 'Phase breakdown (layout/prepaint/paint)',
+      evidence: {
+        layout_us: snapshotA?.perf?.layoutUs,
+        prepaint_us: snapshotA?.perf?.prepaintUs,
+        paint_us: snapshotA?.perf?.paintUs,
+      },
+    })
+  }
+
+  // Optional semantics evidence for selected node.
+  if (selectedNodeId && snapshotA?.semantics?.nodesById[selectedNodeId]) {
+    const n = snapshotA.semantics.nodesById[selectedNodeId]
+    triage.push({
+      level: 'info',
+      kind: 'selected_node',
+      message: `Selected node (${selectedNodeId})`,
+      evidence: {
+        id: n.id,
+        role: n.role,
+        test_id: n.testId,
+        label: n.label,
+        name: n.name,
+        parent: n.parentId,
+        children: n.children.slice(0, 20),
+        bounds: n.bounds,
+      },
+    })
+  }
+
+  // Diff summary when comparing.
+  let diff: DiffResult | null = null
+  if (snapshotA && snapshotB) {
+    diff = diffSnapshots(snapshotA, snapshotB)
+    triage.push({
+      level: 'info',
+      kind: 'diff',
+      message: getDiffSummary(diff),
+      evidence: { added: diff.added.length, removed: diff.removed.length, changed: diff.changed.length },
+    })
+  }
+
+  const outDirContext = parseOutDirContext(bundle.meta.outDir)
+
+  const payload = {
+    schema_version: 1,
+    generated_at: new Date().toISOString(),
+    bundle: {
+      file_name: bundle.meta.fileName,
+      file_size: bundle.meta.fileSize,
+      schema_version: bundle.meta.schemaVersion,
+      exported_unix_ms: bundle.meta.exportedUnixMs,
+      out_dir: bundle.meta.outDir,
+      out_dir_context: outDirContext,
+    },
+    selection: {
+      window_id: window?.windowId,
+      snapshot_a: {
+        tick_id: snapshotA?.tickId,
+        frame_id: snapshotA?.frameId,
+      },
+      snapshot_b: snapshotB
+        ? {
+            tick_id: snapshotB.tickId,
+            frame_id: snapshotB.frameId,
+          }
+        : null,
+      selected_node_id: selectedNodeId,
+    },
+    triage,
+  }
+
+  const baseName = bundle.meta.fileName ? bundle.meta.fileName.replace(/\\.json$/i, '') : 'bundle'
+  downloadJson(payload, `${baseName}.triage.json`)
+}

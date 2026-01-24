@@ -21,7 +21,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { formatFileSize } from '@/lib/download'
-import { generateMarkdownSummary, downloadMarkdown } from '@/lib/download'
+import { exportTriageJson, generateMarkdownSummary, downloadMarkdown } from '@/lib/download'
 import { CommandPalette } from '@/components/command-palette'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSwitcher } from '@/components/language-switcher'
@@ -89,6 +89,17 @@ export function HeaderBar() {
       ? bundle.meta.fileName.replace('.json', '-summary.md')
       : 'bundle-summary.md'
     downloadMarkdown(markdown, fileName)
+  }, [bundle, selectedWindowIndex, selectedSnapshotAIndex, selectedSnapshotBIndex, selectedNodeId])
+
+  const handleExportTriage = useCallback(() => {
+    if (!bundle) return
+    exportTriageJson(
+      bundle,
+      selectedWindowIndex,
+      selectedSnapshotAIndex,
+      selectedSnapshotBIndex,
+      selectedNodeId
+    )
   }, [bundle, selectedWindowIndex, selectedSnapshotAIndex, selectedSnapshotBIndex, selectedNodeId])
 
   // Keyboard shortcuts
@@ -185,6 +196,28 @@ export function HeaderBar() {
               <p>{t('header.exportTooltip')}</p>
             </TooltipContent>
           </Tooltip>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 bg-transparent px-2 lg:px-3"
+                disabled={!bundle}
+              >
+                <ChevronDown className="h-4 w-4" />
+                <span className="ml-1.5 hidden lg:inline">{t('header.exportMore')}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportSummary} disabled={!bundle}>
+                {t('header.exportMarkdown')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportTriage} disabled={!bundle}>
+                {t('header.exportTriage')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Divider */}

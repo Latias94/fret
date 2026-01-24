@@ -59,6 +59,11 @@ pnpm -C tools/fret-bundle-viewer install
 pnpm -C tools/fret-bundle-viewer dev
 ```
 
+Workflow tip:
+
+- Drag the `bundle.json` file from `target/fret-diag/.../bundle.json` into the viewer (or use the file picker).
+- Use “Export triage.json” when you want a small, machine-readable artifact for AI triage.
+
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:

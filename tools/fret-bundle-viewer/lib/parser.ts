@@ -485,6 +485,10 @@ export function parseBundle(jsonText: string, fileName?: string): BundleModel {
   const root = parsed as Record<string, unknown>
   let windows: WindowModel[] = []
 
+  const schemaVersion = typeof root.schema_version === 'number' ? root.schema_version : undefined
+  const exportedUnixMs = typeof root.exported_unix_ms === 'number' ? root.exported_unix_ms : undefined
+  const outDir = typeof root.out_dir === 'string' ? root.out_dir : undefined
+
   // Try to find windows array
   const windowsRaw = root.windows ?? root.window_list ?? root.windowList
   if (Array.isArray(windowsRaw)) {
@@ -515,7 +519,7 @@ export function parseBundle(jsonText: string, fileName?: string): BundleModel {
   }
 
   return {
-    meta: { fileName, fileSize: jsonText.length },
+    meta: { fileName, fileSize: jsonText.length, schemaVersion, exportedUnixMs, outDir },
     windows,
     warnings,
   }

@@ -83,6 +83,9 @@ export interface WindowModel {
 export interface BundleMeta {
   fileName?: string
   fileSize?: number
+  schemaVersion?: number
+  exportedUnixMs?: number
+  outDir?: string
 }
 
 export interface BundleModel {

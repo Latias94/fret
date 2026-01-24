@@ -84,6 +84,7 @@ Related docs:
 3. **Sharing**
    - Bundle compression option (zip) with stable naming.
    - Simple bug template: attach `bundle.json` + optional `script.json`.
+   - Offline bundle viewer: `tools/fret-bundle-viewer` (supports semantics tree, perf panels, and `triage.json` export).
 
 ## CI / automation strategy (open questions)
 

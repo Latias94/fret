@@ -68,10 +68,40 @@ function InfoRow({ label, value, mono = false, warning = false, missingText = 'M
 }
 
 function SummaryTab() {
+  const bundle = useBundleStore((s) => s.bundle)
   const window = useBundleStore((s) => s.getSelectedWindow())
   const snapshot = useBundleStore((s) => s.getSelectedSnapshotA())
   const redactText = useBundleStore((s) => s.redactText)
   const { t } = useTranslation()
+
+  const outDirContext = useMemo(() => {
+    const outDir = bundle?.meta.outDir
+    if (!outDir) return null
+
+    const m = outDir.match(/^(\d+)-(.*)$/)
+    const ts = m?.[1]
+    const tail = m?.[2] ?? outDir
+
+    const sm = tail.match(/^script-step-(\d+)-(.+)$/)
+    if (sm) {
+      return {
+        kind: 'script_step' as const,
+        timestampPrefix: ts,
+        stepIndex: Number(sm[1]),
+        action: sm[2],
+      }
+    }
+
+    return {
+      kind: 'label' as const,
+      timestampPrefix: ts,
+      label: tail,
+    }
+  }, [bundle?.meta.outDir])
+
+  const handleCopy = useCallback((text: string) => {
+    copyToClipboard(text)
+  }, [])
 
   const triage = useMemo(() => {
     if (!snapshot) return []
@@ -145,6 +175,47 @@ function SummaryTab() {
   return (
     <ScrollArea className="h-full">
       <div className="p-3 space-y-4">
+        {/* Bundle */}
+        {bundle && (
+          <div>
+            <h4 className="text-xs font-medium text-foreground mb-2">{t('summary.bundle')}</h4>
+            <div className="bg-muted/30 rounded-md p-2">
+              <div className="flex items-center justify-between gap-2 py-1">
+                <div className="flex items-start gap-2 min-w-0">
+                  <span className="text-xs text-muted-foreground w-28 shrink-0">{t('summary.outDir')}</span>
+                  <span className={cn('text-xs text-foreground break-all font-mono', !bundle.meta.outDir && 'text-muted-foreground')}>
+                    {bundle.meta.outDir ?? ''}
+                  </span>
+                </div>
+                {bundle.meta.outDir && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => handleCopy(bundle.meta.outDir!)}
+                  >
+                    {t('summary.copy')}
+                  </Button>
+                )}
+              </div>
+
+              <InfoRow label={t('summary.bundleSchema')} value={bundle.meta.schemaVersion} />
+              <InfoRow label={t('summary.exported')} value={bundle.meta.exportedUnixMs} mono />
+
+              {outDirContext && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  <span className="font-medium">{t('summary.outDirContext')}:</span>{' '}
+                  <span className="font-mono">
+                    {outDirContext.kind === 'script_step'
+                      ? `script-step-${String(outDirContext.stepIndex).padStart(4, '0')}-${outDirContext.action}`
+                      : outDirContext.label}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Window Info */}
         <div>
           <h4 className="text-xs font-medium text-foreground mb-2">{t('summary.window')}</h4>
