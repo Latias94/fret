@@ -10,7 +10,7 @@ use fret_ui::action::{
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
-use fret_ui::tree::UiLayerId;
+use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{Invalidation, UiHost, UiTree};
 
 use crate::primitives::dismissable_layer as dismissable_layer_prim;
@@ -928,7 +928,11 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            apply_hover_layer_policy(ui, entry.layer, true, interactive);
+            let capture_conflicts_with_layer = arbitration.pointer_capture_active
+                && (arbitration.pointer_capture_multiple_layers
+                    || arbitration.pointer_capture_layer != Some(entry.layer));
+            let present = !capture_conflicts_with_layer;
+            apply_hover_layer_policy(ui, entry.layer, present, interactive && present);
         });
     }
 
@@ -995,10 +999,16 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
+            let capture_conflicts_with_layer = arbitration.pointer_capture_active
+                && (arbitration.pointer_capture_multiple_layers
+                    || arbitration.pointer_capture_layer != Some(entry.layer));
+            let present = !capture_conflicts_with_layer;
+            let interactive = interactive && present;
+
             apply_tooltip_layer_policy(
                 ui,
                 entry.layer,
-                true,
+                present,
                 interactive,
                 wants_outside_press_observer,
                 wants_pointer_move_events,

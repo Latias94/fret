@@ -3003,6 +3003,8 @@ fn non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_whil
             open,
             present: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: overlay_children,
@@ -3031,6 +3033,7 @@ fn non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_whil
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: PointerId(0),
             pointer_type: Default::default(),
@@ -3211,8 +3214,7 @@ fn tooltip_does_not_request_observers_while_closing() {
     // Install a tooltip layer that is still present but non-interactive (closing animation).
     begin_frame(&mut app, window);
     let id = GlobalElementId(0xdead);
-    let handler: fret_ui::action::OnDismissRequest =
-        Arc::new(|_host, _cx, _reason: DismissReason| {});
+    let handler: fret_ui::action::OnDismissRequest = Arc::new(|_host, _cx, _req| {});
     let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
         Arc::new(|_host, _cx, _move| false);
     request_tooltip_for_window(
