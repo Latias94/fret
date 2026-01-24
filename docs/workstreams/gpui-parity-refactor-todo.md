@@ -60,6 +60,12 @@ Keep this list short and evidence-backed:
   - Touches: `tools/diag-scripts/ui-gallery-overlay-torture.json`, `apps/fretboard/src/diag.rs`
 - [x] GPUI-MVP0-diag-012 Modal barrier underlay-block scripted scenario exists (overlay regression scaffold).
   - Touches: `tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json`, `apps/fretboard/src/diag.rs`
+- [x] GPUI-MVP0-diag-013 Add a bundle comparison command (cached vs uncached) to enforce “behavior preserving” view-cache.
+  - Touches: `apps/fretboard/src/diag.rs`, `apps/fretboard/src/cli.rs`, `docs/ui-diagnostics-and-scripted-tests.md`
+  - Notes: compares stable semantics anchors (`debug.semantics.nodes[].test_id`) and can include paint `scene_fingerprint`.
+- [x] GPUI-MVP0-diag-014 Add post-run view-cache reuse gating for scripted regressions.
+  - Touches: `apps/fretboard/src/diag.rs`, `apps/fretboard/src/cli.rs`, `docs/ui-diagnostics-and-scripted-tests.md`
+  - Notes: `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events after warmup frames.
 - [x] GPUI-MVP0-diag-004 Virtual list torture scripted scenario exists.
   - Touches: `tools/diag-scripts/ui-gallery-virtual-list-torture.json`, `apps/fretboard/src/diag.rs`
 - [x] GPUI-MVP0-diag-005 Export prepaint timing + add warmup filtering for perf runs.
