@@ -213,7 +213,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 
 ### Visual Outcomes
 
-- [ ] Elevation mapping (MD3 levels → shadow parameters).
+- [x] Elevation mapping (MD3 levels → shadow parameters).
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/elevation.rs` (`shadow_for_elevation_with_color`),
+    `ecosystem/fret-ui-material3/src/menu.rs` (`ContainerProps.shadow`),
+    `crates/fret-ui/src/paint.rs` (`paint_shadow`).
 - [ ] Shape mapping (corner tokens, per-state expressive shape where applicable).
   - [x] Corner set tokens (`md.sys.shape.corner.*.(top|start|end)`) and component shapes that depend on them.
 - [ ] Typography mapping (typescale roles).

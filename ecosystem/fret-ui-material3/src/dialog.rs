@@ -22,6 +22,7 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
+use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
@@ -468,6 +469,18 @@ impl Dialog {
                     .corners_by_key("md.comp.dialog.container.shape")
                     .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
                     .unwrap_or_else(|| Corners::all(Px(28.0)));
+                let elevation = theme
+                    .metric_by_key("md.comp.dialog.container.elevation")
+                    .unwrap_or(Px(0.0));
+                let shadow_color = theme
+                    .color_by_key("md.comp.dialog.container.shadow-color")
+                    .unwrap_or_else(|| tokens.color_sys("md.sys.color.shadow"));
+                let shadow = shadow_for_elevation_with_color(
+                    &theme,
+                    elevation,
+                    Some(shadow_color),
+                    container_shape,
+                );
 
                 let headline_color = tokens
                     .color_comp_or_sys("md.comp.dialog.headline.color", "md.sys.color.on-surface");
@@ -659,6 +672,7 @@ impl Dialog {
                                                         ContainerProps {
                                                             layout: panel_layout,
                                                             background: Some(container_bg),
+                                                            shadow,
                                                             corner_radii: container_shape,
                                                             padding: Edges::all(Px(24.0)),
                                                             ..Default::default()

@@ -28,6 +28,7 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
 
+use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::ms_to_frames;
 
@@ -325,6 +326,17 @@ impl PlainTooltip {
         let radius = theme
             .metric_by_key("md.comp.plain-tooltip.container.shape")
             .unwrap_or(Px(4.0));
+        let corner_radii = Corners::all(radius);
+        let elevation = theme
+            .metric_by_key("md.comp.plain-tooltip.container.elevation")
+            .or_else(|| theme.metric_by_key("md.comp.rich-tooltip.container.elevation"))
+            .unwrap_or(Px(0.0));
+        let shadow_color = theme
+            .color_by_key("md.comp.plain-tooltip.container.shadow-color")
+            .or_else(|| theme.color_by_key("md.comp.rich-tooltip.container.shadow-color"))
+            .unwrap_or_else(|| resolver.color_sys("md.sys.color.shadow"));
+        let shadow =
+            shadow_for_elevation_with_color(&theme, elevation, Some(shadow_color), corner_radii);
 
         let body_small = theme
             .text_style_by_key("md.sys.typescale.body-small")
@@ -356,7 +368,8 @@ impl PlainTooltip {
                         bottom: Px(4.0),
                     },
                     background: Some(container_bg),
-                    corner_radii: Corners::all(radius),
+                    shadow,
+                    corner_radii,
                     ..Default::default()
                 },
                 move |_cx| vec![child],

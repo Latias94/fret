@@ -22,6 +22,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{Theme, UiHost};
 
 use crate::foundation::content::MaterialContentDefaults;
+use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
@@ -174,16 +175,26 @@ impl Menu {
                 .color_by_key("md.comp.menu.container.color")
                 .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
                 .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"));
+            let elevation = theme
+                .metric_by_key("md.comp.menu.container.elevation")
+                .unwrap_or(Px(0.0));
+            let shadow_color = theme
+                .color_by_key("md.comp.menu.container.shadow-color")
+                .or_else(|| theme.color_by_key("md.sys.color.shadow"))
+                .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"));
             let r = theme
                 .metric_by_key("md.comp.menu.container.shape")
                 .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
                 .unwrap_or(Px(4.0));
             let corner = Corners::all(r);
+            let shadow =
+                shadow_for_elevation_with_color(&theme, elevation, Some(shadow_color), corner);
 
             cx.semantics(sem, move |cx| {
                 vec![cx.container(
                     ContainerProps {
                         background: Some(container_bg),
+                        shadow,
                         corner_radii: corner,
                         layout: {
                             let mut l = fret_ui::element::LayoutStyle::default();
