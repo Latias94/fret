@@ -24,7 +24,8 @@ use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
+    RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
+    material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
@@ -459,25 +460,6 @@ fn navigation_rail_item<H: UiHost>(
                 let state_layer_target =
                     rail_state_layer_opacity(theme, is_pressed, is_hovered, is_focused);
 
-                let state_duration_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.short2")
-                    .unwrap_or(100);
-                let easing = theme
-                    .easing_by_key("md.sys.motion.easing.standard")
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
-
-                let ripple_expand_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.short4")
-                    .unwrap_or(200);
-                let ripple_fade_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.short2")
-                    .unwrap_or(100);
-
                 let bounds = cx
                     .last_bounds_for_element(cx.root_id())
                     .unwrap_or(cx.bounds);
@@ -485,13 +467,7 @@ fn navigation_rail_item<H: UiHost>(
                 let ripple_base_opacity = theme
                     .number_by_key("md.comp.navigation-rail.pressed.state-layer.opacity")
                     .unwrap_or(0.1);
-                let config = IndicationConfig {
-                    state_duration_ms,
-                    ripple_expand_ms,
-                    ripple_fade_ms,
-                    ripple_radius: None,
-                    easing,
-                };
+                let config = material_pressable_indication_config(theme, None);
 
                 let indicator_bounds = fret_core::Rect::new(
                     fret_core::Point::new(Px((bounds.size.width.0 - indicator_w.0) * 0.5), Px(4.0)),

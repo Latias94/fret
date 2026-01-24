@@ -19,7 +19,7 @@ use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, material_ink_layer_for_pressable,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 
@@ -155,33 +155,11 @@ impl Checkbox {
                         let state_layer_color =
                             checkbox_state_layer_color(&theme, checked, interaction);
 
-                        let state_duration_ms = theme
-                            .duration_ms_by_key("md.sys.motion.duration.short2")
-                            .unwrap_or(100);
-                        let easing = theme
-                            .easing_by_key("md.sys.motion.easing.standard")
-                            .unwrap_or(fret_ui::theme::CubicBezier {
-                                x1: 0.0,
-                                y1: 0.0,
-                                x2: 1.0,
-                                y2: 1.0,
-                            });
-
-                        let ripple_expand_ms = theme
-                            .duration_ms_by_key("md.sys.motion.duration.short4")
-                            .unwrap_or(200);
-                        let ripple_fade_ms = theme
-                            .duration_ms_by_key("md.sys.motion.duration.short2")
-                            .unwrap_or(100);
-
                         let ripple_base_opacity = checkbox_ripple_base_opacity(&theme, checked);
-                        let config = IndicationConfig {
-                            state_duration_ms,
-                            ripple_expand_ms,
-                            ripple_fade_ms,
-                            ripple_radius: Some(Px(size.state_layer.0 * 0.5)),
-                            easing,
-                        };
+                        let config = material_pressable_indication_config(
+                            &theme,
+                            Some(Px(size.state_layer.0 * 0.5)),
+                        );
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,

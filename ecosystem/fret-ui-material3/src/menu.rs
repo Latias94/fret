@@ -24,7 +24,7 @@ use fret_ui::{Theme, UiHost};
 use crate::foundation::content::MaterialContentDefaults;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
-    IndicationConfig, RippleClip, material_ink_layer_for_pressable,
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 
@@ -394,35 +394,10 @@ fn material_menu_item<H: UiHost>(
                 let (label_color, state_layer_color, state_layer_target) =
                     menu_item_outcomes(theme, enabled, is_pressed, is_hovered, is_focused);
 
-                let state_duration_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.short2")
-                    .unwrap_or(100);
-                let easing = theme
-                    .easing_by_key("md.sys.motion.easing.standard")
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
-
-                let ripple_expand_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.short4")
-                    .unwrap_or(200);
-                let ripple_fade_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.short2")
-                    .unwrap_or(100);
-
                 let ripple_base_opacity = theme
                     .number_by_key("md.comp.menu.list-item.pressed.state-layer.opacity")
                     .unwrap_or(0.1);
-                let config = IndicationConfig {
-                    state_duration_ms,
-                    ripple_expand_ms,
-                    ripple_fade_ms,
-                    ripple_radius: None,
-                    easing,
-                };
+                let config = material_pressable_indication_config(theme, None);
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,

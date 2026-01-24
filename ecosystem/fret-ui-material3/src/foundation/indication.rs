@@ -46,6 +46,33 @@ impl Default for IndicationConfig {
     }
 }
 
+pub fn material_pressable_indication_config(
+    theme: &fret_ui::Theme,
+    ripple_radius: Option<Px>,
+) -> IndicationConfig {
+    let defaults = IndicationConfig::default();
+    let state_duration_ms = theme
+        .duration_ms_by_key("md.sys.motion.duration.short2")
+        .unwrap_or(defaults.state_duration_ms);
+    let ripple_expand_ms = theme
+        .duration_ms_by_key("md.sys.motion.duration.short4")
+        .unwrap_or(defaults.ripple_expand_ms);
+    let ripple_fade_ms = theme
+        .duration_ms_by_key("md.sys.motion.duration.short2")
+        .unwrap_or(defaults.ripple_fade_ms);
+    let easing = theme
+        .easing_by_key("md.sys.motion.easing.standard")
+        .unwrap_or(defaults.easing);
+
+    IndicationConfig {
+        state_duration_ms,
+        ripple_expand_ms,
+        ripple_fade_ms,
+        ripple_radius,
+        easing,
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct IndicationFrame {
     pub state_layer_opacity: f32,

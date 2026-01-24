@@ -58,6 +58,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/mod.rs`,
     `ecosystem/fret-ui-material3/src/foundation/indication.rs`,
     `ecosystem/fret-ui-material3/src/foundation/geometry.rs`.
+- [x] Centralize pressable indication timing defaults (durations + easing) to avoid per-component drift.
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`material_pressable_indication_config`).
 - [x] Migrate `Button` and `Tabs` to the foundation indication path and remove non-Material fallbacks.
   - Evidence: `ecosystem/fret-ui-material3/src/button.rs`,
     `ecosystem/fret-ui-material3/src/tabs.rs`.

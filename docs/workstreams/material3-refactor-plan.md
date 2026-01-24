@@ -55,6 +55,8 @@ Current state in this worktree:
   `focus_ring`).
 - Multiple components already use the foundation indication path (`Button`, `Tabs`, `Checkbox`,
   `IconButton`, `Switch`, `Menu`, `Radio`).
+- Pressable indication timing defaults (durations + standard easing) are centralized in
+  `foundation::indication::material_pressable_indication_config` to avoid per-component drift.
 - A token import + audit pipeline exists to keep scalar tokens aligned with Material Web v30.
 
 ## Compose Multiplatform Baseline (Reference Architecture)
