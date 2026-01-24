@@ -2165,6 +2165,124 @@ pub(crate) fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+pub(crate) fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.dialog.`
+
+    cfg.numbers.insert(
+        "md.comp.dialog.action.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.dialog.action.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers
+        .insert("md.comp.dialog.action.label-text.weight".to_string(), 500.0);
+    cfg.numbers.insert(
+        "md.comp.dialog.action.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.dialog.container.elevation".to_string(), 6.0);
+    cfg.metrics
+        .insert("md.comp.dialog.container.shape".to_string(), 28.0);
+    cfg.numbers
+        .insert("md.comp.dialog.headline.weight".to_string(), 400.0);
+    cfg.numbers
+        .insert("md.comp.dialog.subhead.weight".to_string(), 400.0);
+    cfg.numbers
+        .insert("md.comp.dialog.supporting-text.weight".to_string(), 400.0);
+    cfg.metrics.insert(
+        "md.comp.dialog.with-divider.divider.height".to_string(),
+        1.0,
+    );
+    cfg.metrics
+        .insert("md.comp.dialog.with-icon.icon.size".to_string(), 24.0);
+}
+
+pub(crate) fn inject_comp_full_screen_dialog_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.full-screen-dialog.`
+
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.action-bar.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.action-bar.container.height".to_string(),
+        56.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.action-bar.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.action-bar.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.action-bar.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.action-bar.on-scroll.container.elevation".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.action-bar.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.container.shape".to_string(),
+        0.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.header.action.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.header.action.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.header.action.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.header.action.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.header.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.header.container.height".to_string(),
+        56.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.full-screen-dialog.header.headline.weight".to_string(),
+        400.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.header.icon.size".to_string(),
+        24.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.header.on-scroll.container.elevation".to_string(),
+        3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.full-screen-dialog.with-divider.divider.height".to_string(),
+        1.0,
+    );
+}
+
 pub(crate) fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.outlined-text-field.`

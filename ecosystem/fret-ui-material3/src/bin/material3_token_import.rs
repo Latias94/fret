@@ -52,6 +52,8 @@ impl Args {
             "md.comp.menu.".to_string(),
             "md.comp.outlined-text-field.".to_string(),
             "md.comp.filled-text-field.".to_string(),
+            "md.comp.dialog.".to_string(),
+            "md.comp.full-screen-dialog.".to_string(),
         ];
         let mut debug = false;
 
@@ -477,6 +479,22 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.menu.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.menu."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_dialog_scalars",
+        "md.comp.dialog.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.dialog."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_full_screen_dialog_scalars",
+        "md.comp.full-screen-dialog.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.full-screen-dialog."))
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_scalars(
