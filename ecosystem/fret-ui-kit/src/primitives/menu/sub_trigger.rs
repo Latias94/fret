@@ -44,6 +44,10 @@ pub fn wire<H: UiHost>(
     }
 
     if has_submenu {
+        // The open-delay timer is recorded against the submenu trigger element id (the pressable),
+        // so install the timer handler on this element as well as the menu root.
+        sub::install_timer_handler(cx, item_id, models.clone(), cfg);
+
         let models_for_hover = models.clone();
         let value_for_hover = value.clone();
         let cfg_for_hover = cfg;

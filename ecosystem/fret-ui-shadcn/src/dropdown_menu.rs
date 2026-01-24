@@ -3911,6 +3911,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4670,6 +4673,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4758,6 +4764,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4798,7 +4807,10 @@ mod tests {
             trigger_id_out.clone(),
             entries.clone(),
         );
-        assert_eq!(trigger_id_2, trigger_id, "expected a stable trigger element id");
+        assert_eq!(
+            trigger_id_2, trigger_id,
+            "expected a stable trigger element id"
+        );
 
         let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
         let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
@@ -4852,25 +4864,33 @@ mod tests {
         );
 
         let effects = app.flush_effects();
-        let open_timer = effects.iter().find_map(|e| match e {
-            Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(100) => {
-                Some(*token)
-            }
-            _ => None,
-        });
-        let Some(open_timer) = open_timer else {
-            panic!("expected submenu open-delay timer effect");
-        };
+        let open_delay = menu::sub::MenuSubmenuConfig::default().open_delay;
+        let open_timers: Vec<fret_runtime::TimerToken> = effects
+            .iter()
+            .filter_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if *after == open_delay => Some(*token),
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !open_timers.is_empty(),
+            "expected submenu open-delay timer effect"
+        );
 
         // Third frame: hovering does not open the submenu immediately (open-delay timer).
-        let _ = render_frame(
+        let (_, trigger_id_3) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
+        );
+        assert_eq!(
+            trigger_id_3, trigger_id,
+            "expected a stable trigger element id"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4892,17 +4912,24 @@ mod tests {
             "submenu items should not render before the open-delay timer fires"
         );
 
-        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
+        for token in open_timers {
+            ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+        }
 
         // Fourth frame: after open timer fires, the submenu opens.
-        let _ = render_frame(
+        let (_, trigger_id_4) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries.clone(),
+        );
+        assert_eq!(
+            trigger_id_4, trigger_id,
+            "expected a stable trigger element id"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4949,7 +4976,23 @@ mod tests {
                     - sub_alpha.origin.y.0.min(sub_beta.origin.y.0)),
             ),
         );
-        let probe = Point::new(Px(390.0), Px(10.0));
+        let more_center = rect_center(more.bounds);
+        let submenu_center = rect_center(submenu_bounds);
+        let dx = submenu_center.x.0 - more_center.x.0;
+        let dy = submenu_center.y.0 - more_center.y.0;
+        // Move away from the submenu direction so the safe-hover corridor is considered unsafe and
+        // the close-delay timer is armed.
+        let probe = if dx.abs() >= dy.abs() {
+            if dx >= 0.0 {
+                Point::new(Px(-100.0), more_center.y)
+            } else {
+                Point::new(Px(bounds.size.width.0 + 100.0), more_center.y)
+            }
+        } else if dy >= 0.0 {
+            Point::new(more_center.x, Px(-100.0))
+        } else {
+            Point::new(more_center.x, Px(bounds.size.height.0 + 100.0))
+        };
 
         ui.dispatch_event(
             &mut app,
@@ -4964,8 +5007,9 @@ mod tests {
         );
 
         let effects = app.flush_effects();
+        let close_delay = menu::sub::MenuSubmenuConfig::default().close_delay;
         let timer = effects.iter().find_map(|e| match e {
-            Effect::SetTimer { token, .. } => Some(*token),
+            Effect::SetTimer { token, after, .. } if *after == close_delay => Some(*token),
             _ => None,
         });
         let Some(timer) = timer else {
@@ -4977,14 +5021,19 @@ mod tests {
         };
 
         // Fifth frame: leaving the safe corridor arms a short close delay (submenu remains visible).
-        let _ = render_frame(
+        let (_, trigger_id_5) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             entries,
+        );
+        assert_eq!(
+            trigger_id_5, trigger_id,
+            "expected a stable trigger element id"
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4999,13 +5048,14 @@ mod tests {
         ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: timer });
 
         // Sixth frame: after the close timer fires, the submenu begins closing.
-        let _ = render_frame(
+        let (_, trigger_id_6) = render_frame_capture_trigger_id(
             &mut ui,
             &mut app,
             &mut services,
             window,
             bounds,
             open.clone(),
+            trigger_id_out.clone(),
             vec![
                 DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
                     DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
@@ -5014,15 +5064,20 @@ mod tests {
                 DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
             ],
         );
+        assert_eq!(
+            trigger_id_6, trigger_id,
+            "expected a stable trigger element id"
+        );
 
         for _ in 0..overlay_motion::SHADCN_MOTION_TICKS_100 {
-            let _ = render_frame(
+            let _ = render_frame_capture_trigger_id(
                 &mut ui,
                 &mut app,
                 &mut services,
                 window,
                 bounds,
                 open.clone(),
+                trigger_id_out.clone(),
                 vec![
                     DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
                         DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
