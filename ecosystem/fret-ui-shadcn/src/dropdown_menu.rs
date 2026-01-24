@@ -5036,6 +5036,131 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_close_transition_does_not_drive_submenu_timers() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ])),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+        ];
+
+        // Frame 1: closed.
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open and locate the submenu trigger.
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        let more_center = rect_center(more.bounds);
+
+        // Begin close transition (present=true, interactive=false).
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing. Pointer moves should not drive hover intent/timers anymore.
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out,
+            underlay_clicked,
+            entries,
+        );
+        let _ = app.flush_effects();
+
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::None,
+            "expected close transition to be click-through"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: more_center,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        let cfg = menu::sub::MenuSubmenuConfig::default();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::SetTimer { after, .. } if *after == cfg.open_delay)),
+            "expected close transition pointer move to not arm open-delay timer; effects={effects:?} pos={more_center:?} open_delay={:?}",
+            cfg.open_delay
+        );
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::SetTimer { after, .. } if *after == cfg.close_delay)),
+            "expected close transition pointer move to not arm close-delay timer; effects={effects:?} pos={more_center:?} close_delay={:?}",
+            cfg.close_delay
+        );
+    }
+
+    #[test]
     fn dropdown_menu_click_through_outside_press_closes_and_focuses_underlay() {
         use fret_core::MouseButton;
 
