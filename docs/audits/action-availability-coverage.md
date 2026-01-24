@@ -44,6 +44,11 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
 - `focus.menu_bar`
   - Availability is app/runner specific; expected to be provided by a workspace shell or runner
     integration.
+  - Default contract: shells that render an in-window menubar should publish
+    `WindowMenuBarFocusService` so cross-surface gating can disable the command when no menubar is
+    present.
+    - Evidence: `ecosystem/fret-kit/src/workspace_shell.rs` (publishes service),
+      `crates/fret-ui/src/tree/commands.rs` (publishes availability snapshot entry)
 
 ### Edit / Clipboard
 
