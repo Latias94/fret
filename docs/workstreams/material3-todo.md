@@ -196,7 +196,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin_local`),
     `crates/fret-ui/src/paint.rs` (`paint_ripple`).
 - [ ] Ripple parity improvements (unbounded clip, token radius, spec fade rules).
-  - Evidence (partial): `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleClip`),
+  - Evidence (partial): `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleClip`, `IndicationConfig.ripple_radius`),
     `ecosystem/fret-ui-material3/src/checkbox.rs` (unbounded ripple),
     `ecosystem/fret-ui-material3/src/radio.rs` (unbounded ripple),
     `ecosystem/fret-ui-material3/src/switch.rs` (unbounded ripple).

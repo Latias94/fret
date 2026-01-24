@@ -21,6 +21,11 @@ pub struct IndicationConfig {
     pub state_duration_ms: u32,
     pub ripple_expand_ms: u32,
     pub ripple_fade_ms: u32,
+    /// Optional override for the ripple's max radius (end size).
+    ///
+    /// This is used to align components like Checkbox/Radio/Switch with Compose Material 3, which
+    /// specifies `radius = StateLayerSize / 2` for unbounded ripples.
+    pub ripple_radius: Option<Px>,
     pub easing: CubicBezier,
 }
 
@@ -30,6 +35,7 @@ impl Default for IndicationConfig {
             state_duration_ms: 100,
             ripple_expand_ms: 200,
             ripple_fade_ms: 100,
+            ripple_radius: None,
             easing: CubicBezier {
                 x1: 0.0,
                 y1: 0.0,
@@ -107,7 +113,10 @@ pub fn advance_indication_for_pressable<H: UiHost>(
         rt.prev_pressed = pressed;
         if pressed_rising && ripple_enabled {
             let origin = down_origin_local(bounds, last_down);
-            let max_radius = ripple_max_radius(bounds, origin);
+            let max_radius = config
+                .ripple_radius
+                .filter(|r| r.0.is_finite() && r.0 > 0.0)
+                .unwrap_or_else(|| ripple_max_radius(bounds, origin));
             rt.ripple.start(
                 now_frame,
                 origin,
@@ -188,10 +197,15 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
                 Px(origin.x.0 - ripple_bounds.origin.x.0),
                 Px(origin.y.0 - ripple_bounds.origin.y.0),
             );
-            let max_radius = ripple_max_radius(
-                Rect::new(fret_core::Point::new(Px(0.0), Px(0.0)), ripple_bounds.size),
-                origin_in_ripple,
-            );
+            let max_radius = config
+                .ripple_radius
+                .filter(|r| r.0.is_finite() && r.0 > 0.0)
+                .unwrap_or_else(|| {
+                    ripple_max_radius(
+                        Rect::new(fret_core::Point::new(Px(0.0), Px(0.0)), ripple_bounds.size),
+                        origin_in_ripple,
+                    )
+                });
             rt.ripple.start(
                 now_frame,
                 origin,

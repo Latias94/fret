@@ -239,6 +239,7 @@ impl DialogAction {
                             state_duration_ms,
                             ripple_expand_ms,
                             ripple_fade_ms,
+                            ripple_radius: None,
                             easing,
                         },
                     );

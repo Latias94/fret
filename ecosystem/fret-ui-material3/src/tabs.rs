@@ -475,6 +475,7 @@ fn material_primary_tab<H: UiHost>(
                     state_duration_ms,
                     ripple_expand_ms,
                     ripple_fade_ms,
+                    ripple_radius: None,
                     easing,
                 };
                 let indication = advance_indication_for_pressable(

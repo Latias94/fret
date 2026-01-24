@@ -183,6 +183,7 @@ impl Checkbox {
                             state_duration_ms,
                             ripple_expand_ms,
                             ripple_fade_ms,
+                            ripple_radius: Some(Px(size.state_layer.0 * 0.5)),
                             easing,
                         };
                         let indication = advance_indication_for_pressable(
