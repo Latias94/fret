@@ -99,8 +99,6 @@ pub(super) struct WindowOverlays {
 enum OverlayLayerKind {
     Modal,
     NonModalDismissible,
-    Hover,
-    Tooltip,
     Toast,
 }
 
@@ -144,23 +142,6 @@ impl OverlayLayerState {
             wants_timer_events: present,
         }
     }
-
-    fn tooltip(present: bool, interactive: bool) -> Self {
-        Self {
-            present,
-            interactive,
-            wants_timer_events: false,
-        }
-    }
-
-    fn hover(present: bool, interactive: bool) -> Self {
-        Self {
-            present,
-            interactive,
-            wants_timer_events: false,
-        }
-    }
-
     fn toast(present: bool, wants_timer_events: bool) -> Self {
         Self {
             present,
@@ -191,17 +172,6 @@ fn apply_overlay_layer_state<H: UiHost>(
             // is closing (`interactive=false` but `present=true` for an exit transition), the
             // layer must remain hit-testable to keep the underlay inert and prevent click-through.
             ui.set_layer_hit_testable(layer, st.present);
-            ui.set_layer_wants_pointer_down_outside_events(layer, false);
-        }
-        OverlayLayerKind::Tooltip => {
-            ui.set_layer_visible(layer, st.present);
-            ui.set_layer_hit_testable(layer, false);
-            ui.set_layer_wants_pointer_down_outside_events(layer, st.interactive);
-            ui.set_layer_wants_pointer_move_events(layer, st.interactive);
-        }
-        OverlayLayerKind::Hover => {
-            ui.set_layer_visible(layer, st.present);
-            ui.set_layer_hit_testable(layer, st.interactive);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
         }
         OverlayLayerKind::Toast => {
@@ -235,14 +205,6 @@ impl OverlayLayer {
         Self::hidden(OverlayLayerKind::NonModalDismissible)
     }
 
-    pub(super) fn hide_hover() -> Self {
-        Self::hidden(OverlayLayerKind::Hover)
-    }
-
-    pub(super) fn hide_tooltip() -> Self {
-        Self::hidden(OverlayLayerKind::Tooltip)
-    }
-
     pub(super) fn hide_toast() -> Self {
         Self::hidden(OverlayLayerKind::Toast)
     }
@@ -258,20 +220,6 @@ impl OverlayLayer {
         Self::new(
             OverlayLayerKind::NonModalDismissible,
             OverlayLayerState::non_modal_dismissible(present, interactive),
-        )
-    }
-
-    pub(super) fn tooltip(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::Tooltip,
-            OverlayLayerState::tooltip(present, interactive),
-        )
-    }
-
-    pub(super) fn hover(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::Hover,
-            OverlayLayerState::hover(present, interactive),
         )
     }
 

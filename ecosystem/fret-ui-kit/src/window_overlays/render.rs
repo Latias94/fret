@@ -132,6 +132,48 @@ fn clear_non_modal_dismissible_layer_policy<H: UiHost>(ui: &mut UiTree<H>, layer
     ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
 }
 
+fn apply_hover_layer_policy<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+) {
+    ui.set_layer_visible(layer, present);
+    ui.set_layer_hit_testable(layer, present && interactive);
+    ui.set_layer_wants_pointer_down_outside_events(layer, false);
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_wants_pointer_move_events(layer, false);
+    ui.set_layer_wants_timer_events(layer, false);
+    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
+}
+
+fn apply_tooltip_layer_policy<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+    wants_outside_press_observer: bool,
+    wants_pointer_move_events: bool,
+) {
+    // Tooltips are always click-through. "Interactive" controls whether we install observer hooks
+    // while the tooltip is open (and must be disabled during close transitions).
+    ui.set_layer_visible(layer, present);
+    ui.set_layer_hit_testable(layer, false);
+    ui.set_layer_wants_pointer_down_outside_events(
+        layer,
+        present && interactive && wants_outside_press_observer,
+    );
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_wants_pointer_move_events(
+        layer,
+        present && interactive && wants_pointer_move_events,
+    );
+    ui.set_layer_wants_timer_events(layer, false);
+    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
+}
+
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -879,6 +921,7 @@ pub fn render<H: UiHost>(
         }
 
         seen_hover_overlays.insert(req.id);
+        let interactive = req.interactive;
 
         let root = fret_ui::declarative::render_root(
             ui,
@@ -902,7 +945,7 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            OverlayLayer::hover(true, req.interactive).apply(ui, entry.layer);
+            apply_hover_layer_policy(ui, entry.layer, true, interactive);
         });
     }
 
@@ -925,16 +968,19 @@ pub fn render<H: UiHost>(
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
             && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
         {
-            OverlayLayer::hide_hover().apply(ui, layer);
+            apply_hover_layer_policy(ui, layer, false, false);
             ui.set_focus(Some(trigger_node));
         } else {
-            OverlayLayer::hide_hover().apply(ui, layer);
+            apply_hover_layer_policy(ui, layer, false, false);
         }
     }
 
     for req in tooltip_requests {
         seen_tooltips.insert(req.id);
 
+        let interactive = req.interactive;
+        let wants_outside_press_observer = req.on_dismiss_request.is_some();
+        let wants_pointer_move_events = req.on_pointer_move.is_some();
         let on_dismiss_request = req.on_dismiss_request.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
@@ -966,9 +1012,23 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
-            OverlayLayer::tooltip(true, req.interactive).apply(ui, entry.layer);
+            apply_tooltip_layer_policy(
+                ui,
+                entry.layer,
+                true,
+                interactive,
+                wants_outside_press_observer,
+                wants_pointer_move_events,
+            );
 
-            ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
+            if interactive {
+                ui.set_layer_scroll_dismiss_elements(
+                    entry.layer,
+                    req.trigger.into_iter().collect(),
+                );
+            } else {
+                ui.set_layer_scroll_dismiss_elements(entry.layer, Vec::new());
+            }
         });
     }
 
@@ -987,7 +1047,8 @@ pub fn render<H: UiHost>(
         });
 
     for layer in to_hide_tooltips {
-        OverlayLayer::hide_tooltip().apply(ui, layer);
+        apply_tooltip_layer_policy(ui, layer, false, false, false, false);
+        ui.set_layer_scroll_dismiss_elements(layer, Vec::new());
     }
 
     for req in toast_requests {
