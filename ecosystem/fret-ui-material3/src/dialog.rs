@@ -560,18 +560,25 @@ impl Dialog {
                             });
 
                             let panel = cx.named("panel", |cx| {
+                                let opacity = transition.progress;
                                 let translate_y = Px((1.0 - transition.progress) * 20.0);
+                                let scale = 0.9 + 0.1 * transition.progress;
+
+                                let origin = fret_core::Point::new(
+                                    Px(cx.bounds.origin.x.0 + cx.bounds.size.width.0 * 0.5),
+                                    Px(cx.bounds.origin.y.0 + cx.bounds.size.height.0 * 0.5),
+                                );
+                                let origin_inv =
+                                    fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
+                                let transform = fret_core::Transform2D::translation(
+                                    fret_core::Point::new(Px(0.0), translate_y),
+                                ) * fret_core::Transform2D::translation(origin)
+                                    * fret_core::Transform2D::scale_uniform(scale)
+                                    * fret_core::Transform2D::translation(origin_inv);
 
                                 let mut center_layout = LayoutStyle::default();
-                                center_layout.position = PositionStyle::Absolute;
                                 center_layout.size.width = Length::Fill;
                                 center_layout.size.height = Length::Fill;
-                                center_layout.inset = InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
-                                    bottom: Some(Px(0.0)),
-                                    left: Some(Px(0.0)),
-                                };
 
                                 let mut center = FlexProps::default();
                                 center.layout = center_layout;
@@ -580,14 +587,7 @@ impl Dialog {
                                 center.align = CrossAlign::Center;
                                 center.padding = Edges::all(Px(24.0));
 
-                                cx.render_transform(
-                                    fret_core::Transform2D::translation(fret_core::Point::new(
-                                        Px(0.0),
-                                        translate_y,
-                                    )),
-                                    move |cx| {
-                                        vec![cx.opacity(transition.progress, move |cx| {
-                                            vec![cx.flex(center, move |cx| {
+                                let content = cx.flex(center, move |cx| {
                                                 let mut panel_layout = LayoutStyle::default();
                                                 panel_layout.size.width = Length::Fill;
                                                 panel_layout.size.max_width = Some(Px(560.0));
@@ -680,9 +680,14 @@ impl Dialog {
                                                         move |_cx| body,
                                                     )]
                                                 })]
-                                            })]
-                                        })]
-                                    },
+                                            });
+
+                                fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
+                                    cx,
+                                    opacity,
+                                    transform,
+                                    presence.interactive,
+                                    vec![content],
                                 )
                             });
 

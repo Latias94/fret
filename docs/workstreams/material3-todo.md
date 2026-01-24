@@ -202,7 +202,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-headless/src/transition.rs` (`update_with_cubic_bezier`),
     `ecosystem/fret-ui-kit/src/declarative/transition.rs` (`drive_transition_with_durations_and_cubic_bezier`),
     `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`transition_with_durations_and_cubic_bezier`),
-    `ecosystem/fret-ui-material3/src/dialog.rs` (overlay transition),
+    `ecosystem/fret-ui-material3/src/dialog.rs` (scrim fade + panel scale/translate transition),
     `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (menu transition),
     `ecosystem/fret-ui-material3/src/tooltip.rs` (tooltip transition),
     `ecosystem/fret-ui-material3/src/snackbar.rs` (toast-layer motion tokens).

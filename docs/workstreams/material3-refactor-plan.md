@@ -280,6 +280,8 @@ Goal: prove the foundation approach reduces divergence and removes flicker/misma
 Status notes:
 
 - Most migrated components now rely on `foundation::indication`.
+- Dialog overlay motion is now implemented via shared opacity + render-transform wrappers (matching
+  menu/tooltip patterns) to reduce drift.
 - `TextField` still needs a full indication migration (it currently only avoids non-Material token
   fallbacks).
 
