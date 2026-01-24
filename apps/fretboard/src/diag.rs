@@ -36,6 +36,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_out: Option<PathBuf> = None;
     let mut pack_include_root_artifacts: bool = false;
     let mut pack_include_triage: bool = false;
+    let mut pack_include_screenshots: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
@@ -101,10 +102,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--include-all" => {
                 pack_include_root_artifacts = true;
                 pack_include_triage = true;
+                pack_include_screenshots = true;
                 i += 1;
             }
             "--include-triage" => {
                 pack_include_triage = true;
+                i += 1;
+            }
+            "--include-screenshots" => {
+                pack_include_screenshots = true;
                 i += 1;
             }
             "--script-path" => {
@@ -567,6 +573,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &out,
                 pack_include_root_artifacts,
                 pack_include_triage,
+                pack_include_screenshots,
                 &artifacts_root,
                 stats_top,
                 sort_override.unwrap_or(BundleStatsSort::Invalidation),
@@ -1302,6 +1309,7 @@ fn pack_bundle_dir_to_zip(
     out_path: &Path,
     include_root_artifacts: bool,
     include_triage: bool,
+    include_screenshots: bool,
     artifacts_root: &Path,
     stats_top: usize,
     sort: BundleStatsSort,
@@ -1350,6 +1358,14 @@ fn pack_bundle_dir_to_zip(
     if include_root_artifacts {
         let root_prefix = format!("{bundle_name}/_root");
         zip_add_root_artifacts(&mut zip, artifacts_root, &root_prefix, options)?;
+    }
+
+    if include_screenshots {
+        let screenshots_dir = artifacts_root.join("screenshots").join(bundle_name);
+        if screenshots_dir.is_dir() {
+            let screenshots_prefix = format!("{bundle_name}/_root/screenshots");
+            zip_add_screenshots(&mut zip, &screenshots_dir, &screenshots_prefix, options)?;
+        }
     }
 
     if include_triage {
@@ -1493,6 +1509,73 @@ fn zip_add_root_artifacts(
         let dst = format!("{zip_prefix}/{name}");
         zip.start_file(dst, options).map_err(|e| e.to_string())?;
         let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn zip_add_screenshots(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    zip_add_screenshot_dir(zip, dir, dir, zip_prefix, options)
+}
+
+fn zip_add_screenshot_dir(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    base_dir: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    let mut entries: Vec<std::fs::DirEntry> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+        if meta.file_type().is_symlink() {
+            continue;
+        }
+
+        if meta.is_dir() {
+            zip_add_screenshot_dir(zip, &path, base_dir, zip_prefix, options)?;
+            continue;
+        }
+
+        if !meta.is_file() {
+            continue;
+        }
+
+        let name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_default();
+
+        // Keep this conservative to avoid exploding zip sizes accidentally.
+        let should_include = matches!(ext.as_str(), "png") || name == "manifest.json";
+        if !should_include {
+            continue;
+        }
+
+        let rel = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "failed to compute zip relative path".to_string())?;
+
+        let dst = format!("{}/{}", zip_prefix, zip_name(rel));
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
         std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
     }
 
