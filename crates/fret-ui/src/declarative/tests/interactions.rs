@@ -1182,6 +1182,105 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
 }
 
 #[test]
+fn text_input_select_all_is_blocked_when_empty() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-select-all-empty",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let select_all = CommandId::from("text.select_all");
+    let clear = CommandId::from("text.clear");
+    let unknown = CommandId::from("text.unknown");
+
+    assert!(
+        !ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected text.clear to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &unknown),
+        "expected unknown text.* commands to be NotHandled for availability"
+    );
+}
+
+#[test]
+fn text_area_select_all_is_blocked_when_empty() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-select-all-empty",
+        |cx| vec![cx.text_area(crate::element::TextAreaProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let area_node = ui.children(root)[0];
+    ui.set_focus(Some(area_node));
+
+    let select_all = CommandId::from("text.select_all");
+    let clear = CommandId::from("text.clear");
+    let unknown = CommandId::from("text.unknown");
+
+    assert!(
+        !ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected text.clear to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &unknown),
+        "expected unknown text.* commands to be NotHandled for availability"
+    );
+}
+
+#[test]
 fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
