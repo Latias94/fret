@@ -1871,6 +1871,70 @@ pub(crate) fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) 
     );
 }
 
+pub(crate) fn inject_comp_navigation_bar_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.navigation-bar.`
+
+    cfg.metrics.insert(
+        "md.comp.navigation-bar.active-indicator.height".to_string(),
+        32.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-bar.active-indicator.shape".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-bar.active-indicator.width".to_string(),
+        64.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-bar.active.label-text.weight".to_string(),
+        700.0,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-bar.badge.shape".to_string(), 3.0);
+    cfg.metrics
+        .insert("md.comp.navigation-bar.badge.size".to_string(), 6.0);
+    cfg.metrics.insert(
+        "md.comp.navigation-bar.container.elevation".to_string(),
+        3.0,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-bar.container.height".to_string(), 80.0);
+    cfg.metrics
+        .insert("md.comp.navigation-bar.container.shape".to_string(), 0.0);
+    cfg.metrics.insert(
+        "md.comp.navigation-bar.focus.indicator.outline.offset".to_string(),
+        -3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-bar.focus.indicator.thickness".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-bar.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-bar.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-bar.icon.size".to_string(), 24.0);
+    cfg.numbers.insert(
+        "md.comp.navigation-bar.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-bar.large-badge.shape".to_string(), 8.0);
+    cfg.metrics
+        .insert("md.comp.navigation-bar.large-badge.size".to_string(), 16.0);
+    cfg.numbers.insert(
+        "md.comp.navigation-bar.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+}
+
 pub(crate) fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.menu.`
