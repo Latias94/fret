@@ -3250,7 +3250,6 @@ mod tests {
                 modifiers: Modifiers::default(),
                 is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
-                is_click: true,
                 click_count: 1,
             }),
         );
@@ -3423,7 +3422,6 @@ mod tests {
                 modifiers: Modifiers::default(),
                 is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
-                is_click: true,
                 click_count: 1,
             }),
         );
@@ -3491,7 +3489,6 @@ mod tests {
                 modifiers: Modifiers::default(),
                 is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
-                is_click: true,
                 click_count: 1,
             }),
         );
@@ -3558,7 +3555,6 @@ mod tests {
                 modifiers: Modifiers::default(),
                 is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
-                is_click: true,
                 click_count: 1,
             }),
         );
