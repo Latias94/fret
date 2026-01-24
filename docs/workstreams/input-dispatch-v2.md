@@ -107,6 +107,13 @@ See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed
 - Policy normalization: factor non-modal dismissible overlay input policy (outside-press branches, consume-outside flags,
   and pointer occlusion) into shared helpers to keep `present` vs `interactive` invariants consistent across overlays.
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- Policy normalization: tooltip + hover overlay layers respect `present` vs `interactive` (close
+  transitions stay painted but become click-through / observer-inert), and tooltips only request
+  outside-press / pointer-move observers when explicitly opted in.
+  - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs`,
+    `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
+    `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_by_default`,
+    `tooltip_does_not_request_observers_while_closing`, `hover_overlay_is_click_through_while_closing`)
 - Menu ergonomics: ensure submenu timers (open/close/focus delay) and safe-hover pointer-move outcomes
   are routed consistently by installing timer + pointer-move handlers on the submenu trigger path.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/{root.rs,sub_trigger.rs}`
