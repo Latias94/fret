@@ -170,14 +170,12 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       Removing this currently regresses `ui-gallery-overlay-torture.json` (fails at step 10 with `click_no_semantics_match` under cache+shell).
       Remove this once parent-pointer repair + reachability + explicit view-cache subtree liveness is proven sufficient under reuse.
       - Anchor: `crates/fret-ui/src/declarative/mount.rs` (`view_cache_has_reuse_roots` guard in the GC retain pass).
-    - Add missing detachment explainability so we can debug the stopgap removal from a single failing bundle:
-      - Export `root_parent_children_last_set_location` for `removed_subtrees` (plumb `UiTree`'s `debug_set_children_writes` into the record).
-      - Export `root_element_path` for `removed_subtrees` (map `root_element` via diagnostics debug identity / element path registry during bundle export).
   - Done when:
     - The `view_cache_has_reuse_roots` stopgap is removed and both overlay regression harnesses remain green under cache+shell reuse.
   - Diagnostics:
-    - Current: `removed_subtrees` include `root_element`, `root_parent`, `root_parent_element`, a `root_path` sample, and `location` (callsite).
-    - TODO: include `root_parent_children_last_set_location` (last `set_children(parent, ..)` site when known) and `root_element_path` (debug identity) to make detachment explainable from a single bundle.
+    - `removed_subtrees` include `root_element_path` (when the element debug identity is still retained within the diagnostics lag window).
+    - `removed_subtrees` include `root_parent_children_last_set_location` (when the parent has a recorded `set_children(..)` write in this run).
+    - If these fields are missing in a failing bundle, it usually means: the debug identity entry was pruned (not touched for `gc_lag_frames`), or the parent never issued a `set_children(..)` write in the current capture.
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
