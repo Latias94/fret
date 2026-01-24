@@ -2209,6 +2209,56 @@ pub(crate) fn inject_comp_rich_tooltip_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+pub(crate) fn inject_comp_snackbar_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.snackbar.`
+
+    cfg.numbers.insert(
+        "md.comp.snackbar.action.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.snackbar.action.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.snackbar.action.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.snackbar.action.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.snackbar.container.elevation".to_string(), 6.0);
+    cfg.metrics
+        .insert("md.comp.snackbar.container.shape".to_string(), 4.0);
+    cfg.numbers.insert(
+        "md.comp.snackbar.icon.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.snackbar.icon.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers.insert(
+        "md.comp.snackbar.icon.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics
+        .insert("md.comp.snackbar.icon.size".to_string(), 24.0);
+    cfg.numbers
+        .insert("md.comp.snackbar.supporting-text.weight".to_string(), 400.0);
+    cfg.metrics.insert(
+        "md.comp.snackbar.with-single-line.container.height".to_string(),
+        48.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.snackbar.with-two-lines.container.height".to_string(),
+        68.0,
+    );
+}
+
 pub(crate) fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.dialog.`

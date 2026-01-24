@@ -117,6 +117,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_menu_scalars(cfg);
     inject_comp_plain_tooltip_scalars(cfg);
     inject_comp_rich_tooltip_scalars(cfg);
+    inject_comp_snackbar_scalars(cfg);
     inject_comp_dialog_scalars(cfg);
     inject_comp_full_screen_dialog_scalars(cfg);
 }
@@ -268,6 +269,7 @@ pub fn theme_config_with_colors(
     inject_comp_menu_colors_from_sys(&mut cfg);
     inject_comp_plain_tooltip_colors_from_sys(&mut cfg);
     inject_comp_rich_tooltip_colors_from_sys(&mut cfg);
+    inject_comp_snackbar_colors_from_sys(&mut cfg);
     inject_comp_dialog_colors_from_sys(&mut cfg);
     inject_comp_full_screen_dialog_colors_from_sys(&mut cfg);
     cfg
@@ -1146,6 +1148,10 @@ fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_rich_tooltip_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_rich_tooltip_scalars(cfg);
+}
+
+fn inject_comp_snackbar_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_snackbar_scalars(cfg);
 }
 
 fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
@@ -2161,6 +2167,99 @@ fn inject_comp_rich_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.rich-tooltip.supporting-text.color",
         "md.sys.color.on-surface-variant",
+    );
+}
+
+fn inject_comp_snackbar_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-snackbar.scss
+
+    copy_color(
+        cfg,
+        "md.comp.snackbar.container.color",
+        "md.sys.color.inverse-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.container.shadow-color",
+        "md.sys.color.shadow",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.snackbar.supporting-text.color",
+        "md.sys.color.inverse-on-surface",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.snackbar.action.label-text.color",
+        "md.sys.color.inverse-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.action.hover.label-text.color",
+        "md.sys.color.inverse-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.action.hover.state-layer.color",
+        "md.sys.color.inverse-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.action.focus.label-text.color",
+        "md.sys.color.inverse-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.action.focus.state-layer.color",
+        "md.sys.color.inverse-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.action.pressed.label-text.color",
+        "md.sys.color.inverse-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.action.pressed.state-layer.color",
+        "md.sys.color.inverse-primary",
+    );
+
+    copy_color(
+        cfg,
+        "md.comp.snackbar.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.icon.hover.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.icon.hover.state-layer.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.icon.focus.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.icon.focus.state-layer.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.icon.pressed.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.snackbar.icon.pressed.state-layer.color",
+        "md.sys.color.inverse-on-surface",
     );
 }
 

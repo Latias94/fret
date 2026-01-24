@@ -52,6 +52,7 @@ impl Args {
             "md.comp.menu.".to_string(),
             "md.comp.plain-tooltip.".to_string(),
             "md.comp.rich-tooltip.".to_string(),
+            "md.comp.snackbar.".to_string(),
             "md.comp.outlined-text-field.".to_string(),
             "md.comp.filled-text-field.".to_string(),
             "md.comp.dialog.".to_string(),
@@ -497,6 +498,14 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.rich-tooltip.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.rich-tooltip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_snackbar_scalars",
+        "md.comp.snackbar.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.snackbar."))
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_scalars(
