@@ -26,6 +26,7 @@ Each TODO is labeled:
 ## Baseline (Existing Harnesses)
 
 - Scripted UI regressions: `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
+- Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `apps/fretboard/src/diag.rs`)
 - View-cache reuse gating: `fretboard diag run/suite --check-view-cache-reuse-min <n>`
 - Bundle comparison: `fretboard diag compare <a> <b> ...` (semantics + optional scene fingerprint)
 
@@ -50,8 +51,9 @@ Each TODO is labeled:
   - Touches: `tools/diag-scripts/*`, `apps/fretboard/src/diag.rs`
 - [ ] OVERLAY-reg-012 Add a “portal geometry” scenario (floating placement + viewport clamp + scroll/resize).
   - Touches: `crates/fret-ui/src/overlay_placement/*`, `tools/diag-scripts/*`
-- [ ] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
+- [x] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
   - Mechanism: record cached+uncached bundles and enforce `diag compare` + `--check-view-cache-reuse-min`.
+  - Evidence: `fretboard diag matrix ui-gallery` (runs both variants and compares per-script bundles).
 
 ## P1 — Ergonomics (Ecosystem Integration)
 

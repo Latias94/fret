@@ -445,6 +445,18 @@ Notes:
 - `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events in snapshots after `--warmup-frames`.
 - If `view_cache_active` is false for all snapshots (or `cache_roots` are not exported), the check will fail by design.
 
+### Matrix runner (uncached vs cached)
+
+To automate the “view-cache is behavior preserving” check across the UI gallery suite, run the matrix:
+
+- `cargo run -p fretboard -- diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- Requires `--launch` so the runner can control `FRET_UI_GALLERY_VIEW_CACHE` (0 vs 1) per run.
+- Writes bundles under `--dir/uncached` and `--dir/cached`, then compares each script pair via `diag compare` semantics.
+- Default reuse gate is `--check-view-cache-reuse-min 1` (pass `--check-view-cache-reuse-min 0` to disable the gate).
+
 ### Bundle comparison (cached vs uncached)
 
 To build confidence that view-cache is "behavior preserving", compare two captured bundles.
