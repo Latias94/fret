@@ -141,17 +141,12 @@ impl MvuProgram for TodoMvuProgram {
         st: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
     ) -> Vec<AnyElement> {
-        cx.observe_model(&st.todos, Invalidation::Layout);
-        cx.observe_model(&st.draft, Invalidation::Layout);
-        cx.observe_model(&st.filter, Invalidation::Layout);
-
         let theme = Theme::global(&*cx.app).clone();
 
         let filter_value = cx
-            .app
-            .models()
-            .read(&st.filter, |v| v.clone())
-            .ok()
+            .watch_model(&st.filter)
+            .layout()
+            .cloned()
             .unwrap_or_default();
 
         let done_invalidation = if filter_value.as_deref() == Some("all") {
@@ -161,10 +156,9 @@ impl MvuProgram for TodoMvuProgram {
         };
 
         let draft_value = cx
-            .app
-            .models()
-            .read(&st.draft, |s| s.clone())
-            .ok()
+            .watch_model(&st.draft)
+            .layout()
+            .cloned()
             .unwrap_or_default();
 
         let add_enabled = !draft_value.trim().is_empty();
@@ -174,7 +168,7 @@ impl MvuProgram for TodoMvuProgram {
             .variant(shadcn::ButtonVariant::Default)
             .disabled(!add_enabled)
             .on_click(msg.cmd(Msg::Add))
-            .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
+            .children([icon::icon(cx, IconId::new("lucide.plus"))])
             .into_element(cx);
         let add_btn = cx.semantics(
             SemanticsProps {
@@ -182,7 +176,7 @@ impl MvuProgram for TodoMvuProgram {
                 test_id: Some(Arc::from(TEST_ID_ADD)),
                 ..Default::default()
             },
-            move |_cx| vec![add_btn],
+            move |_cx| [add_btn],
         );
 
         let input = shadcn::Input::new(st.draft.clone())
@@ -196,27 +190,30 @@ impl MvuProgram for TodoMvuProgram {
                 test_id: Some(Arc::from(TEST_ID_INPUT)),
                 ..Default::default()
             },
-            move |_cx| vec![input],
+            move |_cx| [input],
         );
 
         let todos = cx
-            .app
-            .models()
-            .read(&st.todos, |v| v.clone())
-            .ok()
+            .watch_model(&st.todos)
+            .layout()
+            .cloned()
             .unwrap_or_default();
+        let todos_with_done: Vec<(TodoItem, bool)> = todos
+            .into_iter()
+            .map(|t| {
+                let done = cx
+                    .watch_model(&t.done)
+                    .invalidation(done_invalidation)
+                    .copied()
+                    .unwrap_or(false);
+                (t, done)
+            })
+            .collect();
 
-        for it in &todos {
-            cx.observe_model(&it.done, done_invalidation);
-        }
+        let completed = todos_with_done.iter().filter(|(_, done)| *done).count();
+        let active = todos_with_done.len().saturating_sub(completed);
 
-        let completed = todos
-            .iter()
-            .filter(|t| cx.app.models().read(&t.done, |v| *v).ok().unwrap_or(false))
-            .count();
-        let active = todos.len().saturating_sub(completed);
-
-        let header = shadcn::CardHeader::new(vec![stack::hstack(
+        let header = shadcn::CardHeader::new([stack::hstack(
             cx,
             stack::HStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
@@ -287,10 +284,10 @@ impl MvuProgram for TodoMvuProgram {
                 shadcn::TabsItem::new(
                     "all",
                     "全部",
-                    vec![todo_list_panel(
+                    [todo_list_panel(
                         cx,
                         &theme,
-                        &todos,
+                        &todos_with_done,
                         None,
                         msg,
                         list_max_h.clone(),
@@ -299,10 +296,10 @@ impl MvuProgram for TodoMvuProgram {
                 shadcn::TabsItem::new(
                     "active",
                     format!("进行中 ({active})"),
-                    vec![todo_list_panel(
+                    [todo_list_panel(
                         cx,
                         &theme,
-                        &todos,
+                        &todos_with_done,
                         Some(false),
                         msg,
                         list_max_h.clone(),
@@ -311,10 +308,10 @@ impl MvuProgram for TodoMvuProgram {
                 shadcn::TabsItem::new(
                     "done",
                     format!("已完成 ({completed})"),
-                    vec![todo_list_panel(
+                    [todo_list_panel(
                         cx,
                         &theme,
-                        &todos,
+                        &todos_with_done,
                         Some(true),
                         msg,
                         list_max_h,
@@ -329,7 +326,7 @@ impl MvuProgram for TodoMvuProgram {
             .on_click(msg.cmd(Msg::ClearDone))
             .into_element(cx);
 
-        let footer = shadcn::CardFooter::new(vec![stack::hstack(
+        let footer = shadcn::CardFooter::new([stack::hstack(
             cx,
             stack::HStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
@@ -359,9 +356,9 @@ impl MvuProgram for TodoMvuProgram {
         )])
         .into_element(cx);
 
-        let content = shadcn::CardContent::new(vec![input_row, tabs]).into_element(cx);
+        let content = shadcn::CardContent::new([input_row, tabs]).into_element(cx);
 
-        let card = shadcn::Card::new(vec![header, content, footer])
+        let card = shadcn::Card::new([header, content, footer])
             .refine_layout(
                 LayoutRefinement::default()
                     .w_full()
@@ -408,7 +405,7 @@ impl MvuProgram for TodoMvuProgram {
                 label: Some(Arc::from("Debug:todo-mvu-demo:page")),
                 ..Default::default()
             },
-            move |_cx| vec![page],
+            move |_cx| [page],
         )]
     }
 }
@@ -416,21 +413,20 @@ impl MvuProgram for TodoMvuProgram {
 fn todo_list_panel(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
-    todos: &[TodoItem],
+    todos: &[(TodoItem, bool)],
     show_done: Option<bool>,
     msg: &mut MessageRouter<Msg>,
     max_h: MetricRef,
 ) -> AnyElement {
-    let filtered: Vec<(TodoItem, bool, CommandId)> = todos
+    let filtered: Vec<(&TodoItem, bool, CommandId)> = todos
         .iter()
-        .cloned()
         .filter_map(|t| {
-            let done = cx.app.models().read(&t.done, |v| *v).ok().unwrap_or(false);
-            if show_done.is_some_and(|v| v != done) {
+            let (t, done) = t;
+            if show_done.is_some_and(|v| v != *done) {
                 return None;
             }
             let remove_cmd = msg.cmd(Msg::Remove(t.id));
-            Some((t, done, remove_cmd))
+            Some((t, *done, remove_cmd))
         })
         .collect();
 
@@ -475,7 +471,7 @@ fn todo_list_panel(
         },
     );
 
-    shadcn::ScrollArea::new(vec![rows])
+    shadcn::ScrollArea::new([rows])
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -526,7 +522,7 @@ fn todo_row(
         .size(shadcn::ButtonSize::IconSm)
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(remove_cmd)
-        .children(vec![icon::icon_with(
+        .children([icon::icon_with(
             cx,
             IconId::new("lucide.trash-2"),
             Some(Px(16.0)),
@@ -539,7 +535,7 @@ fn todo_row(
             test_id: Some(todo_item_test_id(item.id, "remove")),
             ..Default::default()
         },
-        move |_cx| vec![remove_btn],
+        move |_cx| [remove_btn],
     );
 
     let row = stack::hstack(cx, stack::HStackProps::default().items_center(), |cx| {
@@ -560,10 +556,10 @@ fn todo_row(
             test_id: Some(todo_item_test_id(item.id, "row")),
             ..Default::default()
         },
-        move |_cx| vec![row],
+        move |_cx| [row],
     );
 
     let props =
         decl_style::container_props(theme, row_chrome, LayoutRefinement::default().w_full());
-    cx.container(props, move |_cx| vec![row])
+    cx.container(props, move |_cx| [row])
 }
