@@ -104,7 +104,7 @@ Related ADRs:
 ## Tests
 
 - Runtime-level occlusion conformance:
-  - `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+  - `crates/fret-ui/src/tree/tests/pointer_occlusion.rs` (`pointer_occlusion_allows_pointer_move_observer_dispatch_while_suppressing_underlay_hit_dispatch`)
 - Runtime-level interaction conformance:
   - `crates/fret-ui/src/tree/tests/outside_press.rs` (`outside_press_observer_can_consume_pointer_down_under_pointer_occlusion`)
 - Docking viewport capture conformance:
