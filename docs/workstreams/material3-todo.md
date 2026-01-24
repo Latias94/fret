@@ -165,6 +165,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - ripple configuration escape hatch (Compose `LocalRippleConfiguration` analogue),
   - motion scheme override (Compose `LocalMotionScheme` analogue) (scheme selection; expressive tokens TBD).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/context.rs`
+- [x] Add a minimal layout probe helper for measurement-driven visuals (1-frame latency).
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/layout_probe.rs`,
+    `ecosystem/fret-ui-material3/src/tabs.rs`
 - [ ] Decide whether we need a hoistable interaction source surface (Compose
   `MutableInteractionSource` analogue) or whether `PressableState` + foundation runtime state is
   sufficient for our current authoring model.

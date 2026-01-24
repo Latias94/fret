@@ -1609,7 +1609,7 @@ fn preview_material3_tabs(
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let tabs = material3::Tabs::new(value)
+    let fixed_tabs = material3::Tabs::new(value.clone())
         .a11y_label("Material 3 Tabs")
         .test_id("ui-gallery-material3-tabs")
         .items(vec![
@@ -1626,9 +1626,26 @@ fn preview_material3_tabs(
         ])
         .into_element(cx);
 
+    let scrollable_tabs = material3::Tabs::new(value)
+        .a11y_label("Material 3 Tabs (scrollable)")
+        .test_id("ui-gallery-material3-tabs-scrollable")
+        .scrollable(true)
+        .items(vec![
+            material3::TabItem::new("overview", "Overview"),
+            material3::TabItem::new("settings", "Settings"),
+            material3::TabItem::new("typography", "Typography"),
+            material3::TabItem::new("very_long_label", "Very Long Label For Layout Probe"),
+            material3::TabItem::new("tokens", "Tokens"),
+            material3::TabItem::new("motion", "Motion"),
+            material3::TabItem::new("disabled", "Disabled").disabled(true),
+        ])
+        .into_element(cx);
+
     vec![
         cx.text("Material 3 Tabs: roving focus + state layer + bounded ripple."),
-        tabs,
+        fixed_tabs,
+        cx.text("Scrollable/variable width preview (measurement-driven indicator)."),
+        scrollable_tabs,
         cx.text(format!("value={}", current.as_ref())),
     ]
 }

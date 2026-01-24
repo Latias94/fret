@@ -238,7 +238,9 @@ These are *candidates*, not guaranteed core work:
 - **Scoped theme / content defaults**: implement via `ElementCx::inherited_state` provider patterns in
   `fret-ui-material3` first; consider core help only if invalidation/ergonomics require it.
 - **Subcompose-like measurement**: for tabs (indicator “match content size”) and other
-  measurement-driven visuals, relying only on last-frame bounds can cause visible jitter.
+  measurement-driven visuals. We currently use a lightweight `foundation::layout_probe` that reads
+  last-frame bounds (1-frame latency). If this proves insufficient (visible jitter), we should
+  consider a core mechanism upgrade.
 - **Pixel snapping / rounding policy**: some controls require consistent rounding rules across
   layout + paint to avoid “drift” at non-1.0 scale factors.
 - **Stable structure guarantees**: better guidance or helpers to keep indicator/ink layers present

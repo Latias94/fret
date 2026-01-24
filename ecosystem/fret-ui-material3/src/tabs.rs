@@ -14,7 +14,8 @@ use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollAxis, ScrollProps,
+    SemanticsProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
@@ -22,13 +23,14 @@ use fret_ui::{Invalidation, Theme, UiHost};
 use crate::foundation::indication::{
     IndicationConfig, advance_indication_for_pressable, material_ink_layer,
 };
+use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::SpringAnimator;
 
 #[derive(Debug, Default, Clone)]
 struct TabListLayoutRuntime {
-    tab_ids: Vec<GlobalElementId>,
+    tabs: LayoutProbeList,
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +77,7 @@ pub struct Tabs {
     test_id: Option<Arc<str>>,
     disabled: bool,
     loop_navigation: bool,
+    scrollable: bool,
 }
 
 impl Tabs {
@@ -86,6 +89,7 @@ impl Tabs {
             test_id: None,
             disabled: false,
             loop_navigation: true,
+            scrollable: false,
         }
     }
 
@@ -114,6 +118,11 @@ impl Tabs {
         self
     }
 
+    pub fn scrollable(mut self, scrollable: bool) -> Self {
+        self.scrollable = scrollable;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Tabs {
             model,
@@ -122,6 +131,7 @@ impl Tabs {
             test_id,
             disabled,
             loop_navigation,
+            scrollable,
         } = self;
 
         cx.scope(|cx| {
@@ -194,9 +204,7 @@ impl Tabs {
                         let container_id = cx.root_id();
 
                         cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
-                            if rt.tab_ids.len() != tab_count {
-                                rt.tab_ids.resize(tab_count, GlobalElementId(0));
-                            }
+                            rt.tabs.ensure_len(tab_count);
                         });
                         let indicator = primary_tab_list_indicator(
                             cx,
@@ -207,110 +215,114 @@ impl Tabs {
                             selected_idx,
                         );
 
-                        vec![
-                            indicator,
-                            cx.roving_flex(props, move |cx| {
-                                let values_for_roving = values.clone();
-                                let model_for_roving = model.clone();
+                        let roving = cx.roving_flex(props, move |cx| {
+                            let values_for_roving = values.clone();
+                            let model_for_roving = model.clone();
 
-                                cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                    use fret_ui::action::RovingNavigateResult;
+                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                use fret_ui::action::RovingNavigateResult;
 
-                                    let is_disabled = |idx: usize| -> bool {
-                                        it.disabled.get(idx).copied().unwrap_or(false)
-                                    };
+                                let is_disabled = |idx: usize| -> bool {
+                                    it.disabled.get(idx).copied().unwrap_or(false)
+                                };
 
-                                    let forward = match (it.axis, it.key) {
-                                        (Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
-                                        (Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
-                                        _ => None,
-                                    };
+                                let forward = match (it.axis, it.key) {
+                                    (Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
+                                    (Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+                                    _ => None,
+                                };
 
-                                    if it.key == KeyCode::Home {
-                                        let target = (0..it.len).find(|&i| !is_disabled(i));
-                                        return RovingNavigateResult::Handled { target };
-                                    }
-                                    if it.key == KeyCode::End {
-                                        let target = (0..it.len).rev().find(|&i| !is_disabled(i));
-                                        return RovingNavigateResult::Handled { target };
-                                    }
+                                if it.key == KeyCode::Home {
+                                    let target = (0..it.len).find(|&i| !is_disabled(i));
+                                    return RovingNavigateResult::Handled { target };
+                                }
+                                if it.key == KeyCode::End {
+                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                    return RovingNavigateResult::Handled { target };
+                                }
 
-                                    let Some(forward) = forward else {
-                                        return RovingNavigateResult::NotHandled;
-                                    };
+                                let Some(forward) = forward else {
+                                    return RovingNavigateResult::NotHandled;
+                                };
 
-                                    let current = it
-                                        .current
-                                        .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                    let Some(current) = current else {
-                                        return RovingNavigateResult::Handled { target: None };
-                                    };
+                                let current = it
+                                    .current
+                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                let Some(current) = current else {
+                                    return RovingNavigateResult::Handled { target: None };
+                                };
 
-                                    let len = it.len;
-                                    let mut target: Option<usize> = None;
-                                    if it.wrap {
-                                        for step in 1..=len {
-                                            let idx = if forward {
-                                                (current + step) % len
-                                            } else {
-                                                (current + len - (step % len)) % len
-                                            };
-                                            if !is_disabled(idx) {
-                                                target = Some(idx);
-                                                break;
-                                            }
-                                        }
-                                    } else if forward {
-                                        target = ((current + 1)..len).find(|&i| !is_disabled(i));
-                                    } else if current > 0 {
-                                        target = (0..current).rev().find(|&i| !is_disabled(i));
-                                    }
-
-                                    RovingNavigateResult::Handled { target }
-                                }));
-
-                                cx.roving_on_active_change(Arc::new(
-                                    move |host, action_cx, idx| {
-                                        let Some(value) = values_for_roving.get(idx).cloned()
-                                        else {
-                                            return;
+                                let len = it.len;
+                                let mut target: Option<usize> = None;
+                                if it.wrap {
+                                    for step in 1..=len {
+                                        let idx = if forward {
+                                            (current + step) % len
+                                        } else {
+                                            (current + len - (step % len)) % len
                                         };
-                                        let already_selected = host
-                                            .models_mut()
-                                            .read(&model_for_roving, |v| {
-                                                v.as_ref() == value.as_ref()
-                                            })
-                                            .ok()
-                                            .unwrap_or(false);
-                                        if already_selected {
-                                            return;
+                                        if !is_disabled(idx) {
+                                            target = Some(idx);
+                                            break;
                                         }
-                                        let _ =
-                                            host.update_model(&model_for_roving, |v| *v = value);
-                                        host.request_redraw(action_cx.window);
-                                    },
-                                ));
+                                    }
+                                } else if forward {
+                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                } else if current > 0 {
+                                    target = (0..current).rev().find(|&i| !is_disabled(i));
+                                }
 
-                                items
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(idx, it)| {
-                                        let tab_stop = tab_stop.is_some_and(|t| t == idx);
-                                        material_primary_tab(
-                                            cx,
-                                            &theme,
-                                            container_id,
-                                            model.clone(),
-                                            it,
-                                            idx,
-                                            items.len(),
-                                            tab_stop,
-                                            disabled,
-                                        )
-                                    })
-                                    .collect::<Vec<_>>()
-                            }),
-                        ]
+                                RovingNavigateResult::Handled { target }
+                            }));
+
+                            cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {
+                                let Some(value) = values_for_roving.get(idx).cloned() else {
+                                    return;
+                                };
+                                let already_selected = host
+                                    .models_mut()
+                                    .read(&model_for_roving, |v| v.as_ref() == value.as_ref())
+                                    .ok()
+                                    .unwrap_or(false);
+                                if already_selected {
+                                    return;
+                                }
+                                let _ = host.update_model(&model_for_roving, |v| *v = value);
+                                host.request_redraw(action_cx.window);
+                            }));
+
+                            items
+                                .iter()
+                                .enumerate()
+                                .map(|(idx, it)| {
+                                    let tab_stop = tab_stop.is_some_and(|t| t == idx);
+                                    material_primary_tab(
+                                        cx,
+                                        &theme,
+                                        container_id,
+                                        model.clone(),
+                                        it,
+                                        idx,
+                                        items.len(),
+                                        tab_stop,
+                                        disabled,
+                                        scrollable,
+                                    )
+                                })
+                                .collect::<Vec<_>>()
+                        });
+
+                        let tabs = if scrollable {
+                            let mut scroll_props = ScrollProps::default();
+                            scroll_props.axis = ScrollAxis::X;
+                            scroll_props.layout.size.width = Length::Fill;
+                            scroll_props.layout.size.height = Length::Fill;
+                            cx.scroll(scroll_props, move |_cx| vec![roving])
+                        } else {
+                            roving
+                        };
+
+                        vec![indicator, tabs]
                     },
                 )]
             })
@@ -328,6 +340,7 @@ fn material_primary_tab<H: UiHost>(
     set_size: usize,
     tab_stop: bool,
     disabled_group: bool,
+    scrollable: bool,
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
@@ -342,12 +355,8 @@ fn material_primary_tab<H: UiHost>(
             .unwrap_or(false);
 
         cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
-            if rt.tab_ids.len() != set_size {
-                rt.tab_ids.resize(set_size, GlobalElementId(0));
-            }
-            if let Some(slot) = rt.tab_ids.get_mut(idx) {
-                *slot = pressable_id;
-            }
+            rt.tabs.ensure_len(set_size);
+            rt.tabs.set(idx, pressable_id);
         });
 
         if enabled {
@@ -388,8 +397,14 @@ fn material_primary_tab<H: UiHost>(
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
                 l.size.height = Length::Px(height);
-                l.size.width = Length::Fill;
-                l.flex.grow = 1.0;
+                if scrollable {
+                    l.size.width = Length::Auto;
+                    l.flex.grow = 0.0;
+                    l.flex.shrink = 0.0;
+                } else {
+                    l.size.width = Length::Fill;
+                    l.flex.grow = 1.0;
+                }
                 l.overflow = Overflow::Visible;
                 l
             },
@@ -480,13 +495,26 @@ fn material_primary_tab<H: UiHost>(
                 let label_el = primary_tab_label(cx, theme, &label, label_color);
 
                 let mut row = FlexProps::default();
-                row.layout.size.width = Length::Fill;
+                row.layout.size.width = if scrollable {
+                    Length::Auto
+                } else {
+                    Length::Fill
+                };
                 row.layout.size.height = Length::Px(height);
                 row.layout.overflow = Overflow::Clip;
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Center;
                 row.align = CrossAlign::Center;
-                row.padding = Edges::all(Px(0.0));
+                row.padding = if scrollable {
+                    Edges {
+                        left: Px(16.0),
+                        right: Px(16.0),
+                        top: Px(0.0),
+                        bottom: Px(0.0),
+                    }
+                } else {
+                    Edges::all(Px(0.0))
+                };
 
                 vec![cx.flex(row, move |_cx| vec![ink, label_el])]
             })
@@ -535,10 +563,9 @@ fn primary_tab_list_indicator<H: UiHost>(
         let tab_bounds = selected_idx
             .and_then(|idx| {
                 cx.with_state_for(container_id, TabListLayoutRuntime::default, |rt| {
-                    rt.tab_ids.get(idx).copied()
+                    rt.tabs.get(idx)
                 })
             })
-            .and_then(|tab_id| (tab_id.0 != 0).then_some(tab_id))
             .and_then(|tab_id| cx.last_bounds_for_element(tab_id));
 
         let (target_x, target_width, target_height, color) = if tab_count > 0 {
