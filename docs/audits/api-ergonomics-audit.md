@@ -65,6 +65,8 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [x] Scroll-into-view is stable when already scrolled (prevents focus traversal “drift”).
   - Evidence: `crates/fret-ui/src/declarative/host_widget.rs` (`ElementHostWidget::scroll_descendant_into_view`)
   - Tests: `crates/fret-ui/src/tree/tests/scroll_into_view.rs` (`scroll_into_view_does_not_drift_*`)
+- [x] Representative demos adopt `ModelWatchExt` to reduce observe+read boilerplate.
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
