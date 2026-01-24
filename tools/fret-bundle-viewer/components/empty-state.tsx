@@ -15,7 +15,6 @@ import {
 import { FileJson, FolderOpen, ChevronDown, AlertCircle, Clock, X, Trash2 } from 'lucide-react'
 import { useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from '@/hooks/use-i18n'
-import { extractBundleAndArtifactsFromZipFile } from '@/lib/zip'
 
 export function EmptyState() {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -46,6 +45,7 @@ export function EmptyState() {
       void (async () => {
         try {
           if (isZip) {
+            const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
             const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
             const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
             loadBundle(bundleText, {

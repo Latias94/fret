@@ -22,11 +22,9 @@ import {
 } from '@/components/ui/tooltip'
 import { formatFileSize } from '@/lib/download'
 import { exportTriageJson, generateMarkdownSummary, downloadMarkdown } from '@/lib/download'
-import { CommandPalette } from '@/components/command-palette'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { useTranslation } from '@/hooks/use-i18n'
-import { extractBundleAndArtifactsFromZipFile } from '@/lib/zip'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -38,6 +36,10 @@ import {
   ChevronDown,
   Command,
 } from 'lucide-react'
+
+const LazyCommandPalette = React.lazy(() =>
+  import('@/components/command-palette').then((m) => ({ default: m.CommandPalette }))
+)
 
 export function HeaderBar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -73,6 +75,7 @@ export function HeaderBar() {
       void (async () => {
         try {
           if (isZip) {
+            const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
             const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
             const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
             loadBundle(bundleText, {
@@ -357,11 +360,15 @@ export function HeaderBar() {
       </header>
 
       {/* Command Palette */}
-      <CommandPalette
-        open={commandOpen}
-        onOpenChange={setCommandOpen}
-        onOpenFile={handleFileOpen}
-      />
+      {commandOpen && (
+        <React.Suspense fallback={null}>
+          <LazyCommandPalette
+            open={commandOpen}
+            onOpenChange={setCommandOpen}
+            onOpenFile={handleFileOpen}
+          />
+        </React.Suspense>
+      )}
 
       <Dialog
         open={pasteOpen}

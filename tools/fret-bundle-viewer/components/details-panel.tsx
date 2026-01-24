@@ -1,16 +1,15 @@
 'use client'
 
-import { useMemo, useCallback, useState } from 'react'
+import { Suspense, lazy, useMemo, useCallback, useState } from 'react'
 import { useBundleStore } from '@/store/use-bundle-store'
 import { bestSelector, nodePath, selectorToJson, generateScriptStep, scriptStepToJson, copyToClipboard } from '@/lib/selector'
-import { RawJsonView } from '@/components/raw-json-view'
-import { DiffView } from '@/components/diff-view'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/hooks/use-i18n'
 import { downloadText } from '@/lib/download'
@@ -21,6 +20,13 @@ import {
   Search,
   FileCode,
 } from 'lucide-react'
+
+const LazyRawJsonView = lazy(() =>
+  import('@/components/raw-json-view').then((m) => ({ default: m.RawJsonView }))
+)
+const LazyDiffView = lazy(() =>
+  import('@/components/diff-view').then((m) => ({ default: m.DiffView }))
+)
 
 type JsonObject = Record<string, unknown>
 
@@ -1218,7 +1224,16 @@ function RawTab() {
         </Button>
       </div>
       <div className="flex-1 overflow-hidden">
-        <RawJsonView data={viewMode === 'raw' ? snapshot.raw : snapshot} />
+        <Suspense
+          fallback={
+            <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Spinner />
+              <span>Loading...</span>
+            </div>
+          }
+        >
+          <LazyRawJsonView data={viewMode === 'raw' ? snapshot.raw : snapshot} />
+        </Suspense>
       </div>
     </div>
   )
@@ -1284,7 +1299,16 @@ export function DetailsPanel() {
         </TabsContent>
         {compareMode && (
           <TabsContent value="diff" className="flex-1 mt-0 overflow-hidden">
-            <DiffView />
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Spinner />
+                  <span>Loading...</span>
+                </div>
+              }
+            >
+              <LazyDiffView />
+            </Suspense>
           </TabsContent>
         )}
         <TabsContent value="raw" className="flex-1 mt-0 overflow-hidden">

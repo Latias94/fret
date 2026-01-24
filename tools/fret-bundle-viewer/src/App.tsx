@@ -1,14 +1,33 @@
+import { Suspense, lazy } from 'react'
+
 import { useBundleStore } from '@/store/use-bundle-store'
-import { DetailsPanel } from '@/components/details-panel'
-import { EmptyState } from '@/components/empty-state'
 import { HeaderBar } from '@/components/header-bar'
-import { SemanticsTreePanel } from '@/components/semantics-tree-panel'
-import { SnapshotsPanel } from '@/components/snapshots-panel'
+import { EmptyState } from '@/components/empty-state'
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
+import { Spinner } from '@/components/ui/spinner'
+
+const LazySemanticsTreePanel = lazy(() =>
+  import('@/components/semantics-tree-panel').then((m) => ({ default: m.SemanticsTreePanel }))
+)
+const LazySnapshotsPanel = lazy(() =>
+  import('@/components/snapshots-panel').then((m) => ({ default: m.SnapshotsPanel }))
+)
+const LazyDetailsPanel = lazy(() =>
+  import('@/components/details-panel').then((m) => ({ default: m.DetailsPanel }))
+)
+
+function PanelFallback({ label }: { label: string }) {
+  return (
+    <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+      <Spinner />
+      <span>{label}</span>
+    </div>
+  )
+}
 
 export default function App() {
   const bundle = useBundleStore((s) => s.bundle)
@@ -27,7 +46,9 @@ export default function App() {
           <ResizablePanelGroup direction="horizontal" className="h-full">
             <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
               <div className="h-full border-r border-border bg-card">
-                <SemanticsTreePanel />
+                <Suspense fallback={<PanelFallback label="Loading tree..." />}>
+                  <LazySemanticsTreePanel />
+                </Suspense>
               </div>
             </ResizablePanel>
 
@@ -35,7 +56,9 @@ export default function App() {
 
             <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
               <div className="h-full border-r border-border bg-card">
-                <SnapshotsPanel />
+                <Suspense fallback={<PanelFallback label="Loading snapshots..." />}>
+                  <LazySnapshotsPanel />
+                </Suspense>
               </div>
             </ResizablePanel>
 
@@ -43,7 +66,9 @@ export default function App() {
 
             <ResizablePanel defaultSize={35} minSize={25}>
               <div className="h-full bg-card">
-                <DetailsPanel />
+                <Suspense fallback={<PanelFallback label="Loading details..." />}>
+                  <LazyDetailsPanel />
+                </Suspense>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -56,4 +81,3 @@ export default function App() {
     </div>
   )
 }
-
