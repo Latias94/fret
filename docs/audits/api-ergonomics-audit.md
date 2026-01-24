@@ -65,7 +65,8 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
-  - Evidence: `ecosystem/fret-ui-shadcn/src/{collapsible,command,input_group,table,tabs,toggle_group}.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{breadcrumb,card,command,field,item,scroll_area,toggle,tooltip}.rs`,
+    `ecosystem/fret-ui-shadcn/src/ui_builder_ext/breadcrumb.rs`
 - [x] Consolidate third-party “component integration contract” guidance (P2) with a short checklist.
   - Evidence: `docs/component-authoring-contracts.md`
   - Evidence: `docs/component-author-guide.md`
@@ -243,7 +244,7 @@ This keeps kernel contracts stable and prevents accidental scope creep.
 ## Follow-up Work Items
 
 - Promote ADR 0175 from Proposed → Accepted once example migration proves the UX.
-- Implement P1 changes (`IntoIterator`) and run `cargo fmt` + tests.
+- Continue expanding P1 (`IntoIterator`) beyond the initial shadcn batch (and make kernel authoring helpers consistent).
 
 ## Comparative References (Iced, GPUI)
 
