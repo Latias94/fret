@@ -3911,7 +3911,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app.models_mut().insert(None);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
