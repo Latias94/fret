@@ -65,6 +65,7 @@ Workflow tip:
 - You can also open a `.zip` that contains a `bundle.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
 - To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`): `cargo run -p fretboard -- diag pack --include-root-artifacts`
+- The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
 

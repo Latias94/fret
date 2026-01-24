@@ -275,6 +275,18 @@ export function downloadMarkdown(content: string, fileName: string): void {
   URL.revokeObjectURL(url)
 }
 
+export function downloadText(content: string, fileName: string, contentType: string = 'text/plain'): void {
+  const blob = new Blob([content], { type: contentType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 function downloadJson(content: unknown, fileName: string): void {
   const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)

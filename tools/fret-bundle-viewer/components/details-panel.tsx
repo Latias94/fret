@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/hooks/use-i18n'
+import { downloadText } from '@/lib/download'
 import {
   AlertTriangle,
   Copy,
@@ -101,6 +102,10 @@ function SummaryTab() {
 
   const handleCopy = useCallback((text: string) => {
     copyToClipboard(text)
+  }, [])
+
+  const handleDownload = useCallback((fileName: string, text: string) => {
+    downloadText(text, fileName, 'application/json')
   }, [])
 
   const triage = useMemo(() => {
@@ -210,6 +215,72 @@ function SummaryTab() {
                       ? `script-step-${String(outDirContext.stepIndex).padStart(4, '0')}-${outDirContext.action}`
                       : outDirContext.label}
                   </span>
+                </div>
+              )}
+
+              {bundle.meta.zip?.zipFileName && (
+                <div className="mt-3">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    <span className="font-medium">{t('summary.sourceZip')}:</span>{' '}
+                    <span className="font-mono break-all">{bundle.meta.zip.zipFileName}</span>
+                  </div>
+                  {bundle.meta.zip.bundlePathInZip && (
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium">{t('summary.bundlePathInZip')}:</span>{' '}
+                      <span className="font-mono break-all">{bundle.meta.zip.bundlePathInZip}</span>
+                    </div>
+                  )}
+
+                  {bundle.meta.zip.artifacts && bundle.meta.zip.artifacts.length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-xs text-muted-foreground mb-1">
+                        <span className="font-medium">{t('summary.zipArtifacts')}:</span>{' '}
+                        <span className="font-mono">{bundle.meta.zip.artifacts.length}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {bundle.meta.zip.artifacts.slice(0, 10).map((a) => (
+                          <div
+                            key={a.path}
+                            className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1"
+                          >
+                            <div className="min-w-0 flex items-center gap-2">
+                              <span className="text-[11px] font-mono text-foreground truncate">
+                                {a.fileName}
+                              </span>
+                              {a.truncated && (
+                                <Badge variant="outline" className="text-[10px]">
+                                  {t('summary.truncated')}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() => handleCopy(a.text)}
+                              >
+                                {t('summary.copy')}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[11px]"
+                                onClick={() => handleDownload(a.fileName, a.text)}
+                              >
+                                {t('summary.download')}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        {bundle.meta.zip.artifacts.length > 10 && (
+                          <div className="text-[11px] text-muted-foreground">
+                            {t('header.andMore', { count: bundle.meta.zip.artifacts.length - 10 })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { BundleModel, SnapshotModel, SemanticsNodeModel } from '@/lib/types'
+import type { BundleModel, SnapshotModel, SemanticsNodeModel, ZipImportMeta } from '@/lib/types'
 import { parseBundle } from '@/lib/parser'
 import { simpleSampleBundle, multiWindowSampleBundle } from '@/lib/sample-bundles'
 
@@ -37,7 +37,10 @@ interface BundleState {
   getSelectedNode: () => SemanticsNodeModel | null
 
   // Actions
-  loadBundle: (text: string, fileNameOrOptions?: string | { fileName?: string; fileSize?: number; recordRecent?: boolean }) => void
+  loadBundle: (
+    text: string,
+    fileNameOrOptions?: string | { fileName?: string; fileSize?: number; recordRecent?: boolean; zip?: ZipImportMeta }
+  ) => void
   loadSampleBundle: (type: 'simple' | 'multi-window') => void
   clearBundle: () => void
 
@@ -133,6 +136,9 @@ export const useBundleStore = create<BundleState>((set, get) => ({
 
       if (typeof options.fileSize === 'number') {
         bundle.meta.fileSize = options.fileSize
+      }
+      if (options.zip) {
+        bundle.meta.zip = options.zip
       }
       
       // Auto-expand root nodes

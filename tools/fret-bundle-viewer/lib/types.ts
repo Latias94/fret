@@ -86,6 +86,21 @@ export interface BundleMeta {
   schemaVersion?: number
   exportedUnixMs?: number
   outDir?: string
+  zip?: ZipImportMeta
+}
+
+export interface ZipArtifact {
+  path: string
+  fileName: string
+  sizeBytes: number
+  truncated?: boolean
+  text: string
+}
+
+export interface ZipImportMeta {
+  zipFileName?: string
+  bundlePathInZip?: string
+  artifacts?: ZipArtifact[]
 }
 
 export interface BundleModel {

@@ -114,6 +114,11 @@ export const translations = {
     'summary.outDir': 'Out dir',
     'summary.outDirContext': 'Out dir context',
     'summary.copy': 'Copy',
+    'summary.download': 'Download',
+    'summary.sourceZip': 'Source zip',
+    'summary.bundlePathInZip': 'bundle.json path in zip',
+    'summary.zipArtifacts': 'Zip artifacts',
+    'summary.truncated': 'truncated',
 
     'triage.noSignals': 'No obvious signals in this snapshot',
     'triage.frameTime': 'Frame time: {us}μs',
@@ -358,6 +363,11 @@ export const translations = {
     'summary.outDir': 'Out dir',
     'summary.outDirContext': 'Out dir 上下文',
     'summary.copy': '复制',
+    'summary.download': '下载',
+    'summary.sourceZip': '来源 zip',
+    'summary.bundlePathInZip': 'zip 内 bundle.json 路径',
+    'summary.zipArtifacts': 'Zip artifacts',
+    'summary.truncated': '已截断',
 
     'triage.noSignals': '此快照未发现明显信号',
     'triage.frameTime': '帧耗时：{us}μs',
