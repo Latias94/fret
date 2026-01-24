@@ -53,7 +53,7 @@ const SemanticsNodeSchema = z.object({
 function normalizeNode(raw: unknown, warnings: UiMessage[]): SemanticsNodeModel | null {
   const parsed = SemanticsNodeSchema.safeParse(raw)
   if (!parsed.success) {
-    warnings.push({ key: 'warn.semanticsNodeParseFailed' })
+    warnings.push({ key: 'warn.semanticsNodeParseFailed', detail: parsed.error.message })
     return null
   }
   const d = parsed.data

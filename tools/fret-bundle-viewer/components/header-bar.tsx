@@ -350,7 +350,10 @@ export function HeaderBar() {
                 <TooltipContent className="max-w-sm">
                   <ul className="space-y-1 text-xs">
                     {bundle.warnings.slice(0, 5).map((w, i) => (
-                      <li key={i}>{t(w.key, w.params)}</li>
+                      <li key={i}>
+                        {t(w.key, w.params)}
+                        {w.detail ? `: ${w.detail}` : ''}
+                      </li>
                     ))}
                     {bundle.warnings.length > 5 && (
                       <li>{t('header.andMore', { count: bundle.warnings.length - 5 })}</li>
