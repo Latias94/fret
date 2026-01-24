@@ -179,7 +179,12 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
-    - Re-verified (2026-01-24): PASS on this branch with the stopgap still enabled (`target/fret-diag/1769236670918-*`, `target/fret-diag/1769236719451-*`).
+    - Re-verified (2026-01-24): PASS on this branch with the stopgap still enabled:
+      - `target/fret-diag-overlay-torture-cache005-stopgap/1769240992350-ui-gallery-overlay-torture/bundle.json`
+      - `target/fret-diag-sidebar-scroll-refresh-cache005-stopgap/1769241046228-ui-gallery-sidebar-scroll-refresh/bundle.json`
+  - Evidence (fail when stopgap is removed):
+    - Removing the `view_cache_has_reuse_roots` GC guard regresses `ui-gallery-overlay-torture.json` at step 10 (`click_no_semantics_match`):
+      - `target/fret-diag-overlay-torture-cache005/1769240888633-script-step-0010-click-no-semantics-match/bundle.json`
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
   - Touches: `crates/fret-ui/src/tree/layout.rs` (`repair_view_cache_root_bounds_from_engine_if_needed`)
