@@ -239,6 +239,23 @@ impl OverlayRequest {
         trigger: GlobalElementId,
         children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
+        Self::hover_with_presence(
+            id,
+            trigger,
+            OverlayPresence {
+                present: true,
+                interactive: true,
+            },
+            children,
+        )
+    }
+
+    pub fn hover_with_presence(
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        presence: OverlayPresence,
+        children: impl IntoIterator<Item = AnyElement>,
+    ) -> Self {
         Self {
             kind: OverlayKind::Hover,
             id,
@@ -252,10 +269,7 @@ impl OverlayRequest {
             open: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
-            presence: OverlayPresence {
-                present: true,
-                interactive: true,
-            },
+            presence,
             initial_focus: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,

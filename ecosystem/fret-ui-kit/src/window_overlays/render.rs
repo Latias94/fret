@@ -22,8 +22,8 @@ use super::state::{
 };
 use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{
-    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, ToastPosition,
-    ToastVariant, TooltipRequest, dismiss_toast_action,
+    DismissiblePopoverRequest, ModalRequest, ToastLayerRequest, ToastPosition, ToastVariant,
+    dismiss_toast_action,
 };
 
 #[derive(Default)]
@@ -132,6 +132,48 @@ fn clear_non_modal_dismissible_layer_policy<H: UiHost>(ui: &mut UiTree<H>, layer
     ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
 }
 
+fn apply_hover_layer_policy<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+) {
+    ui.set_layer_visible(layer, present);
+    ui.set_layer_hit_testable(layer, present && interactive);
+    ui.set_layer_wants_pointer_down_outside_events(layer, false);
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_wants_pointer_move_events(layer, false);
+    ui.set_layer_wants_timer_events(layer, false);
+    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
+}
+
+fn apply_tooltip_layer_policy<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+    wants_outside_press_observer: bool,
+    wants_pointer_move_events: bool,
+) {
+    // Tooltips are always click-through. "Interactive" controls whether we install observer hooks
+    // while the tooltip is open (and must be disabled during close transitions).
+    ui.set_layer_visible(layer, present);
+    ui.set_layer_hit_testable(layer, false);
+    ui.set_layer_wants_pointer_down_outside_events(
+        layer,
+        present && interactive && wants_outside_press_observer,
+    );
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_wants_pointer_move_events(
+        layer,
+        present && interactive && wants_pointer_move_events,
+    );
+    ui.set_layer_wants_timer_events(layer, false);
+    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
+}
+
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -193,8 +235,8 @@ pub fn render<H: UiHost>(
     let (
         mut modal_requests,
         mut popover_requests,
-        mut hover_overlay_requests,
-        mut tooltip_requests,
+        hover_overlay_requests,
+        tooltip_requests,
         mut toast_requests,
     ) = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         overlays
@@ -213,9 +255,9 @@ pub fn render<H: UiHost>(
     });
 
     // When view caching skips rerendering the subtree that emits overlay requests, the per-frame
-    // request lists will be empty (or missing specific overlays). Keep a cached "declaration"
-    // and synthesize requests for overlays that are currently open so overlay behavior remains
-    // correct under view caching.
+    // request lists will be empty (or missing specific overlays). Keep a cached "declaration" and
+    // synthesize requests for overlays that have authoritative open/present models so behavior
+    // remains correct under view caching.
     //
     // Notes:
     // - This intentionally treats close transitions as "instant" when the request producer is
@@ -223,17 +265,17 @@ pub fn render<H: UiHost>(
     //   synthesizing a request.
     // - Without this, scripts that rely on Radix-style overlay semantics can fail when view
     //   caching is enabled (the overlay request vanishes for a frame and the overlay unmounts).
+    // - Hover overlays and tooltips are intentionally treated as per-frame requests until their
+    //   request surfaces have a stable contract under view caching.
     let modal_request_ids: HashSet<GlobalElementId> = modal_requests.iter().map(|r| r.id).collect();
     let popover_request_ids: HashSet<GlobalElementId> =
         popover_requests.iter().map(|r| r.id).collect();
     let toast_request_ids: HashSet<GlobalElementId> = toast_requests.iter().map(|r| r.id).collect();
 
-    let (extra_modals, extra_popovers, extra_hover_overlays, extra_tooltips, extra_toasts) = app
-        .with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
+    let (extra_modals, extra_popovers, extra_toasts) =
+        app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut modals: Vec<ModalRequest> = Vec::new();
             let mut popovers: Vec<DismissiblePopoverRequest> = Vec::new();
-            let hover_overlays: Vec<HoverOverlayRequest> = Vec::new();
-            let tooltips: Vec<TooltipRequest> = Vec::new();
             let mut toasts: Vec<ToastLayerRequest> = Vec::new();
 
             for ((w, id), req) in overlays.cached_modal_requests.iter() {
@@ -262,21 +304,6 @@ pub fn render<H: UiHost>(
                 popovers.push(req);
             }
 
-            // Hover overlays currently have no authoritative open/present model (unlike
-            // popovers/modals). Re-emitting cached hover overlays would therefore keep them alive
-            // even after the source subtree stops requesting them, which breaks Radix-style
-            // unmount expectations (e.g. `HoverCard` closing on blur).
-            //
-            // Treat hover overlays as strictly per-frame requests until we introduce an explicit
-            // presence contract for `HoverOverlayRequest`.
-
-            // Tooltips have the same challenge as hover overlays: without an explicit open/present
-            // model, cached synthesis can keep tooltips alive even after their producer stops
-            // requesting them (e.g. when hoverable content becomes disabled).
-            //
-            // Keep tooltips strictly per-frame until `TooltipRequest` has an authoritative open
-            // signal that survives view caching.
-
             for ((w, id), req) in overlays.cached_toast_layer_requests.iter() {
                 if *w != window || toast_request_ids.contains(id) {
                     continue;
@@ -284,13 +311,11 @@ pub fn render<H: UiHost>(
                 toasts.push(req.clone());
             }
 
-            (modals, popovers, hover_overlays, tooltips, toasts)
+            (modals, popovers, toasts)
         });
 
     modal_requests.extend(extra_modals);
     popover_requests.extend(extra_popovers);
-    hover_overlay_requests.extend(extra_hover_overlays);
-    tooltip_requests.extend(extra_tooltips);
     toast_requests.extend(extra_toasts);
 
     let mut seen_modals: HashSet<GlobalElementId> = HashSet::new();
@@ -879,6 +904,7 @@ pub fn render<H: UiHost>(
         }
 
         seen_hover_overlays.insert(req.id);
+        let interactive = req.interactive;
 
         let root = fret_ui::declarative::render_root(
             ui,
@@ -902,7 +928,7 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            OverlayLayer::hover(true, req.interactive).apply(ui, entry.layer);
+            apply_hover_layer_policy(ui, entry.layer, true, interactive);
         });
     }
 
@@ -925,16 +951,19 @@ pub fn render<H: UiHost>(
         if focus.is_some_and(|n| ui.node_layer(n) == Some(layer))
             && let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, trigger)
         {
-            OverlayLayer::hide_hover().apply(ui, layer);
+            apply_hover_layer_policy(ui, layer, false, false);
             ui.set_focus(Some(trigger_node));
         } else {
-            OverlayLayer::hide_hover().apply(ui, layer);
+            apply_hover_layer_policy(ui, layer, false, false);
         }
     }
 
     for req in tooltip_requests {
         seen_tooltips.insert(req.id);
 
+        let interactive = req.interactive;
+        let wants_outside_press_observer = req.on_dismiss_request.is_some();
+        let wants_pointer_move_events = req.on_pointer_move.is_some();
         let on_dismiss_request = req.on_dismiss_request.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
@@ -966,9 +995,23 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
-            OverlayLayer::tooltip(true, req.interactive).apply(ui, entry.layer);
+            apply_tooltip_layer_policy(
+                ui,
+                entry.layer,
+                true,
+                interactive,
+                wants_outside_press_observer,
+                wants_pointer_move_events,
+            );
 
-            ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
+            if interactive {
+                ui.set_layer_scroll_dismiss_elements(
+                    entry.layer,
+                    req.trigger.into_iter().collect(),
+                );
+            } else {
+                ui.set_layer_scroll_dismiss_elements(entry.layer, Vec::new());
+            }
         });
     }
 
@@ -987,7 +1030,8 @@ pub fn render<H: UiHost>(
         });
 
     for layer in to_hide_tooltips {
-        OverlayLayer::hide_tooltip().apply(ui, layer);
+        apply_tooltip_layer_policy(ui, layer, false, false, false, false);
+        ui.set_layer_scroll_dismiss_elements(layer, Vec::new());
     }
 
     for req in toast_requests {
