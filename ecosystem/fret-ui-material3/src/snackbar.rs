@@ -11,7 +11,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{Edges, Px};
+use fret_core::{Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
@@ -21,6 +21,8 @@ use fret_ui_kit::{
     ToastId, ToastLayerStyle, ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
     ToastVariantColors, ToastVariantPalette,
 };
+
+use crate::foundation::elevation::shadow_for_elevation_with_color;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SnackbarDuration {
@@ -239,6 +241,19 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
     let container_shape = theme
         .metric_by_key("md.comp.snackbar.container.shape")
         .unwrap_or(Px(4.0));
+    let elevation = theme
+        .metric_by_key("md.comp.snackbar.container.elevation")
+        .unwrap_or(Px(0.0));
+    let shadow_color = theme
+        .color_by_key("md.comp.snackbar.container.shadow-color")
+        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"));
+    let shadow = shadow_for_elevation_with_color(
+        theme,
+        elevation,
+        Some(shadow_color),
+        Corners::all(container_shape),
+    );
     let single_line_height =
         theme.metric_by_key("md.comp.snackbar.with-single-line.container.height");
     let two_line_height = theme.metric_by_key("md.comp.snackbar.with-two-lines.container.height");
@@ -276,6 +291,7 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
 
     ToastLayerStyle {
         palette,
+        shadow,
         border_color_key: None,
         border_width: Px(0.0),
         description_color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
