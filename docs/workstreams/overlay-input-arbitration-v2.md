@@ -129,6 +129,7 @@ Related ADRs:
   - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_does_not_drive_submenu_timers`)
   - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_submenu_safe_hover_corridor_cancels_close_timer_under_pointer_occlusion`)
   - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`hover_card_close_transition_is_click_through`)
+  - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (`tooltip_close_transition_is_click_through`)
 
 ## Next (P0 follow-ups)
 
