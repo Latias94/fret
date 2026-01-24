@@ -258,16 +258,29 @@ impl ElementHostWidget {
         }
         offset = clamped;
 
+        // Layout children in stable "content space" and apply the scroll offset via
+        // `children_render_transform` (same pattern as `Scroll`).
+        //
+        // This avoids the "translation-only layout" O(N) subtree bound updates that happen when
+        // we bake the scroll offset into each child's layout rect.
+        self.scroll_child_transform = Some(super::super::ScrollChildTransform {
+            handle: props.scroll_handle.base_handle().clone(),
+            axis: match axis {
+                fret_core::Axis::Vertical => crate::element::ScrollAxis::Y,
+                fret_core::Axis::Horizontal => crate::element::ScrollAxis::X,
+            },
+        });
+
         let mut child_rects: Vec<(NodeId, Rect)> = Vec::with_capacity(measured_updates.len());
         for (child, idx, measured_extent) in &measured_updates {
             let start = metrics.offset_for_index(*idx);
             let origin = match axis {
                 fret_core::Axis::Vertical => {
-                    let y = cx.bounds.origin.y.0 + start.0 - offset.0;
+                    let y = cx.bounds.origin.y.0 + start.0;
                     fret_core::Point::new(cx.bounds.origin.x, Px(y))
                 }
                 fret_core::Axis::Horizontal => {
-                    let x = cx.bounds.origin.x.0 + start.0 - offset.0;
+                    let x = cx.bounds.origin.x.0 + start.0;
                     fret_core::Point::new(Px(x), cx.bounds.origin.y)
                 }
             };

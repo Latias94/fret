@@ -80,7 +80,10 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                     props.scroll_handle.base_handle().binding_key(),
                     Invalidation::Layout,
                 );
-                cx.invalidate_self(Invalidation::Layout);
+                // VirtualList scrolling is applied via a children-only render transform, so
+                // hit-testing must be invalidated to refresh coordinate mapping under the
+                // updated offset.
+                cx.invalidate_self(Invalidation::HitTest);
                 cx.request_redraw();
                 cx.stop_propagation();
             }
