@@ -53,6 +53,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_wheel_scroll_test_id: Option<String> = None;
+    let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
@@ -258,6 +259,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --check-wheel-scroll".to_string());
                 };
                 check_wheel_scroll_test_id = Some(v);
+                i += 1;
+            }
+            "--check-drag-cache-root-paint-only" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-drag-cache-root-paint-only".to_string());
+                };
+                check_drag_cache_root_paint_only_test_id = Some(v);
                 i += 1;
             }
             "--check-hover-layout" => {
@@ -1007,6 +1016,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
                 check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
+            }
+            if let Some(test_id) = check_drag_cache_root_paint_only_test_id.as_deref() {
+                check_bundle_for_drag_cache_root_paint_only(&bundle_path, test_id)?;
             }
             if let Some(max_allowed) = check_hover_layout_max {
                 check_report_for_hover_layout_invalidations(&report, max_allowed)?;
@@ -2842,6 +2854,164 @@ fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> 
     node.get("bounds")
         .and_then(|v| v.get("y"))
         .and_then(|v| v.as_f64())
+}
+
+fn check_bundle_for_drag_cache_root_paint_only(
+    bundle_path: &Path,
+    test_id: &str,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_drag_cache_root_paint_only_json(&bundle, bundle_path, test_id)
+}
+
+fn check_bundle_for_drag_cache_root_paint_only_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut failures: Vec<String> = Vec::new();
+    let mut saw_drag = false;
+    let mut missing_semantics = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let events = w
+            .get("events")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut down_frame: Option<u64> = None;
+        let mut up_frame: Option<u64> = None;
+        for e in events {
+            let kind = e.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+            let frame_id = e.get("frame_id").and_then(|v| v.as_u64());
+            match (kind, frame_id) {
+                ("pointer.down", Some(frame)) if down_frame.is_none() => down_frame = Some(frame),
+                ("pointer.up", Some(frame)) if down_frame.is_some() => {
+                    up_frame = Some(frame);
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        let (Some(down_frame), Some(up_frame)) = (down_frame, up_frame) else {
+            continue;
+        };
+        saw_drag = true;
+
+        let mut cache_root_node_id: Option<u64> = None;
+        for s in snaps {
+            if let Some(id) = semantics_node_id_for_test_id(s, test_id) {
+                cache_root_node_id = Some(id);
+                break;
+            }
+            if s.get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .is_none()
+            {
+                missing_semantics = true;
+            }
+        }
+        let Some(cache_root_node_id) = cache_root_node_id else {
+            failures.push(format!(
+                "window={window_id} could not resolve semantics test_id={test_id} to a node id"
+            ));
+            continue;
+        };
+
+        for s in snaps {
+            let Some(frame_id) = s.get("frame_id").and_then(|v| v.as_u64()) else {
+                continue;
+            };
+            if frame_id < down_frame || frame_id > up_frame {
+                continue;
+            }
+
+            let Some(cache_roots) = s
+                .get("debug")
+                .and_then(|v| v.get("cache_roots"))
+                .and_then(|v| v.as_array())
+            else {
+                continue;
+            };
+            let Some(root) = cache_roots.iter().find(|r| {
+                r.get("root")
+                    .and_then(|v| v.as_u64())
+                    .is_some_and(|id| id == cache_root_node_id)
+            }) else {
+                failures.push(format!(
+                    "window={window_id} frame={frame_id} missing cache_roots entry for node={cache_root_node_id} (test_id={test_id})"
+                ));
+                continue;
+            };
+
+            let reused = root
+                .get("reused")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let paint_replayed_ops = root
+                .get("paint_replayed_ops")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if !reused || paint_replayed_ops != 0 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let reason = root
+                    .get("reuse_reason")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                failures.push(format!(
+                    "window={window_id} tick={tick_id} frame={frame_id} cache_root={cache_root_node_id} test_id={test_id} reused={reused} paint_replayed_ops={paint_replayed_ops} reuse_reason={reason}"
+                ));
+                if failures.len() >= 8 {
+                    break;
+                }
+            }
+        }
+    }
+
+    if missing_semantics {
+        return Err(format!(
+            "drag cache-root paint-only check requires semantics snapshots (re-run with FRET_DIAG_SEMANTICS=1): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if !saw_drag {
+        return Err(format!(
+            "drag cache-root paint-only check could not find a pointer drag (pointer.down -> pointer.up) in bundle events: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("drag cache-root paint-only check failed\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
 }
 
 fn first_wheel_frame_id_for_window(window: &serde_json::Value) -> Option<u64> {
