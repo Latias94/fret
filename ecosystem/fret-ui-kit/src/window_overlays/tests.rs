@@ -5533,6 +5533,252 @@ fn dock_drag_cross_window_closes_dismissible_popovers_in_source_and_current_wind
 }
 
 #[test]
+fn dock_drag_cross_window_leaving_current_window_does_not_restore_closed_popovers() {
+    use slotmap::KeyData;
+
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+
+    let mut app = App::new();
+
+    let mut ui_a: UiTree<App> = UiTree::new();
+    ui_a.set_window(window_a);
+    let mut ui_b: UiTree<App> = UiTree::new();
+    ui_b.set_window(window_b);
+
+    let open_a = app.models_mut().insert(false);
+    let open_b = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Frame 1: establish stable trigger ids.
+    let trigger_a = render_base_with_trigger(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds,
+        open_a.clone(),
+    );
+    ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let trigger_b = render_base_with_trigger(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds,
+        open_b.clone(),
+    );
+    ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Frame 2: open a dismissible popover in both windows.
+    let _ = app.models_mut().update(&open_a, |v| *v = true);
+    let _ = app.models_mut().update(&open_b, |v| *v = true);
+
+    begin_frame(&mut app, window_a);
+    let _ = render_base_with_trigger(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds,
+        open_a.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_a,
+        DismissiblePopoverRequest {
+            id: trigger_a,
+            root_name: popover_root_name(trigger_a),
+            trigger: trigger_a,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_a.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_a, &mut app, &mut services, window_a, bounds);
+    ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    begin_frame(&mut app, window_b);
+    let _ = render_base_with_trigger(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds,
+        open_b.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_b,
+        DismissiblePopoverRequest {
+            id: trigger_b,
+            root_name: popover_root_name(trigger_b),
+            trigger: trigger_b,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_b.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_b, &mut app, &mut services, window_b, bounds);
+    ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&open_a), Some(true));
+    assert_eq!(app.models().get_copied(&open_b), Some(true));
+
+    // Frame 3: start a cross-window dock drag and enter window B; both windows should close popovers.
+    app.begin_cross_window_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window_a,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+    let drag = app.drag_mut(PointerId(7)).expect("drag session");
+    drag.current_window = window_b;
+
+    begin_frame(&mut app, window_a);
+    let _ = render_base_with_trigger(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds,
+        open_a.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_a,
+        DismissiblePopoverRequest {
+            id: trigger_a,
+            root_name: popover_root_name(trigger_a),
+            trigger: trigger_a,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_a.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_a, &mut app, &mut services, window_a, bounds);
+    ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    begin_frame(&mut app, window_b);
+    let _ = render_base_with_trigger(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds,
+        open_b.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_b,
+        DismissiblePopoverRequest {
+            id: trigger_b,
+            root_name: popover_root_name(trigger_b),
+            trigger: trigger_b,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_b.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_b, &mut app, &mut services, window_b, bounds);
+    ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&open_a), Some(false));
+    assert_eq!(app.models().get_copied(&open_b), Some(false));
+
+    // Frame 4: drag leaves window B; the previously closed popover should remain closed.
+    let drag = app.drag_mut(PointerId(7)).expect("drag session");
+    drag.current_window = window_a;
+
+    begin_frame(&mut app, window_b);
+    let _ = render_base_with_trigger(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds,
+        open_b.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_b,
+        DismissiblePopoverRequest {
+            id: trigger_b,
+            root_name: popover_root_name(trigger_b),
+            trigger: trigger_b,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_b.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_b, &mut app, &mut services, window_b, bounds);
+    ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_copied(&open_b),
+        Some(false),
+        "expected the popover to remain closed after leaving the window"
+    );
+}
+
+#[test]
 fn dock_drag_hides_hover_overlays_in_affected_window() {
     let window = AppWindowId::default();
     let mut app = App::new();
