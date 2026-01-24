@@ -4756,8 +4756,6 @@ mod tests {
 
     #[test]
     fn dropdown_menu_submenu_opens_on_hover_and_closes_on_leave() {
-        use std::time::Duration;
-
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
