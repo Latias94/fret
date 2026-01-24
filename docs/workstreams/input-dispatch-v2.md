@@ -1,6 +1,8 @@
 # Input Dispatch v2 Workstream (Phases, Default Actions, and Action Availability)
 
 This document is a **workstream note** that complements ADR 1157 (`docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`).
+
+- TODO tracker (keep updated during implementation): `docs/workstreams/input-dispatch-v2-todo.md`
 It captures the concrete “editor-grade” ergonomics goals, cross-crate integration seams, and the remaining decision points
 needed to avoid a large late-stage rewrite.
 
@@ -103,10 +105,11 @@ That keeps runner/menus/palette gating consistent even as the internal authoring
 
 ## Next steps (recommended order)
 
+See the TODO tracker for current status and evidence: `docs/workstreams/input-dispatch-v2-todo.md`.
+
 1) Lock the tri-state semantics in docs and tests (availability snapshot uses `None` for unknown).
 2) Ensure command palette gating uses `WindowCommandGatingSnapshot` consistently across all entry builders.
 3) Promote a single “frozen gating snapshot while overlay is open” pattern that other overlays can reuse.
 4) Extend availability coverage for core text commands (`text.copy/cut/paste/select_all/clear/delete*`) across
    text widgets and read-only selection surfaces.
 5) Expand menu/OS runner gating to use the same aggregated snapshot (no divergent heuristics).
-
