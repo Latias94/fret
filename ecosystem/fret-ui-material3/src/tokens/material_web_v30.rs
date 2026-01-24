@@ -2023,6 +2023,88 @@ pub(crate) fn inject_comp_navigation_drawer_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+pub(crate) fn inject_comp_navigation_rail_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.navigation-rail.`
+
+    cfg.metrics.insert(
+        "md.comp.navigation-rail.active-indicator.height".to_string(),
+        32.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-rail.active-indicator.shape".to_string(),
+        9999.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-rail.active-indicator.width".to_string(),
+        56.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.active.label-text.weight".to_string(),
+        700.0,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-rail.badge.shape".to_string(), 3.0);
+    cfg.metrics
+        .insert("md.comp.navigation-rail.badge.size".to_string(), 6.0);
+    cfg.metrics.insert(
+        "md.comp.navigation-rail.container.elevation".to_string(),
+        0.0,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-rail.container.shape".to_string(), 0.0);
+    cfg.metrics
+        .insert("md.comp.navigation-rail.container.width".to_string(), 80.0);
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-rail.icon.size".to_string(), 24.0);
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.label-text.weight".to_string(),
+        500.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.large-badge-label.weight".to_string(),
+        500.0,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-rail.large-badge.shape".to_string(), 8.0);
+    cfg.metrics
+        .insert("md.comp.navigation-rail.large-badge.size".to_string(), 16.0);
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.menu.focus.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.menu.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.metrics
+        .insert("md.comp.navigation-rail.menu.icon.size".to_string(), 24.0);
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.menu.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-rail.no-label.active-indicator.height".to_string(),
+        56.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.navigation-rail.no-label.active-indicator.shape".to_string(),
+        9999.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.navigation-rail.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+}
+
 pub(crate) fn inject_comp_menu_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.menu.`
