@@ -112,8 +112,24 @@ export const translations = {
     'details.node': 'Node',
     'details.events': 'Events',
     'details.performance': 'Perf',
+    'details.overlay': 'Overlay',
     'details.diff': 'Diff',
     'details.raw': 'Raw',
+
+    // Overlay
+    'overlay.title': 'Overlay',
+    'overlay.noSnapshot': 'No snapshot selected',
+    'overlay.noSemantics': 'No semantics data in the selected snapshot',
+    'overlay.noBounds': 'No bounds data available in this snapshot',
+    'overlay.fit': 'Fit',
+    'overlay.hint': 'Scroll to zoom • Drag to pan • Click to select',
+    'overlay.showSemantics': 'Semantics',
+    'overlay.showSelectedPath': 'Selected path',
+    'overlay.showHitChain': 'Hit chain',
+    'overlay.showLayerRoots': 'Layer roots',
+    'overlay.showBlocksUnderlay': 'Blocks underlay',
+    'overlay.hover': 'Hover',
+    'overlay.none': 'none',
 
     // Summary Tab
     'summary.noSnapshot': 'No snapshot selected',
@@ -248,6 +264,10 @@ export const translations = {
     'raw.rawJson': 'Raw JSON',
     'raw.normalized': 'Normalized',
     'raw.copyAll': 'Copy all',
+
+    // JSON View
+    'json.null': 'null',
+    'json.undefined': 'undefined',
 
     // Command Palette
     'cmd.placeholder': 'Type a command or search...',
@@ -404,8 +424,24 @@ export const translations = {
     'details.node': '节点',
     'details.events': '事件',
     'details.performance': '性能',
+    'details.overlay': '叠加',
     'details.diff': '对比',
     'details.raw': '原始',
+
+    // Overlay
+    'overlay.title': '叠加层',
+    'overlay.noSnapshot': '未选择快照',
+    'overlay.noSemantics': '所选快照中没有语义数据',
+    'overlay.noBounds': '该快照缺少 bounds 数据',
+    'overlay.fit': '适配',
+    'overlay.hint': '滚轮缩放 · 拖拽平移 · 点击选中',
+    'overlay.showSemantics': '语义框',
+    'overlay.showSelectedPath': '选中路径',
+    'overlay.showHitChain': '命中链',
+    'overlay.showLayerRoots': '层根节点',
+    'overlay.showBlocksUnderlay': '阻挡下层',
+    'overlay.hover': '悬停',
+    'overlay.none': '无',
 
     // Summary Tab
     'summary.noSnapshot': '未选择快照',
@@ -540,6 +576,10 @@ export const translations = {
     'raw.rawJson': '原始 JSON',
     'raw.normalized': '标准化',
     'raw.copyAll': '复制全部',
+
+    // JSON View
+    'json.null': '空',
+    'json.undefined': '未定义',
 
     // Command Palette
     'cmd.placeholder': '输入命令或搜索...',

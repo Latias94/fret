@@ -27,6 +27,9 @@ const LazyRawJsonView = lazy(() =>
 const LazyDiffView = lazy(() =>
   import('@/components/diff-view').then((m) => ({ default: m.DiffView }))
 )
+const LazyOverlayPanel = lazy(() =>
+  import('@/components/overlay-panel').then((m) => ({ default: m.OverlayPanel }))
+)
 
 type JsonObject = Record<string, unknown>
 
@@ -1289,6 +1292,9 @@ export function DetailsPanel() {
             <TabsTrigger value="performance" className="text-xs px-2 h-6">
               {t('details.performance')}
             </TabsTrigger>
+            <TabsTrigger value="overlay" className="text-xs px-2 h-6">
+              {t('details.overlay')}
+            </TabsTrigger>
             {compareMode && (
               <TabsTrigger value="diff" className="text-xs px-2 h-6">
                 {t('details.diff')}
@@ -1311,6 +1317,18 @@ export function DetailsPanel() {
         </TabsContent>
         <TabsContent value="performance" className="flex-1 mt-0 overflow-hidden">
           <PerformanceTab />
+        </TabsContent>
+        <TabsContent value="overlay" className="flex-1 mt-0 overflow-hidden">
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Spinner />
+                <span>{t('common.loading')}</span>
+              </div>
+            }
+          >
+            <LazyOverlayPanel />
+          </Suspense>
         </TabsContent>
         {compareMode && (
           <TabsContent value="diff" className="flex-1 mt-0 overflow-hidden">
