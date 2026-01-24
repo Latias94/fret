@@ -4794,6 +4794,118 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_modal_outside_press_closes_without_activating_underlay() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // Frame 1: closed, establish stable trigger/underlay bounds.
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open (modal).
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+        );
+
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+            "expected modal dropdown-menu to install pointer occlusion"
+        );
+
+        // Click the underlay: should close the menu via outside-press observer, but must not be
+        // click-through (no underlay activation/focus).
+        let position = Point::new(Px(410.0), Px(310.0));
+        let underlay_id = underlay_id_out.get().expect("underlay element id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
+
+        let underlay_bounds = ui
+            .debug_node_bounds(underlay_node)
+            .expect("underlay bounds");
+        assert!(
+            underlay_bounds.contains(position),
+            "expected click position to fall inside underlay bounds; pos={position:?} bounds={underlay_bounds:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
+        assert_ne!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected underlay to not be focused by a modal dismissal; focus_after={:?}",
+            ui.focus()
+        );
+    }
+
+    #[test]
     fn dropdown_menu_click_through_outside_press_closes_and_focuses_underlay() {
         use fret_core::MouseButton;
 
