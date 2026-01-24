@@ -2919,6 +2919,129 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
 }
 
 #[test]
+fn non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+    let overlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |cx| {
+            vec![cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |cx, _st| {
+                    cx.pressable_toggle_bool(&underlay_clicked);
+                    vec![]
+                },
+            )]
+        },
+    );
+    ui.set_root(base);
+
+    begin_frame(&mut app, window);
+    let trigger = GlobalElementId(0xdead);
+    let overlay_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "popover-child", |cx| {
+            vec![cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    enabled: true,
+                    focusable: false,
+                    ..Default::default()
+                },
+                |cx, _st| {
+                    cx.pressable_toggle_bool(&overlay_clicked);
+                    vec![]
+                },
+            )]
+        });
+
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open,
+            present: true,
+            initial_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: overlay_children,
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
+    assert_eq!(app.models().get_copied(&overlay_clicked), Some(false));
+}
+
+#[test]
 fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
     let window = AppWindowId::default();
     let mut app = App::new();
