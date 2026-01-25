@@ -100,7 +100,7 @@ pub fn advance_indication_for_pressable<H: UiHost>(
     ripple_base_opacity: f32,
     config: IndicationConfig,
 ) -> IndicationFrame {
-    use crate::foundation::geometry::{down_origin_local, ripple_max_radius};
+    use crate::foundation::geometry::{down_origin, ripple_max_radius};
 
     let ripple_config = inherited_ripple_configuration(cx);
     let mut ripple_enabled = true;
@@ -147,7 +147,7 @@ pub fn advance_indication_for_pressable<H: UiHost>(
         let pressed_falling = !pressed && rt.prev_pressed;
         rt.prev_pressed = pressed;
         if pressed_rising && ripple_enabled {
-            let origin = down_origin_local(bounds, last_down);
+            let origin = down_origin(bounds, last_down);
             let max_radius = config
                 .ripple_radius
                 .filter(|r| r.0.is_finite() && r.0 > 0.0)
@@ -237,7 +237,7 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
     ripple_base_opacity: f32,
     config: IndicationConfig,
 ) -> IndicationFrame {
-    use crate::foundation::geometry::{down_origin_local, ripple_max_radius};
+    use crate::foundation::geometry::{down_origin, ripple_max_radius};
 
     let ripple_config = inherited_ripple_configuration(cx);
     let mut ripple_enabled = true;
@@ -284,20 +284,18 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
         let pressed_falling = !pressed && rt.prev_pressed;
         rt.prev_pressed = pressed;
         if pressed_rising && ripple_enabled {
-            let origin = down_origin_local(bounds, last_down);
-            let origin_in_ripple = fret_core::Point::new(
-                Px(origin.x.0 - ripple_bounds.origin.x.0),
-                Px(origin.y.0 - ripple_bounds.origin.y.0),
+            let origin = down_origin(bounds, last_down);
+            let abs_ripple_bounds = Rect::new(
+                fret_core::Point::new(
+                    Px(bounds.origin.x.0 + ripple_bounds.origin.x.0),
+                    Px(bounds.origin.y.0 + ripple_bounds.origin.y.0),
+                ),
+                ripple_bounds.size,
             );
             let max_radius = config
                 .ripple_radius
                 .filter(|r| r.0.is_finite() && r.0 > 0.0)
-                .unwrap_or_else(|| {
-                    ripple_max_radius(
-                        Rect::new(fret_core::Point::new(Px(0.0), Px(0.0)), ripple_bounds.size),
-                        origin_in_ripple,
-                    )
-                });
+                .unwrap_or_else(|| ripple_max_radius(abs_ripple_bounds, origin));
             let ripple_color = ripple_color_override.unwrap_or(ripple_fallback_color);
             rt.ripple.start(
                 now_frame,
@@ -445,11 +443,20 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
     props.layout.inset.left = Some(Px(0.0));
 
     cx.canvas(props, move |p| {
+        let bounds = p.bounds();
+        let abs_paint_bounds = Rect::new(
+            fret_core::Point::new(
+                Px(bounds.origin.x.0 + paint_bounds.origin.x.0),
+                Px(bounds.origin.y.0 + paint_bounds.origin.y.0),
+            ),
+            paint_bounds.size,
+        );
+
         if state_layer_opacity > 0.0 {
             fret_ui::paint::paint_state_layer(
                 p.scene(),
                 DrawOrder(0),
-                paint_bounds,
+                abs_paint_bounds,
                 color,
                 state_layer_opacity,
                 corner_radii,
@@ -464,7 +471,7 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
             fret_ui::paint::paint_ripple(
                 p.scene(),
                 DrawOrder(1),
-                paint_bounds,
+                abs_paint_bounds,
                 r.origin,
                 r.radius,
                 r.color,

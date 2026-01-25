@@ -214,7 +214,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.
   - Evidence: `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RippleAnimator`),
     `ecosystem/fret-ui-material3/src/button.rs` (`PointerRegion` → `PointerRegionState.last_down`),
-    `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin_local`),
+    `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin`),
     `crates/fret-ui/src/paint.rs` (`paint_ripple`).
 - [ ] Ripple parity improvements (unbounded clip, token radius, fade rules, color latching).
   - [x] Fade starts on release (no fade while held).
@@ -224,6 +224,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (passes color into `RippleAnimator::start`),
       `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RipplePaintFrame.color`).
   - [ ] Clip + bounds parity for unbounded ripples (may require core paint/transform guidance).
+  - [x] Ripple bounds/origin coordinate space is consistent under nested layout offsets.
+    - Evidence: `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin`, `ripple_max_radius`),
+      `ecosystem/fret-ui-material3/src/foundation/indication.rs` (translate local ripple bounds to absolute),
+      tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`radio_ripple_origin_tracks_pointer_down_position`, `switch_ripple_origin_tracks_pointer_down_position`).
   - Evidence (partial): `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleClip`, `IndicationConfig.ripple_radius`),
     `ecosystem/fret-ui-material3/src/checkbox.rs` (unbounded ripple),
     `ecosystem/fret-ui-material3/src/radio.rs` (unbounded ripple),
@@ -276,7 +280,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Checkbox (MVP: bool-only, state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/checkbox.rs` (`Checkbox`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_checkbox_*`).
-- [x] Switch (MVP: bool-only, thumb state layer + bounded ripple)
+- [x] Switch (MVP: bool-only, thumb state layer + unbounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/switch.rs` (`Switch`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_*`).
 - [x] Radio (MVP: bool/group-value binding, state layer + bounded ripple, dot grow animation)

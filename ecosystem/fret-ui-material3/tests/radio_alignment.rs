@@ -4,14 +4,15 @@ use std::{
 };
 
 use fret_core::{
-    AppWindowId, Edges, Event, Modifiers, MouseButton, Point, PointerEvent, PointerId, PointerType,
-    Px, Rect, Scene, SceneOp, Size, UiServices,
+    AppWindowId, DrawOrder, Edges, Event, Modifiers, MouseButton, Point, PointerEvent, PointerId,
+    PointerType, Px, Rect, Scene, SceneOp, Size, UiServices,
 };
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
     EffectSink, FrameId, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost,
     PlatformCapabilities, TickId, TimeHost,
 };
+use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 
 #[derive(Default)]
@@ -271,12 +272,17 @@ impl fret_core::SvgService for FakeUiServices {
     }
 }
 
-fn find_first_bounds_with_size(ui: &UiTree<TestHost>, root: fret_core::NodeId) -> Option<Rect> {
+fn find_first_bounds_with_size(
+    ui: &UiTree<TestHost>,
+    root: fret_core::NodeId,
+    width: f32,
+    height: f32,
+) -> Option<Rect> {
     let mut stack = vec![root];
     while let Some(node) = stack.pop() {
-        if let Some(r) = ui.debug_node_bounds(node)
-            && (r.size.width.0 - 40.0).abs() < 0.1
-            && (r.size.height.0 - 40.0).abs() < 0.1
+        if let Some(r) = ui.debug_node_visual_bounds(node)
+            && (r.size.width.0 - width).abs() < 0.1
+            && (r.size.height.0 - height).abs() < 0.1
         {
             return Some(r);
         }
@@ -297,6 +303,20 @@ fn pointer_down(pointer_id: PointerId, position: Point) -> Event {
         click_count: 1,
         pointer_type: PointerType::Mouse,
     })
+}
+
+fn with_padding<'a, H: fret_ui::UiHost>(
+    cx: &mut fret_ui::elements::ElementContext<'a, H>,
+    padding: Px,
+    child: AnyElement,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            padding: Edges::all(padding),
+            ..Default::default()
+        },
+        move |_cx| vec![child],
+    )
 }
 
 #[test]
@@ -326,11 +346,10 @@ fn radio_selected_dot_is_centered_in_outline() {
         let render =
             |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
                 fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                    vec![
-                        fret_ui_material3::Radio::new(selected.clone())
-                            .a11y_label("radio")
-                            .into_element(cx),
-                    ]
+                    let child = fret_ui_material3::Radio::new(selected.clone())
+                        .a11y_label("radio")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(37.0), child)]
                 })
             };
 
@@ -430,11 +449,10 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
         let render =
             |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
                 fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                    vec![
-                        fret_ui_material3::Radio::new(selected.clone())
-                            .a11y_label("radio")
-                            .into_element(cx),
-                    ]
+                    let child = fret_ui_material3::Radio::new(selected.clone())
+                        .a11y_label("radio")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(37.0), child)]
                 })
             };
 
@@ -442,8 +460,8 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, scale_factor);
 
-        let radio_bounds =
-            find_first_bounds_with_size(&ui, root).expect("expected a 40x40 radio chrome bounds");
+        let radio_bounds = find_first_bounds_with_size(&ui, root, 40.0, 40.0)
+            .expect("expected a 40x40 radio chrome bounds");
         let press_at = Point::new(
             Px(radio_bounds.origin.x.0 + radio_bounds.size.width.0 * 0.5),
             Px(radio_bounds.origin.y.0 + radio_bounds.size.height.0 * 0.5),
@@ -468,6 +486,7 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
 
             for op in scene.ops() {
                 let SceneOp::Quad {
+                    order,
                     rect: circle,
                     background,
                     border,
@@ -478,6 +497,139 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
                     continue;
                 };
 
+                if order != &DrawOrder(1) {
+                    continue;
+                }
+                if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
+                    continue;
+                }
+                if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
+                    continue;
+                }
+
+                let r = corner_radii.top_left.0;
+                let r_ok = (corner_radii.top_right.0 - r).abs() < 1e-3
+                    && (corner_radii.bottom_left.0 - r).abs() < 1e-3
+                    && (corner_radii.bottom_right.0 - r).abs() < 1e-3;
+                if !r_ok {
+                    continue;
+                }
+                if (circle.size.width.0 * 0.5 - r).abs() > 1e-3
+                    || (circle.size.height.0 * 0.5 - r).abs() > 1e-3
+                {
+                    continue;
+                }
+
+                ripple_center = Some(Point::new(
+                    Px(circle.origin.x.0 + circle.size.width.0 * 0.5),
+                    Px(circle.origin.y.0 + circle.size.height.0 * 0.5),
+                ));
+                break;
+            }
+
+            if ripple_center.is_some() {
+                break;
+            }
+        }
+
+        let Some(ripple_center) = ripple_center else {
+            panic!("expected a ripple circle quad in the scene");
+        };
+
+        assert!(
+            (ripple_center.x.0 - press_at.x.0).abs() < 0.75
+                && (ripple_center.y.0 - press_at.y.0).abs() < 0.75,
+            "expected ripple origin to match pointer down position (scale={scale_factor}): ripple_center={ripple_center:?} press_at={press_at:?}"
+        );
+    }
+}
+
+#[test]
+fn switch_ripple_origin_tracks_pointer_down_position() {
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+
+        let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+            fret_ui_material3::tokens::v30::TypographyOptions::default(),
+            fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+        );
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+        let theme = Theme::global(&app);
+        let track_width = theme
+            .metric_by_key("md.comp.switch.track.width")
+            .unwrap_or(Px(52.0));
+        let state_layer = theme
+            .metric_by_key("md.comp.switch.state-layer.size")
+            .unwrap_or(Px(40.0));
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        );
+
+        let selected = app.models_mut().insert(false);
+
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let child = fret_ui_material3::Switch::new(selected.clone())
+                        .a11y_label("switch")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(37.0), child)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+        let switch_bounds = find_first_bounds_with_size(&ui, root, track_width.0, state_layer.0)
+            .expect("expected a switch outer bounds");
+        let press_at = Point::new(
+            Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+            Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut ripple_center: Option<Point> = None;
+        for _ in 0..4 {
+            app.advance_frame();
+
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+            for op in scene.ops() {
+                let SceneOp::Quad {
+                    order,
+                    rect: circle,
+                    background,
+                    border,
+                    corner_radii,
+                    ..
+                } = op
+                else {
+                    continue;
+                };
+
+                if order != &DrawOrder(1) {
+                    continue;
+                }
                 if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
                     continue;
                 }

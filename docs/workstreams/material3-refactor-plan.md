@@ -39,6 +39,9 @@ mechanisms (measurement/rounding), not “a single wrong token”:
   state layer” rules and stay stable across states (pressed/hover/focus).
 - **Ripple drift / flicker**: ripple visuals should not “inherit” hover/focus colors mid-flight; the
   pressed ripple color should be latched at press time, and fade should start on release.
+- **Coordinate space mismatches**: ripple origins and bounds must be consistent under nested layout
+  offsets (padding/stacking). If we mix local bounds with window-space pointer positions, the
+  ripple will “jump” or appear clipped to the wrong region.
 
 References in this repo:
 
@@ -95,6 +98,9 @@ Compose:
 
 - The default `LocalIndication` is a Material ripple, and components rely on a shared
   `InteractionSource` contract to coordinate pressed/hover/focus/dragged states.
+- Press interactions carry a press position, and some components intentionally attach the
+  indication to a different visual sub-region than the one owning the gesture (e.g. `Switch`
+  attaches ripple/state-layer to the thumb while the toggleable surface covers the full switch).
 - Ripple is implemented as an `IndicationNodeFactory` with:
   - bounded vs unbounded behavior,
   - optional fixed radius,
@@ -109,6 +115,9 @@ Implication for Fret:
   - unbounded ripples,
   - keyboard activation ripple origin rules,
   - a scoped ripple configuration override (escape hatch).
+- We should treat “gesture space” (window pointer positions) and “paint space” (ink bounds) as
+  distinct, and keep their mapping explicit in the foundation APIs (e.g. the existing
+  `material_ink_layer_for_pressable_with_ripple_bounds` helper, plus clear coordinate invariants).
 
 ### Motion scheme (spatial vs effects)
 
