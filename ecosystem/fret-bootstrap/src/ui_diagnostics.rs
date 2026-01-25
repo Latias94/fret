@@ -2568,6 +2568,18 @@ pub struct UiCommandGatingTraceEntryV1 {
     pub reason: String,
     #[serde(default)]
     pub scope: String,
+    #[serde(default)]
+    pub source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub menu_path: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct UiCommandGatingTraceCandidate {
+    command: fret_runtime::CommandId,
+    source: &'static str,
+    menu_path: Option<String>,
+    menu_when: Option<fret_runtime::WhenExpr>,
 }
 
 fn command_gating_trace_for_window(
@@ -2576,21 +2588,49 @@ fn command_gating_trace_for_window(
 ) -> Vec<UiCommandGatingTraceEntryV1> {
     let gating = fret_runtime::best_effort_snapshot_for_window(app, window);
 
-    let mut commands: HashSet<fret_runtime::CommandId> = HashSet::new();
+    let mut candidates: Vec<UiCommandGatingTraceCandidate> = Vec::new();
 
-    // Include any commands that were explicitly overridden.
+    // 1) Explicit gating inputs (useful for verifying that snapshots are being published).
     for (cmd, _) in gating.enabled_overrides() {
-        commands.insert(cmd.clone());
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: cmd.clone(),
+            source: "enabled_overrides",
+            menu_path: None,
+            menu_when: None,
+        });
     }
-
-    // Include any widget-scope action availability entries that were published.
     if let Some(map) = gating.action_availability() {
         for (cmd, _) in map {
-            commands.insert(cmd.clone());
+            candidates.push(UiCommandGatingTraceCandidate {
+                command: cmd.clone(),
+                source: "action_availability",
+                menu_path: None,
+                menu_when: None,
+            });
         }
     }
 
-    // Include core, cross-surface editor commands (common across menus/palettes/buttons).
+    // 2) Effective OS menubar model (data-only). This is the closest source of truth for
+    // "visible menu commands" from the app's perspective.
+    if let Some(menu_bar) = fret_app::effective_menu_bar(app) {
+        collect_menu_bar_commands(&menu_bar, &mut candidates);
+    }
+
+    // 3) Command palette catalog (best-effort). This approximates the set of entries derived from
+    // host commands; the actual palette filters further by query/group options.
+    for (id, meta) in app.commands().iter() {
+        if meta.hidden {
+            continue;
+        }
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: id.clone(),
+            source: "command_palette_catalog",
+            menu_path: None,
+            menu_when: None,
+        });
+    }
+
+    // Always include a core, cross-surface set even if the host didn't publish any snapshot yet.
     for &cmd in &[
         "edit.undo",
         "edit.redo",
@@ -2600,23 +2640,58 @@ fn command_gating_trace_for_window(
         "edit.select_all",
         "focus.menu_bar",
     ] {
-        commands.insert(fret_runtime::CommandId::from(cmd));
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: fret_runtime::CommandId::from(cmd),
+            source: "core",
+            menu_path: None,
+            menu_when: None,
+        });
     }
 
-    let mut commands: Vec<fret_runtime::CommandId> = commands.into_iter().collect();
-    commands.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+    // Deduplicate by (command, source, menu_path) so repeated insertions don't explode snapshots.
+    let mut seen: HashSet<(String, &'static str, Option<String>)> = HashSet::new();
+    candidates.retain(|c| {
+        let key = (
+            c.command.as_str().to_string(),
+            c.source,
+            c.menu_path.clone(),
+        );
+        if seen.contains(&key) {
+            return false;
+        }
+        seen.insert(key);
+        true
+    });
 
-    const MAX_TRACE_ENTRIES: usize = 64;
-    commands
+    candidates.sort_by(|a, b| {
+        a.source
+            .cmp(b.source)
+            .then_with(|| a.menu_path.cmp(&b.menu_path))
+            .then_with(|| a.command.as_str().cmp(b.command.as_str()))
+    });
+
+    const MAX_TRACE_ENTRIES: usize = 200;
+    candidates
         .into_iter()
         .take(MAX_TRACE_ENTRIES)
-        .map(|command| {
-            let (enabled, reason, scope) = command_gating_decision(app, &gating, &command);
+        .map(|c| {
+            let (mut enabled, mut reason, scope) =
+                command_gating_decision(app, &gating, &c.command);
+            if enabled
+                && let Some(menu_when) = c.menu_when.as_ref()
+                && !menu_when.eval(gating.input_ctx())
+            {
+                enabled = false;
+                reason = "menu_when_false".to_string();
+            }
+
             UiCommandGatingTraceEntryV1 {
-                command: command.as_str().to_string(),
+                command: c.command.as_str().to_string(),
                 enabled,
                 reason,
                 scope,
+                source: c.source.to_string(),
+                menu_path: c.menu_path,
             }
         })
         .collect()
@@ -2662,6 +2737,44 @@ fn command_gating_decision(
     }
 
     (true, "enabled".to_string(), scope)
+}
+
+fn collect_menu_bar_commands(
+    menu_bar: &fret_runtime::MenuBar,
+    out: &mut Vec<UiCommandGatingTraceCandidate>,
+) {
+    for menu in &menu_bar.menus {
+        let menu_title = menu.title.as_ref().to_string();
+        collect_menu_items(&menu_title, &menu.items, out);
+    }
+}
+
+fn collect_menu_items(
+    prefix: &str,
+    items: &[fret_runtime::MenuItem],
+    out: &mut Vec<UiCommandGatingTraceCandidate>,
+) {
+    for item in items {
+        match item {
+            fret_runtime::MenuItem::Command { command, when } => {
+                out.push(UiCommandGatingTraceCandidate {
+                    command: command.clone(),
+                    source: "menu_bar",
+                    menu_path: Some(prefix.to_string()),
+                    menu_when: when.clone(),
+                });
+            }
+            fret_runtime::MenuItem::Separator | fret_runtime::MenuItem::SystemMenu { .. } => {}
+            fret_runtime::MenuItem::Submenu {
+                title,
+                when: _,
+                items,
+            } => {
+                let next = format!("{prefix} > {}", title.as_ref());
+                collect_menu_items(&next, items, out);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
