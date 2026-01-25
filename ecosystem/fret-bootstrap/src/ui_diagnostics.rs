@@ -2415,7 +2415,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -3742,6 +3742,7 @@ impl UiHitTestSnapshotV1 {
         let mut scope_roots = Vec::new();
         if let Some(root) = hit_test.barrier_root {
             scope_roots.push(UiHitTestScopeRootV1 {
+                label: "modal_barrier_root".to_string(),
                 kind: "modal_barrier_root".to_string(),
                 root: key_to_u64(root),
                 layer_id: None,
@@ -3758,7 +3759,16 @@ impl UiHitTestSnapshotV1 {
 
         for root in &hit_test.active_layer_roots {
             let info = by_root.get(root).copied();
+            let label = info
+                .map(|l| {
+                    format!(
+                        "layer_root(pointer_occlusion={})",
+                        pointer_occlusion_label(l.pointer_occlusion)
+                    )
+                })
+                .unwrap_or_else(|| "layer_root".to_string());
             scope_roots.push(UiHitTestScopeRootV1 {
+                label,
                 kind: "layer_root".to_string(),
                 root: key_to_u64(*root),
                 layer_id: info.map(|l| l.id.data().as_ffi()),
@@ -3784,6 +3794,11 @@ impl UiHitTestSnapshotV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiHitTestScopeRootV1 {
+    /// Stable, script-friendly label for the scope root.
+    ///
+    /// This is intended for comparisons across refactors without relying on `Debug` formatting.
+    #[serde(default)]
+    pub label: String,
     /// Stable scope root kind (e.g. `modal_barrier_root`, `layer_root`).
     pub kind: String,
     /// Node id of the root (not stable between runs; treat as an in-run reference only).
@@ -3798,6 +3813,51 @@ pub struct UiHitTestScopeRootV1 {
     pub blocks_underlay_input: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hit_testable: Option<bool>,
+}
+
+#[cfg(test)]
+mod hit_test_scope_root_label_tests {
+    use super::*;
+    use fret_core::NodeId;
+    use fret_ui::tree::{PointerOcclusion, UiDebugHitTest, UiDebugLayerInfo, UiLayerId};
+
+    #[test]
+    fn hit_test_scope_roots_include_stable_labels() {
+        let barrier_root = NodeId::default();
+        let layer_root = NodeId::default();
+        let layer = UiDebugLayerInfo {
+            id: UiLayerId::default(),
+            root: layer_root,
+            visible: true,
+            blocks_underlay_input: true,
+            hit_testable: true,
+            pointer_occlusion: PointerOcclusion::BlockMouseExceptScroll,
+            wants_pointer_down_outside_events: false,
+            wants_pointer_move_events: false,
+            wants_timer_events: false,
+        };
+        let hit_test = UiDebugHitTest {
+            hit: None,
+            active_layer_roots: vec![layer_root],
+            barrier_root: Some(barrier_root),
+        };
+        let snap = UiHitTestSnapshotV1::from_hit_test_with_layers(
+            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+            hit_test,
+            &[layer],
+        );
+        assert_eq!(snap.scope_roots.len(), 2);
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| r.kind == "modal_barrier_root" && r.label == "modal_barrier_root")
+        );
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| r.kind == "layer_root" && r.label.contains("pointer_occlusion="))
+        );
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

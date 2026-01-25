@@ -233,6 +233,7 @@ At a high level:
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, with optional `reuse_reason`)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
+    - `debug.hit_test.scope_roots[]` includes stable `label` strings plus occlusion/hit-test metadata (prefer this over raw node ids).
   - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals; includes optional `*_path` strings for key elements)
   - `debug.semantics`: the exported semantics snapshot (ADR 0033) when enabled
 
