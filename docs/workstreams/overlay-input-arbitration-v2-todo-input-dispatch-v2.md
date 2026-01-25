@@ -73,6 +73,11 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_disables_safe_hover_observers_and_timers`)
 
+- [x] OIA2-test-012 Close transition disables hover/submenu observers and timers (context menu).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_does_not_drive_submenu_timers`)
+    - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_is_click_through_and_drops_pointer_occlusion`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
