@@ -145,13 +145,18 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
     };
 
     let mut by_window: HashMap<AppWindowId, WindowCommandGatingSnapshot> = HashMap::new();
+    let svc = app.global::<fret_runtime::WindowCommandGatingService>();
     for window in windows {
         let fallback_input_ctx = InputContext::fallback(Platform::Macos, caps.clone());
-        let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
-            app,
-            window,
-            fallback_input_ctx,
-        );
+        let snapshot = svc
+            .and_then(|svc| svc.snapshot(window).cloned())
+            .unwrap_or_else(|| {
+                fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+                    app,
+                    window,
+                    fallback_input_ctx,
+                )
+            });
         by_window.insert(window, snapshot);
     }
 
