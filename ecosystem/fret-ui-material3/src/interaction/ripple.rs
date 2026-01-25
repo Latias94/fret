@@ -9,8 +9,16 @@ use fret_ui::theme::CubicBezier;
 use crate::motion::{cubic_bezier_ease, ms_to_frames};
 
 #[derive(Debug, Clone, Copy)]
+pub enum RippleOrigin {
+    /// Origin in the scene coordinate space.
+    Absolute(Point),
+    /// Origin relative to the paint bounds origin.
+    Local(Point),
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct RipplePaintFrame {
-    pub origin: Point,
+    pub origin: RippleOrigin,
     pub radius: Px,
     pub color: fret_core::Color,
     pub opacity: f32,
@@ -18,7 +26,7 @@ pub struct RipplePaintFrame {
 
 #[derive(Debug, Clone, Copy)]
 struct RipplePulse {
-    origin: Point,
+    origin: RippleOrigin,
     max_radius: Px,
     color: fret_core::Color,
     start_frame: u64,
@@ -41,7 +49,7 @@ impl RippleAnimator {
     pub fn start(
         &mut self,
         now_frame: u64,
-        origin: Point,
+        origin: RippleOrigin,
         max_radius: Px,
         color: fret_core::Color,
         expand_duration_ms: u32,
@@ -111,6 +119,7 @@ impl RippleAnimator {
 #[cfg(test)]
 mod tests {
     use super::RippleAnimator;
+    use super::RippleOrigin;
     use fret_core::{Point, Px};
     use fret_ui::theme::CubicBezier;
 
@@ -119,7 +128,7 @@ mod tests {
         let mut a = RippleAnimator::default();
         a.start(
             0,
-            Point::new(Px(0.0), Px(0.0)),
+            RippleOrigin::Absolute(Point::new(Px(0.0), Px(0.0))),
             Px(10.0),
             fret_core::Color {
                 r: 1.0,
@@ -156,7 +165,7 @@ mod tests {
         let mut a = RippleAnimator::default();
         a.start(
             0,
-            Point::new(Px(0.0), Px(0.0)),
+            RippleOrigin::Absolute(Point::new(Px(0.0), Px(0.0))),
             Px(10.0),
             fret_core::Color {
                 r: 1.0,

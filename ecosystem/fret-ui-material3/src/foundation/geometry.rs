@@ -1,13 +1,9 @@
 use fret_core::{Point, Px, Rect};
-use fret_ui::action::PointerDownCx;
-
-pub fn down_origin(bounds: Rect, down: Option<PointerDownCx>) -> Point {
-    down.map(|d| d.position).unwrap_or_else(|| {
-        Point::new(
-            Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
-            Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
-        )
-    })
+pub fn rect_center(bounds: Rect) -> Point {
+    Point::new(
+        Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+        Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+    )
 }
 
 pub fn ripple_max_radius(bounds: Rect, origin: Point) -> Px {

@@ -113,8 +113,10 @@ Implication for Fret:
 - This maps directly onto our `foundation::indication` goal, but we should close the remaining
   parity gaps as *foundation work*, not per-component patches:
   - unbounded ripples,
-  - keyboard activation ripple origin rules,
   - a scoped ripple configuration override (escape hatch).
+- Keyboard origin + minimum press duration are now implemented in the foundation:
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleOrigin::Local`, `IndicationConfig.ripple_min_press_ms`),
+    tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`switch_keyboard_ripple_origin_ignores_stale_pointer_down`, `switch_ripple_holds_for_minimum_press_duration_before_fade`).
 - We should treat “gesture space” (window pointer positions) and “paint space” (ink bounds) as
   distinct, and keep their mapping explicit in the foundation APIs (e.g. the existing
   `material_ink_layer_for_pressable_with_ripple_bounds` helper, plus clear coordinate invariants).

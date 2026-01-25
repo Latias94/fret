@@ -1,11 +1,11 @@
-use fret_core::{Color, Corners, DrawOrder, Px, Rect};
+use fret_core::{Color, Corners, DrawOrder, Point, Px, Rect};
 use fret_ui::UiHost;
 use fret_ui::element::{AnyElement, CanvasProps};
 use fret_ui::elements::ElementContext;
 use fret_ui::theme::CubicBezier;
 
 use crate::foundation::context::{MaterialRippleConfiguration, inherited_ripple_configuration};
-use crate::interaction::ripple::{RippleAnimator, RipplePaintFrame};
+use crate::interaction::ripple::{RippleAnimator, RippleOrigin, RipplePaintFrame};
 use crate::interaction::state_layer::StateLayerAnimator;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,6 +22,11 @@ pub struct IndicationConfig {
     pub state_duration_ms: u32,
     pub ripple_expand_ms: u32,
     pub ripple_fade_ms: u32,
+    /// Minimum time the ripple should remain in the "pressed" state before it can be released.
+    ///
+    /// This matches Material Web v30 behavior, where a quick click / key press keeps the pressed
+    /// ripple visible for a short minimum to avoid perceptual flicker.
+    pub ripple_min_press_ms: u32,
     /// Optional override for the ripple's max radius (end size).
     ///
     /// This is used to align components like Checkbox/Radio/Switch with Compose Material 3, which
@@ -36,6 +41,7 @@ impl Default for IndicationConfig {
             state_duration_ms: 100,
             ripple_expand_ms: 200,
             ripple_fade_ms: 100,
+            ripple_min_press_ms: 225,
             ripple_radius: None,
             easing: CubicBezier {
                 x1: 0.0,
@@ -69,6 +75,7 @@ pub fn material_pressable_indication_config(
         state_duration_ms,
         ripple_expand_ms,
         ripple_fade_ms,
+        ripple_min_press_ms: defaults.ripple_min_press_ms,
         ripple_radius,
         easing,
     }
@@ -87,6 +94,8 @@ struct IndicationRuntime {
     state_target: f32,
     state_layer: StateLayerAnimator,
     ripple: RippleAnimator,
+    ripple_press_frame: Option<u64>,
+    ripple_release_due_frame: Option<u64>,
 }
 
 pub fn advance_indication_for_pressable<H: UiHost>(
@@ -101,7 +110,8 @@ pub fn advance_indication_for_pressable<H: UiHost>(
     ripple_base_opacity: f32,
     config: IndicationConfig,
 ) -> IndicationFrame {
-    use crate::foundation::geometry::{down_origin, ripple_max_radius};
+    use crate::foundation::geometry::{rect_center, ripple_max_radius};
+    use crate::motion::ms_to_frames;
 
     let ripple_config = inherited_ripple_configuration(cx);
     let mut ripple_enabled = true;
@@ -128,6 +138,13 @@ pub fn advance_indication_for_pressable<H: UiHost>(
         | None => {}
     }
 
+    let now_tick = cx.app.tick_id();
+    let is_keyboard = fret_ui::input_modality::is_keyboard(&mut *cx.app, Some(cx.window));
+    let last_down = (!is_keyboard)
+        .then_some(last_down)
+        .flatten()
+        .filter(|down| now_tick.0.saturating_sub(down.tick_id.0) <= 2);
+
     cx.with_state_for(pressable_id, IndicationRuntime::default, |rt| {
         if (state_layer_target - rt.state_target).abs() > 1e-6 {
             rt.state_target = state_layer_target;
@@ -142,21 +159,50 @@ pub fn advance_indication_for_pressable<H: UiHost>(
 
         if !ripple_enabled {
             rt.ripple = RippleAnimator::default();
+            rt.ripple_press_frame = None;
+            rt.ripple_release_due_frame = None;
+        }
+
+        let min_press_frames = ms_to_frames(config.ripple_min_press_ms).max(1);
+        if let Some(release_due) = rt.ripple_release_due_frame
+            && now_frame >= release_due
+        {
+            rt.ripple.release(now_frame);
+            rt.ripple_release_due_frame = None;
         }
 
         let pressed_rising = pressed && !rt.prev_pressed;
         let pressed_falling = !pressed && rt.prev_pressed;
         rt.prev_pressed = pressed;
         if pressed_rising && ripple_enabled {
-            let origin = down_origin(bounds, last_down);
+            let abs_fallback_center = rect_center(bounds);
+            let abs_origin_for_radius = last_down
+                .map(|down| down.position)
+                .unwrap_or(abs_fallback_center);
+            let origin_for_paint = if is_keyboard && last_down.is_none() {
+                RippleOrigin::Local(Point::new(
+                    Px(bounds.size.width.0 * 0.5),
+                    Px(bounds.size.height.0 * 0.5),
+                ))
+            } else {
+                RippleOrigin::Absolute(abs_origin_for_radius)
+            };
             let max_radius = config
                 .ripple_radius
                 .filter(|r| r.0.is_finite() && r.0 > 0.0)
-                .unwrap_or_else(|| ripple_max_radius(bounds, origin));
+                .unwrap_or_else(|| match origin_for_paint {
+                    RippleOrigin::Absolute(origin) => ripple_max_radius(bounds, origin),
+                    RippleOrigin::Local(origin) => {
+                        let local_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), bounds.size);
+                        ripple_max_radius(local_bounds, origin)
+                    }
+                });
             let ripple_color = ripple_color_override.unwrap_or(ripple_fallback_color);
+            rt.ripple_press_frame = Some(now_frame);
+            rt.ripple_release_due_frame = None;
             rt.ripple.start(
                 now_frame,
-                origin,
+                origin_for_paint,
                 max_radius,
                 ripple_color,
                 config.ripple_expand_ms,
@@ -165,7 +211,16 @@ pub fn advance_indication_for_pressable<H: UiHost>(
             );
         }
         if pressed_falling && ripple_enabled {
-            rt.ripple.release(now_frame);
+            let min_release = rt
+                .ripple_press_frame
+                .unwrap_or(now_frame)
+                .saturating_add(min_press_frames);
+            if now_frame < min_release {
+                rt.ripple_release_due_frame = Some(min_release);
+            } else {
+                rt.ripple.release(now_frame);
+                rt.ripple_release_due_frame = None;
+            }
         }
 
         let ripple_frame = ripple_enabled
@@ -238,7 +293,8 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
     ripple_base_opacity: f32,
     config: IndicationConfig,
 ) -> IndicationFrame {
-    use crate::foundation::geometry::{down_origin, ripple_max_radius};
+    use crate::foundation::geometry::{rect_center, ripple_max_radius};
+    use crate::motion::ms_to_frames;
 
     let ripple_config = inherited_ripple_configuration(cx);
     let mut ripple_enabled = true;
@@ -265,6 +321,13 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
         | None => {}
     }
 
+    let now_tick = cx.app.tick_id();
+    let is_keyboard = fret_ui::input_modality::is_keyboard(&mut *cx.app, Some(cx.window));
+    let last_down = (!is_keyboard)
+        .then_some(last_down)
+        .flatten()
+        .filter(|down| now_tick.0.saturating_sub(down.tick_id.0) <= 2);
+
     cx.with_state_for(pressable_id, IndicationRuntime::default, |rt| {
         if (state_layer_target - rt.state_target).abs() > 1e-6 {
             rt.state_target = state_layer_target;
@@ -279,13 +342,22 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
 
         if !ripple_enabled {
             rt.ripple = RippleAnimator::default();
+            rt.ripple_press_frame = None;
+            rt.ripple_release_due_frame = None;
+        }
+
+        let min_press_frames = ms_to_frames(config.ripple_min_press_ms).max(1);
+        if let Some(release_due) = rt.ripple_release_due_frame
+            && now_frame >= release_due
+        {
+            rt.ripple.release(now_frame);
+            rt.ripple_release_due_frame = None;
         }
 
         let pressed_rising = pressed && !rt.prev_pressed;
         let pressed_falling = !pressed && rt.prev_pressed;
         rt.prev_pressed = pressed;
         if pressed_rising && ripple_enabled {
-            let origin = down_origin(bounds, last_down);
             let abs_ripple_bounds = Rect::new(
                 fret_core::Point::new(
                     Px(bounds.origin.x.0 + ripple_bounds.origin.x.0),
@@ -293,14 +365,35 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
                 ),
                 ripple_bounds.size,
             );
+            let abs_fallback_center = rect_center(abs_ripple_bounds);
+            let abs_origin_for_radius = last_down
+                .map(|down| down.position)
+                .unwrap_or(abs_fallback_center);
+            let origin_for_paint = if is_keyboard && last_down.is_none() {
+                RippleOrigin::Local(Point::new(
+                    Px(ripple_bounds.size.width.0 * 0.5),
+                    Px(ripple_bounds.size.height.0 * 0.5),
+                ))
+            } else {
+                RippleOrigin::Absolute(abs_origin_for_radius)
+            };
             let max_radius = config
                 .ripple_radius
                 .filter(|r| r.0.is_finite() && r.0 > 0.0)
-                .unwrap_or_else(|| ripple_max_radius(abs_ripple_bounds, origin));
+                .unwrap_or_else(|| match origin_for_paint {
+                    RippleOrigin::Absolute(origin) => ripple_max_radius(abs_ripple_bounds, origin),
+                    RippleOrigin::Local(origin) => {
+                        let local_bounds =
+                            Rect::new(Point::new(Px(0.0), Px(0.0)), ripple_bounds.size);
+                        ripple_max_radius(local_bounds, origin)
+                    }
+                });
             let ripple_color = ripple_color_override.unwrap_or(ripple_fallback_color);
+            rt.ripple_press_frame = Some(now_frame);
+            rt.ripple_release_due_frame = None;
             rt.ripple.start(
                 now_frame,
-                origin,
+                origin_for_paint,
                 max_radius,
                 ripple_color,
                 config.ripple_expand_ms,
@@ -309,7 +402,16 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
             );
         }
         if pressed_falling && ripple_enabled {
-            rt.ripple.release(now_frame);
+            let min_release = rt
+                .ripple_press_frame
+                .unwrap_or(now_frame)
+                .saturating_add(min_press_frames);
+            if now_frame < min_release {
+                rt.ripple_release_due_frame = Some(min_release);
+            } else {
+                rt.ripple.release(now_frame);
+                rt.ripple_release_due_frame = None;
+            }
         }
 
         let ripple_frame = ripple_enabled
@@ -408,11 +510,18 @@ pub fn material_ink_layer<H: UiHost>(
                 RippleClip::Bounded => Some(corner_radii),
                 RippleClip::Unbounded => None,
             };
+            let origin = match r.origin {
+                RippleOrigin::Absolute(origin) => origin,
+                RippleOrigin::Local(origin) => Point::new(
+                    Px(bounds.origin.x.0 + origin.x.0),
+                    Px(bounds.origin.y.0 + origin.y.0),
+                ),
+            };
             fret_ui::paint::paint_ripple(
                 p.scene(),
                 DrawOrder(1),
                 bounds,
-                r.origin,
+                origin,
                 r.radius,
                 r.color,
                 r.opacity,
@@ -469,11 +578,18 @@ pub fn material_ink_layer_with_bounds<H: UiHost>(
                 RippleClip::Bounded => Some(corner_radii),
                 RippleClip::Unbounded => None,
             };
+            let origin = match r.origin {
+                RippleOrigin::Absolute(origin) => origin,
+                RippleOrigin::Local(origin) => Point::new(
+                    Px(abs_paint_bounds.origin.x.0 + origin.x.0),
+                    Px(abs_paint_bounds.origin.y.0 + origin.y.0),
+                ),
+            };
             fret_ui::paint::paint_ripple(
                 p.scene(),
                 DrawOrder(1),
                 abs_paint_bounds,
-                r.origin,
+                origin,
                 r.radius,
                 r.color,
                 r.opacity,

@@ -4,8 +4,8 @@ use std::{
 };
 
 use fret_core::{
-    AppWindowId, DrawOrder, Edges, Event, Modifiers, MouseButton, Point, PointerEvent, PointerId,
-    PointerType, Px, Rect, Scene, SceneOp, Size, UiServices,
+    AppWindowId, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, NodeId, Point,
+    PointerEvent, PointerId, PointerType, Px, Rect, Scene, SceneOp, Size, Transform2D, UiServices,
 };
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
@@ -303,6 +303,32 @@ fn pointer_down(pointer_id: PointerId, position: Point) -> Event {
         click_count: 1,
         pointer_type: PointerType::Mouse,
     })
+}
+
+fn pointer_up(pointer_id: PointerId, position: Point) -> Event {
+    Event::Pointer(PointerEvent::Up {
+        pointer_id,
+        position,
+        button: MouseButton::Left,
+        modifiers: Modifiers::default(),
+        click_count: 1,
+        pointer_type: PointerType::Mouse,
+    })
+}
+
+fn key_down(key: KeyCode) -> Event {
+    Event::KeyDown {
+        key,
+        modifiers: Modifiers::default(),
+        repeat: false,
+    }
+}
+
+fn key_up(key: KeyCode) -> Event {
+    Event::KeyUp {
+        key,
+        modifiers: Modifiers::default(),
+    }
 }
 
 fn with_padding<'a, H: fret_ui::UiHost>(
@@ -692,4 +718,351 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
             "expected ripple origin to match pointer down position (scale={scale_factor}): ripple_center={ripple_center:?} press_at={press_at:?}"
         );
     }
+}
+
+#[test]
+fn switch_keyboard_ripple_origin_ignores_stale_pointer_down() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+
+    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+        fret_ui_material3::tokens::v30::TypographyOptions::default(),
+        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+    );
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let theme = Theme::global(&app);
+    let track_width = theme
+        .metric_by_key("md.comp.switch.track.width")
+        .unwrap_or(Px(52.0));
+    let track_height = theme
+        .metric_by_key("md.comp.switch.track.height")
+        .unwrap_or(Px(32.0));
+    let state_layer = theme
+        .metric_by_key("md.comp.switch.state-layer.size")
+        .unwrap_or(Px(40.0));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let selected = app.models_mut().insert(false);
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let child = fret_ui_material3::Switch::new(selected.clone())
+                .a11y_label("switch")
+                .into_element(cx);
+            vec![with_padding(cx, Px(37.0), child)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let track_bounds = find_first_bounds_with_size(&ui, root, track_width.0, track_height.0)
+        .expect("expected switch track bounds");
+    let old_press_at = Point::new(
+        Px(track_bounds.origin.x.0 + 2.0),
+        Px(track_bounds.origin.y.0 + 2.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), old_press_at),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_up(PointerId(1), old_press_at),
+    );
+
+    // Let the pointer-started ripple fully finish so we don't confuse it with the keyboard ripple.
+    for _ in 0..120 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    }
+
+    // Ensure keyboard events are delivered by explicitly focusing the switch node via semantics.
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let focus: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.label.as_deref() == Some("switch") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected switch node in semantics snapshot");
+    ui.set_focus(Some(focus));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Space));
+    assert!(
+        fret_ui::input_modality::is_keyboard(&mut app, Some(window)),
+        "expected keydown to switch input modality to keyboard"
+    );
+
+    let mut expected_center: Option<Point> = None;
+    let mut ripple_center: Option<Point> = None;
+    for attempt in 0..6 {
+        if attempt > 0 {
+            app.advance_frame();
+        }
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        // Scene ops may contain transforms. Always compare centers in the same coordinate space
+        // by applying the transform stack while scanning.
+        let mut transform = Transform2D::IDENTITY;
+        let mut transform_stack: Vec<Transform2D> = Vec::new();
+        let mut clip_stack: Vec<Option<Point>> = Vec::new();
+
+        for op in scene.ops() {
+            match *op {
+                SceneOp::PushTransform { transform: next } => {
+                    transform_stack.push(transform);
+                    transform = transform.compose(next);
+                }
+                SceneOp::PopTransform => {
+                    transform = transform_stack.pop().unwrap_or(Transform2D::IDENTITY);
+                }
+                SceneOp::PushClipRect { .. } => {
+                    clip_stack.push(None);
+                }
+                SceneOp::PushClipRRect { rect, .. } => {
+                    let is_state_layer = (rect.size.width.0 - state_layer.0).abs() < 0.25
+                        && (rect.size.height.0 - state_layer.0).abs() < 0.25;
+                    let center = Point::new(
+                        Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+                    );
+                    clip_stack.push(is_state_layer.then_some(transform.apply_point(center)));
+                }
+                SceneOp::PopClip => {
+                    clip_stack.pop();
+                }
+                SceneOp::Quad {
+                    order,
+                    rect,
+                    background,
+                    border,
+                    corner_radii,
+                    ..
+                } => {
+                    let Some(center_expected) = clip_stack.iter().rev().find_map(|center| *center)
+                    else {
+                        continue;
+                    };
+                    if order != DrawOrder(1)
+                        || border != Edges::all(Px(0.0))
+                        || background.a <= 0.001
+                        || background.a >= 0.9
+                        || (rect.size.width.0 - rect.size.height.0).abs() >= 0.25
+                    {
+                        continue;
+                    }
+
+                    let r = corner_radii.top_left.0;
+                    let r_ok = (corner_radii.top_right.0 - r).abs() < 0.25
+                        && (corner_radii.bottom_left.0 - r).abs() < 0.25
+                        && (corner_radii.bottom_right.0 - r).abs() < 0.25;
+                    if !r_ok {
+                        continue;
+                    }
+                    if (rect.size.width.0 * 0.5 - r).abs() > 0.25
+                        || (rect.size.height.0 * 0.5 - r).abs() > 0.25
+                    {
+                        continue;
+                    }
+
+                    let center_ripple = Point::new(
+                        Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                        Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+                    );
+                    expected_center = Some(center_expected);
+                    ripple_center = Some(transform.apply_point(center_ripple));
+                    break;
+                }
+                _ => {}
+            }
+        }
+
+        if expected_center.is_some() && ripple_center.is_some() {
+            break;
+        }
+    }
+
+    let expected_center = expected_center.expect("expected state-layer bounds quad");
+    let ripple_center = ripple_center.expect("expected a ripple quad");
+
+    assert!(
+        (ripple_center.x.0 - expected_center.x.0).abs() < 0.75
+            && (ripple_center.y.0 - expected_center.y.0).abs() < 0.75,
+        "expected keyboard ripple origin to be centered in the state-layer bounds: ripple_center={ripple_center:?} expected_center={expected_center:?}"
+    );
+    assert!(
+        (ripple_center.x.0 - old_press_at.x.0).abs() > 2.0
+            || (ripple_center.y.0 - old_press_at.y.0).abs() > 2.0,
+        "expected keyboard ripple origin to ignore stale pointer down: ripple_center={ripple_center:?} old_press_at={old_press_at:?}"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Space));
+}
+
+#[test]
+fn switch_ripple_holds_for_minimum_press_duration_before_fade() {
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+
+    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+        fret_ui_material3::tokens::v30::TypographyOptions::default(),
+        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+    );
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let theme = Theme::global(&app);
+    let min_frames = fret_ui_material3::motion::ms_to_frames(225);
+    let track_width = theme
+        .metric_by_key("md.comp.switch.track.width")
+        .unwrap_or(Px(52.0));
+    let track_height = theme
+        .metric_by_key("md.comp.switch.track.height")
+        .unwrap_or(Px(32.0));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let selected = app.models_mut().insert(false);
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            vec![
+                fret_ui_material3::Switch::new(selected.clone())
+                    .a11y_label("switch")
+                    .into_element(cx),
+            ]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Ensure the pressable is focused so it responds to keyboard events.
+    let _ = find_first_bounds_with_size(&ui, root, track_width.0, track_height.0)
+        .expect("expected switch track bounds");
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let focus: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.label.as_deref() == Some("switch") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected switch node in semantics snapshot");
+    ui.set_focus(Some(focus));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Space));
+
+    // Ensure the ripple has started (pressed rising observed).
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Space));
+
+    let mut held_alpha: Option<f32> = None;
+    let mut saw_fade = false;
+    for frame_offset in 0..(min_frames.saturating_add(3)) {
+        if frame_offset > 0 {
+            app.advance_frame();
+        }
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let ripple_alpha = scene
+            .ops()
+            .iter()
+            .filter_map(|op| match op {
+                SceneOp::Quad {
+                    order,
+                    background,
+                    border,
+                    ..
+                } if *order == DrawOrder(1) && *border == Edges::all(Px(0.0)) => Some(background.a),
+                _ => None,
+            })
+            .next()
+            .unwrap_or(0.0);
+
+        if held_alpha.is_none() && ripple_alpha > 0.001 {
+            held_alpha = Some(ripple_alpha);
+        }
+        let Some(held_alpha) = held_alpha else {
+            continue;
+        };
+
+        if frame_offset < min_frames {
+            assert!(
+                (ripple_alpha - held_alpha).abs() < 1e-3,
+                "expected ripple alpha to hold until min press duration: offset={frame_offset} ripple_alpha={ripple_alpha} held_alpha={held_alpha}"
+            );
+        }
+
+        if frame_offset >= min_frames {
+            assert!(
+                ripple_alpha < held_alpha - 1e-4,
+                "expected ripple alpha to start fading after min press duration: offset={frame_offset} ripple_alpha={ripple_alpha} held_alpha={held_alpha} min_frames={min_frames}"
+            );
+            saw_fade = true;
+            break;
+        }
+    }
+
+    assert!(
+        held_alpha.is_some(),
+        "expected to observe a keyboard ripple"
+    );
+    assert!(saw_fade, "expected the ripple to start fading");
 }

@@ -214,27 +214,31 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Ripple policy (pointer-origin + fallback-to-center) wired to mechanism primitive.
   - Evidence: `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RippleAnimator`),
     `ecosystem/fret-ui-material3/src/button.rs` (`PointerRegion` → `PointerRegionState.last_down`),
-    `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin`),
+    `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`rect_center`, `ripple_max_radius`),
     `crates/fret-ui/src/paint.rs` (`paint_ripple`).
-- [ ] Ripple parity improvements (unbounded clip, token radius, fade rules, color latching).
+- [x] Ripple parity improvements (keyboard origin, minimum press duration, bounds/clip, fade rules).
   - [x] Fade starts on release (no fade while held).
     - Evidence: `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RippleAnimator::release`),
       tests in `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`ripple_does_not_fade_until_release`).
   - [x] Ripple color is latched at press start (avoids hover/focus color drift during fade).
     - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (passes color into `RippleAnimator::start`),
       `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RipplePaintFrame.color`).
+  - [x] Keyboard activation ripple origin ignores stale pointer down (falls back to state-layer center).
+    - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleOrigin::Local`, tick-gated `last_down`),
+      tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`switch_keyboard_ripple_origin_ignores_stale_pointer_down`).
+  - [x] Minimum press duration keeps pressed ripple visible for short taps/clicks.
+    - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`IndicationConfig.ripple_min_press_ms`),
+      tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`switch_ripple_holds_for_minimum_press_duration_before_fade`).
   - [x] Clip + bounds parity for state-layer ripples (Material Web-style bounded-by-state-layer).
     - Evidence: `ecosystem/fret-ui-material3/src/checkbox.rs`, `ecosystem/fret-ui-material3/src/radio.rs`,
       `ecosystem/fret-ui-material3/src/switch.rs` (use `RippleClip::Bounded` with circular state-layer bounds),
       `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (asserts `SceneOp::PushClipRRect` is emitted).
   - [x] Ripple bounds/origin coordinate space is consistent under nested layout offsets.
-    - Evidence: `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin`, `ripple_max_radius`),
-      `ecosystem/fret-ui-material3/src/foundation/indication.rs` (translate local ripple bounds to absolute),
+    - Evidence: `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`rect_center`, `ripple_max_radius`),
+      `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`advance_indication_for_pressable_with_ripple_bounds`),
       tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`radio_ripple_origin_tracks_pointer_down_position`, `switch_ripple_origin_tracks_pointer_down_position`).
-  - Evidence (partial): `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleClip`, `IndicationConfig.ripple_radius`),
-    `ecosystem/fret-ui-material3/src/checkbox.rs` (unbounded ripple),
-    `ecosystem/fret-ui-material3/src/radio.rs` (unbounded ripple),
-    `ecosystem/fret-ui-material3/src/switch.rs` (unbounded ripple).
+  - Evidence (partial): `ecosystem/fret-ui-material3/src/foundation/indication.rs` (`RippleClip`,
+    `IndicationConfig.ripple_radius`, `IndicationConfig.ripple_min_press_ms`).
 - [x] Focus ring style and focus-visible heuristics aligned with Material expectations.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/focus_ring.rs` (`material_focus_ring_for_component`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (`paint_focus_ring` gated by `focus_visible::is_focus_visible`).
