@@ -5,5 +5,6 @@
 
 pub mod v30;
 
+pub(crate) mod button;
 pub(crate) mod icon_button;
 pub(crate) mod material_web_v30;

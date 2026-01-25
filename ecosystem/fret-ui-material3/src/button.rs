@@ -25,6 +25,7 @@ use crate::foundation::indication::{
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::{SpringAnimator, SpringSpec};
+use crate::tokens::button as button_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonVariant {
@@ -158,26 +159,30 @@ impl Button {
                         let is_focused = enabled && st.focused && focus_visible;
 
                         let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                        let (container_bg, label_color) =
-                            button_colors(&theme, self.variant, enabled);
-                        let state_layer_color =
-                            state_layer_color(&theme, self.variant, label_color, interaction);
+                        let token_interaction = interaction.map(|s| match s {
+                            InteractionState::Hovered => button_tokens::ButtonInteraction::Hovered,
+                            InteractionState::Focused => button_tokens::ButtonInteraction::Focused,
+                            InteractionState::Pressed => button_tokens::ButtonInteraction::Pressed,
+                        });
 
-                        let state_layer_target = state_layer_target_opacity(
+                        let label_color = button_tokens::label_color(&theme, self.variant, enabled);
+                        let container_bg = button_tokens::container_background(
                             &theme,
-                            enabled,
                             self.variant,
-                            is_pressed,
-                            is_hovered,
-                            is_focused,
+                            enabled,
+                            label_color,
                         );
-
-                        let ripple_base_opacity = theme
-                            .number_by_key(&format!(
-                                "md.comp.button.{}.pressed.state-layer.opacity",
-                                variant_key(self.variant)
-                            ))
-                            .unwrap_or(0.1);
+                        let state_layer_color = button_tokens::state_layer_color(
+                            &theme,
+                            self.variant,
+                            label_color,
+                            token_interaction,
+                        );
+                        let state_layer_target = token_interaction
+                            .map(|i| button_tokens::state_layer_opacity(&theme, self.variant, i))
+                            .unwrap_or(0.0);
+                        let ripple_base_opacity =
+                            button_tokens::pressed_state_layer_opacity(&theme, self.variant);
                         let config = material_pressable_indication_config(&theme, None);
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -376,110 +381,6 @@ struct ButtonOutline {
     color: Color,
 }
 
-fn button_colors(theme: &Theme, variant: ButtonVariant, enabled: bool) -> (Option<Color>, Color) {
-    let variant_key = variant_key(variant);
-    let disabled_label_opacity = theme
-        .number_by_key(&format!(
-            "md.comp.button.{variant_key}.disabled.label-text.opacity"
-        ))
-        .unwrap_or(0.38);
-    let disabled_container_opacity = theme
-        .number_by_key(&format!(
-            "md.comp.button.{variant_key}.disabled.container.opacity"
-        ))
-        .unwrap_or(0.1);
-
-    let disabled_label_base = theme
-        .color_by_key(&format!(
-            "md.comp.button.{variant_key}.disabled.label-text.color"
-        ))
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-
-    let mut disabled_label = disabled_label_base;
-    disabled_label.a *= disabled_label_opacity;
-
-    let enabled_label = theme
-        .color_by_key(&format!("md.comp.button.{variant_key}.label-text.color"))
-        .or_else(|| match variant {
-            ButtonVariant::Filled => theme.color_by_key("md.sys.color.on-primary"),
-            ButtonVariant::Tonal => theme.color_by_key("md.sys.color.on-secondary-container"),
-            ButtonVariant::Elevated | ButtonVariant::Text => {
-                theme.color_by_key("md.sys.color.primary")
-            }
-            ButtonVariant::Outlined => theme.color_by_key("md.sys.color.on-surface-variant"),
-        })
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-
-    let label = if enabled {
-        enabled_label
-    } else {
-        disabled_label
-    };
-
-    let background = match variant {
-        ButtonVariant::Text | ButtonVariant::Outlined => None,
-        ButtonVariant::Filled => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.filled.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-                        .unwrap_or_else(|| theme.color_required("md.sys.color.primary")),
-                )
-            } else {
-                let mut c = theme
-                    .color_by_key("md.comp.button.filled.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-                c.a *= disabled_container_opacity;
-                Some(c)
-            }
-        }
-        ButtonVariant::Tonal => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.tonal.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.secondary-container"))
-                        .unwrap_or_else(|| {
-                            theme.color_required("md.sys.color.secondary-container")
-                        }),
-                )
-            } else {
-                let mut c = theme
-                    .color_by_key("md.comp.button.tonal.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-                c.a *= disabled_container_opacity;
-                Some(c)
-            }
-        }
-        ButtonVariant::Elevated => {
-            if enabled {
-                Some(
-                    theme
-                        .color_by_key("md.comp.button.elevated.container.color")
-                        .or_else(|| theme.color_by_key("md.sys.color.surface-container-low"))
-                        .unwrap_or_else(|| {
-                            theme.color_required("md.sys.color.surface-container-low")
-                        }),
-                )
-            } else {
-                let mut c = theme
-                    .color_by_key("md.comp.button.elevated.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-                c.a *= disabled_container_opacity;
-                Some(c)
-            }
-        }
-    };
-
-    (background, label)
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum InteractionState {
     Hovered,
@@ -498,64 +399,6 @@ fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Option<Inte
         return Some(InteractionState::Hovered);
     }
     None
-}
-
-fn state_layer_color(
-    theme: &Theme,
-    variant: ButtonVariant,
-    label: Color,
-    state: Option<InteractionState>,
-) -> Color {
-    let Some(state) = state else {
-        return label;
-    };
-    let variant_key = variant_key(variant);
-    let suffix = match state {
-        InteractionState::Hovered => "hovered.state-layer.color",
-        InteractionState::Focused => "focused.state-layer.color",
-        InteractionState::Pressed => "pressed.state-layer.color",
-    };
-
-    theme
-        .color_by_key(&format!("md.comp.button.{variant_key}.{suffix}"))
-        .unwrap_or(label)
-}
-
-fn state_layer_target_opacity(
-    theme: &Theme,
-    enabled: bool,
-    variant: ButtonVariant,
-    pressed: bool,
-    hovered: bool,
-    focused: bool,
-) -> f32 {
-    let tokens = MaterialTokenResolver::new(theme);
-    if !enabled {
-        return 0.0;
-    }
-    let variant_key = variant_key(variant);
-    if pressed {
-        return tokens.number_comp_or_sys(
-            &format!("md.comp.button.{variant_key}.pressed.state-layer.opacity"),
-            "md.sys.state.pressed.state-layer-opacity",
-            0.1,
-        );
-    }
-    if focused {
-        return tokens.number_comp_or_sys(
-            &format!("md.comp.button.{variant_key}.focused.state-layer.opacity"),
-            "md.sys.state.focus.state-layer-opacity",
-            0.1,
-        );
-    }
-    if hovered {
-        return tokens.number_comp_or_sys(
-            &format!("md.comp.button.{variant_key}.hovered.state-layer.opacity"),
-            "md.sys.state.hover.state-layer-opacity",
-            0.08,
-        );
-    }
-    0.0
 }
 
 fn button_outline(theme: &Theme, variant: ButtonVariant, enabled: bool) -> Option<ButtonOutline> {
@@ -581,14 +424,4 @@ fn button_outline(theme: &Theme, variant: ButtonVariant, enabled: bool) -> Optio
 
     color.a = 1.0;
     Some(ButtonOutline { width, color })
-}
-
-fn variant_key(variant: ButtonVariant) -> &'static str {
-    match variant {
-        ButtonVariant::Filled => "filled",
-        ButtonVariant::Tonal => "tonal",
-        ButtonVariant::Elevated => "elevated",
-        ButtonVariant::Outlined => "outlined",
-        ButtonVariant::Text => "text",
-    }
 }
