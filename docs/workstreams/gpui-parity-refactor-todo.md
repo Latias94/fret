@@ -154,7 +154,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Note: early iterations used a global "skip sweep while reuse exists" safety gate; MVP2-cache-005 aims to remove this by making liveness explicit under reuse.
   - Diagnostics: export `removed_subtrees` records in bundles to make sweeping behavior explainable from a single run.
   - Evidence (pass):
-    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --check-gc-sweep-liveness --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
   - Follow-up: remove the global "skip sweep when reuse exists" stopgap by relying on explicit liveness under cache-root reuse (dirty views + notify + cache key gates).
 
 - [x] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.

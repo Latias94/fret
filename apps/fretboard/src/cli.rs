@@ -60,10 +60,10 @@ Usage:
   fretboard diag poke [--trigger-path <path>] [--dir <dir>]
   fretboard diag latest [--dir <dir>]
   fretboard diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]
-  fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
-  fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
-  fretboard diag stats <bundle_dir|bundle.json> [--top <n>] [--sort <invalidation|time>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>] [--check-drag-cache-root-paint-only <test_id>] [--check-gc-sweep-liveness]
-  fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
+  fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>] [--check-wheel-scroll <test_id>] [--check-hover-layout] [--check-hover-layout-max <n>] [--check-gc-sweep-liveness] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
+  fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>] [--check-wheel-scroll <test_id>] [--check-hover-layout] [--check-hover-layout-max <n>] [--check-gc-sweep-liveness] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
+  fretboard diag stats <bundle_dir|bundle.json> [--top <n>] [--sort <invalidation|time>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>] [--check-wheel-scroll <test_id>] [--check-drag-cache-root-paint-only <test_id>] [--check-hover-layout] [--check-hover-layout-max <n>] [--check-gc-sweep-liveness]
+  fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>] [--check-wheel-scroll <test_id>] [--check-hover-layout] [--check-hover-layout-max <n>] [--check-gc-sweep-liveness] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard list native-demos
   fretboard list web-demos
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]

@@ -577,6 +577,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if check_stale_paint_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
                     || check_hover_layout_max.is_some()
+                    || check_gc_sweep_liveness
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -595,6 +596,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_gc_sweep_liveness,
                         warmup_frames,
                     )?;
                 }
@@ -720,7 +722,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if result.stage.as_deref() == Some("passed")
                     && (check_stale_paint_test_id.is_some()
                         || check_wheel_scroll_test_id.is_some()
-                        || check_hover_layout_max.is_some())
+                        || check_hover_layout_max.is_some()
+                        || check_gc_sweep_liveness)
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -740,6 +743,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_gc_sweep_liveness,
                         warmup_frames,
                     )?;
                 }
@@ -887,6 +891,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             stats_top.max(1),
                             sort,
                             BundleStatsOptions::default(),
+                        )?;
+                    }
+                    if check_stale_paint_test_id.is_some()
+                        || check_wheel_scroll_test_id.is_some()
+                        || check_hover_layout_max.is_some()
+                        || check_gc_sweep_liveness
+                    {
+                        apply_post_run_checks(
+                            &bundle_path,
+                            check_stale_paint_test_id.as_deref(),
+                            check_stale_paint_eps,
+                            check_wheel_scroll_test_id.as_deref(),
+                            check_hover_layout_max,
+                            check_gc_sweep_liveness,
+                            warmup_frames,
                         )?;
                     }
                     let top = report.top.first();
@@ -1267,6 +1286,7 @@ fn apply_post_run_checks(
     check_stale_paint_eps: f32,
     check_wheel_scroll_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
+    check_gc_sweep_liveness: bool,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -1283,6 +1303,9 @@ fn apply_post_run_checks(
             BundleStatsOptions { warmup_frames },
         )?;
         check_report_for_hover_layout_invalidations(&report, max_allowed)?;
+    }
+    if check_gc_sweep_liveness {
+        check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
     }
     Ok(())
 }
