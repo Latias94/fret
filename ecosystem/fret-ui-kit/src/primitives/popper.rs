@@ -39,7 +39,9 @@ pub fn anchored_panel_options_for_popper_content(
         offset: Offset {
             main_axis: arrow_protrusion,
             cross_axis: align_offset,
-            alignment_axis: None,
+            // Radix maps `alignOffset` to Floating UI's `alignmentAxis` offset, which flips sign
+            // for `*-end` placements (and flips under RTL for vertical placements).
+            alignment_axis: Some(align_offset),
         },
         // Radix uses Floating UI `shift({ crossAxis: false })` by default for popper content.
         shift: ShiftOptions {
