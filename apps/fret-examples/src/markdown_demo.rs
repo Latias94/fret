@@ -14,8 +14,7 @@ use fret_ui::element::{
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::GlobalWatchExt as _;
-use fret_ui_kit::declarative::scroll as decl_scroll;
-use fret_ui_kit::{ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ColorRef, MetricRef, Space, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -546,23 +545,19 @@ $$
                     .items_center()
                     .into_element(cx);
 
-                    let scroll = decl_scroll::overflow_scroll_content(
-                        cx,
-                        LayoutRefinement::default()
-                            .w_full()
-                            .flex_1()
-                            .min_h(MetricRef::Px(Px(0.0))),
-                        true,
-                        |cx| {
-                            ui::container(cx, |cx| {
-                                [markdown::Markdown::new(markdown_source.clone())
-                                    .into_element_with(cx, &components)]
-                            })
-                            .w_full()
-                            .padding_px(padding_md)
-                            .into_element(cx)
-                        },
-                    );
+                    let scroll = ui::scroll_area(cx, |cx| {
+                        [ui::container(cx, |cx| {
+                            [markdown::Markdown::new(markdown_source.clone())
+                                .into_element_with(cx, &components)]
+                        })
+                        .w_full()
+                        .padding_px(padding_md)
+                        .into_element(cx)]
+                    })
+                    .w_full()
+                    .flex_1()
+                    .min_h_0()
+                    .into_element(cx);
 
                     [
                         cx.text("markdown_demo"),

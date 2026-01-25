@@ -2,7 +2,12 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Axis, Edges, FontWeight, Px, TextOverflow, TextWrap};
-use fret_ui::element::{AnyElement, FlexProps, Length, StackProps, TextProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, FlexProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
+    SizeStyle, StackProps, TextProps,
+};
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::style as decl_style;
@@ -174,6 +179,209 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(ContainerBox::new(children))
+}
+
+/// A patchable scroll area constructor for authoring ergonomics.
+///
+/// This is a thin wrapper over the runtime `Scroll` + `Scrollbar` elements with sensible defaults.
+#[derive(Debug, Clone)]
+pub struct ScrollAreaBox<H, F> {
+    pub(crate) chrome: ChromeRefinement,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) axis: ScrollAxis,
+    pub(crate) show_scrollbar_x: bool,
+    pub(crate) show_scrollbar_y: bool,
+    pub(crate) handle: Option<ScrollHandle>,
+    pub(crate) children: Option<F>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H, F> ScrollAreaBox<H, F> {
+    pub fn new(children: F) -> Self {
+        Self {
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            axis: ScrollAxis::Y,
+            show_scrollbar_x: false,
+            show_scrollbar_y: true,
+            handle: None,
+            children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, F> UiPatchTarget for ScrollAreaBox<H, F> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.chrome = self.chrome.merge(patch.chrome);
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, F> UiSupportsChrome for ScrollAreaBox<H, F> {}
+impl<H, F> UiSupportsLayout for ScrollAreaBox<H, F> {}
+
+impl<H: UiHost, F, I> ScrollAreaBox<H, F>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let container = decl_style::container_props(&theme, self.chrome, self.layout);
+
+        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let thumb = theme.color_required("scrollbar.thumb.background");
+        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+        let corner_bg = theme
+            .color_by_key("scrollbar.corner.background")
+            .or_else(|| theme.color_by_key("scrollbar.track.background"))
+            .unwrap_or(fret_core::Color::TRANSPARENT);
+
+        let axis = self.axis;
+        let show_scrollbar_x = self.show_scrollbar_x;
+        let show_scrollbar_y = self.show_scrollbar_y;
+        let provided_handle = self.handle;
+        let children = self.children.expect("expected scroll children closure");
+
+        cx.container(container, move |cx| {
+            let handle = cx.with_state(ScrollHandle::default, |h| {
+                if let Some(handle) = provided_handle.clone() {
+                    *h = handle;
+                }
+                h.clone()
+            });
+
+            let mut scroll_layout = LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = Overflow::Clip;
+
+            let scroll = cx.scroll(
+                ScrollProps {
+                    layout: scroll_layout,
+                    axis,
+                    scroll_handle: Some(handle.clone()),
+                    ..Default::default()
+                },
+                children,
+            );
+
+            let scroll_id = scroll.id;
+            let mut out = vec![scroll];
+
+            if show_scrollbar_y {
+                let scrollbar_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        bottom: Some(if show_scrollbar_x {
+                            scrollbar_w
+                        } else {
+                            Px(0.0)
+                        }),
+                        left: None,
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                out.push(cx.scrollbar(ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: ScrollbarAxis::Vertical,
+                    scroll_target: Some(scroll_id),
+                    scroll_handle: handle.clone(),
+                    style: ScrollbarStyle {
+                        thumb,
+                        thumb_hover,
+                        ..Default::default()
+                    },
+                }));
+            }
+
+            if show_scrollbar_x {
+                let scrollbar_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: None,
+                        right: Some(if show_scrollbar_y {
+                            scrollbar_w
+                        } else {
+                            Px(0.0)
+                        }),
+                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)),
+                    },
+                    size: SizeStyle {
+                        height: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                out.push(cx.scrollbar(ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: ScrollbarAxis::Horizontal,
+                    scroll_target: Some(scroll_id),
+                    scroll_handle: handle.clone(),
+                    style: ScrollbarStyle {
+                        thumb,
+                        thumb_hover,
+                        ..Default::default()
+                    },
+                }));
+            }
+
+            if show_scrollbar_x && show_scrollbar_y {
+                let corner_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: None,
+                        right: Some(Px(0.0)),
+                        bottom: Some(Px(0.0)),
+                        left: None,
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(scrollbar_w),
+                        height: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                out.push(cx.container(
+                    ContainerProps {
+                        layout: corner_layout,
+                        background: Some(corner_bg),
+                        ..Default::default()
+                    },
+                    |_cx| [],
+                ));
+            }
+
+            out
+        })
+    }
+}
+
+/// Returns a patchable scroll area builder.
+///
+/// Defaults:
+/// - axis: vertical
+/// - scrollbar: Y on, X off
+pub fn scroll_area<H: UiHost, F, I>(
+    _cx: &mut ElementContext<'_, H>,
+    children: F,
+) -> UiBuilder<ScrollAreaBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
+    UiBuilder::new(ScrollAreaBox::new(children))
 }
 
 /// A patchable stack layout constructor for authoring ergonomics.

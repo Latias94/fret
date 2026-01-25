@@ -4,7 +4,8 @@ use crate::{
     MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
 use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, ScrollAxis};
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 
 /// Aggregated authoring patch applied by `UiBuilder`.
@@ -740,6 +741,32 @@ impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
     }
 }
 
+impl<H, F> UiBuilder<crate::ui::ScrollAreaBox<H, F>> {
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.inner.axis = axis;
+        self
+    }
+
+    pub fn show_scrollbar_x(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_x = show;
+        self
+    }
+
+    pub fn show_scrollbar_y(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_y = show;
+        self
+    }
+
+    pub fn show_scrollbars(self, x: bool, y: bool) -> Self {
+        self.show_scrollbar_x(x).show_scrollbar_y(y)
+    }
+
+    pub fn handle(mut self, handle: ScrollHandle) -> Self {
+        self.inner.handle = Some(handle);
+        self
+    }
+}
+
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
@@ -767,6 +794,16 @@ where
 }
 
 impl<H: UiHost, F, I> UiBuilder<crate::ui::StackBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, F, I> UiBuilder<crate::ui::ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
