@@ -160,8 +160,11 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
 - [!] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
   - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
-  - Root cause: `node_layer` (and cache-root discovery) relies on parent pointers; a reachable subtree can retain correct child edges but have a broken parent chain,
-    causing GC to mis-classify it as detached and sweep it on a cache-hit frame.
+  - Current evidence (stopgap disabled): the swept subtree that contains `ui-gallery-dialog-trigger` is classified as a fully-detached *island* at sweep time:
+    - `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false` in `removed_subtrees`.
+    - `root_path_edge_ui_contains_child` / `root_path_edge_frame_contains_child` remain `1` along the recorded parent chain, suggesting subtree-local edges are still self-consistent.
+
+    This points to a higher-level attachment / root-selection / bookkeeping issue (missing liveness roots or overwritten root ownership), not only a broken parent-pointer chain.
   - Progress (v1):
     - Repair parent pointers for nodes reachable from layer roots before running the declarative GC sweep (`UiTree::repair_parent_pointers_from_layer_roots`).
     - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness) as the foundation for removing the global stopgap gate.
@@ -170,6 +173,19 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       Removing this currently regresses `ui-gallery-overlay-torture.json` (fails at step 10 with `click_no_semantics_match` under cache+shell).
       Remove this once parent-pointer repair + reachability + explicit view-cache subtree liveness is proven sufficient under reuse.
       - Anchor: `crates/fret-ui/src/declarative/mount.rs` (`view_cache_has_reuse_roots` guard in the GC retain pass).
+    - Explain why a subtree that should still be live becomes unreachable from *both* liveness sources on the failing frame:
+      - verify the expected layer root is still registered/considered in `ui.all_layer_roots()` for that frame (and whether visibility/policy changes effectively drop it as a liveness root),
+      - verify the expected cache root is present in `window_state.view_cache_reuse_roots()` and has a recorded subtree-element list.
+    - Verify we are not accidentally overwriting element-root ownership during “touch existing subtree” paths:
+      - add debug-only diagnostics when updating `NodeEntry.root` for an element that already has a different `root`,
+      - decide whether to preserve the original root (avoid cross-root pollution) or split bookkeeping per-root if overwrites are expected/legitimate.
+  - Next (ordered):
+    - Export/confirm the liveness roots on the failing frame: which layer roots are active (and whether “invisible” layers still count as liveness roots), plus the current `view_cache_reuse_roots` list.
+    - Add debug-only diagnostics for `NodeEntry.root` overwrites (element + old_root + new_root + debug paths) to validate or falsify the “cross-root ownership overwrite” hypothesis.
+    - Re-run the overlay torture with the stopgap disabled and use the new fields to decide whether the fix is:
+      - missing liveness roots (root selection / visibility semantics), or
+      - root ownership pollution, or
+      - a real attachment edge drop (the subtree truly becomes detached).
   - Done when:
     - The `view_cache_has_reuse_roots` stopgap is removed and both overlay regression harnesses remain green under cache+shell reuse.
   - Diagnostics:

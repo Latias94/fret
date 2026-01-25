@@ -527,10 +527,14 @@ Implementation note (current state):
   interactive while skipping re-mounting for many frames).
 - Current stopgap: while any cache root is in reuse, stale-node sweeping is conservatively disabled (a global gate)
   to avoid deleting live cached subtrees. MVP2-cache-005 removes this by relying on parent-pointer repair +
-  reachability-based detachment checks + explicit view-cache subtree liveness.
+  reachability-based detachment checks + explicit cache-root liveness roots (layer roots + view-cache reuse roots),
+  and by tightening bookkeeping so cache-hit frames cannot “lose” liveness/attachment via stale root selection or
+  cross-root ownership overwrites.
   - Status note: removing the stopgap currently regresses `ui-gallery-overlay-torture.json` under cache+shell reuse
     (`click_no_semantics_match`); failing bundles also show the overlay layer root flipping `visible=false` while
-    GC removes subtrees with `root_layer=None`, suggesting broken layer-root attachment. Status (2026-01-24):
+    GC removes subtrees with `root_layer=None`. Recent failing bundles additionally classify the removed subtree as
+    unreachable from both `layer_roots` and `view_cache_reuse_roots`, suggesting a higher-level attachment/liveness-root
+    selection issue rather than only a broken parent-pointer chain. Status (2026-01-24):
     MVP2-cache-005 is blocked; keep this gate until it is green (see the TODO tracker evidence).
 
 Proposed ecosystem-facing API surface (runtime internal may differ):
