@@ -33,6 +33,7 @@ pub struct UiDiagnosticsConfig {
     pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    pub max_gating_trace_entries: usize,
 }
 
 impl Default for UiDiagnosticsConfig {
@@ -108,6 +109,11 @@ impl Default for UiDiagnosticsConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(4096);
+        let max_gating_trace_entries = std::env::var("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(200)
+            .clamp(0, 2000);
 
         Self {
             enabled,
@@ -131,6 +137,7 @@ impl Default for UiDiagnosticsConfig {
             inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
+            max_gating_trace_entries,
         }
     }
 }
@@ -1529,6 +1536,7 @@ impl UiDiagnosticsService {
                 hit_test,
                 element_diag,
                 semantics,
+                self.cfg.max_gating_trace_entries,
             ),
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
@@ -2617,6 +2625,7 @@ impl UiTreeDebugSnapshotV1 {
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
+        max_gating_trace_entries: usize,
     ) -> Self {
         let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
             .debug_view_cache_contained_relayout_roots()
@@ -2708,7 +2717,11 @@ impl UiTreeDebugSnapshotV1 {
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
             ),
-            command_gating_trace: command_gating_trace_for_window(app, window),
+            command_gating_trace: command_gating_trace_for_window(
+                app,
+                window,
+                max_gating_trace_entries,
+            ),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
@@ -3039,6 +3052,7 @@ struct UiCommandGatingTraceCandidate {
 fn command_gating_trace_for_window(
     app: &App,
     window: AppWindowId,
+    max_entries: usize,
 ) -> Vec<UiCommandGatingTraceEntryV1> {
     let gating = fret_runtime::best_effort_snapshot_for_window(app, window);
 
@@ -3124,10 +3138,10 @@ fn command_gating_trace_for_window(
             .then_with(|| a.command.as_str().cmp(b.command.as_str()))
     });
 
-    const MAX_TRACE_ENTRIES: usize = 200;
+    let max_entries = max_entries.min(2000);
     candidates
         .into_iter()
-        .take(MAX_TRACE_ENTRIES)
+        .take(max_entries)
         .map(|c| {
             let decision =
                 command_gating_decision_trace(app, &gating, &c.command, c.menu_when.as_ref());
