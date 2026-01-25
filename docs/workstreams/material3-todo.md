@@ -218,6 +218,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] List token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/list.rs`,
       `ecosystem/fret-ui-material3/src/list.rs`.
+  - [x] DropdownMenu token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/dropdown_menu.rs`,
+      `ecosystem/fret-ui-material3/src/dropdown_menu.rs`.
 
 ### Interaction Outcomes
 
