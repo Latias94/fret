@@ -505,6 +505,21 @@ fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
     );
     copy_color(
         cfg,
+        "md.comp.icon-button.standard.hovered.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.focused.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.pressed.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
         "md.comp.icon-button.standard.hovered.state-layer.color",
         "md.sys.color.on-surface-variant",
     );
@@ -527,6 +542,21 @@ fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.icon-button.standard.selected.icon.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.selected.hovered.icon.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.selected.focused.icon.color",
+        "md.sys.color.primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.standard.selected.pressed.icon.color",
         "md.sys.color.primary",
     );
     copy_color(
@@ -554,6 +584,21 @@ fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.icon-button.filled.icon.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.hovered.icon.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.focused.icon.color",
+        "md.sys.color.on-primary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.filled.pressed.icon.color",
         "md.sys.color.on-primary",
     );
     copy_color(
@@ -647,6 +692,21 @@ fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
     );
     copy_color(
         cfg,
+        "md.comp.icon-button.tonal.hovered.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.focused.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.pressed.icon.color",
+        "md.sys.color.on-secondary-container",
+    );
+    copy_color(
+        cfg,
         "md.comp.icon-button.tonal.hovered.state-layer.color",
         "md.sys.color.on-secondary-container",
     );
@@ -681,11 +741,56 @@ fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.icon-button.tonal.selected.icon.color",
         "md.sys.color.on-secondary",
     );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.hovered.icon.color",
+        "md.sys.color.on-secondary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.focused.icon.color",
+        "md.sys.color.on-secondary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.pressed.icon.color",
+        "md.sys.color.on-secondary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.hovered.state-layer.color",
+        "md.sys.color.on-secondary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.focused.state-layer.color",
+        "md.sys.color.on-secondary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.tonal.selected.pressed.state-layer.color",
+        "md.sys.color.on-secondary",
+    );
 
     // Outlined.
     copy_color(
         cfg,
         "md.comp.icon-button.outlined.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.hovered.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.focused.icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.pressed.icon.color",
         "md.sys.color.on-surface-variant",
     );
     copy_color(
@@ -727,6 +832,36 @@ fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
     copy_color(
         cfg,
         "md.comp.icon-button.outlined.selected.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.hovered.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.focused.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.pressed.icon.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.hovered.state-layer.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.focused.state-layer.color",
+        "md.sys.color.inverse-on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.icon-button.outlined.selected.pressed.state-layer.color",
         "md.sys.color.inverse-on-surface",
     );
     copy_color(

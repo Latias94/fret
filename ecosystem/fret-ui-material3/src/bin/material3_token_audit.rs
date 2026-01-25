@@ -42,11 +42,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = std::io::stderr().flush();
     }
     let used = extract_used_keys_from_rs_tree(&source_dir)?;
+    let (expanded_from_templates, unexpanded_templates) = expand_key_templates(&used.templates);
+    let used_expanded = {
+        let mut out = used.exact.clone();
+        out.extend(expanded_from_templates.iter().cloned());
+        out
+    };
     if args.debug {
         eprintln!(
-            "audit: source scan done (exact={}, templates={})",
+            "audit: source scan done (exact={}, templates={}, expanded={})",
             used.exact.len(),
-            used.templates.len()
+            used.templates.len(),
+            expanded_from_templates.len()
         );
         let _ = std::io::stderr().flush();
         eprintln!("audit: building injected key set from v30 ThemeConfig...");
@@ -65,31 +72,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("- injected: {}", v30_path.display());
     println!();
 
-    let missing_injection = used
-        .exact
+    let missing_injection = used_expanded
         .difference(&injected)
         .cloned()
         .collect::<BTreeSet<_>>();
     let unused_injection = injected
-        .difference(&used.exact)
+        .difference(&used_expanded)
         .cloned()
         .collect::<BTreeSet<_>>();
 
     println!("Counts");
     println!("- used keys (exact): {}", used.exact.len());
     println!("- used keys (templates): {}", used.templates.len());
+    println!(
+        "- used keys (expanded from templates): {}",
+        expanded_from_templates.len()
+    );
+    println!(
+        "- used key templates (unexpanded): {}",
+        unexpanded_templates.len()
+    );
+    println!("- used keys (total): {}", used_expanded.len());
     println!("- injected keys (exact): {}", injected.len());
     println!("- missing injected keys: {}", missing_injection.len());
     println!("- unused injected keys: {}", unused_injection.len());
     println!();
 
-    if !used.templates.is_empty() {
-        println!("Used key templates (showing up to {}):", args.limit);
-        for k in used.templates.iter().take(args.limit) {
+    if !unexpanded_templates.is_empty() {
+        println!("Unexpanded key templates (showing up to {}):", args.limit);
+        for k in unexpanded_templates.iter().take(args.limit) {
             println!("- {k}");
         }
-        if used.templates.len() > args.limit {
-            println!("- ... ({} more)", used.templates.len() - args.limit);
+        if unexpanded_templates.len() > args.limit {
+            println!("- ... ({} more)", unexpanded_templates.len() - args.limit);
         }
         println!();
     }
@@ -122,8 +137,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!();
 
             let allowlisted = allowlisted_non_material_web_tokens();
-            let unknown_vs_material_web = used
-                .exact
+            let unknown_vs_material_web = used_expanded
                 .difference(&material_web)
                 .filter(|k| !allowlisted.contains(k.as_str()))
                 .cloned()
@@ -256,6 +270,217 @@ fn print_help() {
 struct KeyScan {
     exact: BTreeSet<String>,
     templates: BTreeSet<String>,
+}
+
+fn expand_key_templates(templates: &BTreeSet<String>) -> (BTreeSet<String>, BTreeSet<String>) {
+    let mut expanded = BTreeSet::new();
+    let mut unexpanded = BTreeSet::new();
+
+    for t in templates {
+        if let Some(keys) = expand_key_template(t) {
+            expanded.extend(keys);
+        } else {
+            unexpanded.insert(t.clone());
+        }
+    }
+
+    (expanded, unexpanded)
+}
+
+fn expand_key_template(template: &str) -> Option<BTreeSet<String>> {
+    if template.starts_with("md.comp.button.") {
+        return expand_button_template(template);
+    }
+    if template.starts_with("md.comp.icon-button.") {
+        return expand_icon_button_template(template);
+    }
+    if template.starts_with("md.comp.radio-button.") {
+        return expand_radio_button_template(template);
+    }
+    if template.starts_with("md.comp.switch.") {
+        return expand_switch_template(template);
+    }
+    if template.starts_with("md.sys.typescale.") {
+        return expand_typescale_template(template);
+    }
+
+    None
+}
+
+fn ensure_no_template_braces(keys: &BTreeSet<String>) -> Option<BTreeSet<String>> {
+    keys.iter()
+        .all(|k| !k.contains('{') && !k.contains('}'))
+        .then_some(keys.clone())
+}
+
+fn expand_placeholder(
+    keys: &BTreeSet<String>,
+    placeholder: &str,
+    values: &[&'static str],
+) -> BTreeSet<String> {
+    if !keys.iter().any(|k| k.contains(placeholder)) {
+        return keys.clone();
+    }
+
+    let mut out = BTreeSet::new();
+    for k in keys {
+        if k.contains(placeholder) {
+            for v in values {
+                out.insert(k.replace(placeholder, v));
+            }
+        } else {
+            out.insert(k.clone());
+        }
+    }
+    out
+}
+
+fn expand_button_template(template: &str) -> Option<BTreeSet<String>> {
+    const VARIANTS: &[&str] = &["filled", "tonal", "elevated", "outlined", "text"];
+    const SUFFIXES: &[&str] = &[
+        "hovered.state-layer.color",
+        "focused.state-layer.color",
+        "pressed.state-layer.color",
+    ];
+
+    let mut keys = BTreeSet::from([template.to_string()]);
+    keys = expand_placeholder(&keys, "{variant_key}", VARIANTS);
+    keys = expand_placeholder(&keys, "{}", VARIANTS);
+    keys = expand_placeholder(&keys, "{suffix}", SUFFIXES);
+
+    ensure_no_template_braces(&keys)
+}
+
+fn expand_icon_button_template(template: &str) -> Option<BTreeSet<String>> {
+    const VARIANTS: &[&str] = &["standard", "filled", "tonal", "outlined"];
+    const STATE_DOTTED: &[&str] = &["hovered.", "focused.", "pressed."];
+    const STATE_TRIMMED: &[&str] = &["hovered", "focused", "pressed"];
+
+    let mut keys = BTreeSet::from([template.to_string()]);
+
+    // Named variant placeholder.
+    keys = expand_placeholder(&keys, "{variant_key}", VARIANTS);
+
+    // Special-case: format-style `{}` used as the variant slot only for
+    // `md.comp.icon-button.{}.pressed.state-layer.opacity`.
+    keys = expand_icon_button_variant_slot(&keys, VARIANTS);
+
+    // Expand `select_prefix` based on the variant segment present in the key.
+    keys = expand_icon_button_select_prefix(&keys);
+
+    // Outlined uses a `prefix` naming, but it's the same select-prefix concept.
+    keys = expand_placeholder(&keys, "{prefix}", &["", "selected."]);
+
+    // Interaction state placeholders.
+    keys = expand_placeholder(&keys, "{state}", STATE_DOTTED);
+    keys = expand_placeholder(&keys, "{}", STATE_TRIMMED);
+
+    ensure_no_template_braces(&keys)
+}
+
+fn expand_icon_button_variant_slot(
+    keys: &BTreeSet<String>,
+    variants: &[&'static str],
+) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    for k in keys {
+        if k.starts_with("md.comp.icon-button.{}.") {
+            for v in variants {
+                out.insert(k.replacen(
+                    "md.comp.icon-button.{}.",
+                    &format!("md.comp.icon-button.{v}."),
+                    1,
+                ));
+            }
+        } else {
+            out.insert(k.clone());
+        }
+    }
+    out
+}
+
+fn expand_icon_button_select_prefix(keys: &BTreeSet<String>) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    for k in keys {
+        if !k.contains("{select_prefix}") {
+            out.insert(k.clone());
+            continue;
+        }
+
+        let Some(variant) = icon_button_variant_from_key(k) else {
+            out.insert(k.clone());
+            continue;
+        };
+
+        for prefix in icon_button_select_prefixes(variant) {
+            out.insert(k.replace("{select_prefix}", prefix));
+        }
+    }
+    out
+}
+
+fn icon_button_variant_from_key(key: &str) -> Option<&str> {
+    let rest = key.strip_prefix("md.comp.icon-button.")?;
+    Some(rest.split('.').next().unwrap_or_default())
+}
+
+fn icon_button_select_prefixes(variant: &str) -> &'static [&'static str] {
+    match variant {
+        // Standard: base tokens are unselected; selected uses a distinct prefix.
+        "standard" => &["", "selected."],
+        // Filled: base tokens are the selected look; unselected uses a distinct prefix.
+        "filled" => &["", "unselected."],
+        // Tonal: base tokens are unselected; selected uses a distinct prefix.
+        "tonal" => &["", "selected."],
+        // Outlined: base tokens are unselected; selected uses a distinct prefix.
+        "outlined" => &["", "selected."],
+        _ => &[""],
+    }
+}
+
+fn expand_radio_button_template(template: &str) -> Option<BTreeSet<String>> {
+    const GROUPS: &[&str] = &["selected", "unselected"];
+
+    let mut keys = BTreeSet::from([template.to_string()]);
+    keys = expand_placeholder(&keys, "{group}", GROUPS);
+
+    ensure_no_template_braces(&keys)
+}
+
+fn expand_switch_template(template: &str) -> Option<BTreeSet<String>> {
+    const GROUPS: &[&str] = &["selected", "unselected"];
+    const STATES: &[&str] = &["hover", "focus", "pressed"];
+
+    let mut keys = BTreeSet::from([template.to_string()]);
+    keys = expand_placeholder(&keys, "{group}", GROUPS);
+    keys = expand_placeholder(&keys, "{state}", STATES);
+
+    ensure_no_template_braces(&keys)
+}
+
+fn expand_typescale_template(template: &str) -> Option<BTreeSet<String>> {
+    const NAMES: &[&str] = &[
+        "display-large",
+        "display-medium",
+        "display-small",
+        "headline-large",
+        "headline-medium",
+        "headline-small",
+        "title-large",
+        "title-medium",
+        "title-small",
+        "body-large",
+        "body-medium",
+        "body-small",
+        "label-large",
+        "label-medium",
+        "label-small",
+    ];
+
+    let mut keys = BTreeSet::from([template.to_string()]);
+    keys = expand_placeholder(&keys, "{name}", NAMES);
+
+    ensure_no_template_braces(&keys)
 }
 
 fn extract_used_keys_from_rs_tree(dir: &Path) -> Result<KeyScan, Box<dyn std::error::Error>> {

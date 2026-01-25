@@ -457,14 +457,7 @@ fn icon_button_colors(
                     background: Some(c),
                     icon_color: icon,
                     state_layer_color,
-                    outline: icon_button_outline(
-                        theme,
-                        variant,
-                        outline_width,
-                        toggle,
-                        selected,
-                        enabled,
-                    ),
+                    outline: icon_button_outline(theme, variant, outline_width, enabled),
                 };
             }
         }
@@ -489,14 +482,7 @@ fn icon_button_colors(
                     background: Some(c),
                     icon_color: icon,
                     state_layer_color,
-                    outline: icon_button_outline(
-                        theme,
-                        variant,
-                        outline_width,
-                        toggle,
-                        selected,
-                        enabled,
-                    ),
+                    outline: icon_button_outline(theme, variant, outline_width, enabled),
                 };
             }
         }
@@ -520,14 +506,7 @@ fn icon_button_colors(
                     background: Some(c),
                     icon_color: icon,
                     state_layer_color,
-                    outline: icon_button_outline(
-                        theme,
-                        variant,
-                        outline_width,
-                        toggle,
-                        selected,
-                        enabled,
-                    ),
+                    outline: icon_button_outline(theme, variant, outline_width, enabled),
                 };
             }
         }
@@ -544,7 +523,7 @@ fn icon_button_colors(
         background,
         icon_color: icon,
         state_layer_color,
-        outline: icon_button_outline(theme, variant, outline_width, toggle, selected, enabled),
+        outline: icon_button_outline(theme, variant, outline_width, enabled),
     }
 }
 
@@ -596,27 +575,16 @@ fn icon_button_outline(
     theme: &Theme,
     variant: IconButtonVariant,
     width: Px,
-    toggle: bool,
-    selected: bool,
     enabled: bool,
 ) -> Option<IconButtonOutline> {
     if variant != IconButtonVariant::Outlined {
         return None;
     }
-    let prefix = select_prefix_for_variant(variant, toggle, selected);
 
     let mut color = if !enabled {
-        theme
-            .color_by_key(&format!(
-                "md.comp.icon-button.outlined.{prefix}disabled.outline.color"
-            ))
-            .or_else(|| theme.color_by_key("md.comp.icon-button.outlined.disabled.outline.color"))
+        theme.color_by_key("md.comp.icon-button.outlined.disabled.outline.color")
     } else {
-        theme
-            .color_by_key(&format!(
-                "md.comp.icon-button.outlined.{prefix}outline.color"
-            ))
-            .or_else(|| theme.color_by_key("md.comp.icon-button.outlined.outline.color"))
+        theme.color_by_key("md.comp.icon-button.outlined.outline.color")
     }
     .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
     .or_else(|| theme.color_by_key("md.sys.color.outline"))
