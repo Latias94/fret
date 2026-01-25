@@ -37,7 +37,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - [x] SDSR-010 Pilot: migrate `Button` to state-driven background + focus-visible border semantics.
 - [x] SDSR-011 Worktree: introduce and export `ButtonStyle` (override background/foreground/border with per-state properties).
 
-- [ ] SDSR-020 Define a shared “style struct” pattern for shadcn controls:
+- [x] SDSR-020 Define a shared “style struct” pattern for shadcn controls:
   - `*Style` structs with `Option<WidgetStateProperty<...>>` fields.
   - `merged()` semantics (right-biased overrides, no deep merge).
   - Per-control `style(...)` builder method.
@@ -105,3 +105,4 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
 - SDSR-410 evidence: `WidgetStates::from_pressable(...)` in `ecosystem/fret-ui-kit/src/style/state.rs`, applied in `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`.
 - SDSR-300/310/320: `docs/shadcn-style-token-conventions.md`
+- SDSR-020: `docs/shadcn-style-override-patterns.md` + exported `*Style` structs in `ecosystem/fret-ui-shadcn/src/{button,toggle,tabs,input}.rs`

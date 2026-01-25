@@ -102,10 +102,12 @@ Evidence anchors:
 - `ecosystem/fret-ui-kit/src/style/tokens.rs` (`ColorFallback::ThemeTokenAlphaMul`)
 - `ecosystem/fret-ui-kit/src/style/tests.rs` (unit tests for state precedence + fallback behavior)
 - `ecosystem/fret-ui-shadcn/src/button.rs` (pilot: button background uses per-state tokens with fallback; outline border respects focus-visible)
+- Shared override patterns: `docs/shadcn-style-override-patterns.md`
+- Additional v1 `*Style` surfaces: `ecosystem/fret-ui-shadcn/src/{toggle,tabs,input}.rs`
 
 Known gaps:
 
 - Only a pilot migration exists; most components still resolve state styling ad-hoc.
-- No stable public `*Style` structs are defined yet (e.g. `ButtonStyle` with merge/override rules).
-- No ecosystem-wide guidance for slot naming beyond v1 conventions above.
-
+- Many components still resolve state styling ad-hoc (menus, lists, etc. are migrating incrementally).
+- Slot vocabulary guidance is v1-only and will likely evolve as new ecosystems (e.g. Material 3)
+  introduce additional slots/semantics.
