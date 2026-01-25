@@ -224,7 +224,8 @@ pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
 pub use tabs::{
-    Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsTrigger, tabs, tabs_uncontrolled,
+    Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsStyle, TabsTrigger, tabs,
+    tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
 pub use toggle::{
