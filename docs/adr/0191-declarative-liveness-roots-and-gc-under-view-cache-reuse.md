@@ -21,12 +21,25 @@ This ADR locks the contract needed to:
 
 These systems converge on the same core idea: **GC must be reachability/ownership driven, not frame-age driven**.
 
-- **Flutter**: retained `Element`/`RenderObject` trees; disposal happens when a subtree is structurally removed during reconciliation, not because it was “not visited this frame”. `BuildOwner.finalizeTree` completes lifecycle transitions for removed elements; “inactive” elements remain owned until finalized.
+- **Flutter**: retained `Element`/`RenderObject` trees; disposal happens when a subtree is structurally removed during reconciliation, not because it was “not visited this frame”.
+  - `Element.deactivateChild` detaches a child from its parent and moves it to `_InactiveElements` (still owned, not yet disposed).
+  - `BuildOwner.finalizeTree` unmounts `_InactiveElements` at the end of a frame/build pass (lifecycle becomes `defunct`), and performs sanity checks (e.g. duplicate `GlobalKey` detection).
+  - Visibility is not lifetime: an `OverlayEntry` or an `Offstage` subtree can be non-visible while remaining part of the owned tree.
+  - “KeepAlive” in sliver/list contexts is a separate mechanism: it prevents render-object disposal even when off-screen; it does not redefine the meaning of “structurally removed”.
 - **React**: Fiber nodes are created/retained based on reconciliation; nodes are deleted when they are not present in the next tree (structural removal), not because they were skipped by an optimization.
 - **Jetpack Compose / SwiftUI**: compositions are retained via slot tables/graph ownership; nodes are disposed when removed from composition, not due to timeouts.
-- **GPUI-style view caching**: cache hits reuse recorded frame ranges and keep view dependencies/state live because the view is still present in the window’s view graph; cache hits do not imply liveness loss.
+- **GPUI-style view caching**: cache hits reuse recorded frame ranges and keep view dependencies/state live because the view is still present in the window’s view graph.
+  - View caching is gated by “dirty views” (e.g. `WindowInvalidator.dirty_views`) plus a cache key (bounds/content mask/text style).
+  - Cache hits still restore dependency tracking (e.g. extend `accessed_entities`) and preserve element-local state by “accessing” it as part of `prepaint`/`paint` replay.
 
 In all cases, “not rebuilt this frame” is not a signal for disposal. Liveness comes from explicit roots (composition/window roots) and ownership bookkeeping.
+
+### Derived best practices (applicable to Fret)
+
+1. **Separate lifetime from visibility.** A layer can be `visible=false` while still being live; lifetime changes only when a root is uninstalled.
+2. **Make liveness a property of the ownership graph + root set**, not of incidental “visited this frame” behavior. Optimizations (like cached-subtree reuse) must not change lifetime semantics.
+3. **Make cache hits explicitly “touch” dependencies and state**, the same way a full rebuild would. In GPUI this happens by replaying prepaint/paint and restoring accessed dependencies; in Flutter it happens by staying in the active tree.
+4. **Keep multi-root ownership stable and diagnosable.** Cross-root identity reuse is either forbidden (bug) or must be modeled explicitly; “touch” paths must not silently reassign ownership.
 
 ## Decision
 
@@ -130,4 +143,5 @@ Success criteria:
 - ADR 1151: identity debug paths + staged state: `docs/adr/1151-element-identity-debug-paths-and-frame-staged-element-state.md`
 - ADR 1152: ViewCache subtree reuse + state retention: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`
 - Workstream tracker: `docs/workstreams/gpui-parity-refactor-todo.md` (MVP2-cache-005)
-
+- Flutter lifecycle reference (pinned checkout): `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`_InactiveElements`, `BuildOwner.finalizeTree`, `Element.deactivateChild`).
+- GPUI view caching reference (pinned checkout): `repo-ref/zed/crates/gpui/src/view.rs` (`AnyView::cached`, `reuse_prepaint`, `reuse_paint`), `repo-ref/zed/crates/gpui/src/window.rs` (`WindowInvalidator`, `dirty_views`, `mark_view_dirty`).
