@@ -10,6 +10,7 @@ progress here to avoid document ownership conflicts.
 Primary roadmap document:
 
 - `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
+- TODO tracker (keep updated during implementation): `docs/workstreams/overlay-input-arbitration-v2-todo.md`
 
 Related ADRs:
 
@@ -127,12 +128,4 @@ Related ADRs:
 
 ## Next (P0 follow-ups)
 
-- Expand the arbitration conformance suite:
-  - dock drag closes/hides non-modal overlays (ADR 0072) (covered by `dock_drag_closes_dismissible_popovers_in_affected_window`, `dock_drag_closes_dismissible_popovers_for_non_mouse_pointer`, `dock_drag_closes_dismissible_popovers_only_in_affected_window`, `dock_drag_hides_hover_overlays_in_affected_window`, `dock_drag_hides_hover_overlays_for_non_mouse_pointer`),
-  - docking drag + overlay hygiene (ADR 0072 edges),
-  - viewport tool capture vs hover overlays/tooltips (ADR 0049 follow-up).
-- Diagnostics: pointer/wheel scope roots are exposed via `UiTree::debug_hit_test` (includes modal barrier and pointer occlusion roots) and exported via `fret-bootstrap` hit-test snapshots.
-  - Evidence: `crates/fret-ui/src/tree/mod.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fret-ui-gallery/src/driver.rs`
-- Policy normalization: continue consolidating overlay "menu-like" invariants (visibility,
-  hit-testability, observer flags, and occlusion) beyond dismissible popovers (tooltips, hover
-  overlays, and future menu surfaces).
+See the TODO tracker for current status and evidence: `docs/workstreams/overlay-input-arbitration-v2-todo.md`.
