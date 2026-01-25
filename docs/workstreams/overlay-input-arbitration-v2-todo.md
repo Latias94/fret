@@ -35,6 +35,8 @@ Keep this list short and evidence-backed:
   - Target: cover “start drag while submenu open / while capture active / cross-window hover window”.
   - Evidence:
     - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends`)
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`dock_drag_closes_menu_like_overlay_and_disables_pointer_move_observers`)
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`dock_drag_cross_window_closes_menu_like_overlays_and_clears_occlusion`)
 - [x] OIA2-test-003 Viewport tool capture suppresses hover overlays/tooltips (ADR 0049 follow-up baseline).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (viewport capture suppression tests)
 - [x] OIA2-test-004 “Present vs interactive” close-transition invariants are locked by tests.
