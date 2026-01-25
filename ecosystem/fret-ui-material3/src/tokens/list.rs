@@ -51,6 +51,51 @@ pub(crate) fn item_container_shape_with_variant(
     }
 }
 
+pub(crate) fn item_container_shape_for_interaction(
+    theme: &Theme,
+    selected: bool,
+    enabled: bool,
+    interaction: ListItemInteraction,
+    expressive: bool,
+) -> Corners {
+    if !expressive {
+        return item_container_shape_with_variant(theme, selected, false);
+    }
+
+    let key = match (selected, enabled, interaction) {
+        (true, false, _) => "md.comp.list.list-item.selected.disabled.container.expressive.shape",
+        (true, true, ListItemInteraction::Pressed) => {
+            "md.comp.list.list-item.selected.pressed.container.expressive.shape"
+        }
+        (true, true, ListItemInteraction::Focused) => {
+            "md.comp.list.list-item.selected.focused.container.expressive.shape"
+        }
+        (true, true, ListItemInteraction::Hovered) => {
+            "md.comp.list.list-item.selected.hovered.container.expressive.shape"
+        }
+        (true, true, ListItemInteraction::Default) => {
+            "md.comp.list.list-item.selected.container.expressive.shape"
+        }
+        (false, false, _) => "md.comp.list.list-item.disabled.container.expressive.shape",
+        (false, true, ListItemInteraction::Pressed) => {
+            "md.comp.list.list-item.pressed.container.expressive.shape"
+        }
+        (false, true, ListItemInteraction::Focused) => {
+            "md.comp.list.list-item.focused.container.expressive.shape"
+        }
+        (false, true, ListItemInteraction::Hovered) => {
+            "md.comp.list.list-item.hovered.container.expressive.shape"
+        }
+        (false, true, ListItemInteraction::Default) => {
+            "md.comp.list.list-item.container.expressive.shape"
+        }
+    };
+
+    theme
+        .corners_by_key(key)
+        .unwrap_or_else(|| item_container_shape_with_variant(theme, selected, true))
+}
+
 pub(crate) fn item_between_space(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.list.list-item.between-space")
@@ -259,4 +304,69 @@ pub(crate) fn pressed_state_layer_opacity(theme: &Theme, selected: bool) -> f32 
             "md.comp.list.list-item.pressed.state-layer.opacity"
         })
         .unwrap_or(0.1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_ui::Theme;
+
+    use crate::tokens::v30::{TypographyOptions, theme_config};
+
+    #[test]
+    fn expressive_list_shapes_vary_by_interaction() {
+        let cfg = theme_config(TypographyOptions::default());
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&cfg);
+        });
+        let theme = Theme::global(&app).clone();
+
+        let default = item_container_shape_for_interaction(
+            &theme,
+            false,
+            true,
+            ListItemInteraction::Default,
+            true,
+        );
+        assert_eq!(default, Corners::all(Px(4.0)));
+
+        let hovered = item_container_shape_for_interaction(
+            &theme,
+            false,
+            true,
+            ListItemInteraction::Hovered,
+            true,
+        );
+        assert_eq!(hovered, Corners::all(Px(12.0)));
+
+        let pressed = item_container_shape_for_interaction(
+            &theme,
+            false,
+            true,
+            ListItemInteraction::Pressed,
+            true,
+        );
+        assert_eq!(pressed, Corners::all(Px(16.0)));
+
+        let selected_default = item_container_shape_for_interaction(
+            &theme,
+            true,
+            true,
+            ListItemInteraction::Default,
+            true,
+        );
+        assert_eq!(selected_default, Corners::all(Px(16.0)));
+
+        let disabled = item_container_shape_for_interaction(
+            &theme,
+            false,
+            false,
+            ListItemInteraction::Default,
+            true,
+        );
+        assert_eq!(disabled, Corners::all(Px(4.0)));
+    }
 }

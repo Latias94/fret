@@ -1364,11 +1364,51 @@ fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
         Corners::all(Px(4.0)),
     );
     cfg.corners.insert(
+        "md.comp.list.list-item.disabled.container.expressive.shape".to_string(),
+        Corners::all(Px(4.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.dragged.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.focused.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.hovered.container.expressive.shape".to_string(),
+        Corners::all(Px(12.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.pressed.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
         "md.comp.list.list-item.selected.container.shape".to_string(),
         Corners::all(Px(16.0)),
     );
     cfg.corners.insert(
         "md.comp.list.list-item.selected.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.selected.disabled.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.selected.dragged.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.selected.focused.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.selected.hovered.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.selected.pressed.container.expressive.shape".to_string(),
         Corners::all(Px(16.0)),
     );
 }
@@ -3063,6 +3103,12 @@ mod tests {
                 .get("md.comp.list.list-item.container.expressive.shape")
                 .copied(),
             Some(fret_core::Corners::all(fret_core::Px(4.0)))
+        );
+        assert_eq!(
+            cfg.corners
+                .get("md.comp.list.list-item.hovered.container.expressive.shape")
+                .copied(),
+            Some(fret_core::Corners::all(fret_core::Px(12.0)))
         );
         assert_eq!(
             cfg.corners

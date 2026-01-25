@@ -327,10 +327,16 @@ fn list_item<H: UiHost>(
 
         let height = list_tokens::one_line_container_height(theme);
 
-        let corner_radii =
-            list_tokens::item_container_shape_with_variant(theme, selected, expressive);
+        let focus_ring_corner_radii = list_tokens::item_container_shape_for_interaction(
+            theme,
+            selected,
+            enabled,
+            list_tokens::ListItemInteraction::Focused,
+            expressive,
+        );
 
-        let focus_ring = material_focus_ring_for_component(theme, "md.comp.list", corner_radii);
+        let focus_ring =
+            material_focus_ring_for_component(theme, "md.comp.list", focus_ring_corner_radii);
 
         let pressable_props = PressableProps {
             enabled,
@@ -375,6 +381,14 @@ fn list_item<H: UiHost>(
 
                 let (label_color, icon_color, state_layer_color, state_layer_target) =
                     list_tokens::item_outcomes(theme, selected, enabled, interaction);
+
+                let corner_radii = list_tokens::item_container_shape_for_interaction(
+                    theme,
+                    selected,
+                    enabled,
+                    interaction,
+                    expressive,
+                );
 
                 let ripple_base_opacity = list_tokens::pressed_state_layer_opacity(theme, selected);
                 let config = material_pressable_indication_config(theme, None);

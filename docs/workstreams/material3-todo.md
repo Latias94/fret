@@ -20,6 +20,13 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - Align **visual outcomes** via Material tokens (color, shape, elevation, typography, motion).
 - Keep `crates/fret-ui` focused on mechanisms; Material policies live in the ecosystem.
 
+## Expressive (component variants)
+
+- [x] List: expressive icon size + per-interaction container shape.
+  - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_list_scalars`),
+    `ecosystem/fret-ui-material3/src/tokens/list.rs` (`item_container_shape_for_interaction`),
+    `ecosystem/fret-ui-material3/src/list.rs` (design variant aware shape selection).
+
 ## Non-goals (initially)
 
 - Perfect parity with `@material/web` implementation details (DOM/Lit behavior).
