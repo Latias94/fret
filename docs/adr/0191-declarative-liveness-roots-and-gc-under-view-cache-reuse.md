@@ -282,6 +282,14 @@ Success criteria:
 - ADR 1152: ViewCache subtree reuse + state retention: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`
 - Workstream tracker: `docs/workstreams/gpui-parity-refactor-todo.md` (MVP2-cache-005)
 - Flutter lifecycle reference: `packages/flutter/lib/src/widgets/framework.dart` (Flutter upstream).
-  - Suggested anchors (may drift): `_InactiveElements`, `BuildOwner.finalizeTree`, `Element.deactivateChild`.
+  - Anchors (pinned `repo-ref/flutter`, may drift upstream):
+    - `_InactiveElements` (~`framework.dart:2099`)
+    - `BuildOwner.finalizeTree` (~`framework.dart:3339`)
+    - `Element.deactivateChild` (~`framework.dart:4632`)
 - GPUI view caching reference: `crates/gpui/src/view.rs`, `crates/gpui/src/window.rs` (Zed upstream).
-  - Suggested anchors (may drift): `AnyView::cached`, `reuse_prepaint`, `reuse_paint`, `WindowInvalidator.dirty_views`.
+  - Anchors (pinned `repo-ref/zed`, may drift upstream):
+    - `AnyView::cached` (~`view.rs:103`)
+    - `reuse_prepaint` (~`view.rs:216`)
+    - `reuse_paint` (~`view.rs:280`)
+    - `WindowInvalidator.dirty_views` (~`window.rs:102`)
+    - `Window::mark_view_dirty` (~`window.rs:1476`)
