@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `260/448` (`58.0%`)
-- Next P0 gaps: forms/field validation chrome, then carousel and typography breadth.
+- Keys referenced by tests: `273/448` (`60.9%`)
+- Next P0 gaps: carousel, then typography breadth and spinner/item patterns.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -29,7 +29,6 @@ viewport/DPI stress variants for the highest-risk families (menus, listboxes, ca
 
 P0 (next):
 
-- Gate `form-*` pages (RHF + TanStack variants) using Fret-native `FormState` while matching upstream layout/ARIA outputs.
 - Gate `carousel-*` pages (default first, then constrained viewport if policy changes).
 
 P1:

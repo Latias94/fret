@@ -492,6 +492,42 @@ fn find_node_with_bounds_close(
     None
 }
 
+fn find_node_with_size_close(
+    ui: &UiTree<App>,
+    root: NodeId,
+    expected_w: f32,
+    expected_h: f32,
+    tol: f32,
+) -> Option<Rect> {
+    let mut nodes = Vec::new();
+    collect_subtree_nodes(ui, root, &mut nodes);
+
+    let mut best: Option<Rect> = None;
+    let mut best_score = f32::INFINITY;
+    let mut best_area = f32::INFINITY;
+
+    for id in nodes {
+        let Some(bounds) = ui.debug_node_bounds(id) else {
+            continue;
+        };
+        let dw = (bounds.size.width.0 - expected_w).abs();
+        let dh = (bounds.size.height.0 - expected_h).abs();
+        if dw > tol || dh > tol {
+            continue;
+        }
+
+        let score = dw + dh;
+        let area = bounds.size.width.0 * bounds.size.height.0;
+        if score < best_score || (score == best_score && area < best_area) {
+            best = Some(bounds);
+            best_score = score;
+            best_area = area;
+        }
+    }
+
+    best
+}
+
 fn assert_rect_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) {
     assert_close_px(&format!("{label} x"), actual.origin.x, expected.x, tol);
     assert_close_px(&format!("{label} y"), actual.origin.y, expected.y, tol);
@@ -11002,6 +11038,400 @@ fn web_vs_fret_layout_form_tanstack_textarea_geometry_matches_web() {
         FormControlKind::Textarea,
         "Save",
     );
+}
+
+fn web_find_input_group_container_containing<'a>(
+    theme: &'a WebGoldenTheme,
+    input: &WebNode,
+) -> &'a WebNode {
+    let mut all = Vec::new();
+    web_collect_all(&theme.root, &mut all);
+    all.into_iter()
+        .filter(|n| {
+            n.tag == "div"
+                && n.class_name
+                    .as_deref()
+                    .is_some_and(|c| c.contains("group/input-group"))
+                && rect_contains(n.rect, input.rect)
+        })
+        .min_by(|a, b| {
+            let area_a = a.rect.w * a.rect.h;
+            let area_b = b.rect.w * b.rect.h;
+            area_a
+                .partial_cmp(&area_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .expect("web input-group container")
+}
+
+fn form_trailing_icon_button<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    a11y_label: &str,
+) -> fret_ui::element::AnyElement {
+    let icon = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: SemanticsRole::Panel,
+            label: Some(Arc::from(format!("{a11y_label}:icon"))),
+            ..Default::default()
+        },
+        move |cx| vec![decl_icon::icon(cx, fret_icons::ids::ui::SEARCH)],
+    );
+
+    fret_ui_shadcn::InputGroupButton::new("")
+        .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+        .size(fret_ui_shadcn::InputGroupButtonSize::IconXs)
+        .a11y_label(a11y_label)
+        .children(vec![icon])
+        .into_element(cx)
+}
+
+fn assert_form_input_group_control_geometry_matches_web(
+    web_name: &str,
+    title: &str,
+    description: &str,
+    input_id: &str,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_card = web_find_by_class_tokens(
+        &theme.root,
+        &[
+            "bg-card",
+            "text-card-foreground",
+            "rounded-xl",
+            "border",
+            "py-6",
+            "sm:max-w-md",
+        ],
+    )
+    .expect("web card root");
+
+    let web_input = web_find_by_id(&theme.root, input_id).expect("web input");
+    let web_group = web_find_input_group_container_containing(theme, web_input);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<String> = cx.app.models_mut().insert(String::new());
+
+        let group = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!("Golden:{web_name}:group"))),
+                ..Default::default()
+            },
+            move |cx| {
+                let trailing = form_trailing_icon_button(cx, &format!("Golden:{web_name}:trail"));
+                vec![
+                    fret_ui_shadcn::InputGroup::new(model)
+                        .trailing(vec![trailing])
+                        .trailing_has_button(true)
+                        .a11y_label("Golden:form-input-group")
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        let card = fret_ui_shadcn::Card::new(vec![
+            fret_ui_shadcn::CardHeader::new(vec![
+                fret_ui_shadcn::CardTitle::new(title).into_element(cx),
+                fret_ui_shadcn::CardDescription::new(description).into_element(cx),
+            ])
+            .into_element(cx),
+            fret_ui_shadcn::CardContent::new(vec![group]).into_element(cx),
+        ])
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_card.rect.w))),
+        )
+        .into_element(cx);
+
+        vec![card]
+    });
+
+    let group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some(&format!("Golden:{web_name}:group")),
+    )
+    .expect("fret input-group");
+
+    assert_rect_xwh_close_px("input-group", group.bounds, web_group.rect, 1.0);
+}
+
+fn assert_form_checkbox_control_size_matches_web(web_name: &str, checkbox_id: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_checkbox = web_find_by_id(&theme.root, checkbox_id).expect("web checkbox");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let checked: Model<bool> = cx.app.models_mut().insert(true);
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!("Golden:{web_name}:checkbox"))),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Checkbox::new(checked)
+                        .disabled(true)
+                        .a11y_label("Golden:form-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        )]
+    });
+
+    let checkbox = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some(&format!("Golden:{web_name}:checkbox")),
+    )
+    .expect("fret checkbox wrapper");
+
+    assert_close_px(
+        "checkbox w",
+        checkbox.bounds.size.width,
+        web_checkbox.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "checkbox h",
+        checkbox.bounds.size.height,
+        web_checkbox.rect.h,
+        1.0,
+    );
+}
+
+fn assert_form_switch_control_size_matches_web(web_name: &str, switch_id: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_switch = web_find_by_id(&theme.root, switch_id).expect("web switch");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let checked: Model<bool> = cx.app.models_mut().insert(false);
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!("Golden:{web_name}:switch"))),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Switch::new(checked)
+                        .a11y_label("Golden:form-switch")
+                        .into_element(cx),
+                ]
+            },
+        )]
+    });
+
+    let switch = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some(&format!("Golden:{web_name}:switch")),
+    )
+    .expect("fret switch wrapper");
+
+    assert_close_px("switch w", switch.bounds.size.width, web_switch.rect.w, 1.0);
+    assert_close_px(
+        "switch h",
+        switch.bounds.size.height,
+        web_switch.rect.h,
+        1.0,
+    );
+}
+
+fn assert_form_select_control_size_matches_web(web_name: &str, select_id: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_select = web_find_by_id(&theme.root, select_id).expect("web select trigger");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+        let open: Model<bool> = cx.app.models_mut().insert(false);
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!("Golden:{web_name}:select"))),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::Select::new(value, open)
+                        .placeholder("Select")
+                        .items([
+                            fret_ui_shadcn::SelectItem::new("auto", "Auto"),
+                            fret_ui_shadcn::SelectItem::new("english", "English"),
+                            fret_ui_shadcn::SelectItem::new("spanish", "Spanish"),
+                        ])
+                        .refine_layout(
+                            LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
+                        )
+                        .into_element(cx),
+                ]
+            },
+        )]
+    });
+
+    let select = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some(&format!("Golden:{web_name}:select")),
+    )
+    .expect("fret select wrapper");
+
+    assert_close_px("select w", select.bounds.size.width, web_select.rect.w, 1.0);
+    assert_close_px(
+        "select h",
+        select.bounds.size.height,
+        web_select.rect.h,
+        1.0,
+    );
+}
+
+fn assert_form_radio_control_size_matches_web(web_name: &str, radio_id: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_radio = web_find_by_id(&theme.root, radio_id).expect("web radio");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, _snap, root) = run_fret_root_with_ui(bounds, |cx| {
+        let group = fret_ui_shadcn::RadioGroup::uncontrolled(Some("other"))
+            .item(fret_ui_shadcn::RadioGroupItem::new("starter", "Starter"))
+            .a11y_label("Golden:form-radio-group")
+            .into_element(cx);
+        vec![group]
+    });
+
+    let radio_bounds =
+        find_node_with_size_close(&ui, root, web_radio.rect.w, web_radio.rect.h, 1.0)
+            .expect("missing fret radio indicator bounds");
+
+    assert_close_px("radio w", radio_bounds.size.width, web_radio.rect.w, 1.0);
+    assert_close_px("radio h", radio_bounds.size.height, web_radio.rect.h, 1.0);
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_array_geometry_matches_web() {
+    assert_form_input_group_control_geometry_matches_web(
+        "form-rhf-array",
+        "Contact Emails",
+        "Manage your contact email addresses.",
+        "form-rhf-array-email-0",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_array_geometry_matches_web() {
+    assert_form_input_group_control_geometry_matches_web(
+        "form-tanstack-array",
+        "Contact Emails",
+        "Manage your contact email addresses.",
+        "form-tanstack-array-email-0",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_password_geometry_matches_web() {
+    assert_form_input_group_control_geometry_matches_web(
+        "form-rhf-password",
+        "Create Password",
+        "Choose a strong password to secure your account.",
+        "form-rhf-password-input",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_checkbox_geometry_matches_web() {
+    assert_form_checkbox_control_size_matches_web(
+        "form-rhf-checkbox",
+        "form-rhf-checkbox-responses",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_checkbox_geometry_matches_web() {
+    assert_form_checkbox_control_size_matches_web(
+        "form-tanstack-checkbox",
+        "form-tanstack-checkbox-responses",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_switch_geometry_matches_web() {
+    assert_form_switch_control_size_matches_web("form-rhf-switch", "form-rhf-switch-twoFactor");
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_switch_geometry_matches_web() {
+    assert_form_switch_control_size_matches_web(
+        "form-tanstack-switch",
+        "form-tanstack-switch-twoFactor",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_select_geometry_matches_web() {
+    assert_form_select_control_size_matches_web("form-rhf-select", "form-rhf-select-language");
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_select_geometry_matches_web() {
+    assert_form_select_control_size_matches_web(
+        "form-tanstack-select",
+        "form-tanstack-select-language",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_radiogroup_geometry_matches_web() {
+    assert_form_radio_control_size_matches_web(
+        "form-rhf-radiogroup",
+        "form-rhf-radiogroup-starter",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_radiogroup_geometry_matches_web() {
+    assert_form_radio_control_size_matches_web(
+        "form-tanstack-radiogroup",
+        "form-tanstack-radiogroup-starter",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_complex_geometry_matches_web() {
+    assert_form_radio_control_size_matches_web("form-rhf-complex", "form-rhf-complex-basic");
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_complex_geometry_matches_web() {
+    assert_form_radio_control_size_matches_web("form-tanstack-complex", "basic");
 }
 
 #[test]

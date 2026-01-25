@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `260/448` keys referenced (`58.0%`)
+- shadcn-web `v4/new-york-v4`: `273/448` keys referenced (`60.9%`)
 
 ## Executive summary (current status + next targets)
 
@@ -40,7 +40,6 @@ These gates do **not** imply full parity; they are simply the most effective ear
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
-- `form` (13 variants): remaining RHF/TanStack pages (checkbox/select/radiogroup/complex/array/switch).
 - `typography` (13 variants): prose defaults + text metric edge cases.
 - `carousel` (6 variants): layout + snapping + spacing.
 - `spinner` / `item` (17 variants combined): smaller-but-frequent controls and list patterns that tend to
@@ -48,13 +47,11 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Forms / Field validation chrome**
-   - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
-2. **Carousel**
+1. **Carousel**
    - Add a default gate first, then a constrained viewport gate if the layout policy changes.
-3. **Typography breadth**
+2. **Typography breadth**
    - Gate remaining typography pages that are sensitive to font metrics and baseline rounding.
-4. **Spinner + item patterns**
+3. **Spinner + item patterns**
    - Gate remaining `spinner-*` and `item-*` pages to catch padding/centering drift in common list rows.
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a

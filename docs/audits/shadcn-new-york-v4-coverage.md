@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `260` (`58.0%`)
-- Keys not referenced by tests: `188`
+- Keys referenced by tests: `273` (`60.9%`)
+- Keys not referenced by tests: `175`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -42,10 +42,11 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
-- `form` (13; remaining RHF/TanStack variants)
 - `typography` (13; baseline text metrics and prose defaults)
 - `input` (10; control chrome + stacking patterns)
 - `spinner` (9; control chrome + layout + visual alignment)
+- `item` (8; list row chrome + slot alignment)
+- `carousel` (6; layout + snapping + spacing)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were:
 
