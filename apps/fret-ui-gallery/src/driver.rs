@@ -132,6 +132,7 @@ struct UiGalleryWindowState {
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
     material3_list_value: Model<Arc<str>>,
+    material3_expressive: Model<bool>,
     material3_navigation_bar_value: Model<Arc<str>>,
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
@@ -413,6 +414,7 @@ impl UiGalleryDriver {
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
         let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
         let material3_list_value = app.models_mut().insert(Arc::<str>::from("alpha"));
+        let material3_expressive = app.models_mut().insert(false);
         let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
         let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
         let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
@@ -530,6 +532,7 @@ impl UiGalleryDriver {
             material3_radio_value,
             material3_tabs_value,
             material3_list_value,
+            material3_expressive,
             material3_navigation_bar_value,
             material3_navigation_rail_value,
             material3_navigation_drawer_value,
@@ -982,6 +985,7 @@ impl UiGalleryDriver {
         let material3_radio_value = state.material3_radio_value.clone();
         let material3_tabs_value = state.material3_tabs_value.clone();
         let material3_list_value = state.material3_list_value.clone();
+        let material3_expressive = state.material3_expressive.clone();
         let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
         let material3_navigation_rail_value = state.material3_navigation_rail_value.clone();
         let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
@@ -1358,6 +1362,7 @@ impl UiGalleryDriver {
                                             material3_radio_value.clone(),
                                             material3_tabs_value.clone(),
                                             material3_list_value.clone(),
+                                            material3_expressive.clone(),
                                             material3_navigation_bar_value.clone(),
                                             material3_navigation_rail_value.clone(),
                                             material3_navigation_drawer_value.clone(),
@@ -1444,6 +1449,7 @@ impl UiGalleryDriver {
                                         material3_radio_value.clone(),
                                         material3_tabs_value.clone(),
                                         material3_list_value.clone(),
+                                        material3_expressive.clone(),
                                         material3_navigation_bar_value.clone(),
                                         material3_navigation_rail_value.clone(),
                                         material3_navigation_drawer_value.clone(),

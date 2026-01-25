@@ -224,6 +224,7 @@ pub(crate) fn content_view(
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
     material3_list_value: Model<Arc<str>>,
+    material3_expressive: Model<bool>,
     material3_navigation_bar_value: Model<Arc<str>>,
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
@@ -365,6 +366,7 @@ pub(crate) fn content_view(
         material3_radio_value,
         material3_tabs_value,
         material3_list_value,
+        material3_expressive,
         material3_navigation_bar_value,
         material3_navigation_rail_value,
         material3_navigation_drawer_value,
@@ -481,6 +483,7 @@ fn page_preview(
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
     material3_list_value: Model<Arc<str>>,
+    material3_expressive: Model<bool>,
     material3_navigation_bar_value: Model<Arc<str>>,
     material3_navigation_rail_value: Model<Arc<str>>,
     material3_navigation_drawer_value: Model<Arc<str>>,
@@ -567,6 +570,7 @@ fn page_preview(
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
         PAGE_MATERIAL3_STATE_MATRIX => preview_material3_state_matrix(
             cx,
+            material3_expressive,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -1327,6 +1331,7 @@ fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
 fn preview_material3_state_matrix(
     cx: &mut ElementContext<'_, App>,
+    material3_expressive: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -1338,19 +1343,8 @@ fn preview_material3_state_matrix(
     material3_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct State {
-        expressive: Option<Model<bool>>,
-    }
-
-    let expressive = cx.with_state(State::default, |st| st.expressive.clone());
-    let expressive = expressive.unwrap_or_else(|| {
-        let model = cx.app.models_mut().insert(false);
-        cx.with_state(State::default, |st| st.expressive = Some(model.clone()));
-        model
-    });
     let expressive_enabled = cx
-        .get_model_copied(&expressive, Invalidation::Layout)
+        .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);
 
     let mut out: Vec<AnyElement> = Vec::new();
@@ -1367,7 +1361,7 @@ fn preview_material3_state_matrix(
         stack::HStackProps::default().gap(Space::N2).items_center(),
         move |cx| {
             vec![
-                shadcn::Switch::new(expressive.clone())
+                shadcn::Switch::new(material3_expressive.clone())
                     .a11y_label("Enable Material 3 Expressive variant")
                     .into_element(cx),
                 cx.text(if expressive_enabled {
