@@ -1902,11 +1902,6 @@ fn inject_comp_navigation_drawer_colors_from_sys(cfg: &mut ThemeConfig) {
     );
     copy_color(
         cfg,
-        "md.comp.navigation-drawer.label-text.color",
-        "md.sys.color.on-surface-variant",
-    );
-    copy_color(
-        cfg,
         "md.comp.navigation-drawer.large-badge-label.color",
         "md.sys.color.on-surface-variant",
     );

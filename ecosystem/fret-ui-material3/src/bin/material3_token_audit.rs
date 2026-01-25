@@ -14,6 +14,16 @@ use std::path::{Path, PathBuf};
 
 use fret_ui_material3::tokens::v30;
 
+fn allowlisted_non_material_web_tokens() -> BTreeSet<&'static str> {
+    BTreeSet::from([
+        // Fret-specific: enforced minimum touch target policy.
+        "md.sys.layout.minimum-touch-target.size",
+        // Fret-specific escape hatch: allow overriding shadow color without forking the elevation logic.
+        // Defaults to `md.sys.color.shadow`.
+        "md.comp.dialog.container.shadow-color",
+    ])
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse(env::args().skip(1).collect::<Vec<_>>())?;
 
@@ -111,9 +121,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("- keys: {}", material_web.len());
             println!();
 
+            let allowlisted = allowlisted_non_material_web_tokens();
             let unknown_vs_material_web = used
                 .exact
                 .difference(&material_web)
+                .filter(|k| !allowlisted.contains(k.as_str()))
                 .cloned()
                 .collect::<BTreeSet<_>>();
             if !unknown_vs_material_web.is_empty() {

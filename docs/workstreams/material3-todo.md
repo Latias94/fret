@@ -80,7 +80,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Add scene-level regression tests for radio alignment (dot + ripple origin).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
 - [x] Add a token audit tool (coverage report vs code + material-web sassvars).
-  - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs`.
+  - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (filters allowlisted Fret-only keys).
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.
