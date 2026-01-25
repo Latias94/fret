@@ -197,6 +197,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] Button token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/button.rs`,
       `ecosystem/fret-ui-material3/src/button.rs`.
+  - [x] Switch token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/switch.rs`,
+      `ecosystem/fret-ui-material3/src/switch.rs`.
 
 ### Interaction Outcomes
 
