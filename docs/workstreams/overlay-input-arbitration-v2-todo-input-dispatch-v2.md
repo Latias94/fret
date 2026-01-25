@@ -53,9 +53,12 @@ Each TODO is labeled:
 
 ## P0 — Policy Normalization (Reduce Future Refactor Risk)
 
-- [~] OIA2-pol-020 Consolidate menu-like overlay invariants into shared helpers.
+- [x] OIA2-pol-020 Consolidate menu-like overlay invariants into shared helpers.
   - Target: minimize per-overlay special casing (visibility, hit-testability, observer flags, occlusion lifecycle).
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`non_modal_overlay_effective_interactive`)
+  - Evidence anchors:
+    - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`non_modal_overlay_effective_interactive`)
+    - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`apply_click_through_layer_policy`)
+    - `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs` (`resolve_branch_nodes_for_popover_request`)
 
 ## Notes
 
