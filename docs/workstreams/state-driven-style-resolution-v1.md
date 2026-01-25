@@ -61,9 +61,9 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 
 ### P3 — Token Naming + Slot Vocabulary
 
-- [ ] SDSR-300 Document state token key conventions for shadcn components (background/foreground/border/ring).
-- [ ] SDSR-310 Decide when to use semantic base keys (`primary`, `destructive`) vs component keys (`button.*`).
-- [ ] SDSR-320 Decide how “selected” maps to tokens (e.g. `*.selected.background`) for toggles/tabs/list rows.
+- [x] SDSR-300 Document state token key conventions for shadcn components (background/foreground/border/ring).
+- [x] SDSR-310 Decide when to use semantic base keys (`primary`, `destructive`) vs component keys (`button.*`).
+- [x] SDSR-320 Decide how “selected” maps to tokens (e.g. `*.selected.background`) for toggles/tabs/list rows.
 
 ### P4 — Performance & Ergonomics
 
@@ -104,3 +104,4 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-shadcn/src/hover_card.rs`
 - SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
 - SDSR-410 evidence: `WidgetStates::from_pressable(...)` in `ecosystem/fret-ui-kit/src/style/state.rs`, applied in `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`.
+- SDSR-300/310/320: `docs/shadcn-style-token-conventions.md`
