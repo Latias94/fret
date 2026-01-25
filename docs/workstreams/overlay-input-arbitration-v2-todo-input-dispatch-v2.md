@@ -55,11 +55,10 @@ Each TODO is labeled:
 
 - [~] OIA2-pol-020 Consolidate menu-like overlay invariants into shared helpers.
   - Target: minimize per-overlay special casing (visibility, hit-testability, observer flags, occlusion lifecycle).
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`non_modal_overlay_effective_interactive`)
 
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
 - Keep mechanism contracts in `crates/*` and policy in `ecosystem/*`.
 - Prefer adding/expanding conformance tests before larger refactors.
-
