@@ -311,6 +311,10 @@ pub trait UiPointerActionHost: UiFocusActionHost + UiDragActionHost {
     fn capture_pointer(&mut self);
     fn release_pointer_capture(&mut self);
     fn set_cursor_icon(&mut self, icon: CursorIcon);
+    /// Suppress a runtime default action for the current event dispatch.
+    ///
+    /// This is primarily used to prevent "focus on pointer down" while still allowing propagation
+    /// and other policies (overlays, global shortcuts, outside-press) to observe the event.
     fn prevent_default(&mut self, action: DefaultAction);
 }
 
