@@ -43,6 +43,10 @@ Each TODO is labeled:
     - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_does_not_request_pointer_move_observer_while_closing`)
     - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_does_not_request_timer_events_while_closing`)
 
+- [x] OIA2-test-005 Modal close transition keeps the barrier blocking underlay input (select).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/select.rs` (`select_close_transition_keeps_modal_barrier_blocking_underlay`)
+
 ## P0 — Diagnostics & Debuggability
 
 - [x] OIA2-diag-010 Hit-test scope roots are exposed in diagnostics (baseline).
