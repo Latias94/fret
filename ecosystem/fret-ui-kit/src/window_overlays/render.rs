@@ -100,6 +100,13 @@ fn capture_conflicts_with_layer(arbitration: UiInputArbitrationSnapshot, layer: 
             || arbitration.pointer_capture_layer != Some(layer))
 }
 
+fn present_when_not_capture_conflicted(
+    arbitration: UiInputArbitrationSnapshot,
+    layer: UiLayerId,
+) -> bool {
+    !capture_conflicts_with_layer(arbitration, layer)
+}
+
 fn non_modal_overlay_effective_interactive(
     arbitration: UiInputArbitrationSnapshot,
     layer: UiLayerId,
@@ -947,7 +954,7 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
+            let present = present_when_not_capture_conflicted(arbitration, entry.layer);
             apply_hover_layer_policy(ui, entry.layer, present, interactive && present);
         });
     }
@@ -1019,7 +1026,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
-            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
+            let present = present_when_not_capture_conflicted(arbitration, entry.layer);
             let interactive = interactive && present;
 
             apply_tooltip_layer_policy(
