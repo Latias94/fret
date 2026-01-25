@@ -72,6 +72,8 @@ This document is meant to stay “live” while we iterate. Update this section 
   - Evidence: `apps/fret-examples/src/todo_mvu_interop_demo.rs`
   - Evidence: `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`
   - Evidence: `apps/fret-examples/src/todo_interop_demo.rs`
+- [x] `fretboard new` templates demonstrate iterator-friendly children composition (no forced `vec![...]` in child closures).
+  - Evidence: `apps/fretboard/src/scaffold/templates.rs`
 - [x] Globals can be observed/read ergonomically (`GlobalWatchExt`).
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/global_watch.rs`
   - Example: `apps/fret-examples/src/todo_interop_demo.rs`
