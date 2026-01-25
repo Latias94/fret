@@ -11,6 +11,7 @@ We are doing a “fearless refactor” to reduce divergence across components by
 Material foundation layer (interaction/indication/token resolution) inspired by Compose.
 
 - Plan: `docs/workstreams/material3-refactor-plan.md`
+- Style API alignment (cross-ecosystem interfaces): `docs/workstreams/material3-style-api-alignment-v1.md`
 
 ## Related Workstreams
 
