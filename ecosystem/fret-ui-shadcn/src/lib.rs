@@ -227,7 +227,9 @@ pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsTrigger, tabs, tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
-pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
+pub use toggle::{
+    Toggle, ToggleRoot, ToggleSize, ToggleStyle, ToggleVariant, toggle, toggle_uncontrolled,
+};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
     toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,

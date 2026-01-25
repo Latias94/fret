@@ -44,8 +44,8 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 
 ### P1 — Migrate Core Interactive Controls
 
-- [ ] SDSR-100 Toggle: replace ad-hoc hovered/pressed/focused branches with `WidgetStates` + `WidgetStateProperty`.
-- [ ] SDSR-110 Toggle: add and export `ToggleStyle`.
+- [x] SDSR-100 Toggle: replace ad-hoc hovered/pressed/focused branches with `WidgetStates` + `WidgetStateProperty`.
+- [x] SDSR-110 Toggle: add and export `ToggleStyle`.
 
 - [ ] SDSR-120 Tabs: migrate trigger/button-like styling to `WidgetStates`.
 - [ ] SDSR-121 Tabs: add and export `TabsStyle` (at least tab trigger background/foreground/border/ring).
@@ -93,3 +93,4 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-kit/src/style/tokens.rs`
 - `ecosystem/fret-ui-shadcn/src/button.rs`
 - `ecosystem/fret-ui-shadcn/src/lib.rs`
+- `ecosystem/fret-ui-shadcn/src/toggle.rs`
