@@ -3000,7 +3000,7 @@ fn non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_whil
             disable_outside_pointer_events: true,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            open,
+            open: open.clone(),
             present: true,
             initial_focus: None,
             on_open_auto_focus: None,
@@ -3117,6 +3117,125 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
     assert!(!info.blocks_underlay_input);
     assert!(!info.hit_testable);
     assert!(!info.wants_pointer_down_outside_events);
+}
+
+#[test]
+fn non_modal_overlay_does_not_request_pointer_move_observer_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let trigger = GlobalElementId(0xdead);
+    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
+        Arc::new(|_host, _cx, _move| false);
+
+    // First frame: open the overlay so we know it would normally request pointer-move observers.
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: Some(on_pointer_move.clone()),
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays.popovers.get(&(window, trigger)).map(|p| p.layer)
+        })
+        .expect("popover layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("popover debug layer info");
+
+    assert!(info.visible);
+    assert!(info.hit_testable);
+    assert!(info.wants_pointer_move_events);
+
+    // Second frame: close the overlay but keep it present for a close transition. It must not
+    // install pointer-move observers while closing.
+    let _ = app.models_mut().update(&open, |v| *v = false);
+    begin_frame(&mut app, window);
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open,
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: Some(on_pointer_move),
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("popover debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.hit_testable);
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
 }
 
 #[test]
