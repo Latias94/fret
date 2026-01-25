@@ -98,6 +98,7 @@ Recommended baseline:
 ## Examples (existing v1 surfaces)
 
 - `ButtonStyle`: `ecosystem/fret-ui-shadcn/src/button.rs`
+- `CheckboxStyle`: `ecosystem/fret-ui-shadcn/src/checkbox.rs`
 - `ToggleStyle`: `ecosystem/fret-ui-shadcn/src/toggle.rs`
 - `TabsStyle`: `ecosystem/fret-ui-shadcn/src/tabs.rs`
 - `InputStyle` (focus-specific v0 shape): `ecosystem/fret-ui-shadcn/src/input.rs`
@@ -108,4 +109,3 @@ Recommended baseline:
 - In `WidgetStateProperty<T>`, “last matching override wins”; place more specific overrides later.
 - Keep the number of style slots small. When in doubt, prefer theme tokens + documented fallbacks
   over adding per-component fields.
-

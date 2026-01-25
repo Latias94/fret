@@ -53,6 +53,9 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - [x] SDSR-130 Input: introduce `InputStyle` for chrome/background/border/ring (note: some chrome already resolves via `fret-ui-kit::recipes::input`).
 - [x] SDSR-131 Input: ensure focus-visible semantics for ring/border (aligned with ADR 0061).
 
+- [x] SDSR-140 Checkbox: migrate checked/focus-visible styling to `WidgetStates`.
+- [x] SDSR-141 Checkbox: add and export `CheckboxStyle`.
+
 ### P2 — Overlay/Menu Surfaces (Radix-like)
 
 - [x] SDSR-200 DropdownMenu items: unify hover/active/disabled/open states via `WidgetStates`.
@@ -102,7 +105,9 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-shadcn/src/menubar.rs`
 - `ecosystem/fret-ui-shadcn/src/tooltip.rs`
 - `ecosystem/fret-ui-shadcn/src/hover_card.rs`
+- `ecosystem/fret-ui-shadcn/src/checkbox.rs`
 - SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
 - SDSR-410 evidence: `WidgetStates::from_pressable(...)` in `ecosystem/fret-ui-kit/src/style/state.rs`, applied in `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`.
 - SDSR-300/310/320: `docs/shadcn-style-token-conventions.md`
-- SDSR-020: `docs/shadcn-style-override-patterns.md` + exported `*Style` structs in `ecosystem/fret-ui-shadcn/src/{button,toggle,tabs,input}.rs`
+- SDSR-020: `docs/shadcn-style-override-patterns.md` + exported `*Style` structs in `ecosystem/fret-ui-shadcn/src/{button,checkbox,toggle,tabs,input}.rs`
+- SDSR-140/141: `CheckboxStyle` + `WidgetStates` in `ecosystem/fret-ui-shadcn/src/checkbox.rs` and `ecosystem/fret-ui-shadcn/src/lib.rs`

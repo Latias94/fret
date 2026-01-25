@@ -101,7 +101,7 @@ pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use calendar::Calendar;
 pub use calendar_range::CalendarRange;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
-pub use checkbox::{Checkbox, checkbox};
+pub use checkbox::{Checkbox, CheckboxStyle, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
