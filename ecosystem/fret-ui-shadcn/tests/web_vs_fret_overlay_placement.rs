@@ -3237,6 +3237,70 @@ fn web_vs_fret_calendar_26_open_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_calendar_30_open_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "calendar-30",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+            use time::{Date, Month};
+
+            let trigger = Button::new("Jun 4 - 10, 2025")
+                .variant(ButtonVariant::Outline)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(224.0)))
+                        .h_px(MetricRef::Px(Px(36.0))),
+                );
+
+            let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
+            let popover = fret_ui_shadcn::Popover::new(open.clone())
+                .align(PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    |cx| trigger.into_element(cx),
+                    |cx| {
+                        let month: Model<CalendarMonth> = cx
+                            .app
+                            .models_mut()
+                            .insert(CalendarMonth::new(2025, Month::June));
+                        let selected: Model<DateRangeSelection> =
+                            cx.app.models_mut().insert(DateRangeSelection {
+                                from: Some(
+                                    Date::from_calendar_date(2025, Month::June, 4)
+                                        .expect("valid date"),
+                                ),
+                                to: Some(
+                                    Date::from_calendar_date(2025, Month::June, 10)
+                                        .expect("valid date"),
+                                ),
+                            });
+                        let calendar =
+                            fret_ui_shadcn::CalendarRange::new(month, selected).into_element(cx);
+
+                        fret_ui_shadcn::PopoverContent::new([calendar])
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))),
+                            )
+                            .into_element(cx)
+                    },
+                );
+
+            stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N3),
+                move |_cx| vec![label, popover],
+            )
+        },
+        SemanticsRole::Button,
+        Some("Jun 4 - 10, 2025"),
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_dialog_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "dropdown-menu-dialog",
@@ -17132,6 +17196,40 @@ fn web_vs_fret_drawer_demo_overlay_insets_match_tiny_viewport() {
                         .into_element(cx)
                 },
                 |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_32_open_drawer_insets_match() {
+    use fret_ui_headless::calendar::CalendarMonth;
+    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent, DrawerHeader};
+    use time::Month;
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "calendar-32",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Drawer::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Select date")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    let month: Model<CalendarMonth> = cx
+                        .app
+                        .models_mut()
+                        .insert(CalendarMonth::new(2025, Month::June));
+                    let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+                    let calendar = fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+
+                    DrawerContent::new(vec![DrawerHeader::new(vec![]).into_element(cx), calendar])
+                        .into_element(cx)
+                },
             )
         },
     );
