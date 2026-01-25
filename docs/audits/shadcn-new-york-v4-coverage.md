@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `253` (`56.5%`)
-- Keys not referenced by tests: `195`
+- Keys referenced by tests: `260` (`58.0%`)
+- Keys not referenced by tests: `188`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -42,10 +42,10 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
-- `form` (19; field composition + validation chrome)
+- `form` (13; remaining RHF/TanStack variants)
 - `typography` (13; baseline text metrics and prose defaults)
 - `input` (10; control chrome + stacking patterns)
-- `calendar` (1; primitives-heavy; tends to expose text metrics + grid layout edge cases)
+- `spinner` (9; control chrome + layout + visual alignment)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were:
 
@@ -80,19 +80,17 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## What to do next (recommended order)
 
-1. **Gate missing primitives-heavy widgets** first (high churn risk):
-   - Remaining calendar variants (1 missing): `calendar-hijri`.
-2. **Gate missing form composition + validation chrome** (high leverage):
+1. **Gate missing form composition + validation chrome** (high leverage):
    - `form-*` and any remaining `field-*` / `input-*` invalid variants
-3. **Gate missing medium-surface components** next:
+2. **Gate missing medium-surface components** next:
    - Carousel (`carousel-*`)
    - Typography breadth (`typography-*`)
-4. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
-5. **Add constrained viewport variants** for overlay-like components (if not already gated):
+3. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
+4. **Add constrained viewport variants** for overlay-like components (if not already gated):
    - menus: height/width clamp + scroll buttons
    - popovers/tooltips: flip/shift under low height
    - dialogs/sheets: insets under low height/width
-6. Keep `docs/audits/shadcn-new-york-v4-alignment.md` updated as behavior becomes audited (add
+5. Keep `docs/audits/shadcn-new-york-v4-alignment.md` updated as behavior becomes audited (add
    “Conformance gates” anchors and “Known gaps” notes).
 
 ## Common “coverage smells”

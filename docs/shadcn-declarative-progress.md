@@ -19,8 +19,26 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `253/448` (`56.5%`)
-- Next P0 gaps: `calendar-hijri` (non-Gregorian calendar + locale/RTL policy), then forms/field validation chrome and carousel.
+- Keys referenced by tests: `260/448` (`58.0%`)
+- Next P0 gaps: forms/field validation chrome, then carousel and typography breadth.
+
+## Near-Term Roadmap (shadcn-web v4/new-york-v4)
+
+Strategy: fill **breadth first** (one canonical viewport per page), then add a small set of targeted
+viewport/DPI stress variants for the highest-risk families (menus, listboxes, calendars, typography).
+
+P0 (next):
+
+- Gate `form-*` pages (RHF + TanStack variants) using Fret-native `FormState` while matching upstream layout/ARIA outputs.
+- Gate `carousel-*` pages (default first, then constrained viewport if policy changes).
+
+P1:
+
+- Gate remaining `typography-*`, `spinner-*`, and `item-*` pages (high-frequency primitives).
+
+P2:
+
+- Dedicated `chart-*` alignment push (large surface area; likely needs new audit notes + more selective gates).
 
 ## Scope
 

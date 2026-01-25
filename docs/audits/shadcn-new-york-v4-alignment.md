@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `253/448` keys referenced (`56.5%`)
+- shadcn-web `v4/new-york-v4`: `260/448` keys referenced (`58.0%`)
 
 ## Executive summary (current status + next targets)
 
@@ -40,21 +40,22 @@ These gates do **not** imply full parity; they are simply the most effective ear
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
-- `form` (19 variants): field composition + validation chrome + error state tokens.
-- `calendar` (12 variants): special modes and edge-case modifiers (see below).
+- `form` (13 variants): remaining RHF/TanStack pages (checkbox/select/radiogroup/complex/array/switch).
 - `typography` (13 variants): prose defaults + text metric edge cases.
 - `carousel` (6 variants): layout + snapping + spacing.
+- `spinner` / `item` (17 variants combined): smaller-but-frequent controls and list patterns that tend to
+  expose padding/centering drift.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Calendar dropdown caption + popover composition**
-   - Remaining: `calendar-hijri` (requires non-Gregorian calendar + locale/RTL policy).
-2. **Forms / Field validation chrome**
+1. **Forms / Field validation chrome**
    - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
-3. **Carousel**
+2. **Carousel**
    - Add a default gate first, then a constrained viewport gate if the layout policy changes.
-4. **Typography breadth**
+3. **Typography breadth**
    - Gate remaining typography pages that are sensitive to font metrics and baseline rounding.
+4. **Spinner + item patterns**
+   - Gate remaining `spinner-*` and `item-*` pages to catch padding/centering drift in common list rows.
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
 second wave (because we can keep the matrix small and stable).

@@ -455,6 +455,12 @@ fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {
     );
 }
 
+fn assert_rect_xwh_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) {
+    assert_close_px(&format!("{label} x"), actual.origin.x, expected.x, tol);
+    assert_close_px(&format!("{label} w"), actual.size.width, expected.w, tol);
+    assert_close_px(&format!("{label} h"), actual.size.height, expected.h, tol);
+}
+
 fn collect_subtree_nodes(ui: &UiTree<App>, root: NodeId, out: &mut Vec<NodeId>) {
     out.push(root);
     for child in ui.children(root) {
@@ -10555,6 +10561,449 @@ fn web_vs_fret_layout_card_with_form_width() {
     assert_close_px("card width", card.bounds.size.width, web_card.rect.w, 1.0);
 }
 
+fn web_find_by_id<'a>(root: &'a WebNode, id: &str) -> Option<&'a WebNode> {
+    find_first(root, &|n| {
+        n.id.as_deref() == Some(id) || n.attrs.get("id").is_some_and(|v| v == id)
+    })
+}
+
+fn web_find_by_tag_and_text_within<'a>(
+    root: &'a WebNode,
+    within: WebRect,
+    tag: &str,
+    text: &str,
+) -> Option<&'a WebNode> {
+    find_first(root, &|n| {
+        n.tag == tag && n.text.as_deref() == Some(text) && rect_contains(within, n.rect)
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FormControlKind {
+    Input,
+    Textarea,
+}
+
+fn assert_bug_report_form_demo_geometry_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_card = web_find_by_class_tokens(
+        &theme.root,
+        &[
+            "bg-card",
+            "text-card-foreground",
+            "rounded-xl",
+            "border",
+            "py-6",
+            "sm:max-w-md",
+        ],
+    )
+    .expect("web card root");
+
+    let web_title_input = find_all(&theme.root, &|n| n.tag == "input")
+        .into_iter()
+        .filter(|n| rect_contains(web_card.rect, n.rect))
+        .min_by(|a, b| {
+            a.rect
+                .y
+                .partial_cmp(&b.rect.y)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .expect("web title input");
+
+    let web_description_group = find_all(&theme.root, &|n| {
+        n.tag == "div"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("group/input-group"))
+    })
+    .into_iter()
+    .filter(|n| rect_contains(web_card.rect, n.rect))
+    .min_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    })
+    .expect("web description input-group");
+
+    let web_reset = web_find_by_tag_and_text_within(&theme.root, web_card.rect, "button", "Reset")
+        .expect("web reset button");
+    let web_submit =
+        web_find_by_tag_and_text_within(&theme.root, web_card.rect, "button", "Submit")
+            .expect("web submit button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let title: Model<String> = cx.app.models_mut().insert(String::new());
+        let description: Model<String> = cx.app.models_mut().insert(String::new());
+
+        let title_field = fret_ui_shadcn::Field::new(vec![
+            fret_ui_shadcn::FieldLabel::new("Bug Title").into_element(cx),
+            cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::TextField,
+                    label: Some(Arc::from(format!("Golden:{web_name}:title"))),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        fret_ui_shadcn::Input::new(title)
+                            .a11y_label("Bug Title")
+                            .placeholder("Bug title")
+                            .into_element(cx),
+                    ]
+                },
+            ),
+        ])
+        .into_element(cx);
+
+        let description_group = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!("Golden:{web_name}:description_group"))),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    fret_ui_shadcn::InputGroup::new(description)
+                        .textarea()
+                        .a11y_label("Description")
+                        .textarea_min_height(Px(96.0))
+                        .block_end(vec![
+                            fret_ui_shadcn::InputGroupText::new("0/100 characters")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        let description_field = fret_ui_shadcn::Field::new(vec![
+            fret_ui_shadcn::FieldLabel::new("Description").into_element(cx),
+            description_group,
+            fret_ui_shadcn::FieldDescription::new(
+                "Include steps to reproduce, expected behavior, and what actually happened.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx);
+
+        let card = fret_ui_shadcn::Card::new(vec![
+            fret_ui_shadcn::CardHeader::new(vec![
+                fret_ui_shadcn::CardTitle::new("Bug Report").into_element(cx),
+                fret_ui_shadcn::CardDescription::new(
+                    "Help us improve by reporting bugs you encounter.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            fret_ui_shadcn::CardContent::new(vec![
+                fret_ui_shadcn::FieldGroup::new(vec![title_field, description_field])
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            fret_ui_shadcn::CardFooter::new(vec![cx.row(
+                RowProps {
+                    layout: LayoutStyle::default(),
+                    gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&Theme::global(&*cx.app)),
+                    justify: MainAlign::End,
+                    align: CrossAlign::Center,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        fret_ui_shadcn::Button::new("Reset")
+                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                            .into_element(cx),
+                        fret_ui_shadcn::Button::new("Submit").into_element(cx),
+                    ]
+                },
+            )])
+            .into_element(cx),
+        ])
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_card.rect.w))),
+        )
+        .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!("Golden:{web_name}:card"))),
+                ..Default::default()
+            },
+            move |_cx| vec![card],
+        )]
+    });
+
+    let card = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some(&format!("Golden:{web_name}:card")),
+    )
+    .expect("fret card");
+    let title = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some(&format!("Golden:{web_name}:title")),
+    )
+    .expect("fret title input");
+    let description_group = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some(&format!("Golden:{web_name}:description_group")),
+    )
+    .expect("fret description group");
+    let reset =
+        find_semantics(&snap, SemanticsRole::Button, Some("Reset")).expect("fret reset button");
+    let submit =
+        find_semantics(&snap, SemanticsRole::Button, Some("Submit")).expect("fret submit button");
+
+    assert_close_px("card width", card.bounds.size.width, web_card.rect.w, 1.0);
+    assert_rect_xwh_close_px("title input", title.bounds, web_title_input.rect, 1.0);
+    assert_rect_xwh_close_px(
+        "description input-group",
+        description_group.bounds,
+        web_description_group.rect,
+        1.0,
+    );
+    assert_close_px(
+        "reset button height",
+        reset.bounds.size.height,
+        web_reset.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "submit button height",
+        submit.bounds.size.height,
+        web_submit.rect.h,
+        1.0,
+    );
+}
+
+fn assert_single_field_form_card_geometry_matches_web(
+    web_name: &str,
+    title: &str,
+    description: &str,
+    field_label: &str,
+    field_description: &str,
+    control_id: &str,
+    control_kind: FormControlKind,
+    primary_action: &str,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_card = web_find_by_class_tokens(
+        &theme.root,
+        &[
+            "bg-card",
+            "text-card-foreground",
+            "rounded-xl",
+            "border",
+            "py-6",
+            "sm:max-w-md",
+        ],
+    )
+    .expect("web card root");
+
+    let web_control = match control_kind {
+        FormControlKind::Input => web_find_by_id(&theme.root, control_id).expect("web input"),
+        FormControlKind::Textarea => web_find_by_id(&theme.root, control_id).expect("web textarea"),
+    };
+
+    let web_reset = web_find_by_tag_and_text_within(&theme.root, web_card.rect, "button", "Reset")
+        .expect("web reset button");
+    let web_primary =
+        web_find_by_tag_and_text_within(&theme.root, web_card.rect, "button", primary_action)
+            .expect("web primary button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<String> = cx.app.models_mut().insert(String::new());
+
+        let control = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::TextField,
+                label: Some(Arc::from(format!("Golden:{web_name}:control"))),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![match control_kind {
+                    FormControlKind::Input => fret_ui_shadcn::Input::new(model)
+                        .a11y_label(field_label)
+                        .placeholder("...")
+                        .into_element(cx),
+                    FormControlKind::Textarea => fret_ui_shadcn::Textarea::new(model)
+                        .a11y_label(field_label)
+                        .min_height(Px(120.0))
+                        .into_element(cx),
+                }]
+            },
+        );
+
+        let field = fret_ui_shadcn::Field::new(vec![
+            fret_ui_shadcn::FieldLabel::new(field_label).into_element(cx),
+            control,
+            fret_ui_shadcn::FieldDescription::new(field_description).into_element(cx),
+        ])
+        .into_element(cx);
+
+        let card = fret_ui_shadcn::Card::new(vec![
+            fret_ui_shadcn::CardHeader::new(vec![
+                fret_ui_shadcn::CardTitle::new(title).into_element(cx),
+                fret_ui_shadcn::CardDescription::new(description).into_element(cx),
+            ])
+            .into_element(cx),
+            fret_ui_shadcn::CardContent::new(vec![
+                fret_ui_shadcn::FieldGroup::new(vec![field]).into_element(cx),
+            ])
+            .into_element(cx),
+            fret_ui_shadcn::CardFooter::new(vec![cx.row(
+                RowProps {
+                    layout: LayoutStyle::default(),
+                    gap: fret_ui_kit::MetricRef::space(Space::N2).resolve(&Theme::global(&*cx.app)),
+                    justify: MainAlign::End,
+                    align: CrossAlign::Center,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        fret_ui_shadcn::Button::new("Reset")
+                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                            .into_element(cx),
+                        fret_ui_shadcn::Button::new(primary_action).into_element(cx),
+                    ]
+                },
+            )])
+            .into_element(cx),
+        ])
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_px(fret_ui_kit::MetricRef::Px(Px(web_card.rect.w))),
+        )
+        .into_element(cx);
+
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(format!("Golden:{web_name}:card"))),
+                ..Default::default()
+            },
+            move |_cx| vec![card],
+        )]
+    });
+
+    let card = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some(&format!("Golden:{web_name}:card")),
+    )
+    .expect("fret card");
+    let control = find_semantics(
+        &snap,
+        SemanticsRole::TextField,
+        Some(&format!("Golden:{web_name}:control")),
+    )
+    .expect("fret control");
+    let reset =
+        find_semantics(&snap, SemanticsRole::Button, Some("Reset")).expect("fret reset button");
+    let primary = find_semantics(&snap, SemanticsRole::Button, Some(primary_action))
+        .expect("fret primary button");
+
+    assert_close_px("card width", card.bounds.size.width, web_card.rect.w, 1.0);
+    assert_rect_xwh_close_px("control", control.bounds, web_control.rect, 1.0);
+    assert_close_px(
+        "reset button height",
+        reset.bounds.size.height,
+        web_reset.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        "primary button height",
+        primary.bounds.size.height,
+        web_primary.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_demo_geometry_matches_web() {
+    assert_bug_report_form_demo_geometry_matches_web("form-rhf-demo");
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_demo_geometry_matches_web() {
+    assert_bug_report_form_demo_geometry_matches_web("form-tanstack-demo");
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_input_geometry_matches_web() {
+    assert_single_field_form_card_geometry_matches_web(
+        "form-rhf-input",
+        "Profile Settings",
+        "Update your profile information below.",
+        "Username",
+        "This is your public display name. Must be between 3 and 10 characters. Must only contain letters, numbers, and underscores.",
+        "form-rhf-input-username",
+        FormControlKind::Input,
+        "Save",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_input_geometry_matches_web() {
+    assert_single_field_form_card_geometry_matches_web(
+        "form-tanstack-input",
+        "Profile Settings",
+        "Update your profile information below.",
+        "Username",
+        "This is your public display name. Must be between 3 and 10 characters. Must only contain letters, numbers, and underscores.",
+        "form-tanstack-input-username",
+        FormControlKind::Input,
+        "Save",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_rhf_textarea_geometry_matches_web() {
+    assert_single_field_form_card_geometry_matches_web(
+        "form-rhf-textarea",
+        "Personalization",
+        "Customize your experience by telling us more about yourself.",
+        "More about you",
+        "Tell us more about yourself. This will be used to help us personalize your experience.",
+        "form-rhf-textarea-about",
+        FormControlKind::Textarea,
+        "Save",
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_form_tanstack_textarea_geometry_matches_web() {
+    assert_single_field_form_card_geometry_matches_web(
+        "form-tanstack-textarea",
+        "Personalization",
+        "Customize your experience by telling us more about yourself.",
+        "More about you",
+        "Tell us more about yourself. This will be used to help us personalize your experience.",
+        "form-tanstack-textarea-about",
+        FormControlKind::Textarea,
+        "Save",
+    );
+}
+
 #[test]
 fn web_vs_fret_layout_field_input_geometry() {
     let web = read_web_golden("field-input");
@@ -14412,6 +14861,218 @@ fn web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web(
     let node_bounds = ui.debug_node_bounds(day.id).expect("fret day node bounds");
     assert_close_px("calendar day x", node_bounds.origin.x, web_day.rect.x, 3.0);
     assert_close_px("calendar day y", node_bounds.origin.y, web_day.rect.y, 3.0);
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web() {
+    let web = read_web_golden("calendar-hijri");
+    let theme = web_theme(&web);
+
+    fn parse_css_px(s: &str) -> Option<f32> {
+        s.strip_suffix("px")?.parse::<f32>().ok()
+    }
+
+    let web_rdp_root = web_find_by_class_token(&theme.root, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+    let web_padding_left = web_rdp_root
+        .computed_style
+        .get("paddingLeft")
+        .and_then(|v| parse_css_px(v))
+        .unwrap_or(0.0);
+    let web_border_left = web_rdp_root
+        .computed_style
+        .get("borderLeftWidth")
+        .and_then(|v| parse_css_px(v))
+        .unwrap_or(0.0);
+
+    let web_month_grid =
+        web_find_by_class_token(&theme.root, "rdp-month_grid").expect("web month grid");
+    let web_title = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label")
+        .as_str();
+
+    let web_prev = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Previous Month")
+    })
+    .expect("web prev-month button");
+    let web_next = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Next Month")
+    })
+    .expect("web next-month button");
+
+    const HIJRI_WEEKDAYS: [&str; 7] = [
+        "شنبه",
+        "یک\u{200c}شنبه",
+        "دوشنبه",
+        "سه\u{200c}شنبه",
+        "چهارشنبه",
+        "پنج\u{200c}شنبه",
+        "جمعه",
+    ];
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| HIJRI_WEEKDAYS.iter().any(|wd| label.starts_with(wd)))
+    });
+    assert_eq!(
+        web_day_buttons.len(),
+        42,
+        "expected a 6-week (42-day) grid for calendar-hijri"
+    );
+
+    let cell_size = parse_calendar_cell_size_px(&theme);
+
+    let chrome_override = {
+        let mut chrome = ChromeRefinement::default();
+        if (web_padding_left - 0.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N0);
+        } else if (web_padding_left - 12.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N3);
+        } else if (web_padding_left - 8.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N2);
+        }
+        if web_border_left >= 0.5 {
+            chrome = chrome.border_1();
+        }
+        chrome
+    };
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
+        use time::{Date, Month};
+
+        let selected_date = Date::from_calendar_date(2025, Month::June, 12).expect("valid date");
+        let month = SolarHijriMonth::from_gregorian(selected_date);
+
+        let month_model: Model<SolarHijriMonth> = cx.app.models_mut().insert(month);
+        let selected: Model<Option<Date>> = cx.app.models_mut().insert(Some(selected_date));
+
+        let mut cal = fret_ui_shadcn::CalendarHijri::new(month_model, selected)
+            .show_outside_days(true)
+            .refine_style(chrome_override);
+        if let Some(cell_size) = cell_size {
+            cal = cal.cell_size(cell_size);
+        }
+
+        vec![cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                padding: fret_core::Edges {
+                    left: Px(web_origin_x),
+                    top: Px(web_origin_y),
+                    right: Px(0.0),
+                    bottom: Px(0.0),
+                },
+                ..Default::default()
+            },
+            move |cx| vec![cal.into_element(cx)],
+        )]
+    });
+
+    let prev = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Go to the Previous Month"),
+    )
+    .expect("fret prev-month semantics node");
+    let next = find_semantics(&snap, SemanticsRole::Button, Some("Go to the Next Month"))
+        .expect("fret next-month semantics node");
+
+    let prev_bounds = ui.debug_node_bounds(prev.id).expect("prev bounds");
+    let next_bounds = ui.debug_node_bounds(next.id).expect("next bounds");
+    assert_close_px(
+        "calendar-hijri prev x",
+        prev_bounds.origin.x,
+        web_prev.rect.x,
+        3.0,
+    );
+    assert_close_px(
+        "calendar-hijri prev y",
+        prev_bounds.origin.y,
+        web_prev.rect.y,
+        3.0,
+    );
+    assert_close_px(
+        "calendar-hijri next x",
+        next_bounds.origin.x,
+        web_next.rect.x,
+        3.0,
+    );
+    assert_close_px(
+        "calendar-hijri next y",
+        next_bounds.origin.y,
+        web_next.rect.y,
+        3.0,
+    );
+
+    let title = find_semantics(&snap, SemanticsRole::Text, Some(web_title))
+        .expect("fret calendar-hijri title semantics node");
+    let web_title_node = find_first(&theme.root, &|n| n.text.as_deref() == Some(web_title))
+        .expect("web calendar-hijri title node");
+    let title_bounds = ui.debug_node_bounds(title.id).expect("title bounds");
+    // Title text width is font-metrics dependent (Persian shaping), so gate the center position.
+    let title_center_x = title_bounds.origin.x.0 + title_bounds.size.width.0 / 2.0;
+    let web_title_center_x = web_title_node.rect.x + web_title_node.rect.w / 2.0;
+    assert_close_px(
+        "calendar-hijri title center x",
+        Px(title_center_x),
+        web_title_center_x,
+        3.0,
+    );
+
+    for web_day in web_day_buttons {
+        let label = web_day.attrs.get("aria-label").expect("web day aria-label");
+        let fret_day = find_semantics(&snap, SemanticsRole::Button, Some(label.as_str()))
+            .unwrap_or_else(|| panic!("missing fret hijri day button label={label:?}"));
+        let fret_bounds = ui.debug_node_bounds(fret_day.id).expect("fret day bounds");
+
+        assert_close_px(
+            "calendar-hijri day w",
+            fret_bounds.size.width,
+            web_day.rect.w,
+            1.0,
+        );
+        assert_close_px(
+            "calendar-hijri day h",
+            fret_bounds.size.height,
+            web_day.rect.h,
+            1.0,
+        );
+        assert_close_px(
+            "calendar-hijri day x",
+            fret_bounds.origin.x,
+            web_day.rect.x,
+            3.0,
+        );
+        assert_close_px(
+            "calendar-hijri day y",
+            fret_bounds.origin.y,
+            web_day.rect.y,
+            3.0,
+        );
+    }
 }
 
 fn parse_calendar_title_label(label: &str) -> Option<(time::Month, i32)> {
