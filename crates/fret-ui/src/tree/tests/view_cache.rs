@@ -233,7 +233,7 @@ fn view_cache_notify_propagates_to_ancestor_cache_roots() {
 }
 
 #[test]
-fn view_cache_scroll_handle_invalidations_mark_cache_root_needs_rerender() {
+fn view_cache_scroll_handle_hit_test_only_invalidations_do_not_mark_cache_root_needs_rerender() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
@@ -267,8 +267,53 @@ fn view_cache_scroll_handle_invalidations_mark_cache_root_needs_rerender() {
     assert!(ui.nodes[boundary].invalidation.hit_test);
     assert!(ui.nodes[boundary].invalidation.paint);
     assert!(
+        !ui.nodes[boundary].view_cache_needs_rerender,
+        "scroll-handle hit-test-only invalidations should not force view-cache rerender"
+    );
+    assert!(
+        ui.should_reuse_view_cache_node(boundary),
+        "hit-test-only invalidations should allow view-cache reuse"
+    );
+    assert!(!ui.nodes[root].invalidation.paint);
+}
+
+#[test]
+fn view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let boundary = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![leaf]);
+
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.nodes[boundary].bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(10.0), fret_core::Px(10.0)),
+    );
+
+    for id in [root, boundary, leaf] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    ui.invalidate_with_source_and_detail(
+        leaf,
+        Invalidation::Layout,
+        UiDebugInvalidationSource::Other,
+        UiDebugInvalidationDetail::ScrollHandle,
+    );
+
+    assert!(ui.nodes[boundary].invalidation.layout);
+    assert!(ui.nodes[boundary].invalidation.paint);
+    assert!(
         ui.nodes[boundary].view_cache_needs_rerender,
-        "scroll handle changes can affect rendered output even without layout invalidations"
+        "layout-affecting scroll handle changes should force view-cache rerender"
     );
     assert!(!ui.should_reuse_view_cache_node(boundary));
     assert!(!ui.nodes[root].invalidation.paint);

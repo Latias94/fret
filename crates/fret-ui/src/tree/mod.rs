@@ -970,6 +970,7 @@ struct MeasureStackKey {
 impl<H: UiHost> UiTree<H> {
     fn invalidation_marks_view_dirty(
         source: UiDebugInvalidationSource,
+        inv: Invalidation,
         detail: UiDebugInvalidationDetail,
     ) -> bool {
         matches!(
@@ -977,7 +978,7 @@ impl<H: UiHost> UiTree<H> {
             UiDebugInvalidationSource::Notify
                 | UiDebugInvalidationSource::ModelChange
                 | UiDebugInvalidationSource::GlobalChange
-        ) || detail == UiDebugInvalidationDetail::ScrollHandle
+        ) || (detail == UiDebugInvalidationDetail::ScrollHandle && inv == Invalidation::Layout)
     }
 
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
@@ -3112,7 +3113,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                     hit_cache_root = Some(id);
                     did_stop = true;
-                    if Self::invalidation_marks_view_dirty(source, detail) {
+                    if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -3156,7 +3157,7 @@ impl<H: UiHost> UiTree<H> {
                     && n.view_cache.enabled
                 {
                     n.invalidation.mark(inv);
-                    if Self::invalidation_marks_view_dirty(source, detail) {
+                    if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -3219,7 +3220,7 @@ impl<H: UiHost> UiTree<H> {
             let already = visited.get(&id).copied().unwrap_or_default();
             if source != UiDebugInvalidationSource::Notify
                 && (already & needed) == needed
-                && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, detail))
+                && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, inv, detail))
             {
                 break;
             }
@@ -3251,7 +3252,7 @@ impl<H: UiHost> UiTree<H> {
                             .view_cache_invalidation_truncations
                             .saturating_add(1);
                     }
-                    if Self::invalidation_marks_view_dirty(source, detail) {
+                    if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -3296,7 +3297,7 @@ impl<H: UiHost> UiTree<H> {
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
                     if let Some(n) = self.nodes.get_mut(id) {
-                        if Self::invalidation_marks_view_dirty(source, detail) {
+                        if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
                         }
