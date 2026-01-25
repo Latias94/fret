@@ -638,6 +638,12 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV1::ResetDiagnostics => {
+                self.reset_diagnostics_ring_for_window(window);
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV1::CaptureBundle { label } => {
                 force_dump_label =
                     Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
@@ -1028,6 +1034,10 @@ impl UiDiagnosticsService {
         {
             self.pending_pick = None;
         }
+    }
+
+    fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
+        self.per_window.entry(window).or_default().clear();
     }
 
     pub fn update_inspect_hover(
@@ -1819,6 +1829,14 @@ impl WindowRing {
         self.last_pointer_position = Some(pointer.position());
     }
 
+    fn clear(&mut self) {
+        self.last_pointer_position = None;
+        self.events.clear();
+        self.snapshots.clear();
+        self.last_changed_models.clear();
+        self.last_changed_globals.clear();
+    }
+
     fn push_event(&mut self, cfg: &UiDiagnosticsConfig, event: RecordedUiEventV1) {
         self.events.push_back(event);
         while self.events.len() > cfg.max_events {
@@ -2208,6 +2226,7 @@ pub enum UiActionStepV1 {
         #[serde(default)]
         button: UiMouseButtonV1,
     },
+    ResetDiagnostics,
     MovePointer {
         target: UiSelectorV1,
     },
@@ -4587,6 +4606,18 @@ mod tests {
         assert!(
             !svc.wants_inspection_active(AppWindowId::default()),
             "scripts should not force inspection_active (allows view cache/paint cache during perf triage)"
+        );
+    }
+
+    #[test]
+    fn scripts_support_reset_diagnostics_step() {
+        let parsed: UiActionScriptV1 =
+            serde_json::from_str(r#"{"schema_version":1,"steps":[{"type":"reset_diagnostics"}]}"#)
+                .expect("parse reset_diagnostics step");
+        assert_eq!(parsed.schema_version, 1);
+        assert!(
+            matches!(parsed.steps.as_slice(), [UiActionStepV1::ResetDiagnostics]),
+            "expected reset_diagnostics step"
         );
     }
 

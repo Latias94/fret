@@ -22,6 +22,9 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 1 },
     {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-virtual-list-root" }
