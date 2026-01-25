@@ -482,24 +482,24 @@ impl OverlayController {
                 window_overlays::request_dismissible_popover_for_window(
                     app,
                     window,
-                    window_overlays::DismissiblePopoverRequest {
-                        id: request.id,
-                        root_name,
+                    window_overlays::DismissiblePopoverRequest::new(
+                        request.id,
                         trigger,
-                        dismissable_branches: request.dismissable_branches,
-                        consume_outside_pointer_events: request.consume_outside_pointer_events,
-                        disable_outside_pointer_events: request.disable_outside_pointer_events,
-                        close_on_window_focus_lost: request.close_on_window_focus_lost,
-                        close_on_window_resize: request.close_on_window_resize,
                         open,
-                        present: request.presence.present,
-                        initial_focus: request.initial_focus,
-                        on_open_auto_focus: request.on_open_auto_focus,
-                        on_close_auto_focus: request.on_close_auto_focus,
-                        on_dismiss_request: request.dismissible_on_dismiss_request,
-                        on_pointer_move: request.dismissible_on_pointer_move,
-                        children: request.children,
-                    },
+                        request.children,
+                    )
+                    .root_name(root_name)
+                    .dismissable_branches(request.dismissable_branches)
+                    .consume_outside_pointer_events(request.consume_outside_pointer_events)
+                    .disable_outside_pointer_events(request.disable_outside_pointer_events)
+                    .close_on_window_focus_lost(request.close_on_window_focus_lost)
+                    .close_on_window_resize(request.close_on_window_resize)
+                    .present(request.presence.present)
+                    .initial_focus(request.initial_focus)
+                    .on_open_auto_focus(request.on_open_auto_focus)
+                    .on_close_auto_focus(request.on_close_auto_focus)
+                    .on_dismiss_request(request.dismissible_on_dismiss_request)
+                    .on_pointer_move(request.dismissible_on_pointer_move),
                 );
             }
             OverlayKind::Modal => {
@@ -510,20 +510,16 @@ impl OverlayController {
                 window_overlays::request_modal_for_window(
                     app,
                     window,
-                    window_overlays::ModalRequest {
-                        id: request.id,
-                        root_name,
-                        trigger: request.trigger,
-                        close_on_window_focus_lost: request.close_on_window_focus_lost,
-                        close_on_window_resize: request.close_on_window_resize,
-                        open,
-                        present: request.presence.present,
-                        initial_focus: request.initial_focus,
-                        on_open_auto_focus: request.on_open_auto_focus,
-                        on_close_auto_focus: request.on_close_auto_focus,
-                        on_dismiss_request: request.dismissible_on_dismiss_request,
-                        children: request.children,
-                    },
+                    window_overlays::ModalRequest::new(request.id, open, request.children)
+                        .root_name(root_name)
+                        .trigger(request.trigger)
+                        .close_on_window_focus_lost(request.close_on_window_focus_lost)
+                        .close_on_window_resize(request.close_on_window_resize)
+                        .present(request.presence.present)
+                        .initial_focus(request.initial_focus)
+                        .on_open_auto_focus(request.on_open_auto_focus)
+                        .on_close_auto_focus(request.on_close_auto_focus)
+                        .on_dismiss_request(request.dismissible_on_dismiss_request),
                 );
             }
             OverlayKind::Tooltip => {
@@ -536,15 +532,12 @@ impl OverlayController {
                 window_overlays::request_tooltip_for_window(
                     app,
                     window,
-                    window_overlays::TooltipRequest {
-                        id: request.id,
-                        root_name,
-                        interactive: request.presence.interactive,
-                        trigger: request.trigger,
-                        on_dismiss_request: request.dismissible_on_dismiss_request,
-                        on_pointer_move: request.dismissible_on_pointer_move,
-                        children: request.children,
-                    },
+                    window_overlays::TooltipRequest::new(request.id, request.children)
+                        .root_name(root_name)
+                        .interactive(request.presence.interactive)
+                        .trigger(request.trigger)
+                        .on_dismiss_request(request.dismissible_on_dismiss_request)
+                        .on_pointer_move(request.dismissible_on_pointer_move),
                 );
             }
             OverlayKind::Hover => {
@@ -558,13 +551,13 @@ impl OverlayController {
                 window_overlays::request_hover_overlay_for_window(
                     app,
                     window,
-                    window_overlays::HoverOverlayRequest {
-                        id: request.id,
-                        root_name,
-                        interactive: request.presence.interactive,
+                    window_overlays::HoverOverlayRequest::new(
+                        request.id,
                         trigger,
-                        children: request.children,
-                    },
+                        request.children,
+                    )
+                    .root_name(root_name)
+                    .interactive(request.presence.interactive),
                 );
             }
             OverlayKind::ToastLayer => {
