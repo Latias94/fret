@@ -229,6 +229,40 @@ When diagnostics are enabled and a subtree is removed during GC, a single `bundl
 Diagnostics SHOULD prefer capturing debug paths at the time of removal/attribution (when the identity
 is still available), rather than trying to resolve paths after the fact from a pruned identity map.
 
+## Additional invariants (nested cache roots + ownership)
+
+This section is normative. These invariants exist to prevent the "randomly disappears" class of bugs
+in cached-subtree systems, and to keep future work (ADR 0190 / ADR 0182) incremental.
+
+### A) Subtree membership lists must be complete under nesting
+
+Contract:
+
+- For a ViewCache root `R`, its recorded subtree membership list MUST include *all* elements in the
+  retained subtree, including nested ViewCache roots and their descendants.
+- On cache-hit frames for `R`, liveness refresh MUST NOT depend on re-running declarative render for
+  nested cache roots. The outer root `R` is responsible for keeping the entire retained subtree alive.
+- If child-edge reachability drifts (e.g. missing/partial retained edges for a frame), the membership
+  list MUST still prevent premature collection. Such drift is a correctness bug, but should not turn
+  into user-visible "missing semantics" failures.
+
+Implementation note:
+
+- Fret already records ViewCache state key accesses to *all* cache roots on the active stack, so
+  touching the outer root's recorded state keys is sufficient to keep nested-root state alive.
+  Subtree membership lists serve the analogous role for element/node liveness bookkeeping.
+
+### B) Ownership is explicit; cross-root reparenting is not implicit
+
+Contract:
+
+- Touching an existing retained subtree MUST NOT implicitly reassign ownership across roots.
+  If an element is already owned by a different root, that mismatch MUST be surfaced via diagnostics;
+  it MUST NOT be "repaired" silently.
+- If the framework ever needs Flutter `GlobalKey`-like reparenting/teleportation across roots/layers,
+  it MUST be an explicit operation with a dedicated contract (ownership transfer event + diagnostics
+  attribution). This ADR intentionally does not define that operation.
+
 ## Alternatives considered
 
 1. **Keep the global stopgap forever** ("skip sweeping while reuse exists").
