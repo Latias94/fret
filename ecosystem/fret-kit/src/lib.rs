@@ -68,6 +68,11 @@ pub mod prelude {
     };
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
     pub use fret_ui_kit::declarative::ModelWatchExt;
+    #[cfg(not(feature = "shadcn"))]
+    pub use fret_ui_kit::{
+        UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+        UiSupportsLayout, ui,
+    };
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::mvu::{MessageRouter, Program as MvuProgram};
