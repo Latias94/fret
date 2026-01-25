@@ -31,9 +31,10 @@ Keep this list short and evidence-backed:
 - [x] OIA2-test-001 Dock drag closes/hides overlays (ADR 0072 baseline).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (dock drag overlay hygiene tests),
     `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- [ ] OIA2-test-002 Expand docking drag × overlay hygiene edges (ADR 0072).
+- [~] OIA2-test-002 Expand docking drag × overlay hygiene edges (ADR 0072).
   - Target: cover “start drag while submenu open / while capture active / cross-window hover window”.
-  - Evidence anchors (existing baseline): `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends`)
 - [x] OIA2-test-003 Viewport tool capture suppresses hover overlays/tooltips (ADR 0049 follow-up baseline).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (viewport capture suppression tests)
 - [x] OIA2-test-004 “Present vs interactive” close-transition invariants are locked by tests.

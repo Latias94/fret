@@ -6658,6 +6658,176 @@ fn dock_drag_restores_focus_when_focus_is_missing_on_drag_end() {
 }
 
 #[test]
+fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Frame 1: render base + show a hover overlay.
+    let (trigger, _underlay) = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .hover_overlays
+            .get(&(window, trigger))
+            .map(|h| h.layer)
+    });
+    let layer = layer.expect("hover overlay layer");
+    assert!(ui.is_layer_visible(layer));
+
+    // Frame 2: capture the pointer (viewport-like capture) and start a dock drag session.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    assert!(ui.captured().is_some(), "expected pointer capture");
+
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected hover overlay to be hidden during capture + dock drag"
+    );
+
+    // Frame 3: release capture; dock drag remains active so overlays should stay hidden.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: false,
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    assert!(ui.captured().is_none(), "expected capture release");
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected hover overlay to remain hidden while dock drag is active"
+    );
+
+    // Frame 4: end the drag; overlays can become visible again when re-requested.
+    app.cancel_drag(PointerId(7));
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open,
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        ui.is_layer_visible(layer),
+        "expected hover overlay to become visible again after dock drag ends"
+    );
+}
+
+#[test]
 fn pointer_capture_hides_hover_overlays_in_same_window() {
     let window = AppWindowId::default();
     let mut app = App::new();
