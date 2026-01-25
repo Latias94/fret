@@ -474,6 +474,7 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
         );
 
         let mut ripple_center: Option<Point> = None;
+        let mut saw_ripple_clip = false;
         for _ in 0..4 {
             app.advance_frame();
 
@@ -483,6 +484,11 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
 
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+            saw_ripple_clip |= scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::PushClipRRect { .. }));
 
             for op in scene.ops() {
                 let SceneOp::Quad {
@@ -535,6 +541,10 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
         let Some(ripple_center) = ripple_center else {
             panic!("expected a ripple circle quad in the scene");
         };
+        assert!(
+            saw_ripple_clip,
+            "expected ripple to be clipped to its state-layer bounds (scale={scale_factor})"
+        );
 
         assert!(
             (ripple_center.x.0 - press_at.x.0).abs() < 0.75
@@ -604,6 +614,7 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
         );
 
         let mut ripple_center: Option<Point> = None;
+        let mut saw_ripple_clip = false;
         for _ in 0..4 {
             app.advance_frame();
 
@@ -613,6 +624,11 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
 
             let mut scene = Scene::default();
             ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+            saw_ripple_clip |= scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::PushClipRRect { .. }));
 
             for op in scene.ops() {
                 let SceneOp::Quad {
@@ -665,6 +681,10 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
         let Some(ripple_center) = ripple_center else {
             panic!("expected a ripple circle quad in the scene");
         };
+        assert!(
+            saw_ripple_clip,
+            "expected ripple to be clipped to its state-layer bounds (scale={scale_factor})"
+        );
 
         assert!(
             (ripple_center.x.0 - press_at.x.0).abs() < 0.75

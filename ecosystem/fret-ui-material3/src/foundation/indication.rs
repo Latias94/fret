@@ -13,6 +13,7 @@ pub enum RippleClip {
     /// Clip the ripple to the component's shape (bounded ripple).
     Bounded,
     /// Do not clip the ripple (unbounded ripple).
+    #[allow(dead_code)]
     Unbounded,
 }
 

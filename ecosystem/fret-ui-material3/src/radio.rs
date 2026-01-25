@@ -765,7 +765,7 @@ impl Radio {
                             pressable_id,
                             now_frame,
                             Corners::all(Px(9999.0)),
-                            RippleClip::Unbounded,
+                            RippleClip::Bounded,
                             state_layer_color,
                             is_pressed,
                             state_layer_target,

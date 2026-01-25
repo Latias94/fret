@@ -118,6 +118,10 @@ Implication for Fret:
 - We should treat “gesture space” (window pointer positions) and “paint space” (ink bounds) as
   distinct, and keep their mapping explicit in the foundation APIs (e.g. the existing
   `material_ink_layer_for_pressable_with_ripple_bounds` helper, plus clear coordinate invariants).
+- Material Web v30 effectively clips the press ripple to the *ripple host bounds* (`overflow: hidden`),
+  and “unbounded” outcomes are achieved by choosing a larger / different state-layer host surface
+  (e.g. circular state-layer for Switch/Checkbox/Radio). For parity, Fret should clip the ripple to
+  the state-layer bounds shape by default, and reserve truly unbounded ripples for explicit opt-in.
 
 ### Motion scheme (spatial vs effects)
 

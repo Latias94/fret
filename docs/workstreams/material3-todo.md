@@ -223,7 +223,10 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] Ripple color is latched at press start (avoids hover/focus color drift during fade).
     - Evidence: `ecosystem/fret-ui-material3/src/foundation/indication.rs` (passes color into `RippleAnimator::start`),
       `ecosystem/fret-ui-material3/src/interaction/ripple.rs` (`RipplePaintFrame.color`).
-  - [ ] Clip + bounds parity for unbounded ripples (may require core paint/transform guidance).
+  - [x] Clip + bounds parity for state-layer ripples (Material Web-style bounded-by-state-layer).
+    - Evidence: `ecosystem/fret-ui-material3/src/checkbox.rs`, `ecosystem/fret-ui-material3/src/radio.rs`,
+      `ecosystem/fret-ui-material3/src/switch.rs` (use `RippleClip::Bounded` with circular state-layer bounds),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (asserts `SceneOp::PushClipRRect` is emitted).
   - [x] Ripple bounds/origin coordinate space is consistent under nested layout offsets.
     - Evidence: `ecosystem/fret-ui-material3/src/foundation/geometry.rs` (`down_origin`, `ripple_max_radius`),
       `ecosystem/fret-ui-material3/src/foundation/indication.rs` (translate local ripple bounds to absolute),
@@ -280,7 +283,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Checkbox (MVP: bool-only, state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/checkbox.rs` (`Checkbox`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_checkbox_*`).
-- [x] Switch (MVP: bool-only, thumb state layer + unbounded ripple)
+- [x] Switch (MVP: bool-only, thumb state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/switch.rs` (`Switch`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_*`).
 - [x] Radio (MVP: bool/group-value binding, state layer + bounded ripple, dot grow animation)
