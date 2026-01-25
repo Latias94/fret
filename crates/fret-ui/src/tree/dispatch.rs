@@ -1056,21 +1056,6 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(pos) = event_position(event)
         {
-            // Hover is only meaningful for precision pointers (mouse/pen). Touch should not drive
-            // hover transitions, because it can create "sticky" hover visuals and interaction
-            // flicker in policy layers (e.g. Material state layers).
-            let pointer_type = match event {
-                Event::Pointer(PointerEvent::Down { pointer_type, .. })
-                | Event::Pointer(PointerEvent::Up { pointer_type, .. })
-                | Event::Pointer(PointerEvent::Move { pointer_type, .. })
-                | Event::Pointer(PointerEvent::Wheel { pointer_type, .. })
-                | Event::Pointer(PointerEvent::PinchGesture { pointer_type, .. }) => {
-                    Some(*pointer_type)
-                }
-                _ => None,
-            };
-            let allow_hover_updates = !matches!(pointer_type, Some(fret_core::PointerType::Touch));
-
             // Hit-testing is performance-sensitive (especially for pointer move), but must remain
             // correct across discrete interactions like clicks where the pointer position can jump
             // substantially between events.
