@@ -413,12 +413,17 @@ impl ElementHostWidget {
             // the current visible window is outside the previously rendered overscan window,
             // ensure the nearest view-cache root re-renders on the next frame so it can rebuild
             // the visible items.
-            cx.tree.invalidate_with_source_and_detail(
+            //
+            // Important: avoid forcing an additional "contained relayout" pass in the current
+            // frame. We only need to mark the view-cache reuse gate as dirty and schedule a
+            // redraw; the rerender frame will rebuild children and propagate structural
+            // invalidations normally.
+            cx.tree.mark_nearest_view_cache_root_needs_rerender(
                 cx.node,
-                Invalidation::Layout,
                 UiDebugInvalidationSource::Notify,
                 UiDebugInvalidationDetail::ScrollHandleLayout,
             );
+            needs_redraw = true;
         }
 
         if needs_redraw && let Some(window) = cx.window {

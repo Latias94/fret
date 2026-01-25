@@ -1599,6 +1599,43 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    /// Mark the nearest view-cache root as "needs rerender" without forcing a layout invalidation walk.
+    ///
+    /// This is intended for barrier-driven widgets (virtual lists, scroll content, etc.) that can
+    /// detect a logical "window mismatch" during layout and need the *next frame* to rerun the
+    /// declarative render closure to rebuild children, but do not benefit from triggering an
+    /// additional contained relayout pass in the *current* frame.
+    pub(crate) fn mark_nearest_view_cache_root_needs_rerender(
+        &mut self,
+        node: NodeId,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        if !self.view_cache_active() {
+            return;
+        }
+
+        if !Self::invalidation_marks_view_dirty(source, detail) {
+            return;
+        }
+
+        let Some(root) = self.nearest_view_cache_root(node) else {
+            return;
+        };
+
+        let mut current: Option<NodeId> = Some(root);
+        while let Some(id) = current {
+            let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+            if let Some(n) = self.nodes.get_mut(id)
+                && n.view_cache.enabled
+            {
+                n.view_cache_needs_rerender = true;
+                self.mark_cache_root_dirty(id, source, detail);
+            }
+            current = next_parent;
+        }
+    }
+
     /// Repair invalidation propagation for newly mounted auto-sized cache roots.
     ///
     /// During declarative mounting we may discover `ViewCache` roots before their parent pointers
