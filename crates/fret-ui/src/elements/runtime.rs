@@ -133,6 +133,8 @@ pub struct WindowElementState {
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
     prepared_frame: FrameId,
+    #[cfg(any(test, feature = "diagnostics"))]
+    strict_ownership: bool,
     pub(super) prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) observed_models_rendered: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
@@ -186,6 +188,11 @@ pub struct NodeEntryRootOverwrite {
 }
 
 impl WindowElementState {
+    #[cfg(any(test, feature = "diagnostics"))]
+    pub(crate) fn set_strict_ownership(&mut self, strict: bool) {
+        self.strict_ownership = strict;
+    }
+
     fn prepare_for_frame(&mut self, frame_id: FrameId, lag_frames: u64) {
         if self.prepared_frame == frame_id {
             return;
@@ -628,6 +635,16 @@ impl WindowElementState {
                 }
             }
         }
+        #[cfg(any(test, feature = "diagnostics"))]
+        if self.strict_ownership {
+            if let Some(prev) = self.nodes.get(&id) {
+                assert_eq!(
+                    prev.root, entry.root,
+                    "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
+                    prev.root, entry.root
+                );
+            }
+        }
         self.nodes.insert(id, entry);
     }
 
@@ -914,5 +931,35 @@ impl DebugIdentitySegment {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "ownership root overwrite detected")]
+    fn strict_ownership_panics_on_root_overwrite() {
+        let mut state = WindowElementState::default();
+        state.set_strict_ownership(true);
+
+        let element = GlobalElementId(123);
+        state.set_node_entry(
+            element,
+            NodeEntry {
+                node: NodeId::default(),
+                last_seen_frame: FrameId(1),
+                root: GlobalElementId(1),
+            },
+        );
+        state.set_node_entry(
+            element,
+            NodeEntry {
+                node: NodeId::default(),
+                last_seen_frame: FrameId(1),
+                root: GlobalElementId(2),
+            },
+        );
     }
 }
