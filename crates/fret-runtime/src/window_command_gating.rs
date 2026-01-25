@@ -371,6 +371,40 @@ mod tests {
     }
 
     #[test]
+    fn set_snapshot_does_not_override_stack_top() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.focus_is_text_input = true;
+        let token = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.ui_has_modal = true;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input && !s.input_ctx().ui_has_modal),
+            "expected stack top to remain effective after set_snapshot"
+        );
+
+        svc.remove_pushed_snapshot(window, token)
+            .expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected base snapshot to become effective after popping stack"
+        );
+    }
+
+    #[test]
     fn pushed_snapshots_can_be_removed_out_of_order() {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
