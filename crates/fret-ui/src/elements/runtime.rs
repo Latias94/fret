@@ -29,7 +29,18 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
+    pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ViewCacheReuseRootElementsSample {
+    pub root: GlobalElementId,
+    pub node: Option<NodeId>,
+    pub elements_len: u32,
+    pub elements_head: Vec<GlobalElementId>,
+    pub elements_tail: Vec<GlobalElementId>,
 }
 
 #[derive(Default)]
@@ -681,6 +692,35 @@ impl WindowElementState {
                 })
                 .collect();
 
+        const ELEMENT_SAMPLE: usize = 16;
+        let view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample> =
+            view_cache_reuse_roots
+                .iter()
+                .map(|&root| {
+                    let elements = self.view_cache_elements_for_root(root).unwrap_or(&[]);
+                    let elements_len = elements.len().min(u32::MAX as usize) as u32;
+                    let elements_head: Vec<GlobalElementId> =
+                        elements.iter().take(ELEMENT_SAMPLE).copied().collect();
+                    let elements_tail: Vec<GlobalElementId> = if elements.len() > ELEMENT_SAMPLE {
+                        elements
+                            .iter()
+                            .skip(elements.len().saturating_sub(ELEMENT_SAMPLE))
+                            .copied()
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+
+                    ViewCacheReuseRootElementsSample {
+                        root,
+                        node: self.node_entry(root).map(|e| e.node),
+                        elements_len,
+                        elements_head,
+                        elements_tail,
+                    }
+                })
+                .collect();
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
             active_text_selection: self
@@ -716,6 +756,7 @@ impl WindowElementState {
                 .collect(),
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
+            view_cache_reuse_root_element_samples,
             node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
         }
     }

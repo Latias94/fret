@@ -3870,7 +3870,21 @@ pub struct ElementDiagnosticsSnapshotV1 {
     #[serde(default)]
     pub view_cache_reuse_root_element_counts: Vec<(u64, u32)>,
     #[serde(default)]
+    pub view_cache_reuse_root_element_samples: Vec<ElementViewCacheReuseRootElementsSampleV1>,
+    #[serde(default)]
     pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementViewCacheReuseRootElementsSampleV1 {
+    pub root: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub node: Option<u64>,
+    pub elements_len: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elements_tail: Vec<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3970,6 +3984,17 @@ impl ElementDiagnosticsSnapshotV1 {
                 .view_cache_reuse_root_element_counts
                 .into_iter()
                 .map(|(id, count)| (id.0, count))
+                .collect(),
+            view_cache_reuse_root_element_samples: snapshot
+                .view_cache_reuse_root_element_samples
+                .into_iter()
+                .map(|s| ElementViewCacheReuseRootElementsSampleV1 {
+                    root: s.root.0,
+                    node: s.node.map(|n| n.data().as_ffi()),
+                    elements_len: s.elements_len,
+                    elements_head: s.elements_head.into_iter().map(|id| id.0).collect(),
+                    elements_tail: s.elements_tail.into_iter().map(|id| id.0).collect(),
+                })
                 .collect(),
             node_entry_root_overwrites: snapshot
                 .node_entry_root_overwrites
