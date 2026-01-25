@@ -26,6 +26,8 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::interaction::state_layer::StateLayerAnimator;
+use crate::tokens::radio as radio_tokens;
+use crate::tokens::radio::RadioSizeTokens;
 
 /// Matches Material (and WAI-ARIA APG) `RadioGroup` orientation outcomes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -602,7 +604,7 @@ impl Radio {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let size = radio_size_tokens(&theme);
+            let size = radio_tokens::size_tokens(&theme);
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -707,6 +709,12 @@ impl Radio {
                         let is_hovered = enabled && st.hovered;
                         let is_focused = enabled && st.focused && focus_visible;
                         let interaction = interaction_state(is_pressed, is_hovered, is_focused);
+                        let tokens_interaction = match interaction {
+                            Interaction::None => radio_tokens::RadioInteraction::None,
+                            Interaction::Hovered => radio_tokens::RadioInteraction::Hovered,
+                            Interaction::Focused => radio_tokens::RadioInteraction::Focused,
+                            Interaction::Pressed => radio_tokens::RadioInteraction::Pressed,
+                        };
 
                         let checked = match &self.selection {
                             RadioSelectionModel::Bool(m) => {
@@ -721,10 +729,14 @@ impl Radio {
                                 .is_some_and(|v| v.as_ref() == value.as_ref()),
                         };
 
-                        let state_layer_target =
-                            radio_state_layer_target_opacity(&theme, checked, enabled, interaction);
+                        let state_layer_target = radio_tokens::state_layer_target_opacity(
+                            &theme,
+                            checked,
+                            enabled,
+                            tokens_interaction,
+                        );
                         let state_layer_color =
-                            radio_state_layer_color(&theme, checked, interaction);
+                            radio_tokens::state_layer_color(&theme, checked, tokens_interaction);
                         let indication_config = material_pressable_indication_config(
                             &theme,
                             Some(Px(size.state_layer.0 * 0.5)),
@@ -759,7 +771,8 @@ impl Radio {
                                 (rt.dot.value(), rt.dot.is_active())
                             });
 
-                        let ripple_base_opacity = radio_ripple_base_opacity(&theme, checked);
+                        let ripple_base_opacity =
+                            radio_tokens::pressed_state_layer_opacity(&theme, checked);
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -774,7 +787,8 @@ impl Radio {
                             dot_active,
                         );
 
-                        let icon_color = radio_icon_color(&theme, checked, enabled, interaction);
+                        let icon_color =
+                            radio_tokens::icon_color(&theme, checked, enabled, tokens_interaction);
                         let icon = radio_icon(cx, &theme, size, checked, icon_color, dot_scale);
 
                         let chrome = material_radio_chrome(cx, size, vec![overlay, icon]);
@@ -806,128 +820,6 @@ fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Interaction
     } else {
         Interaction::None
     }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
-#[derive(Debug, Clone, Copy)]
-struct RadioSizeTokens {
-    icon: Px,
-    state_layer: Px,
-}
-
-fn radio_size_tokens(theme: &Theme) -> RadioSizeTokens {
-    let icon = theme
-        .metric_by_key("md.comp.radio-button.icon.size")
-        .unwrap_or(Px(20.0));
-    let state_layer = theme
-        .metric_by_key("md.comp.radio-button.state-layer.size")
-        .unwrap_or(Px(40.0));
-    RadioSizeTokens { icon, state_layer }
-}
-
-fn radio_state_layer_target_opacity(
-    theme: &Theme,
-    checked: bool,
-    enabled: bool,
-    interaction: Interaction,
-) -> f32 {
-    if !enabled {
-        return 0.0;
-    }
-
-    let group = if checked { "selected" } else { "unselected" };
-    match interaction {
-        Interaction::Pressed => theme
-            .number_by_key(&format!(
-                "md.comp.radio-button.{group}.pressed.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        Interaction::Focused => theme
-            .number_by_key(&format!(
-                "md.comp.radio-button.{group}.focus.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        Interaction::Hovered => theme
-            .number_by_key(&format!(
-                "md.comp.radio-button.{group}.hover.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-        Interaction::None => 0.0,
-    }
-}
-
-fn radio_ripple_base_opacity(theme: &Theme, checked: bool) -> f32 {
-    let group = if checked { "selected" } else { "unselected" };
-    theme
-        .number_by_key(&format!(
-            "md.comp.radio-button.{group}.pressed.state-layer.opacity"
-        ))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
-}
-
-fn radio_state_layer_color(theme: &Theme, checked: bool, interaction: Interaction) -> Color {
-    let group = if checked { "selected" } else { "unselected" };
-    let key = match interaction {
-        Interaction::Pressed => format!("md.comp.radio-button.{group}.pressed.state-layer.color"),
-        Interaction::Focused => format!("md.comp.radio-button.{group}.focus.state-layer.color"),
-        Interaction::Hovered => format!("md.comp.radio-button.{group}.hover.state-layer.color"),
-        Interaction::None => format!("md.comp.radio-button.{group}.hover.state-layer.color"),
-    };
-    theme.color_by_key(&key).unwrap_or_else(|| {
-        theme
-            .color_by_key("md.sys.color.primary")
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
-    })
-}
-
-fn radio_icon_color(
-    theme: &Theme,
-    checked: bool,
-    enabled: bool,
-    interaction: Interaction,
-) -> Color {
-    if !enabled {
-        let (color_key, opacity_key) = if checked {
-            (
-                "md.comp.radio-button.disabled.selected.icon.color",
-                "md.comp.radio-button.disabled.selected.icon.opacity",
-            )
-        } else {
-            (
-                "md.comp.radio-button.disabled.unselected.icon.color",
-                "md.comp.radio-button.disabled.unselected.icon.opacity",
-            )
-        };
-
-        let base = theme
-            .color_by_key(color_key)
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-        let opacity = theme.number_by_key(opacity_key).unwrap_or(0.38);
-        return alpha_mul(base, opacity);
-    }
-
-    let group = if checked { "selected" } else { "unselected" };
-    let key = match interaction {
-        Interaction::Pressed => format!("md.comp.radio-button.{group}.pressed.icon.color"),
-        Interaction::Focused => format!("md.comp.radio-button.{group}.focus.icon.color"),
-        Interaction::Hovered => format!("md.comp.radio-button.{group}.hover.icon.color"),
-        Interaction::None => format!("md.comp.radio-button.{group}.icon.color"),
-    };
-
-    theme.color_by_key(&key).unwrap_or_else(|| {
-        theme
-            .color_by_key("md.sys.color.primary")
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
-    })
 }
 
 fn material_radio_chrome<H: UiHost>(
