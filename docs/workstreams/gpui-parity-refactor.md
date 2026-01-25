@@ -522,20 +522,14 @@ We implement a “cached subtree” primitive that:
 
 Implementation note (current state):
 
-- The declarative element GC in `render_root`/`render_dismissible_root_impl` is keyed off “was this element mounted
-  recently” (`last_seen_frame`), which conflicts with view-cache reuse (cached subtrees can remain present and
-  interactive while skipping re-mounting for many frames).
-- Current stopgap: while any cache root is in reuse, stale-node sweeping is conservatively disabled (a global gate)
-  to avoid deleting live cached subtrees. MVP2-cache-005 removes this by relying on parent-pointer repair +
-  reachability-based detachment checks + explicit cache-root liveness roots (layer roots + view-cache reuse roots),
-  and by tightening bookkeeping so cache-hit frames cannot “lose” liveness/attachment via stale root selection or
-  cross-root ownership overwrites.
-  - Status note: removing the stopgap currently regresses `ui-gallery-overlay-torture.json` under cache+shell reuse
-    (`click_no_semantics_match`); failing bundles also show the overlay layer root flipping `visible=false` while
-    GC removes subtrees with `root_layer=None`. Recent failing bundles additionally classify the removed subtree as
-    unreachable from both `layer_roots` and `view_cache_reuse_roots`, suggesting a higher-level attachment/liveness-root
-    selection issue rather than only a broken parent-pointer chain. Status (2026-01-24):
-    MVP2-cache-005 is blocked; keep this gate until it is green (see the TODO tracker evidence).
+- The declarative element GC now treats view-cache reuse as a performance optimization only: cache-hit frames MUST NOT
+  change lifetime semantics (ADR 0191).
+- The previous global stopgap (“skip sweep while any reuse roots exist”) has been removed as part of MVP2-cache-005 by
+  making liveness explicit under reuse:
+  - reachability roots include installed layer roots + view-cache reuse roots,
+  - cache-hit frames refresh liveness via per-root subtree membership lists,
+  - diagnostics attribute structural detaches (e.g. `set_children`) so “why was this swept?” is explainable from a
+    single failing bundle.
 
 Proposed ecosystem-facing API surface (runtime internal may differ):
 

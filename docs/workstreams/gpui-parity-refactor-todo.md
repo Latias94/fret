@@ -157,35 +157,43 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
   - Follow-up: remove the global "skip sweep when reuse exists" stopgap by relying on explicit liveness under cache-root reuse (dirty views + notify + cache key gates).
 
-- [!] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
-  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
+- [x] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
+  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC + cache-root subtree recording), `crates/fret-ui/src/elements/runtime.rs` (per-root subtree lists), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Contract: `docs/adr/0191-declarative-liveness-roots-and-gc-under-view-cache-reuse.md` (Accepted).
-  - Current evidence (stopgap disabled): the swept subtree that contains `ui-gallery-dialog-trigger` is classified as a fully-detached *island* at sweep time:
-    - `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false` in `removed_subtrees`.
-    - `root_path_edge_ui_contains_child` / `root_path_edge_frame_contains_child` remain `1` along the recorded parent chain, suggesting subtree-local edges are still self-consistent.
-
-    New evidence suggests the failure is primarily a **liveness-root membership / attachment bookkeeping** issue (an island becomes structurally detached), not only a broken parent-pointer chain:
-
-    - `trigger_element_in_view_cache_keep_alive=false` and `trigger_element_listed_under_reuse_root=null` for the sweep trigger element in the failing bundle. This suggests the element is not being retained via the view-cache keep-alive set nor listed under any reuse-root subtree element list at removal time.
-    - `root_root_parent_sever_*` attributes a prior detach event for the island root to `crates/fret-ui/src/declarative/mount.rs:1162:16` (a `set_children` write) at `root_root_parent_sever_frame_id=32`, before the sweep frame. After this detach, the island becomes unreachable, so GC can legally collect it when the global stopgap is disabled.
+  - Fix (v1):
+    - Removed the global “skip sweep while reuse exists” GC stopgap.
+    - Made liveness explicit under reuse via layer roots + view-cache reuse roots + per-root subtree membership lists (ADR 0191).
+    - Stabilized unkeyed element identity generation by using per-callsite counters (reduces accidental subtree swaps under conditional structure).
+  - Evidence (cache+shell, sweep enabled):
+    - `target/fret-diag-cache005-stopgap-removed-overlay-1769334929510/1769335008125-ui-gallery-overlay-torture/bundle.json`
+    - `target/fret-diag-cache005-stopgap-removed-sidebar-1769335037056/1769335040362-ui-gallery-sidebar-scroll-refresh/bundle.json`
+  - Evidence (stopgap disabled, before removal):
+    - `target/fret-diag-cache005-stopgap-disabled-overlay-1769334562794/1769334640506-ui-gallery-overlay-torture/bundle.json`
+    - `target/fret-diag-cache005-stopgap-disabled-sidebar-1769334672956/1769334676508-ui-gallery-sidebar-scroll-refresh/bundle.json`
   - Progress (v1):
-    - Repair parent pointers for nodes reachable from layer roots before running the declarative GC sweep (`UiTree::repair_parent_pointers_from_layer_roots`).
     - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness) as the foundation for removing the global stopgap gate.
     - GC reachability classification unions `UiTree` + `WindowFrame` retained child edges (unit test: `gc_reachability_unions_ui_and_window_frame_children` in `crates/fret-ui/src/declarative/mount.rs`).
-  - Remaining:
-    - The GC sweep still has a conservative global stopgap: if any cache root is in reuse, stale/detached nodes are not swept this frame.
-      Removing this currently regresses `ui-gallery-overlay-torture.json` (fails at step 10 with `click_no_semantics_match` under cache+shell).
-      Remove this once parent-pointer repair + reachability + explicit view-cache subtree liveness is proven sufficient under reuse.
-      - Anchor: `crates/fret-ui/src/declarative/mount.rs` (`view_cache_has_reuse_roots` guard in the GC retain pass).
+    - Record ViewCache root subtree element lists on cache-miss frames and touch them on cache-hit frames so liveness does not depend on "visited this frame".
+  - Historical notes (pre-fix):
+    - NOTE: this section is historical; the stopgap guard has been removed and the harnesses are green under cache+shell.
+      - Removed guard: `crates/fret-ui/src/declarative/mount.rs` (previous `view_cache_has_reuse_roots` gate).
     - Explain why a subtree that should still be live becomes unreachable from *both* liveness sources on the failing frame:
       - identify the `root_root_parent_sever_parent` node (map to element id + debug path + whether it is a cache root / reuse root),
       - verify whether the `set_children` call at `mount.rs:1162` represents an intentional cache-root child swap (and identify old/new child element identities),
-      - verify the expected cache root is present in `window_state.view_cache_reuse_roots()` and has a complete recorded subtree-element list (and whether it is being invalidated/cleared prematurely).
+      - verify the expected cache root is present in `window_state.view_cache_reuse_roots()` and has a *complete* recorded subtree-element list (and whether it is being invalidated/cleared prematurely).
+    - Ensure cache-root subtree element recording is complete even on cache-hit frames:
+      - `collect_declarative_elements_for_existing_subtree(..)` MUST be able to recover element ids without relying solely on `WindowFrame.instances` (cache hits may skip instances).
+      - Prefer the element runtime's node entries as an authoritative fallback (e.g. `WindowElementState::element_for_node(node)`), then re-run the stopgap-disabled harnesses.
+    - If overlay torture still fails under stopgap disabled, prioritize proving whether the missing semantics targets live under a nested `CachedSubtree` (inner ViewCache root) that is not being kept alive when an outer cache root hits:
+      - confirm whether the inner cache root appears in the outer root's recorded subtree-element list (and is therefore part of the keep-alive recursion),
+      - and whether the subtree becomes an island due to missing ownership/attachment bookkeeping rather than pure parent-pointer drift.
+    - Diagnostics follow-up: some failing bundles still cannot resolve `root_element_path` / `root_parent_element_path` (paths are `null`).
+      Prefer capturing debug paths at removal time (or extending the debug-path retention window) so cache-005 regressions stay explainable from a single bundle.
     - Verify we are not accidentally overwriting element-root ownership during “touch existing subtree” paths:
       - add debug-only diagnostics when updating `NodeEntry.root` for an element that already has a different `root`,
       - decide whether to preserve the original root (avoid cross-root pollution) or split bookkeeping per-root if overwrites are expected/legitimate.
-  - Next (ordered):
+  - Historical investigation plan (pre-fix):
     - Export/confirm the liveness roots on the failing frame: which layer roots are active (and whether “invisible” layers still count as liveness roots), plus the current `view_cache_reuse_roots` list.
     - Export the sever-parent mapping (parent node -> element id/path + cache-root flags) so the detach callsite can be tied back to the authoring UI structure.
     - Add debug-only diagnostics for `NodeEntry.root` overwrites (element + old_root + new_root + debug paths) to validate or falsify the “cross-root ownership overwrite” hypothesis.
@@ -213,16 +221,19 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
+    - Re-verified (2026-01-25): PASS with sweep enabled under cache+shell (stopgap removed):
+      - `target/fret-diag-cache005-stopgap-removed-overlay-1769334929510/1769335008125-ui-gallery-overlay-torture/bundle.json`
+      - `target/fret-diag-cache005-stopgap-removed-sidebar-1769335037056/1769335040362-ui-gallery-sidebar-scroll-refresh/bundle.json`
     - Re-verified (2026-01-24): PASS on this branch with the stopgap still enabled:
       - `target/fret-diag-overlay-torture-cache005-stopgap/1769240992350-ui-gallery-overlay-torture/bundle.json`
       - `target/fret-diag-sidebar-scroll-refresh-cache005-stopgap/1769241046228-ui-gallery-sidebar-scroll-refresh/bundle.json`
     - Re-verified (2026-01-24): PASS with `debug.overlay_policy_decisions` exported:
       - `target/fret-diag-overlay-torture-cache005-overlay-policy/1769266152963-ui-gallery-overlay-torture/bundle.json`
-  - Evidence (fail when stopgap is removed):
+  - Historical failing evidence (pre-fix):
     - Removing the `view_cache_has_reuse_roots` GC guard regresses `ui-gallery-overlay-torture.json` at step 10 (`click_no_semantics_match`):
       - `target/fret-diag-overlay-torture-cache005/1769240888633-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag-overlay-torture-cache005-newdiags/1769260341209-script-step-0010-click-no-semantics-match/bundle.json`
-    - Repro note (diagnostics-only): set `FRET_UI_DISABLE_VIEW_CACHE_GC_STOPGAP=1` to force the same behavior without editing code.
+    - Historical repro note: early iterations used `FRET_UI_DISABLE_VIEW_CACHE_GC_STOPGAP=1` to emulate stopgap removal; the env var has since been removed along with the stopgap.
       - `target/fret-diag-overlay-torture-cache005-stopgap-disabled/1769266528812-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag-overlay-torture-cache005-stopgap-disabled-path-edges/1769304660925-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag-overlay-torture-cache005-stopgap-disabled-vc-reachability/1769307484613-script-step-0010-click-no-semantics-match/bundle.json`
@@ -263,7 +274,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
         - Export cache-root `set_children` samples (child element id + best-effort debug path) so accidental subtree swaps are explainable from a single failing bundle:
           - `debug.cache_roots[*].children_last_set_{old,new}_elements_head`
           - `debug.cache_roots[*].children_last_set_{old,new}_elements_head_paths`
-      - Confirm whether parent-pointer repair is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the repair seed set if needed.
+      - Confirm whether liveness-root selection is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the liveness root set if needed.
     - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).

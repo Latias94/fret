@@ -17,6 +17,32 @@ This ADR locks the contract needed to:
 - keep cache-hit frames correct under multi-root overlays (ADR 0011, ADR 0067),
 - and keep the system extensible toward prepaint-driven ephemeral items (ADR 0190).
 
+## Goals
+
+- Make "cache-hit" a performance optimization only: it MUST NOT change lifetime semantics.
+- Define a deterministic liveness root set for GC under view-cache reuse (no frame-age guessing).
+- Make structural detaches explainable and attributable (callsite + owning root + membership).
+- Unblock removing the global "skip sweep under reuse" stopgap (workstream MVP2-cache-005).
+- Keep future refactors incremental: this contract must continue to hold as more work moves to
+  prepaint (ADR 0182) and prepaint-windowed surfaces (ADR 0190).
+
+## Terminology (normative)
+
+- **Element**: a stable identity (`GlobalElementId`) with optional local state keyed by `(id, TypeId)`.
+- **Node**: a retained UI tree node (`NodeId`) which may carry an element identity.
+- **Ownership root**: the element-runtime root id (`NodeEntry.root`) that "owns" an element/node entry.
+- **Liveness roots**: the root set used for reachability under GC.
+  - **Layer roots**: installed layer roots for the window (including invisible layers).
+  - **View-cache reuse roots**: cache-root elements that are marked as reused for this frame.
+- **ViewCache root**: an element/node that defines a reuse boundary and a cache key boundary (ADR 1152).
+- **Cache hit**: reusing a ViewCache root without re-running its declarative child render closure.
+- **Structural detach**: an explicit parent/child relationship removal (e.g. `set_children` dropping a
+  child, removing a layer root). Detach is the only semantic event that should make a subtree eligible
+  for collection (modulo lag).
+- **Island root**: a subtree root that is unreachable from *all* liveness roots at sweep time.
+- **Subtree membership list**: the per-reuse-root element list used to deterministically "touch" a
+  retained subtree on cache-hit frames.
+
 ## Non-normative reference patterns (best practice survey)
 
 These systems converge on the same core idea: **GC must be reachability/ownership driven, not frame-age driven**.
@@ -43,6 +69,13 @@ The overlay torture regression (when the global stopgap is disabled) demonstrate
 - Once it is an island, a reachability-based GC is allowed to collect it, and scripted clicks (or real pointer input) start failing as if the UI "randomly disappeared".
 
 In other words, the GC is correctly acting on the reachable graph it sees; the bug is that the ownership/attachment bookkeeping allowed a still-needed subtree to become structurally detached.
+
+In practice, the most common way for this to happen in a cache-hit system is **incomplete liveness bookkeeping under reuse**:
+
+- a cache root swaps or re-parents its child subtree (e.g. a content slot changes pages),
+- but the runtime fails to record a complete "subtree element list" for the new retained subtree,
+- so cache-hit frames do not "touch" some still-live elements (their `last_seen_frame` is not refreshed),
+- and once the lag window expires, the GC is allowed to sweep an otherwise interactive subtree.
 
 The best-practice implication (seen in Flutter/React/Compose/GPUI) is that optimizations must not create implicit structural detaches, and root membership must be explicit and diagnosable.
 
@@ -133,6 +166,49 @@ Rationale:
 - GPUI cache hits reuse recorded ranges without modifying the view graph; the view remains reachable from window roots and cannot "randomly disappear".
 - Flutter separates "temporarily inactive" from "disposed" via `_InactiveElements`; a subtree is not unmounted because it was not rebuilt.
 
+### 7) ViewCache subtree element lists are authoritative for liveness bookkeeping
+
+When a ViewCache root is reused, the runtime still needs an explicit, deterministic way to refresh liveness for the retained subtree without re-running declarative render.
+
+Contract:
+
+- For every ViewCache root (a `GlobalElementId` that may become a reuse root), the runtime MUST maintain a complete list of `GlobalElementId`s that belong to the retained subtree under that root.
+- The list MUST be refreshed on frames where the subtree is structurally rebuilt (cache-miss frames), and MUST be "touched" (last-seen updated) on cache-hit frames.
+- The list MUST NOT depend on "this frame's instances" being present: cache hits can legitimately skip instance creation for large portions of the subtree.
+- The list MUST be derivable from authoritative retained data:
+  - preferred: walk the retained node graph and recover element identity via the element runtime's node entries,
+  - allowed fallbacks: `WindowFrame.instances` and `UiTree::node_element(node)` when present.
+
+Implication:
+
+- If an interactive subtree becomes an island while reuse roots exist, and the subtree contains elements that are missing from the corresponding ViewCache subtree list, that is a bookkeeping bug and MUST be treated as a correctness regression until proven otherwise.
+
+## Alignment notes (how this maps to GPUI / Flutter)
+
+This section is non-normative, but it explains why the chosen contract is the "least surprising"
+and best-aligned choice for long-term extensibility.
+
+### GPUI (Zed) view caching
+
+- **The view graph is the liveness root set.** A cached view remains part of the window's view graph,
+  so it is still "owned" even when its output is reused.
+- **Cache hit still "touches" what matters.** GPUI-style reuse tracks accessed dependencies
+  (`accessed_entities`) and reuses prepaint/paint ranges while keeping dependency/state tracking
+  consistent.
+- **Implication for Fret**: our `view_cache_subtree_element_lists` are the local equivalent of the
+  "accessed set" needed to keep element runtime entries alive under reuse. The membership list must
+  be complete and deterministically touchable on cache-hit frames.
+
+### Flutter lifecycle / ownership
+
+- **Rebuild does not define lifetime.** Widgets rebuild freely; elements/render-objects live until
+  they are structurally removed.
+- **Inactive limbo exists.** Flutter explicitly models a subtree that is detached but not yet
+  disposed (`_InactiveElements`), then finalizes at the end of the frame (`BuildOwner.finalizeTree`).
+- **Visibility does not define lifetime.** A subtree can be offstage/invisible and still owned.
+- **Implication for Fret**: our GC-lag window is analogous to "inactive limbo", but it must be
+  driven by explicit detach + reachability, not by "not visited due to caching".
+
 ## Diagnostics and explainability (hard requirement)
 
 When diagnostics are enabled and a subtree is removed during GC, a single `bundle.json` MUST contain enough information to answer:
@@ -149,6 +225,9 @@ When diagnostics are enabled and a subtree is removed during GC, a single `bundl
    - best-effort attribution of the detach callsite (e.g. a parent `set_children` write) and the severed parent node's element/path, when available.
 5. **Was this a structural child swap?**
    - for cache roots, export a small sample of `set_children` "before/after" child element ids (and best-effort debug paths) so we can detect accidental subtree replacement that explains the disappearance.
+
+Diagnostics SHOULD prefer capturing debug paths at the time of removal/attribution (when the identity
+is still available), rather than trying to resolve paths after the fact from a pruned identity map.
 
 ## Alternatives considered
 
@@ -186,13 +265,12 @@ This ADR intentionally keeps the contract strict today, but it is designed to en
 
 1. Implement diagnostics for liveness roots and ownership overwrites.
 2. Make "touch existing subtree" update `last_seen_frame` without reassigning ownership.
-3. Re-run the overlay torture and sidebar refresh harnesses with the stopgap disabled.
-4. Remove the global "skip sweep while reuse exists" stopgap.
+3. Re-run the overlay torture and sidebar refresh harnesses with sweep enabled under reuse (stopgap removed).
 
 Success criteria:
 
-- `tools/diag-scripts/ui-gallery-overlay-torture.json` stays green under `cache+shell` with stopgap disabled.
-- `tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json` stays green under `cache+shell` with stopgap disabled.
+- `tools/diag-scripts/ui-gallery-overlay-torture.json` stays green under `cache+shell` with sweep enabled under reuse.
+- `tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json` stays green under `cache+shell` with sweep enabled under reuse.
 - Failing bundles remain explainable (diagnostics fields are present and actionable).
 
 ## References
@@ -203,7 +281,7 @@ Success criteria:
 - ADR 1151: identity debug paths + staged state: `docs/adr/1151-element-identity-debug-paths-and-frame-staged-element-state.md`
 - ADR 1152: ViewCache subtree reuse + state retention: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`
 - Workstream tracker: `docs/workstreams/gpui-parity-refactor-todo.md` (MVP2-cache-005)
-- Flutter lifecycle reference (optional pinned checkout): `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart`
-  - Anchors (as of the pinned checkout used during this workstream): `_InactiveElements` (~2099), `BuildOwner.finalizeTree` (~3339), `Element.deactivateChild` (~4632).
-- GPUI view caching reference (optional pinned checkout): `repo-ref/zed/crates/gpui/src/view.rs`, `repo-ref/zed/crates/gpui/src/window.rs`
-  - Anchors: `AnyView::cached` (~103), `reuse_prepaint` (~216), `reuse_paint` (~280), `WindowInvalidator.dirty_views` (~105), `Window::mark_view_dirty` (~1476).
+- Flutter lifecycle reference: `packages/flutter/lib/src/widgets/framework.dart` (Flutter upstream).
+  - Suggested anchors (may drift): `_InactiveElements`, `BuildOwner.finalizeTree`, `Element.deactivateChild`.
+- GPUI view caching reference: `crates/gpui/src/view.rs`, `crates/gpui/src/window.rs` (Zed upstream).
+  - Suggested anchors (may drift): `AnyView::cached`, `reuse_prepaint`, `reuse_paint`, `WindowInvalidator.dirty_views`.
