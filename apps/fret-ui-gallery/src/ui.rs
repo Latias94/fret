@@ -962,6 +962,15 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
+    let row_cache =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_ROW_CACHE").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let header_editing_row = cx
         .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
         .flatten();
@@ -1112,90 +1121,106 @@ fn preview_virtual_list_torture(
                 let index_u64 = index as u64;
                 let is_editing = editing_row == Some(index_u64);
 
-                let zebra = (index % 2) == 0;
-                let background = if is_editing {
-                    theme.color_required("accent")
-                } else if zebra {
-                    theme.color_required("muted")
-                } else {
-                    theme.color_required("background")
-                };
+                let build_row = |cx: &mut ElementContext<'_, App>| {
+                    let zebra = (index % 2) == 0;
+                    let background = if is_editing {
+                        theme.color_required("accent")
+                    } else if zebra {
+                        theme.color_required("muted")
+                    } else {
+                        theme.color_required("background")
+                    };
 
-                let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                    let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
 
-                let edit_row_for_activate = virtual_list_torture_edit_row.clone();
-                let edit_text_for_activate = virtual_list_torture_edit_text.clone();
-                let on_select_row: fret_ui::action::OnActivate =
-                    Arc::new(move |host, action_cx, _reason| {
-                        let _ = host
-                            .models_mut()
-                            .update(&edit_row_for_activate, |v| *v = Some(index_u64));
-                        let _ = host.models_mut().update(&edit_text_for_activate, |v| {
-                            *v = format!("Row {index_u64}");
+                    let edit_row_for_activate = virtual_list_torture_edit_row.clone();
+                    let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+                    let on_select_row: fret_ui::action::OnActivate =
+                        Arc::new(move |host, action_cx, _reason| {
+                            let _ = host
+                                .models_mut()
+                                .update(&edit_row_for_activate, |v| *v = Some(index_u64));
+                            let _ = host.models_mut().update(&edit_text_for_activate, |v| {
+                                *v = format!("Row {index_u64}");
+                            });
+                            host.request_redraw(action_cx.window);
                         });
-                        host.request_redraw(action_cx.window);
-                    });
-                let row_label = shadcn::Button::new(format!("Row {index}"))
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
-                    .on_activate(on_select_row.clone())
-                    .refine_layout(LayoutRefinement::default().flex_1())
-                    .into_element(cx);
-
-                let right = if is_editing {
-                    let mut props = fret_ui::element::TextInputProps::new(
-                        virtual_list_torture_edit_text.clone(),
-                    );
-                    props.a11y_label = Some(Arc::<str>::from("Inline edit"));
-                    props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
-                    props.placeholder = Some(Arc::<str>::from("Type to edit…"));
-                    props.layout.size.width = fret_ui::element::Length::Fill;
-
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N2)
-                            .items_center(),
-                        |cx| vec![cx.text_input(props)],
-                    )
-                } else {
-                    let edit_button = shadcn::Button::new("Edit")
-                        .variant(shadcn::ButtonVariant::Outline)
+                    let row_label = shadcn::Button::new(format!("Row {index}"))
+                        .variant(shadcn::ButtonVariant::Ghost)
                         .size(shadcn::ButtonSize::Sm)
-                        .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
-                        .on_activate(on_select_row)
+                        .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
+                        .on_activate(on_select_row.clone())
+                        .refine_layout(LayoutRefinement::default().flex_1())
                         .into_element(cx);
 
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |_cx| vec![edit_button],
-                    )
+                    let right = if is_editing {
+                        let mut props = fret_ui::element::TextInputProps::new(
+                            virtual_list_torture_edit_text.clone(),
+                        );
+                        props.a11y_label = Some(Arc::<str>::from("Inline edit"));
+                        props.test_id =
+                            Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
+                        props.placeholder = Some(Arc::<str>::from("Type to edit…"));
+                        props.layout.size.width = fret_ui::element::Length::Fill;
+
+                        stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .layout(LayoutRefinement::default().w_full())
+                                .gap(Space::N2)
+                                .items_center(),
+                            |cx| vec![cx.text_input(props)],
+                        )
+                    } else {
+                        let edit_button = shadcn::Button::new("Edit")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
+                            .on_activate(on_select_row)
+                            .into_element(cx);
+
+                        stack::hstack(
+                            cx,
+                            stack::HStackProps::default().gap(Space::N2).items_center(),
+                            |_cx| vec![edit_button],
+                        )
+                    };
+
+                    let mut container_props = decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(background))
+                            .p(Space::N2),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(height_hint)),
+                    );
+                    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                    cx.container(container_props, |cx| {
+                        vec![stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .layout(LayoutRefinement::default().w_full().h_full())
+                                .gap(Space::N2)
+                                .items_center(),
+                            |_cx| vec![row_label, right],
+                        )]
+                    })
                 };
 
-                let mut container_props = decl_style::container_props(
-                    theme,
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(background))
-                        .p(Space::N2),
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(height_hint)),
-                );
-                container_props.layout.overflow = fret_ui::element::Overflow::Clip;
-
-                cx.container(container_props, |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .gap(Space::N2)
-                            .items_center(),
-                        |_cx| vec![row_label, right],
-                    )]
-                })
+                if row_cache {
+                    let cache_key = index_u64 ^ ((is_editing as u64) << 63);
+                    cx.view_cache(
+                        fret_ui::element::ViewCacheProps {
+                            cache_key,
+                            ..Default::default()
+                        },
+                        |cx| vec![build_row(cx)],
+                    )
+                } else {
+                    build_row(cx)
+                }
             },
         );
 
