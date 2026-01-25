@@ -218,6 +218,15 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] List token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/list.rs`,
       `ecosystem/fret-ui-material3/src/list.rs`.
+  - [x] NavigationDrawer token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/navigation_drawer.rs`,
+      `ecosystem/fret-ui-material3/src/navigation_drawer.rs`.
+  - [x] NavigationBar token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/navigation_bar.rs`,
+      `ecosystem/fret-ui-material3/src/navigation_bar.rs`.
+  - [x] NavigationRail token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/navigation_rail.rs`,
+      `ecosystem/fret-ui-material3/src/navigation_rail.rs`.
   - [x] DropdownMenu token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/dropdown_menu.rs`,
       `ecosystem/fret-ui-material3/src/dropdown_menu.rs`.

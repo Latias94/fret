@@ -63,6 +63,8 @@ Current state in this worktree:
 - Pressable indication timing defaults (durations + standard easing) are centralized in
   `foundation::indication::material_pressable_indication_config` to avoid per-component drift.
 - A token import + audit pipeline exists to keep scalar tokens aligned with Material Web v30.
+- Typed token helper modules are landing per component (including navigation surfaces) to reduce
+  raw string usage and keep fallback behavior aligned with Material Web alias mapping.
 
 ## Compose Multiplatform Baseline (Reference Architecture)
 
