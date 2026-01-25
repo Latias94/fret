@@ -6008,6 +6008,141 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_close_transition_disables_safe_hover_observers_and_timers() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(700.0), Px(320.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ])),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+        ];
+
+        // Frame 1: closed.
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open (modal=true installs pointer occlusion and enables safe-hover policies).
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        let overlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, overlay_root).expect("overlay");
+        let layer = ui.node_layer(overlay_node).expect("overlay layer");
+
+        let info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == layer)
+            .expect("overlay layer info");
+        assert!(info.visible);
+        assert!(info.hit_testable);
+        assert_eq!(
+            info.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+        );
+        assert!(info.wants_pointer_move_events);
+        assert!(info.wants_timer_events);
+
+        // Frame 3: close the menu, but keep it present for the close transition.
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        let _root = render_frame_with_clickable_underlay_and_modal(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            underlay_clicked.clone(),
+            entries,
+        );
+
+        let info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == layer)
+            .expect("overlay layer info");
+        assert!(info.visible);
+        assert!(!info.hit_testable);
+        assert_eq!(
+            info.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
+        assert!(!info.wants_pointer_move_events);
+        assert!(!info.wants_timer_events);
+
+        // A pointer move during the close transition must not arm a submenu timer.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        let open_delay = menu::sub::MenuSubmenuConfig::default().open_delay;
+        let close_delay = menu::sub::MenuSubmenuConfig::default().close_delay;
+        assert!(
+            !effects.iter().any(|e| matches!(
+                e,
+                Effect::SetTimer { after, .. } if *after == open_delay || *after == close_delay
+            )),
+            "expected close transition to not arm submenu timers; effects={effects:?}"
+        );
+    }
+
+    #[test]
     fn dropdown_menu_submenu_wheel_scroll_brings_late_items_into_view() {
         use std::time::Duration;
 
