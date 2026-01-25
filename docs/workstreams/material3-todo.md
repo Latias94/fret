@@ -54,6 +54,50 @@ Prefer reusing these primitives over re-inventing per-component state precedence
   `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - Interactivity pseudoclasses contract (hover/pressed as paint-only): `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
 
+## Compose Baseline: Infrastructure vs Components
+
+This section exists to keep us honest about **what should be shared infrastructure** (to avoid
+per-component drift) vs **what should stay inside component recipes**.
+
+Compose Material3 provides a useful “how it’s factored” reference even though our runtime is not
+Compose. The key point is not copying APIs, but copying **which behaviors are centralized**.
+
+### Compose “infrastructure” (centralized policy)
+
+These files are primarily *shared policy primitives*, not one-off component layouts:
+
+- Theme + tokens: `MaterialTheme.kt`, `ColorScheme.kt`, `TonalPalette.kt`, `Shapes.kt`, `Typography.kt`
+- Scoped defaults: `ContentColor.kt` (Compose `LocalContentColor`), `Text.kt` (default text style helpers)
+- Ink + interactions: `Ripple.kt` (Indication), `PrecisionPointer.kt` (hover-capable pointer types)
+- Motion: `MotionScheme.kt` (spatial vs effects specs)
+- Touch target: `InteractiveComponentSize.kt` (minimum touch target policy)
+- Surfaces: `Surface.kt` (elevation/tonal overlay/shadow conventions)
+
+### Fret mapping (where each thing should live)
+
+- `crates/fret-ui` (mechanisms)
+  - Pointer classification + hover semantics (precision pointers; ignore touch for hover)
+  - Paint primitives that are design-system agnostic (state layer / ripple)
+  - Layout + rounding guarantees when required (pixel snapping, stable structure guidance)
+- `ecosystem/fret-ui-material3` foundation (Material policy)
+  - Token namespaces + strict fallback chain (`md.comp.*` → `md.sys.*`)
+  - Indication orchestration (pressed/hover/focus state layer + ripple rules)
+  - MotionScheme mapping (token numbers → animator configs)
+  - Content defaults (Material `contentColor` conventions; disabled alpha)
+  - Interactive size policy (min touch target enforcement)
+  - Elevation policy (MD3 levels → shadows + tonal overlays)
+- `ecosystem/fret-ui-material3` components (recipes)
+  - Structure/layout + semantics + focus wiring
+  - Measurement-driven visuals (indicator placement, thumb bounds) via shared probes
+
+### Backlog extracted from the comparison
+
+- [ ] Add a `LocalTextStyle`-like scoped default helper in Material foundation (text style + icon size).
+- [ ] Land `foundation::elevation` (shadow + tonal overlay) and migrate `Surface`-like containers.
+- [ ] Decide the public surface for hoistable interaction sources (if any), and standardize “pressed origin” latching.
+- [ ] Audit which parts of minimum touch target policy should become a core `fret-ui` mechanism vs remain Material-only.
+- [ ] Decide whether we need a core pixel-snapping policy hook for non-1.0 scale factors (radio/checkbox drift class).
+
 ## Tracking Checklist
 
 ## Progress (completed)
