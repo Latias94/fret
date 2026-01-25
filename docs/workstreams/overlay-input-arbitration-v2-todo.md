@@ -28,30 +28,37 @@ Keep this list short and evidence-backed:
 
 ## P0 — Conformance Suite Expansion (Hard-to-change Boundaries)
 
-- [ ] OIA2-test-001 Expand docking drag × overlay hygiene edges (ADR 0072).
+- [x] OIA2-test-001 Dock drag closes/hides overlays (ADR 0072 baseline).
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (dock drag overlay hygiene tests),
+    `docs/adr/0072-docking-interaction-arbitration-matrix.md`
+- [ ] OIA2-test-002 Expand docking drag × overlay hygiene edges (ADR 0072).
   - Target: cover “start drag while submenu open / while capture active / cross-window hover window”.
-  - Evidence anchors (existing): `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`, `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- [ ] OIA2-test-002 Expand viewport tool capture vs hover overlays/tooltips (ADR 0049 follow-up).
-  - Target: ensure capture sessions suppress incidental hover overlays deterministically across windows.
-  - Evidence anchors (existing): `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
-- [ ] OIA2-test-003 Add “present vs interactive” regression coverage for menu-like overlays under close transitions.
-  - Target: observer requests are disabled while `interactive=false` and click-through invariants hold.
-  - Evidence anchors (existing): `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+  - Evidence anchors (existing baseline): `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+- [x] OIA2-test-003 Viewport tool capture suppresses hover overlays/tooltips (ADR 0049 follow-up baseline).
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (viewport capture suppression tests)
+- [x] OIA2-test-004 “Present vs interactive” close-transition invariants are locked by tests.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+    (`non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_animation`,
+    `non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_while_closing`,
+    `non_modal_overlay_does_not_request_outside_press_observer_while_closing`,
+    `tooltip_does_not_request_observers_while_closing`,
+    `hover_overlay_is_click_through_while_closing`)
 
 ## P0 — Diagnostics & Debuggability
 
-- [ ] OIA2-diag-010 Add a stable “hit-test scope roots” diagnostic (modal barrier + pointer occlusion + capture owner).
-  - Target: enable scripted comparisons without relying on `Debug` formatting.
-  - Evidence anchors (existing): `crates/fret-ui/src/tree/mod.rs` (`debug_hit_test`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- [x] OIA2-diag-010 Hit-test scope roots are exposed in diagnostics (baseline).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`debug_hit_test`),
+    `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- [ ] OIA2-diag-011 Add stable labels for scope roots (avoid relying on `Debug` formatting).
+  - Target: scripted comparisons remain resilient to formatting changes.
 
 ## P0 — Policy Normalization (Reduce Future Refactor Risk)
 
-- [ ] OIA2-pol-020 Continue consolidating menu-like overlay invariants into shared helpers.
-  - Target: normalize “visibility, hit-testability, observer flags, and occlusion” beyond dismissible popovers.
-  - Evidence anchors (existing): `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- [~] OIA2-pol-020 Consolidate menu-like overlay invariants into shared helpers.
+  - Status: partially consolidated; keep reducing special cases.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
 
 ## Notes
 
 - Keep mechanism contracts in `crates/*` and policy in `ecosystem/*`.
 - Prefer adding tests before large refactors; conformance tests are the “guard rails” for fearless changes.
-
