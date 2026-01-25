@@ -9,6 +9,7 @@ pub enum WidgetState {
     Focused = 1 << 3,
     FocusVisible = 1 << 4,
     Selected = 1 << 5,
+    Open = 1 << 6,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -25,6 +26,7 @@ impl WidgetStates {
     pub const FOCUSED: Self = Self(WidgetState::Focused as u16);
     pub const FOCUS_VISIBLE: Self = Self(WidgetState::FocusVisible as u16);
     pub const SELECTED: Self = Self(WidgetState::Selected as u16);
+    pub const OPEN: Self = Self(WidgetState::Open as u16);
 
     pub const fn contains(self, other: Self) -> bool {
         (self.0 & other.0) == other.0
