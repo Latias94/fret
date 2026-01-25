@@ -137,7 +137,7 @@ impl OverlayRequest {
         trigger: GlobalElementId,
         open: Model<bool>,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
+        children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         Self {
             kind: OverlayKind::NonModalDismissible,
@@ -156,7 +156,7 @@ impl OverlayRequest {
             initial_focus: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
-            children,
+            children: children.into_iter().collect(),
             toast_layer: None,
         }
     }
@@ -170,7 +170,7 @@ impl OverlayRequest {
         trigger: GlobalElementId,
         open: Model<bool>,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
+        children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         let mut req = Self::dismissible_popover(id, trigger, open, presence, children);
         req.consume_outside_pointer_events = true;
@@ -183,7 +183,7 @@ impl OverlayRequest {
         trigger: Option<GlobalElementId>,
         open: Model<bool>,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
+        children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         Self {
             kind: OverlayKind::Modal,
@@ -202,7 +202,7 @@ impl OverlayRequest {
             initial_focus: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
-            children,
+            children: children.into_iter().collect(),
             toast_layer: None,
         }
     }
@@ -210,7 +210,7 @@ impl OverlayRequest {
     pub fn tooltip(
         id: GlobalElementId,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
+        children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         Self {
             kind: OverlayKind::Tooltip,
@@ -229,7 +229,7 @@ impl OverlayRequest {
             initial_focus: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
-            children,
+            children: children.into_iter().collect(),
             toast_layer: None,
         }
     }
