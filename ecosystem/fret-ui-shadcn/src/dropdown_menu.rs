@@ -4968,6 +4968,8 @@ mod tests {
             "expected modal dropdown-menu to install pointer occlusion while open"
         );
 
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+
         // Begin close transition (present=true, interactive=false).
         let _ = app.models_mut().update(&open, |v| *v = false);
 
@@ -4993,6 +4995,25 @@ mod tests {
             fret_ui::tree::PointerOcclusion::None,
             "expected close transition to drop pointer occlusion (click-through)"
         );
+
+        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        let overlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, overlay_root).expect("overlay");
+        let layer = ui.node_layer(overlay_node).expect("overlay layer");
+        let close_info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == layer)
+            .expect("overlay layer info");
+        assert!(close_info.visible);
+        assert!(!close_info.hit_testable);
+        assert_eq!(
+            close_info.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
+        assert!(!close_info.wants_pointer_move_events);
+        assert!(!close_info.wants_timer_events);
 
         let underlay_id = underlay_id_out.get().expect("underlay element id");
         let underlay_node =
