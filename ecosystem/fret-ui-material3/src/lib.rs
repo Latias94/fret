@@ -48,6 +48,13 @@ pub use tooltip::{PlainTooltip, TooltipAlign, TooltipProvider, TooltipSide};
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
+    use fret_app::App;
+    use fret_ui::Theme;
+
+    use crate::tokens::v30::{ColorSchemeOptions, TypographyOptions, theme_config_with_colors};
+
     fn assert_material_only_tokens(source: &str) {
         let forbidden_literals = [
             "color_required(\"card\")",
@@ -106,6 +113,95 @@ mod tests {
 
         for src in sources {
             assert_material_only_tokens(src);
+        }
+    }
+
+    fn extract_md_literal_keys(source: &str) -> HashSet<&str> {
+        let mut out = HashSet::new();
+        let mut cursor: usize = 0;
+        while let Some(idx) = source[cursor..].find("\"md.") {
+            let start = cursor + idx + 1;
+            let rest = &source[start..];
+            let Some(end) = rest.find('"') else {
+                break;
+            };
+            let key = &source[start..start + end];
+            cursor = start + end + 1;
+            if key.contains('{') || key.contains('}') || key.contains(' ') || key.contains('\n') {
+                continue;
+            }
+            // Skip namespace/prefix strings like `md.comp.button` / `md.comp.checkbox.selected`
+            // that are used to build other keys.
+            // - `md.sys.*` tokens can be as short as `md.sys.color.primary` (3 dots).
+            // - `md.comp.*` tokens are always deeper (at least 4 dots).
+            let dot_count = key.matches('.').count();
+            if key.starts_with("md.comp.") {
+                if dot_count < 4 {
+                    continue;
+                }
+            } else if dot_count < 3 {
+                continue;
+            }
+            out.insert(key);
+        }
+        out
+    }
+
+    fn token_resolves(theme: &Theme, key: &str) -> bool {
+        theme.color_by_key(key).is_some()
+            || theme.metric_by_key(key).is_some()
+            || theme.number_by_key(key).is_some()
+            || theme.duration_ms_by_key(key).is_some()
+            || theme.easing_by_key(key).is_some()
+            || theme.corners_by_key(key).is_some()
+            || theme.text_style_by_key(key).is_some()
+    }
+
+    #[test]
+    fn material3_literal_md_tokens_resolve_in_v30_theme() {
+        let cfg =
+            theme_config_with_colors(TypographyOptions::default(), ColorSchemeOptions::default());
+
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+        let theme = Theme::global(&app);
+
+        let sources = [
+            include_str!("button.rs"),
+            include_str!("checkbox.rs"),
+            include_str!("dialog.rs"),
+            include_str!("dropdown_menu.rs"),
+            include_str!("icon_button.rs"),
+            include_str!("list.rs"),
+            include_str!("menu.rs"),
+            include_str!("modal_navigation_drawer.rs"),
+            include_str!("navigation_bar.rs"),
+            include_str!("navigation_drawer.rs"),
+            include_str!("navigation_rail.rs"),
+            include_str!("radio.rs"),
+            include_str!("snackbar.rs"),
+            include_str!("switch.rs"),
+            include_str!("tabs.rs"),
+            include_str!("text_field.rs"),
+            include_str!("tooltip.rs"),
+            include_str!("foundation/indication.rs"),
+            include_str!("foundation/focus_ring.rs"),
+            include_str!("foundation/geometry.rs"),
+            include_str!("foundation/tokens.rs"),
+        ];
+
+        let mut keys: Vec<&str> = sources
+            .iter()
+            .flat_map(|src| extract_md_literal_keys(src))
+            .collect();
+        keys.sort_unstable();
+        keys.dedup();
+
+        for key in keys {
+            assert!(
+                token_resolves(&theme, key),
+                "md token not found in v30 theme config: {key}"
+            );
         }
     }
 

@@ -99,7 +99,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 
 ### Token System
 
-- [ ] Decide canonical token key namespace for Material (proposal: `md.sys.*`, `md.comp.*`).
+- [x] Decide canonical token key namespace for Material (proposal: `md.sys.*`, `md.comp.*`).
+  - Evidence: literal key usage throughout `ecosystem/fret-ui-material3/src/*` and the strict
+    resolver `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`.
 - [x] Provide a baseline, hand-authored v30 token preset injection (state/motion/shape/typescale subset).
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`, `theme_config`).
 - [x] Align Switch handle tokens with Material Web v30 (`*.handle.width/height`, not `*.handle.size`).

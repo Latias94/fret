@@ -316,7 +316,9 @@ Status notes:
   - default/hover/focus/pressed/disabled/selected,
   - light/dark,
   - (later) Expressive variants.
-- [ ] Add scripted interaction tests where feasible.
+- [x] Add scripted interaction tests where feasible.
+  - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_signature`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`*_pressed_scene_structure_is_stable`).
 - [x] Add token coverage tooling to detect drift:
   - `cargo run -p fret-ui-material3 --bin material3_token_audit -- --material-web-dir <path>`
   - This reports:

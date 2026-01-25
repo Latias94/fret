@@ -329,15 +329,10 @@ impl PlainTooltip {
             .metric_by_key("md.comp.plain-tooltip.container.shape")
             .unwrap_or(Px(4.0));
         let corner_radii = Corners::all(radius);
-        let elevation = theme
-            .metric_by_key("md.comp.plain-tooltip.container.elevation")
-            .or_else(|| theme.metric_by_key("md.comp.rich-tooltip.container.elevation"))
-            .unwrap_or(Px(0.0));
+        // Material Web v30 plain tooltip tokens do not include elevation; keep it flat by default.
+        let elevation = Px(0.0);
         let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
-        let shadow_color = theme
-            .color_by_key("md.comp.plain-tooltip.container.shadow-color")
-            .or_else(|| theme.color_by_key("md.comp.rich-tooltip.container.shadow-color"))
-            .unwrap_or_else(|| resolver.color_sys("md.sys.color.shadow"));
+        let shadow_color = resolver.color_sys("md.sys.color.shadow");
         let shadow =
             shadow_for_elevation_with_color(&theme, elevation, Some(shadow_color), corner_radii);
 

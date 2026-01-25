@@ -2109,6 +2109,13 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.menu.container.color",
         "md.sys.color.surface-container",
     );
+    // Not a Material Web v30 token, but a convenient escape hatch for renderer-level shadow tuning.
+    // Defaults to `md.sys.color.shadow`.
+    copy_color(
+        cfg,
+        "md.comp.menu.container.shadow-color",
+        "md.sys.color.shadow",
+    );
     copy_color(
         cfg,
         "md.comp.menu.divider.color",
@@ -2543,6 +2550,13 @@ fn inject_comp_dialog_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.dialog.container.color",
         "md.sys.color.surface-container-high",
+    );
+    // Not a Material Web v30 token, but a convenient escape hatch for renderer-level shadow tuning.
+    // Defaults to `md.sys.color.shadow`.
+    copy_color(
+        cfg,
+        "md.comp.dialog.container.shadow-color",
+        "md.sys.color.shadow",
     );
     copy_color(
         cfg,
