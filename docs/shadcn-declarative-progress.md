@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `273/448` (`60.9%`)
-- Next P0 gaps: carousel, then typography breadth and spinner/item patterns.
+- Keys referenced by tests: `279/448` (`62.3%`)
+- Next P0 gaps: typography breadth, then spinner/item patterns.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,11 +38,11 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
-- Gate `carousel-*` pages (default first, then constrained viewport if policy changes).
+- Gate remaining `typography-*` pages (geometry-first; keep font-metrics sensitivity in check).
 
 P1:
 
-- Gate remaining `typography-*`, `spinner-*`, and `item-*` pages (high-frequency primitives).
+- Gate remaining `spinner-*` and `item-*` pages (high-frequency primitives).
 
 P2:
 
@@ -332,7 +332,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
 | calendar | `calendar` | Present | Unreviewed | Headless month grid lives in `fret-ui-kit` (`headless::calendar`); UI surface lives in `fret-ui-shadcn` |
 | card | `card` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`card-with-form`) |
-| carousel | `carousel` | Defer | Unreviewed | Not editor-critical |
+| carousel | `carousel` | Present | Unreviewed | Layout-only; shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`carousel-*`) |
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |
 | checkbox | `checkbox` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`checkbox-demo`) |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |

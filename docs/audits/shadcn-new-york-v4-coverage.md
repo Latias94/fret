@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `273` (`60.9%`)
-- Keys not referenced by tests: `175`
+- Keys referenced by tests: `279` (`62.3%`)
+- Keys not referenced by tests: `169`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -46,7 +46,6 @@ At the time of writing, the largest missing groups were:
 - `input` (10; control chrome + stacking patterns)
 - `spinner` (9; control chrome + layout + visual alignment)
 - `item` (8; list row chrome + slot alignment)
-- `carousel` (6; layout + snapping + spacing)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
@@ -64,6 +63,7 @@ The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-sha
 - `field` (9)
 - `menubar` (9)
 - `breadcrumb` (9)
+- `carousel` (6)
 
 Recompute locally:
 
@@ -84,7 +84,6 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 ## What to do next (recommended order)
 
 1. **Finish the small missing families** (fast breadth gains):
-   - Carousel (`carousel-*`)
    - Typography breadth (`typography-*`)
    - Spinner + item patterns (`spinner-*`, `item-*`)
 2. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).

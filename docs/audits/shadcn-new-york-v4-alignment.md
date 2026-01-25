@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `273/448` keys referenced (`60.9%`)
+- shadcn-web `v4/new-york-v4`: `279/448` keys referenced (`62.3%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -45,17 +45,14 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
 - `typography` (13 variants): prose defaults + text metric edge cases.
-- `carousel` (6 variants): layout + snapping + spacing.
 - `spinner` / `item` (17 variants combined): smaller-but-frequent controls and list patterns that tend to
   expose padding/centering drift.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Carousel**
-   - Add a default gate first, then a constrained viewport gate if the layout policy changes.
-2. **Typography breadth**
+1. **Typography breadth**
    - Gate remaining typography pages that are sensitive to font metrics and baseline rounding.
-3. **Spinner + item patterns**
+2. **Spinner + item patterns**
    - Gate remaining `spinner-*` and `item-*` pages to catch padding/centering drift in common list rows.
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a

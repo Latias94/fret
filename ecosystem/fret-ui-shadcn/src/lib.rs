@@ -22,6 +22,7 @@ pub mod calendar_hijri;
 pub mod calendar_multiple;
 pub mod calendar_range;
 pub mod card;
+pub mod carousel;
 pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
@@ -105,6 +106,7 @@ pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
+pub use carousel::{Carousel, CarouselOrientation};
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
