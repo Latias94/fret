@@ -8,14 +8,11 @@ use fret_launch::{
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
-use fret_ui::element::{
-    AnyElement, AnyElementIterExt as _, ContainerProps, FlexProps, LayoutStyle, Length,
-};
+use fret_ui::element::{AnyElement, AnyElementIterExt as _};
 use fret_ui::{Theme, UiFrameCx, UiTree};
 use fret_ui_kit::declarative as kit_decl;
 use fret_ui_kit::prelude::*;
 use fret_ui_shadcn as shadcn;
-use fret_ui_shadcn::decl_style;
 use std::sync::Arc;
 
 const CMD_ADD: &str = "todo-interop.add";
@@ -175,38 +172,28 @@ impl TodoInteropDriver {
                     cx.watch_model(&t.done).layout().observe();
                 }
 
-                let mut root_layout = LayoutStyle::default();
-                root_layout.size.width = Length::Fill;
-                root_layout.size.height = Length::Fill;
+                let root_el = ui::container(cx, |cx| {
+                    let left = todo_panel(cx, &theme, draft.clone(), &todos);
+                    let right = external_panel(
+                        cx,
+                        &theme,
+                        ext_target,
+                        ext_size,
+                        ext.clicks,
+                        ext.last_input,
+                    );
 
-                let root_el = cx.container(
-                    ContainerProps {
-                        layout: root_layout,
-                        background: Some(theme.color_required("background")),
-                        ..Default::default()
-                    },
-                    |cx| {
-                        let flex = FlexProps {
-                            layout: root_layout,
-                            direction: fret_core::Axis::Horizontal,
-                            gap: Px(16.0),
-                            padding: fret_core::Edges::all(Px(16.0)),
-                            ..Default::default()
-                        };
-
-                        let left = todo_panel(cx, &theme, draft.clone(), &todos);
-                        let right = external_panel(
-                            cx,
-                            &theme,
-                            ext_target,
-                            ext_size,
-                            ext.clicks,
-                            ext.last_input,
-                        );
-
-                        [cx.flex(flex, move |_cx| [left, right])]
-                    },
-                );
+                    [ui::h_flex(cx, move |_cx| [left, right])
+                        .gap(Space::N4)
+                        .p(Space::N4)
+                        .w_full()
+                        .h_full()
+                        .into_element(cx)]
+                })
+                .bg(ColorRef::Color(theme.color_required("background")))
+                .w_full()
+                .h_full()
+                .into_element(cx);
 
                 std::iter::once(root_el)
             });
@@ -433,14 +420,11 @@ fn todo_panel(
         shadcn::CardHeader::new([shadcn::CardTitle::new("Todo").into_element(cx)]).into_element(cx);
 
     let body = shadcn::CardContent::new([
-        stack::hstack_iter(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full()),
-            move |_cx| [draft, add, clear_done],
-        ),
+        ui::h_flex(cx, move |_cx| [draft, add, clear_done])
+            .gap(Space::N2)
+            .items_center()
+            .w_full()
+            .into_element(cx),
         cx.column(fret_ui::element::ColumnProps::default(), move |_cx| list),
     ])
     .into_element(cx);
@@ -458,7 +442,7 @@ fn todo_panel(
 
 fn todo_row(
     cx: &mut fret_ui::ElementContext<'_, App>,
-    theme: &Theme,
+    _theme: &Theme,
     item: &TodoItem,
 ) -> AnyElement {
     let remove = shadcn::Button::new("Remove")
@@ -473,29 +457,23 @@ fn todo_row(
 
     let text = cx.text(item.text.clone());
 
-    let row = stack::hstack_iter(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .items_center()
-            .layout(LayoutRefinement::default().w_full()),
-        move |_cx| [checkbox, text, remove],
-    );
+    let row = ui::h_flex(cx, move |_cx| [checkbox, text, remove])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
+        .into_element(cx);
 
-    let props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .border_1()
-            .rounded(Radius::Md)
-            .p(Space::N2),
-        LayoutRefinement::default().w_full(),
-    );
-    cx.container(props, move |_cx| [row])
+    ui::container(cx, move |_cx| [row])
+        .border_1()
+        .rounded(Radius::Md)
+        .p(Space::N2)
+        .w_full()
+        .into_element(cx)
 }
 
 fn external_panel(
     cx: &mut fret_ui::ElementContext<'_, App>,
-    theme: &Theme,
+    _theme: &Theme,
     target: fret_core::RenderTargetId,
     target_px_size: (u32, u32),
     clicks: u32,
@@ -514,27 +492,23 @@ fn external_panel(
 
     let header = shadcn::CardHeader::new([title, desc, last]).into_element(cx);
 
-    let viewport = cx.container(
-        decl_style::container_props(
-            theme,
-            ChromeRefinement::default().border_1().rounded(Radius::Md),
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(360.0))),
-        ),
-        move |cx| {
-            let props = kit_decl::viewport_surface::ViewportSurfacePanelProps {
-                target,
-                target_px_size,
-                fit: ViewportFit::Contain,
-                opacity: 1.0,
-                forward_input: true,
-            };
-            [kit_decl::viewport_surface::viewport_surface_panel(
-                cx, props,
-            )]
-        },
-    );
+    let viewport = ui::container(cx, move |cx| {
+        let props = kit_decl::viewport_surface::ViewportSurfacePanelProps {
+            target,
+            target_px_size,
+            fit: ViewportFit::Contain,
+            opacity: 1.0,
+            forward_input: true,
+        };
+        [kit_decl::viewport_surface::viewport_surface_panel(
+            cx, props,
+        )]
+    })
+    .border_1()
+    .rounded(Radius::Md)
+    .w_full()
+    .h_px(MetricRef::Px(Px(360.0)))
+    .into_element(cx);
 
     let body = shadcn::CardContent::new([viewport]).into_element(cx);
 
