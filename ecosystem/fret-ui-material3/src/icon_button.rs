@@ -24,6 +24,7 @@ use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interac
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::{SpringAnimator, SpringSpec};
+use crate::tokens::icon_button as icon_button_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum IconButtonVariant {
@@ -200,12 +201,8 @@ impl IconButton {
                             is_focused,
                         );
 
-                        let ripple_base_opacity = theme
-                            .number_by_key(&format!(
-                                "md.comp.icon-button.{}.pressed.state-layer.opacity",
-                                variant_key(self.variant)
-                            ))
-                            .unwrap_or(0.1);
+                        let ripple_base_opacity =
+                            icon_button_tokens::pressed_state_layer_opacity(&theme, self.variant);
                         let config = material_pressable_indication_config(&theme, None);
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -359,239 +356,43 @@ fn icon_button_colors(
     enabled: bool,
     interaction: Option<InteractionState>,
 ) -> IconButtonColors {
-    let variant_key = variant_key(variant);
-    let state = interaction.map(|s| s.as_key_suffix());
+    let tokens_interaction = interaction.map(|s| match s {
+        InteractionState::Hovered => icon_button_tokens::IconButtonInteraction::Hovered,
+        InteractionState::Focused => icon_button_tokens::IconButtonInteraction::Focused,
+        InteractionState::Pressed => icon_button_tokens::IconButtonInteraction::Pressed,
+    });
 
-    let select_prefix = select_prefix_for_variant(variant, toggle, selected);
+    let icon_color = icon_button_tokens::icon_color(
+        theme,
+        variant,
+        toggle,
+        selected,
+        enabled,
+        tokens_interaction,
+    );
+    let state_layer_color = icon_button_tokens::state_layer_color(
+        theme,
+        variant,
+        toggle,
+        selected,
+        enabled,
+        tokens_interaction,
+    );
+    let background = icon_button_tokens::container_background(
+        theme, variant, toggle, selected, enabled, icon_color,
+    );
 
-    let mut icon = if enabled {
-        let key = if let Some(state) = state {
-            format!("md.comp.icon-button.{variant_key}.{select_prefix}{state}icon.color")
-        } else {
-            format!("md.comp.icon-button.{variant_key}.{select_prefix}icon.color")
-        };
-        theme.color_by_key(&key).or_else(|| {
-            // Fall back to the non-toggle token if the selected/unselected variant is not wired.
-            if select_prefix.is_empty() {
-                None
-            } else if let Some(state) = state {
-                theme.color_by_key(&format!(
-                    "md.comp.icon-button.{variant_key}.{state}icon.color"
-                ))
-            } else {
-                theme.color_by_key(&format!("md.comp.icon-button.{variant_key}.icon.color"))
-            }
-        })
-    } else {
-        theme.color_by_key(&format!(
-            "md.comp.icon-button.{variant_key}.disabled.icon.color"
-        ))
-    }
-    .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-
-    if !enabled {
-        let opacity = theme
-            .number_by_key(&format!(
-                "md.comp.icon-button.{variant_key}.disabled.icon.opacity"
-            ))
-            .unwrap_or(0.38);
-        icon.a *= opacity;
-    }
-
-    let mut state_layer_color = theme
-        .color_by_key(&format!(
-            "md.comp.icon-button.{variant_key}.{select_prefix}pressed.state-layer.color"
-        ))
-        .or_else(|| {
-            if select_prefix.is_empty() {
-                None
-            } else {
-                theme.color_by_key(&format!(
-                    "md.comp.icon-button.{variant_key}.pressed.state-layer.color"
-                ))
-            }
-        })
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
-        .unwrap_or(icon);
-    if let Some(interaction) = interaction {
-        state_layer_color = theme
-            .color_by_key(&format!(
-                "md.comp.icon-button.{variant_key}.{select_prefix}{}.state-layer.color",
-                interaction.as_key_suffix_trimmed()
-            ))
-            .or_else(|| {
-                if select_prefix.is_empty() {
-                    None
-                } else {
-                    theme.color_by_key(&format!(
-                        "md.comp.icon-button.{variant_key}.{}.state-layer.color",
-                        interaction.as_key_suffix_trimmed()
-                    ))
-                }
-            })
-            .unwrap_or(state_layer_color);
-    }
-
-    let background = match variant {
-        IconButtonVariant::Standard => None,
-        IconButtonVariant::Filled => {
-            if enabled {
-                let key = if select_prefix.is_empty() {
-                    "md.comp.icon-button.filled.container.color".to_string()
-                } else {
-                    format!("md.comp.icon-button.filled.{select_prefix}container.color")
-                };
-                theme.color_by_key(&key)
-            } else {
-                let mut c = theme
-                    .color_by_key("md.comp.icon-button.filled.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or(icon);
-                let opacity = theme
-                    .number_by_key("md.comp.icon-button.filled.disabled.container.opacity")
-                    .unwrap_or(0.1);
-                c.a *= opacity;
-                return IconButtonColors {
-                    background: Some(c),
-                    icon_color: icon,
-                    state_layer_color,
-                    outline: icon_button_outline(theme, variant, outline_width, enabled),
-                };
-            }
-        }
-        IconButtonVariant::Tonal => {
-            if enabled {
-                let key = if select_prefix.is_empty() {
-                    "md.comp.icon-button.tonal.container.color".to_string()
-                } else {
-                    format!("md.comp.icon-button.tonal.{select_prefix}container.color")
-                };
-                theme.color_by_key(&key)
-            } else {
-                let mut c = theme
-                    .color_by_key("md.comp.icon-button.tonal.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or(icon);
-                let opacity = theme
-                    .number_by_key("md.comp.icon-button.tonal.disabled.container.opacity")
-                    .unwrap_or(0.1);
-                c.a *= opacity;
-                return IconButtonColors {
-                    background: Some(c),
-                    icon_color: icon,
-                    state_layer_color,
-                    outline: icon_button_outline(theme, variant, outline_width, enabled),
-                };
-            }
-        }
-        IconButtonVariant::Outlined => {
-            if !toggle || !selected {
-                None
-            } else if enabled {
-                theme.color_by_key("md.comp.icon-button.outlined.selected.container.color")
-            } else {
-                let mut c = theme
-                    .color_by_key("md.comp.icon-button.outlined.selected.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or(icon);
-                let opacity = theme
-                    .number_by_key(
-                        "md.comp.icon-button.outlined.selected.disabled.container.opacity",
-                    )
-                    .unwrap_or(0.1);
-                c.a *= opacity;
-                return IconButtonColors {
-                    background: Some(c),
-                    icon_color: icon,
-                    state_layer_color,
-                    outline: icon_button_outline(theme, variant, outline_width, enabled),
-                };
-            }
-        }
-    };
-
-    let background = background.filter(|_| {
-        matches!(
-            variant,
-            IconButtonVariant::Filled | IconButtonVariant::Tonal | IconButtonVariant::Outlined
-        )
+    let outline = (variant == IconButtonVariant::Outlined).then(|| IconButtonOutline {
+        width: outline_width,
+        color: icon_button_tokens::outlined_outline_color(theme, enabled),
     });
 
     IconButtonColors {
         background,
-        icon_color: icon,
+        icon_color,
         state_layer_color,
-        outline: icon_button_outline(theme, variant, outline_width, enabled),
+        outline,
     }
-}
-
-fn select_prefix_for_variant(
-    variant: IconButtonVariant,
-    toggle: bool,
-    selected: bool,
-) -> &'static str {
-    if !toggle {
-        return "";
-    }
-    match variant {
-        // Standard base tokens map to unselected state; selected tokens differ.
-        IconButtonVariant::Standard => {
-            if selected {
-                "selected."
-            } else {
-                ""
-            }
-        }
-        // Filled base tokens are the "selected" look; unselected differs.
-        IconButtonVariant::Filled => {
-            if selected {
-                ""
-            } else {
-                "unselected."
-            }
-        }
-        // Tonal base tokens map to unselected state; selected tokens differ.
-        IconButtonVariant::Tonal => {
-            if selected {
-                "selected."
-            } else {
-                ""
-            }
-        }
-        // Outlined base tokens map to unselected state; selected tokens differ.
-        IconButtonVariant::Outlined => {
-            if selected {
-                "selected."
-            } else {
-                ""
-            }
-        }
-    }
-}
-
-fn icon_button_outline(
-    theme: &Theme,
-    variant: IconButtonVariant,
-    width: Px,
-    enabled: bool,
-) -> Option<IconButtonOutline> {
-    if variant != IconButtonVariant::Outlined {
-        return None;
-    }
-
-    let mut color = if !enabled {
-        theme.color_by_key("md.comp.icon-button.outlined.disabled.outline.color")
-    } else {
-        theme.color_by_key("md.comp.icon-button.outlined.outline.color")
-    }
-    .or_else(|| theme.color_by_key("md.sys.color.outline-variant"))
-    .or_else(|| theme.color_by_key("md.sys.color.outline"))
-    .unwrap_or_else(|| theme.color_required("md.sys.color.outline"));
-
-    color.a = 1.0;
-    Some(IconButtonOutline { width, color })
 }
 
 fn material_icon_button_chrome<H: UiHost>(
@@ -680,24 +481,6 @@ enum InteractionState {
     Pressed,
 }
 
-impl InteractionState {
-    fn as_key_suffix(self) -> &'static str {
-        match self {
-            Self::Hovered => "hovered.",
-            Self::Focused => "focused.",
-            Self::Pressed => "pressed.",
-        }
-    }
-
-    fn as_key_suffix_trimmed(self) -> &'static str {
-        match self {
-            Self::Hovered => "hovered",
-            Self::Focused => "focused",
-            Self::Pressed => "pressed",
-        }
-    }
-}
-
 fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Option<InteractionState> {
     if pressed {
         return Some(InteractionState::Pressed);
@@ -723,39 +506,26 @@ fn state_layer_target_opacity(
         return 0.0;
     }
 
-    let variant_key = variant_key(variant);
     if pressed {
-        return theme
-            .number_by_key(&format!(
-                "md.comp.icon-button.{variant_key}.pressed.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1);
+        return icon_button_tokens::state_layer_opacity(
+            theme,
+            variant,
+            icon_button_tokens::IconButtonInteraction::Pressed,
+        );
     }
     if focused {
-        return theme
-            .number_by_key(&format!(
-                "md.comp.icon-button.{variant_key}.focused.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1);
+        return icon_button_tokens::state_layer_opacity(
+            theme,
+            variant,
+            icon_button_tokens::IconButtonInteraction::Focused,
+        );
     }
     if hovered {
-        return theme
-            .number_by_key(&format!(
-                "md.comp.icon-button.{variant_key}.hovered.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08);
+        return icon_button_tokens::state_layer_opacity(
+            theme,
+            variant,
+            icon_button_tokens::IconButtonInteraction::Hovered,
+        );
     }
     0.0
-}
-
-fn variant_key(variant: IconButtonVariant) -> &'static str {
-    match variant {
-        IconButtonVariant::Standard => "standard",
-        IconButtonVariant::Filled => "filled",
-        IconButtonVariant::Tonal => "tonal",
-        IconButtonVariant::Outlined => "outlined",
-    }
 }
