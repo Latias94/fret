@@ -11,19 +11,18 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{Corners, Edges, Px};
+use fret_core::Px;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::{
-    OverlayController, OverlayRequest, ToastAction, ToastButtonStyle, ToastIconButtonStyle,
-    ToastId, ToastLayerStyle, ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
-    ToastVariantColors, ToastVariantPalette,
+    OverlayController, OverlayRequest, ToastAction, ToastButtonStyle, ToastId, ToastLayerStyle,
+    ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
 };
 
-use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::motion::ms_to_frames;
+use crate::tokens::snackbar as snackbar_tokens;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SnackbarDuration {
@@ -236,72 +235,16 @@ impl SnackbarHost {
 }
 
 fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
-    let icon_size = theme
-        .metric_by_key("md.comp.snackbar.icon.size")
-        .unwrap_or(Px(24.0));
-    let container_shape = theme
-        .metric_by_key("md.comp.snackbar.container.shape")
-        .unwrap_or(Px(4.0));
-    let elevation = theme
-        .metric_by_key("md.comp.snackbar.container.elevation")
-        .unwrap_or(Px(0.0));
-    let shadow_color = theme
-        .color_by_key("md.comp.snackbar.container.shadow-color")
-        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"));
-    let shadow = shadow_for_elevation_with_color(
-        theme,
-        elevation,
-        Some(shadow_color),
-        Corners::all(container_shape),
-    );
-    let open_ticks = ms_to_frames(
-        theme
-            .duration_ms_by_key("md.sys.motion.duration.short4")
-            .unwrap_or(200),
-    );
-    let close_ticks = ms_to_frames(
-        theme
-            .duration_ms_by_key("md.sys.motion.duration.short2")
-            .unwrap_or(100),
-    );
-    let easing = theme
-        .easing_by_key("md.sys.motion.easing.emphasized")
-        .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"));
-    let single_line_height =
-        theme.metric_by_key("md.comp.snackbar.with-single-line.container.height");
-    let two_line_height = theme.metric_by_key("md.comp.snackbar.with-two-lines.container.height");
+    let icon_size = snackbar_tokens::icon_size(theme);
+    let container_shape = snackbar_tokens::container_shape_radius(theme);
+    let shadow = snackbar_tokens::container_shadow(theme);
+    let open_ticks = ms_to_frames(snackbar_tokens::open_duration_ms(theme));
+    let close_ticks = ms_to_frames(snackbar_tokens::close_duration_ms(theme));
+    let easing = snackbar_tokens::easing(theme);
+    let single_line_height = snackbar_tokens::single_line_min_height(theme);
+    let two_line_height = snackbar_tokens::two_line_min_height(theme);
 
-    let palette = ToastVariantPalette {
-        default: ToastVariantColors::new(
-            "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
-        ),
-        destructive: ToastVariantColors::new(
-            "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
-        ),
-        success: ToastVariantColors::new(
-            "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
-        ),
-        info: ToastVariantColors::new(
-            "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
-        ),
-        warning: ToastVariantColors::new(
-            "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
-        ),
-        error: ToastVariantColors::new(
-            "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
-        ),
-        loading: ToastVariantColors::new(
-            "md.comp.snackbar.container.color",
-            "md.comp.snackbar.supporting-text.color",
-        ),
-    };
+    let palette = snackbar_tokens::palette();
 
     ToastLayerStyle {
         palette,
@@ -316,14 +259,7 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
         icon_size,
         single_line_min_height: single_line_height,
         two_line_min_height: two_line_height,
-        // Token source does not define padding; keep a conservative default that fits the fixed
-        // container heights.
-        container_padding: Some(Edges {
-            left: Px(16.0),
-            right: Px(16.0),
-            top: Px(8.0),
-            bottom: Px(8.0),
-        }),
+        container_padding: Some(snackbar_tokens::container_padding(theme)),
         container_radius: Some(container_shape),
         title: ToastTextStyle {
             style_key: Some("md.sys.typescale.body-medium".to_string()),
@@ -333,57 +269,8 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
             style_key: Some("md.sys.typescale.body-medium".to_string()),
             color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),
         },
-        action: ToastButtonStyle {
-            label_style_key: Some("md.sys.typescale.label-large".to_string()),
-            label_color_key: Some("md.comp.snackbar.action.label-text.color".to_string()),
-            state_layer_color_key: Some(
-                "md.comp.snackbar.action.hover.state-layer.color".to_string(),
-            ),
-            hover_state_layer_opacity_key: Some(
-                "md.comp.snackbar.action.hover.state-layer.opacity".to_string(),
-            ),
-            focus_state_layer_opacity_key: Some(
-                "md.comp.snackbar.action.focus.state-layer.opacity".to_string(),
-            ),
-            pressed_state_layer_opacity_key: Some(
-                "md.comp.snackbar.action.pressed.state-layer.opacity".to_string(),
-            ),
-            hover_state_layer_opacity: 0.08,
-            focus_state_layer_opacity: 0.1,
-            pressed_state_layer_opacity: 0.1,
-            padding: Edges {
-                left: Px(12.0),
-                right: Px(12.0),
-                top: Px(4.0),
-                bottom: Px(4.0),
-            },
-            radius: Px(4.0),
-        },
+        action: snackbar_tokens::action_button_style(theme),
         cancel: ToastButtonStyle::default(),
-        close: ToastIconButtonStyle {
-            icon_color_key: Some("md.comp.snackbar.icon.color".to_string()),
-            state_layer_color_key: Some(
-                "md.comp.snackbar.icon.hover.state-layer.color".to_string(),
-            ),
-            hover_state_layer_opacity_key: Some(
-                "md.comp.snackbar.icon.hover.state-layer.opacity".to_string(),
-            ),
-            focus_state_layer_opacity_key: Some(
-                "md.comp.snackbar.icon.focus.state-layer.opacity".to_string(),
-            ),
-            pressed_state_layer_opacity_key: Some(
-                "md.comp.snackbar.icon.pressed.state-layer.opacity".to_string(),
-            ),
-            hover_state_layer_opacity: 0.08,
-            focus_state_layer_opacity: 0.1,
-            pressed_state_layer_opacity: 0.1,
-            padding: Edges {
-                left: Px(8.0),
-                right: Px(8.0),
-                top: Px(8.0),
-                bottom: Px(8.0),
-            },
-            radius: Px(4.0),
-        },
+        close: snackbar_tokens::close_icon_button_style(theme),
     }
 }
