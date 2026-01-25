@@ -9,8 +9,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_runtime::Model;
@@ -33,8 +32,8 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::SpringAnimator;
+use crate::tokens::navigation_bar as nav_tokens;
 
 #[derive(Debug, Default, Clone)]
 struct NavigationBarLayoutRuntime {
@@ -168,26 +167,12 @@ impl NavigationBar {
                 ..Default::default()
             };
 
-            let tokens = MaterialTokenResolver::new(&theme);
-            let container_height = theme
-                .metric_by_key("md.comp.navigation-bar.container.height")
-                .unwrap_or(Px(80.0));
-            let container_bg = tokens.color_comp_or_sys(
-                "md.comp.navigation-bar.container.color",
-                "md.sys.color.surface-container",
-            );
-            let elevation = theme
-                .metric_by_key("md.comp.navigation-bar.container.elevation")
-                .unwrap_or(Px(0.0));
+            let container_height = nav_tokens::container_height(&theme);
+            let container_bg = nav_tokens::container_background(&theme);
+            let elevation = nav_tokens::container_elevation(&theme);
             let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
-            let shadow_color = tokens.color_comp_or_sys(
-                "md.comp.navigation-bar.container.shadow-color",
-                "md.sys.color.shadow",
-            );
-            let radius = theme
-                .metric_by_key("md.comp.navigation-bar.container.shape")
-                .unwrap_or(Px(0.0));
-            let corner_radii = Corners::all(radius);
+            let shadow_color = nav_tokens::container_shadow_color(&theme);
+            let corner_radii = nav_tokens::container_shape(&theme);
             let shadow = shadow_for_elevation_with_color(
                 &theme,
                 elevation,
@@ -395,9 +380,7 @@ fn navigation_bar_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
-        let height = theme
-            .metric_by_key("md.comp.navigation-bar.container.height")
-            .unwrap_or(Px(80.0));
+        let height = nav_tokens::container_height(theme);
         let focus_ring = material_focus_ring_for_component(
             theme,
             "md.comp.navigation-bar",
@@ -445,15 +428,13 @@ fn navigation_bar_item<H: UiHost>(
                 let is_focused = enabled && st.focused && focus_visible;
 
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                let label_color = nav_label_color(theme, selected, interaction);
-                let icon_color = nav_icon_color(theme, selected, interaction);
-                let state_layer_color = nav_state_layer_color(theme, selected, interaction);
+                let label_color = nav_tokens::label_color(theme, selected, interaction);
+                let icon_color = nav_tokens::icon_color(theme, selected, interaction);
+                let state_layer_color = nav_tokens::state_layer_color(theme, selected, interaction);
                 let state_layer_target =
-                    nav_state_layer_opacity(theme, is_pressed, is_hovered, is_focused);
+                    nav_tokens::state_layer_target_opacity(theme, enabled, interaction);
 
-                let ripple_base_opacity = theme
-                    .number_by_key("md.comp.navigation-bar.pressed.state-layer.opacity")
-                    .unwrap_or(0.1);
+                let ripple_base_opacity = nav_tokens::pressed_state_layer_opacity(theme);
                 let config = material_pressable_indication_config(theme, None);
                 let ink = material_ink_layer_for_pressable(
                     cx,
@@ -469,12 +450,8 @@ fn navigation_bar_item<H: UiHost>(
                     false,
                 );
 
-                let indicator_w = theme
-                    .metric_by_key("md.comp.navigation-bar.active-indicator.width")
-                    .unwrap_or(Px(64.0));
-                let indicator_h = theme
-                    .metric_by_key("md.comp.navigation-bar.active-indicator.height")
-                    .unwrap_or(Px(32.0));
+                let indicator_w = nav_tokens::active_indicator_width(theme);
+                let indicator_h = nav_tokens::active_indicator_height(theme);
 
                 let icon_slot = cx.named("icon_slot", |cx| {
                     let icon_slot_id = cx.root_id();
@@ -542,24 +519,10 @@ fn navigation_bar_active_indicator<H: UiHost>(
         let id = cx.root_id();
         let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
 
-        let indicator_w = theme
-            .metric_by_key("md.comp.navigation-bar.active-indicator.width")
-            .unwrap_or(Px(64.0));
-        let indicator_h = theme
-            .metric_by_key("md.comp.navigation-bar.active-indicator.height")
-            .unwrap_or(Px(32.0));
-
-        let tokens = MaterialTokenResolver::new(theme);
-        let indicator_color = tokens.color_comp_or_sys(
-            "md.comp.navigation-bar.active-indicator.color",
-            "md.sys.color.secondary-container",
-        );
-
-        let radius = theme
-            .metric_by_key("md.comp.navigation-bar.active-indicator.shape")
-            .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-            .unwrap_or(Px(9999.0));
-        let corner_radii = Corners::all(radius);
+        let indicator_w = nav_tokens::active_indicator_width(theme);
+        let indicator_h = nav_tokens::active_indicator_height(theme);
+        let indicator_color = nav_tokens::active_indicator_color(theme);
+        let corner_radii = nav_tokens::active_indicator_shape(theme);
 
         let icon_slot_bounds = selected_idx
             .and_then(|idx| {
@@ -674,129 +637,20 @@ fn navigation_bar_active_indicator<H: UiHost>(
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum InteractionState {
-    Default,
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> InteractionState {
+fn interaction_state(
+    pressed: bool,
+    hovered: bool,
+    focused: bool,
+) -> nav_tokens::NavigationBarItemInteraction {
     if pressed {
-        InteractionState::Pressed
+        nav_tokens::NavigationBarItemInteraction::Pressed
     } else if focused {
-        InteractionState::Focused
+        nav_tokens::NavigationBarItemInteraction::Focused
     } else if hovered {
-        InteractionState::Hovered
+        nav_tokens::NavigationBarItemInteraction::Hovered
     } else {
-        InteractionState::Default
+        nav_tokens::NavigationBarItemInteraction::Default
     }
-}
-
-fn nav_state_layer_opacity(theme: &Theme, pressed: bool, hovered: bool, focused: bool) -> f32 {
-    let key = if pressed {
-        "md.comp.navigation-bar.pressed.state-layer.opacity"
-    } else if focused {
-        "md.comp.navigation-bar.focus.state-layer.opacity"
-    } else if hovered {
-        "md.comp.navigation-bar.hover.state-layer.opacity"
-    } else {
-        return 0.0;
-    };
-    theme.number_by_key(key).unwrap_or(0.0)
-}
-
-fn nav_state_layer_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-bar.active.focus.state-layer.color",
-            InteractionState::Hovered => "md.comp.navigation-bar.active.hover.state-layer.color",
-            InteractionState::Pressed => "md.comp.navigation-bar.active.pressed.state-layer.color",
-            InteractionState::Default => return Color::TRANSPARENT,
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-bar.inactive.focus.state-layer.color",
-            InteractionState::Hovered => "md.comp.navigation-bar.inactive.hover.state-layer.color",
-            InteractionState::Pressed => {
-                "md.comp.navigation-bar.inactive.pressed.state-layer.color"
-            }
-            InteractionState::Default => return Color::TRANSPARENT,
-        }
-    };
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
-}
-
-fn nav_icon_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-bar.active.focus.icon.color",
-            InteractionState::Hovered => "md.comp.navigation-bar.active.hover.icon.color",
-            InteractionState::Pressed => "md.comp.navigation-bar.active.pressed.icon.color",
-            InteractionState::Default => "md.comp.navigation-bar.active.icon.color",
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-bar.inactive.focus.icon.color",
-            InteractionState::Hovered => "md.comp.navigation-bar.inactive.hover.icon.color",
-            InteractionState::Pressed => "md.comp.navigation-bar.inactive.pressed.icon.color",
-            InteractionState::Default => "md.comp.navigation-bar.inactive.icon.color",
-        }
-    };
-    theme
-        .color_by_key(key)
-        .or_else(|| {
-            if active {
-                theme.color_by_key("md.sys.color.on-secondary-container")
-            } else {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| {
-            if active {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-secondary-container")
-            } else {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-            }
-        })
-}
-
-fn nav_label_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-bar.active.focus.label-text.color",
-            InteractionState::Hovered => "md.comp.navigation-bar.active.hover.label-text.color",
-            InteractionState::Pressed => "md.comp.navigation-bar.active.pressed.label-text.color",
-            InteractionState::Default => "md.comp.navigation-bar.active.label-text.color",
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-bar.inactive.focus.label-text.color",
-            InteractionState::Hovered => "md.comp.navigation-bar.inactive.hover.label-text.color",
-            InteractionState::Pressed => "md.comp.navigation-bar.inactive.pressed.label-text.color",
-            InteractionState::Default => "md.comp.navigation-bar.inactive.label-text.color",
-        }
-    };
-    theme
-        .color_by_key(key)
-        .or_else(|| {
-            if active {
-                theme.color_by_key("md.sys.color.on-surface")
-            } else {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| {
-            if active {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface")
-            } else {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-            }
-        })
 }
 
 fn nav_label<H: UiHost>(
@@ -810,16 +664,7 @@ fn nav_label<H: UiHost>(
         .text_style_by_key("md.sys.typescale.label-medium")
         .unwrap_or_else(TextStyle::default);
 
-    let weight = if active {
-        theme
-            .number_by_key("md.comp.navigation-bar.active.label-text.weight")
-            .unwrap_or(700.0)
-    } else {
-        theme
-            .number_by_key("md.comp.navigation-bar.label-text.weight")
-            .unwrap_or(500.0)
-    };
-    style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
+    style.weight = nav_tokens::label_weight(theme, active);
 
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
@@ -835,9 +680,7 @@ fn nav_icon<H: UiHost>(
     icon: &IconId,
     color: Color,
 ) -> AnyElement {
-    let size = theme
-        .metric_by_key("md.comp.navigation-bar.icon.size")
-        .unwrap_or(Px(24.0));
+    let size = nav_tokens::icon_size(theme);
     let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);

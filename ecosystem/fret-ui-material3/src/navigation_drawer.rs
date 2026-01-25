@@ -9,8 +9,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_runtime::Model;
@@ -31,7 +30,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
-use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::tokens::navigation_drawer as drawer_tokens;
 
 #[derive(Debug, Clone)]
 pub struct NavigationDrawerItem {
@@ -172,41 +171,14 @@ impl NavigationDrawer {
                 ..Default::default()
             };
 
-            let tokens = MaterialTokenResolver::new(&theme);
-            let container_w = theme
-                .metric_by_key("md.comp.navigation-drawer.container.width")
-                .unwrap_or(Px(360.0));
-            let active_indicator_w = theme
-                .metric_by_key("md.comp.navigation-drawer.active-indicator.width")
-                .unwrap_or(Px(336.0));
-            let item_h_pad = Px(((container_w.0 - active_indicator_w.0) / 2.0).max(0.0));
+            let container_w = drawer_tokens::container_width(&theme);
+            let item_h_pad = drawer_tokens::item_horizontal_padding(&theme);
 
-            let (container_key, container_fallback) = match variant {
-                NavigationDrawerVariant::Standard => (
-                    "md.comp.navigation-drawer.standard.container.color",
-                    "md.sys.color.surface",
-                ),
-                NavigationDrawerVariant::Modal => (
-                    "md.comp.navigation-drawer.modal.container.color",
-                    "md.sys.color.surface-container-low",
-                ),
-            };
-            let mut container_bg = tokens.color_comp_or_sys(container_key, container_fallback);
-
-            let elevation = match variant {
-                NavigationDrawerVariant::Standard => theme
-                    .metric_by_key("md.comp.navigation-drawer.standard.container.elevation")
-                    .unwrap_or(Px(0.0)),
-                NavigationDrawerVariant::Modal => theme
-                    .metric_by_key("md.comp.navigation-drawer.modal.container.elevation")
-                    .unwrap_or(Px(1.0)),
-            };
+            let mut container_bg = drawer_tokens::container_background(&theme, variant);
+            let elevation = drawer_tokens::container_elevation(&theme, variant);
             container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
 
-            let container_shape = theme
-                .corners_by_key("md.comp.navigation-drawer.container.shape")
-                .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
-                .unwrap_or_else(|| Corners::all(Px(0.0)));
+            let container_shape = drawer_tokens::container_shape(&theme);
             let shadow = shadow_for_elevation_with_color(&theme, elevation, None, container_shape);
 
             let mut props = RovingFlexProps::default();
@@ -385,14 +357,8 @@ fn navigation_drawer_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
-        let height = theme
-            .metric_by_key("md.comp.navigation-drawer.active-indicator.height")
-            .unwrap_or(Px(56.0));
-        let radius = theme
-            .metric_by_key("md.comp.navigation-drawer.active-indicator.shape")
-            .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-            .unwrap_or(Px(9999.0));
-        let corner_radii = Corners::all(radius);
+        let height = drawer_tokens::active_indicator_height(theme);
+        let corner_radii = Corners::all(drawer_tokens::active_indicator_radius(theme));
         let focus_ring =
             material_focus_ring_for_component(theme, "md.comp.navigation-drawer", corner_radii);
 
@@ -436,15 +402,14 @@ fn navigation_drawer_item<H: UiHost>(
                 let is_focused = enabled && st.focused && focus_visible;
 
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                let label_color = drawer_label_color(theme, selected, interaction);
-                let icon_color = drawer_icon_color(theme, selected, interaction);
-                let state_layer_color = drawer_state_layer_color(theme, selected, interaction);
+                let label_color = drawer_tokens::label_color(theme, selected, interaction);
+                let icon_color = drawer_tokens::icon_color(theme, selected, interaction);
+                let state_layer_color =
+                    drawer_tokens::state_layer_color(theme, selected, interaction);
                 let state_layer_target =
-                    drawer_state_layer_opacity(theme, is_pressed, is_hovered, is_focused);
+                    drawer_tokens::state_layer_target_opacity(theme, enabled, interaction);
 
-                let ripple_base_opacity = theme
-                    .number_by_key("md.comp.navigation-drawer.pressed.state-layer.opacity")
-                    .unwrap_or(0.1);
+                let ripple_base_opacity = drawer_tokens::pressed_state_layer_opacity(theme);
                 let config = material_pressable_indication_config(theme, None);
                 let ink = material_ink_layer_for_pressable(
                     cx,
@@ -460,11 +425,7 @@ fn navigation_drawer_item<H: UiHost>(
                     false,
                 );
 
-                let tokens = MaterialTokenResolver::new(theme);
-                let selected_bg = tokens.color_comp_or_sys(
-                    "md.comp.navigation-drawer.active-indicator.color",
-                    "md.sys.color.secondary-container",
-                );
+                let selected_bg = drawer_tokens::active_indicator_color(theme);
 
                 let icon_el = drawer_icon(cx, theme, &icon, icon_color);
                 let label_el = drawer_label(cx, theme, &label, label_color, selected);
@@ -513,146 +474,20 @@ fn navigation_drawer_item<H: UiHost>(
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum InteractionState {
-    Default,
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> InteractionState {
+fn interaction_state(
+    pressed: bool,
+    hovered: bool,
+    focused: bool,
+) -> drawer_tokens::NavigationDrawerItemInteraction {
     if pressed {
-        InteractionState::Pressed
+        drawer_tokens::NavigationDrawerItemInteraction::Pressed
     } else if focused {
-        InteractionState::Focused
+        drawer_tokens::NavigationDrawerItemInteraction::Focused
     } else if hovered {
-        InteractionState::Hovered
+        drawer_tokens::NavigationDrawerItemInteraction::Hovered
     } else {
-        InteractionState::Default
+        drawer_tokens::NavigationDrawerItemInteraction::Default
     }
-}
-
-fn drawer_state_layer_opacity(theme: &Theme, pressed: bool, hovered: bool, focused: bool) -> f32 {
-    let key = if pressed {
-        "md.comp.navigation-drawer.pressed.state-layer.opacity"
-    } else if focused {
-        "md.comp.navigation-drawer.focus.state-layer.opacity"
-    } else if hovered {
-        "md.comp.navigation-drawer.hover.state-layer.opacity"
-    } else {
-        return 0.0;
-    };
-    theme.number_by_key(key).unwrap_or(0.0)
-}
-
-fn drawer_state_layer_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-drawer.active.focus.state-layer.color",
-            InteractionState::Hovered => "md.comp.navigation-drawer.active.hover.state-layer.color",
-            InteractionState::Pressed => {
-                "md.comp.navigation-drawer.active.pressed.state-layer.color"
-            }
-            InteractionState::Default => return Color::TRANSPARENT,
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => {
-                "md.comp.navigation-drawer.inactive.focus.state-layer.color"
-            }
-            InteractionState::Hovered => {
-                "md.comp.navigation-drawer.inactive.hover.state-layer.color"
-            }
-            InteractionState::Pressed => {
-                "md.comp.navigation-drawer.inactive.pressed.state-layer.color"
-            }
-            InteractionState::Default => return Color::TRANSPARENT,
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
-}
-
-fn drawer_label_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-drawer.active.focus.label-text.color",
-            InteractionState::Hovered => "md.comp.navigation-drawer.active.hover.label-text.color",
-            InteractionState::Pressed => {
-                "md.comp.navigation-drawer.active.pressed.label-text.color"
-            }
-            InteractionState::Default => "md.comp.navigation-drawer.active.label-text.color",
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => {
-                "md.comp.navigation-drawer.inactive.focus.label-text.color"
-            }
-            InteractionState::Hovered => {
-                "md.comp.navigation-drawer.inactive.hover.label-text.color"
-            }
-            InteractionState::Pressed => {
-                "md.comp.navigation-drawer.inactive.pressed.label-text.color"
-            }
-            InteractionState::Default => "md.comp.navigation-drawer.inactive.label-text.color",
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| {
-            if active {
-                theme.color_by_key("md.sys.color.on-surface")
-            } else {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| {
-            if active {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface")
-            } else {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-            }
-        })
-}
-
-fn drawer_icon_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-drawer.active.focus.icon.color",
-            InteractionState::Hovered => "md.comp.navigation-drawer.active.hover.icon.color",
-            InteractionState::Pressed => "md.comp.navigation-drawer.active.pressed.icon.color",
-            InteractionState::Default => "md.comp.navigation-drawer.active.icon.color",
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-drawer.inactive.focus.icon.color",
-            InteractionState::Hovered => "md.comp.navigation-drawer.inactive.hover.icon.color",
-            InteractionState::Pressed => "md.comp.navigation-drawer.inactive.pressed.icon.color",
-            InteractionState::Default => "md.comp.navigation-drawer.inactive.icon.color",
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| {
-            if active {
-                theme.color_by_key("md.sys.color.on-surface")
-            } else {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| {
-            if active {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface")
-            } else {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-            }
-        })
 }
 
 fn drawer_label<H: UiHost>(
@@ -666,16 +501,7 @@ fn drawer_label<H: UiHost>(
         .text_style_by_key("md.sys.typescale.label-large")
         .unwrap_or_else(TextStyle::default);
 
-    let weight = if active {
-        theme
-            .number_by_key("md.comp.navigation-drawer.active.label-text.weight")
-            .unwrap_or(700.0)
-    } else {
-        theme
-            .number_by_key("md.comp.navigation-drawer.label-text.weight")
-            .unwrap_or(500.0)
-    };
-    style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
+    style.weight = drawer_tokens::label_weight(theme, active);
 
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
@@ -691,9 +517,7 @@ fn drawer_icon<H: UiHost>(
     icon: &IconId,
     color: Color,
 ) -> AnyElement {
-    let size = theme
-        .metric_by_key("md.comp.navigation-drawer.icon.size")
-        .unwrap_or(Px(24.0));
+    let size = drawer_tokens::icon_size(theme);
     let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);

@@ -9,8 +9,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Axis, Color, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_runtime::Model;
@@ -30,8 +29,8 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::SpringAnimator;
+use crate::tokens::navigation_rail as rail_tokens;
 
 #[derive(Debug, Default, Clone)]
 struct NavigationRailLayoutRuntime {
@@ -181,18 +180,9 @@ fn navigation_rail_impl<H: UiHost>(
             ..Default::default()
         };
 
-        let tokens = MaterialTokenResolver::new(&theme);
-        let container_w = theme
-            .metric_by_key("md.comp.navigation-rail.container.width")
-            .unwrap_or(Px(80.0));
-        let container_bg = tokens.color_comp_or_sys(
-            "md.comp.navigation-rail.container.color",
-            "md.sys.color.surface",
-        );
-        let container_shape = theme
-            .corners_by_key("md.comp.navigation-rail.container.shape")
-            .or_else(|| theme.corners_by_key("md.sys.shape.corner.none"))
-            .unwrap_or_else(|| Corners::all(Px(0.0)));
+        let container_w = rail_tokens::container_width(&theme);
+        let container_bg = rail_tokens::container_background(&theme);
+        let container_shape = rail_tokens::container_shape(&theme);
 
         let mut props = RovingFlexProps::default();
         props.flex.direction = Axis::Vertical;
@@ -387,18 +377,8 @@ fn navigation_rail_item<H: UiHost>(
             cx.pressable_on_activate(handler);
         }
 
-        let indicator_w = theme
-            .metric_by_key("md.comp.navigation-rail.active-indicator.width")
-            .unwrap_or(Px(56.0));
-        let indicator_h = if always_show_label {
-            theme
-                .metric_by_key("md.comp.navigation-rail.active-indicator.height")
-                .unwrap_or(Px(32.0))
-        } else {
-            theme
-                .metric_by_key("md.comp.navigation-rail.no-label.active-indicator.height")
-                .unwrap_or(Px(56.0))
-        };
+        let indicator_w = rail_tokens::active_indicator_width(theme);
+        let indicator_h = rail_tokens::active_indicator_height(theme, always_show_label);
 
         let label_style = theme
             .text_style_by_key("md.sys.typescale.label-medium")
@@ -454,19 +434,18 @@ fn navigation_rail_item<H: UiHost>(
                 let is_focused = enabled && st.focused && focus_visible;
 
                 let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                let label_color = rail_label_color(theme, selected, interaction);
-                let icon_color = rail_icon_color(theme, selected, interaction);
-                let state_layer_color = rail_state_layer_color(theme, selected, interaction);
+                let label_color = rail_tokens::label_color(theme, selected, interaction);
+                let icon_color = rail_tokens::icon_color(theme, selected, interaction);
+                let state_layer_color =
+                    rail_tokens::state_layer_color(theme, selected, interaction);
                 let state_layer_target =
-                    rail_state_layer_opacity(theme, is_pressed, is_hovered, is_focused);
+                    rail_tokens::state_layer_target_opacity(theme, enabled, interaction);
 
                 let bounds = cx
                     .last_bounds_for_element(cx.root_id())
                     .unwrap_or(cx.bounds);
 
-                let ripple_base_opacity = theme
-                    .number_by_key("md.comp.navigation-rail.pressed.state-layer.opacity")
-                    .unwrap_or(0.1);
+                let ripple_base_opacity = rail_tokens::pressed_state_layer_opacity(theme);
                 let config = material_pressable_indication_config(theme, None);
 
                 let indicator_bounds = fret_core::Rect::new(
@@ -474,11 +453,7 @@ fn navigation_rail_item<H: UiHost>(
                     fret_core::Size::new(indicator_w, indicator_h),
                 );
 
-                let radius = theme
-                    .metric_by_key("md.comp.navigation-rail.active-indicator.shape")
-                    .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-                    .unwrap_or(Px(9999.0));
-                let corner_radii = Corners::all(radius);
+                let corner_radii = rail_tokens::active_indicator_shape(theme);
                 let overlay = material_ink_layer_for_pressable_with_ripple_bounds(
                     cx,
                     pressable_id,
@@ -566,17 +541,8 @@ fn navigation_rail_active_indicator<H: UiHost>(
         let id = cx.root_id();
         let container_bounds = cx.last_bounds_for_element(id).unwrap_or(cx.bounds);
 
-        let tokens = MaterialTokenResolver::new(theme);
-        let indicator_color = tokens.color_comp_or_sys(
-            "md.comp.navigation-rail.active-indicator.color",
-            "md.sys.color.secondary-container",
-        );
-
-        let radius = theme
-            .metric_by_key("md.comp.navigation-rail.active-indicator.shape")
-            .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-            .unwrap_or(Px(9999.0));
-        let corner_radii = Corners::all(radius);
+        let indicator_color = rail_tokens::active_indicator_color(theme);
+        let corner_radii = rail_tokens::active_indicator_shape(theme);
 
         let icon_slot_bounds = selected_idx
             .and_then(|idx| {
@@ -677,134 +643,20 @@ fn navigation_rail_active_indicator<H: UiHost>(
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum InteractionState {
-    Default,
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> InteractionState {
+fn interaction_state(
+    pressed: bool,
+    hovered: bool,
+    focused: bool,
+) -> rail_tokens::NavigationRailItemInteraction {
     if pressed {
-        InteractionState::Pressed
+        rail_tokens::NavigationRailItemInteraction::Pressed
     } else if focused {
-        InteractionState::Focused
+        rail_tokens::NavigationRailItemInteraction::Focused
     } else if hovered {
-        InteractionState::Hovered
+        rail_tokens::NavigationRailItemInteraction::Hovered
     } else {
-        InteractionState::Default
+        rail_tokens::NavigationRailItemInteraction::Default
     }
-}
-
-fn rail_state_layer_opacity(theme: &Theme, pressed: bool, hovered: bool, focused: bool) -> f32 {
-    let key = if pressed {
-        "md.comp.navigation-rail.pressed.state-layer.opacity"
-    } else if focused {
-        "md.comp.navigation-rail.focus.state-layer.opacity"
-    } else if hovered {
-        "md.comp.navigation-rail.hover.state-layer.opacity"
-    } else {
-        return 0.0;
-    };
-    theme.number_by_key(key).unwrap_or(0.0)
-}
-
-fn rail_state_layer_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-rail.active.focus.state-layer.color",
-            InteractionState::Hovered => "md.comp.navigation-rail.active.hover.state-layer.color",
-            InteractionState::Pressed => "md.comp.navigation-rail.active.pressed.state-layer.color",
-            InteractionState::Default => return Color::TRANSPARENT,
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-rail.inactive.focus.state-layer.color",
-            InteractionState::Hovered => "md.comp.navigation-rail.inactive.hover.state-layer.color",
-            InteractionState::Pressed => {
-                "md.comp.navigation-rail.inactive.pressed.state-layer.color"
-            }
-            InteractionState::Default => return Color::TRANSPARENT,
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface"))
-}
-
-fn rail_label_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-rail.active.focus.label-text.color",
-            InteractionState::Hovered => "md.comp.navigation-rail.active.hover.label-text.color",
-            InteractionState::Pressed => "md.comp.navigation-rail.active.pressed.label-text.color",
-            InteractionState::Default => "md.comp.navigation-rail.active.label-text.color",
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-rail.inactive.focus.label-text.color",
-            InteractionState::Hovered => "md.comp.navigation-rail.inactive.hover.label-text.color",
-            InteractionState::Pressed => {
-                "md.comp.navigation-rail.inactive.pressed.label-text.color"
-            }
-            InteractionState::Default => "md.comp.navigation-rail.inactive.label-text.color",
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| {
-            if active {
-                theme.color_by_key("md.sys.color.on-surface")
-            } else {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| {
-            if active {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface")
-            } else {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-            }
-        })
-}
-
-fn rail_icon_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-rail.active.focus.icon.color",
-            InteractionState::Hovered => "md.comp.navigation-rail.active.hover.icon.color",
-            InteractionState::Pressed => "md.comp.navigation-rail.active.pressed.icon.color",
-            InteractionState::Default => "md.comp.navigation-rail.active.icon.color",
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => "md.comp.navigation-rail.inactive.focus.icon.color",
-            InteractionState::Hovered => "md.comp.navigation-rail.inactive.hover.icon.color",
-            InteractionState::Pressed => "md.comp.navigation-rail.inactive.pressed.icon.color",
-            InteractionState::Default => "md.comp.navigation-rail.inactive.icon.color",
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| {
-            if active {
-                theme.color_by_key("md.sys.color.on-surface")
-            } else {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| {
-            if active {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface")
-            } else {
-                MaterialTokenResolver::new(theme).color_sys("md.sys.color.on-surface-variant")
-            }
-        })
 }
 
 fn rail_label<H: UiHost>(
@@ -818,16 +670,7 @@ fn rail_label<H: UiHost>(
         .text_style_by_key("md.sys.typescale.label-medium")
         .unwrap_or_else(TextStyle::default);
 
-    let weight = if active {
-        theme
-            .number_by_key("md.comp.navigation-rail.active.label-text.weight")
-            .unwrap_or(700.0)
-    } else {
-        theme
-            .number_by_key("md.comp.navigation-rail.label-text.weight")
-            .unwrap_or(500.0)
-    };
-    style.weight = FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
+    style.weight = rail_tokens::label_weight(theme, active);
 
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
@@ -843,9 +686,7 @@ fn rail_icon<H: UiHost>(
     icon: &IconId,
     color: Color,
 ) -> AnyElement {
-    let size = theme
-        .metric_by_key("md.comp.navigation-rail.icon.size")
-        .unwrap_or(Px(24.0));
+    let size = rail_tokens::icon_size(theme);
     let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);
