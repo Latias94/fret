@@ -423,8 +423,12 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_BUTTON`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_button`),
     `apps/fret-ui-gallery/src/driver.rs` (v30 token injection via `extend_tokens_from_config`).
-- [x] Add a state-matrix-level variant toggle (Standard vs Expressive) to exercise subtree overrides.
-  - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_state_matrix`).
+- [x] Add a compact Material 3 Gallery page for scanning outcome drift.
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_GALLERY`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_gallery`).
+- [x] Add a gallery-level variant toggle (Standard vs Expressive) to exercise subtree overrides.
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`UiGalleryWindowState.material3_expressive`),
+    `apps/fret-ui-gallery/src/ui.rs` (`material3_scoped_page`).
 - [x] Add a Material 3 IconButton gallery page for manual interaction verification.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_ICON_BUTTON`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_icon_button`).
@@ -441,7 +445,7 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_signature`),
     tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tabs_pressed_scene_structure_is_stable`, `icon_button_pressed_scene_structure_is_stable`, `switch_pressed_scene_structure_is_stable`, `radio_pressed_scene_structure_is_stable`).
 - [x] Extend the interaction harness with quad-level signatures to catch geometry jitter after animations settle.
-  - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_quad_signature`),
+  - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_quad_geometry_signature`),
     tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`*_pressed_scene_structure_is_stable`).
 - [ ] Add golden-style visual snapshots per component state (light/dark, density variants).
 

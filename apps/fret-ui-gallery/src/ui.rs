@@ -568,60 +568,116 @@ fn page_preview(
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
-        PAGE_MATERIAL3_STATE_MATRIX => preview_material3_state_matrix(
+        PAGE_MATERIAL3_GALLERY => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_gallery(
+                cx,
+                material3_checkbox,
+                material3_switch,
+                material3_radio_value,
+                material3_tabs_value,
+                material3_text_field_value,
+                material3_text_field_disabled,
+                material3_text_field_error,
+                last_action.clone(),
+            )
+        }),
+        PAGE_MATERIAL3_STATE_MATRIX => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_state_matrix(
+                    cx,
+                    material3_checkbox,
+                    material3_switch,
+                    material3_radio_value,
+                    material3_tabs_value,
+                    material3_navigation_bar_value,
+                    material3_text_field_value,
+                    material3_text_field_disabled,
+                    material3_text_field_error,
+                    material3_menu_open,
+                    last_action.clone(),
+                )
+            })
+        }
+        PAGE_MATERIAL3_TOUCH_TARGETS => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_touch_targets(
+                    cx,
+                    material3_checkbox,
+                    material3_switch,
+                    material3_radio_value,
+                    material3_tabs_value,
+                )
+            })
+        }
+        PAGE_MATERIAL3_BUTTON => {
+            material3_scoped_page(cx, material3_expressive.clone(), preview_material3_button)
+        }
+        PAGE_MATERIAL3_ICON_BUTTON => material3_scoped_page(
             cx,
-            material3_expressive,
-            material3_checkbox,
-            material3_switch,
-            material3_radio_value,
-            material3_tabs_value,
-            material3_navigation_bar_value,
-            material3_text_field_value,
-            material3_text_field_disabled,
-            material3_text_field_error,
-            material3_menu_open,
-            last_action.clone(),
+            material3_expressive.clone(),
+            preview_material3_icon_button,
         ),
-        PAGE_MATERIAL3_TOUCH_TARGETS => preview_material3_touch_targets(
-            cx,
-            material3_checkbox,
-            material3_switch,
-            material3_radio_value,
-            material3_tabs_value,
-        ),
-        PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
-        PAGE_MATERIAL3_ICON_BUTTON => preview_material3_icon_button(cx),
-        PAGE_MATERIAL3_CHECKBOX => preview_material3_checkbox(cx, material3_checkbox),
-        PAGE_MATERIAL3_SWITCH => preview_material3_switch(cx, material3_switch),
-        PAGE_MATERIAL3_RADIO => preview_material3_radio(cx, material3_radio_value),
-        PAGE_MATERIAL3_TEXT_FIELD => preview_material3_text_field(
-            cx,
-            material3_text_field_value,
-            material3_text_field_disabled,
-            material3_text_field_error,
-        ),
-        PAGE_MATERIAL3_TABS => preview_material3_tabs(cx, material3_tabs_value),
-        PAGE_MATERIAL3_LIST => preview_material3_list(cx, material3_list_value),
+        PAGE_MATERIAL3_CHECKBOX => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_checkbox(cx, material3_checkbox)
+        }),
+        PAGE_MATERIAL3_SWITCH => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_switch(cx, material3_switch)
+        }),
+        PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_radio(cx, material3_radio_value)
+        }),
+        PAGE_MATERIAL3_TEXT_FIELD => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_text_field(
+                    cx,
+                    material3_text_field_value,
+                    material3_text_field_disabled,
+                    material3_text_field_error,
+                )
+            })
+        }
+        PAGE_MATERIAL3_TABS => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_tabs(cx, material3_tabs_value)
+        }),
+        PAGE_MATERIAL3_LIST => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_list(cx, material3_list_value)
+        }),
         PAGE_MATERIAL3_NAVIGATION_BAR => {
-            preview_material3_navigation_bar(cx, material3_navigation_bar_value)
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_navigation_bar(cx, material3_navigation_bar_value)
+            })
         }
         PAGE_MATERIAL3_NAVIGATION_RAIL => {
-            preview_material3_navigation_rail(cx, material3_navigation_rail_value)
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_navigation_rail(cx, material3_navigation_rail_value)
+            })
         }
         PAGE_MATERIAL3_NAVIGATION_DRAWER => {
-            preview_material3_navigation_drawer(cx, material3_navigation_drawer_value)
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_navigation_drawer(cx, material3_navigation_drawer_value)
+            })
         }
-        PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER => preview_material3_modal_navigation_drawer(
-            cx,
-            material3_modal_navigation_drawer_open,
-            material3_navigation_drawer_value,
-        ),
-        PAGE_MATERIAL3_DIALOG => {
+        PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_modal_navigation_drawer(
+                    cx,
+                    material3_modal_navigation_drawer_open,
+                    material3_navigation_drawer_value,
+                )
+            })
+        }
+        PAGE_MATERIAL3_DIALOG => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_dialog(cx, material3_dialog_open, last_action.clone())
+        }),
+        PAGE_MATERIAL3_MENU => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_menu(cx, material3_menu_open, last_action.clone())
+        }),
+        PAGE_MATERIAL3_SNACKBAR => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_snackbar(cx, last_action.clone())
+        }),
+        PAGE_MATERIAL3_TOOLTIP => {
+            material3_scoped_page(cx, material3_expressive.clone(), preview_material3_tooltip)
         }
-        PAGE_MATERIAL3_MENU => preview_material3_menu(cx, material3_menu_open, last_action.clone()),
-        PAGE_MATERIAL3_SNACKBAR => preview_material3_snackbar(cx, last_action.clone()),
-        PAGE_MATERIAL3_TOOLTIP => preview_material3_tooltip(cx),
         _ => preview_intro(cx, theme),
     };
 
@@ -636,6 +692,58 @@ fn page_preview(
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
+}
+
+fn material3_scoped_page(
+    cx: &mut ElementContext<'_, App>,
+    material3_expressive: Model<bool>,
+    content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+) -> Vec<AnyElement> {
+    let enabled = cx
+        .get_model_copied(&material3_expressive, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let mut out: Vec<AnyElement> = Vec::new();
+    out.push(material3_variant_toggle_row(cx, material3_expressive));
+
+    let body = if enabled {
+        material3::context::with_material_design_variant(
+            cx,
+            material3::MaterialDesignVariant::Expressive,
+            content,
+        )
+    } else {
+        content(cx)
+    };
+
+    out.extend(body);
+    out
+}
+
+fn material3_variant_toggle_row(
+    cx: &mut ElementContext<'_, App>,
+    material3_expressive: Model<bool>,
+) -> AnyElement {
+    let enabled = cx
+        .get_model_copied(&material3_expressive, Invalidation::Layout)
+        .unwrap_or(false);
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Switch::new(material3_expressive.clone())
+                    .a11y_label("Enable Material 3 Expressive variant")
+                    .into_element(cx),
+                cx.text(if enabled {
+                    "Variant: Expressive"
+                } else {
+                    "Variant: Standard"
+                }),
+            ]
+        },
+    )
 }
 
 fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
@@ -1329,9 +1437,139 @@ fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     ]
 }
 
+fn preview_material3_gallery(
+    cx: &mut ElementContext<'_, App>,
+    material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+    material3_text_field_error: Model<bool>,
+    _last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+
+    let disabled = cx
+        .get_model_copied(&material3_text_field_disabled, Invalidation::Layout)
+        .unwrap_or(false);
+    let error = cx
+        .get_model_copied(&material3_text_field_error, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let mut out: Vec<AnyElement> = Vec::new();
+    out.push(cx.text("Material 3 Gallery: compact outcomes-first surface."));
+
+    out.push(cx.text("— Buttons —"));
+    out.push(stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                material3::Button::new("Filled")
+                    .variant(material3::ButtonVariant::Filled)
+                    .into_element(cx),
+                material3::Button::new("Tonal")
+                    .variant(material3::ButtonVariant::Tonal)
+                    .into_element(cx),
+                material3::Button::new("Outlined")
+                    .variant(material3::ButtonVariant::Outlined)
+                    .into_element(cx),
+                material3::Button::new("Text")
+                    .variant(material3::ButtonVariant::Text)
+                    .into_element(cx),
+            ]
+        },
+    ));
+
+    out.push(cx.text("— Icon Buttons —"));
+    out.push(stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                material3::IconButton::new(ids::ui::SEARCH)
+                    .a11y_label("Search")
+                    .into_element(cx),
+                material3::IconButton::new(ids::ui::SETTINGS)
+                    .a11y_label("Settings")
+                    .into_element(cx),
+                material3::IconButton::new(ids::ui::CLOSE)
+                    .a11y_label("Close")
+                    .into_element(cx),
+            ]
+        },
+    ));
+
+    out.push(cx.text("— Selection —"));
+    out.push(stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N3).items_center(),
+        |cx| {
+            vec![
+                material3::Checkbox::new(material3_checkbox.clone())
+                    .a11y_label("Checkbox")
+                    .into_element(cx),
+                material3::Switch::new(material3_switch.clone())
+                    .a11y_label("Switch")
+                    .into_element(cx),
+                material3::RadioGroup::new(material3_radio_value.clone())
+                    .a11y_label("Radio Group")
+                    .items(vec![
+                        material3::RadioGroupItem::new("Alpha").a11y_label("Radio Alpha"),
+                        material3::RadioGroupItem::new("Beta").a11y_label("Radio Beta"),
+                        material3::RadioGroupItem::new("Charlie")
+                            .a11y_label("Radio Charlie")
+                            .disabled(true),
+                    ])
+                    .into_element(cx),
+            ]
+        },
+    ));
+
+    out.push(cx.text("— Text Field —"));
+    out.push(stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Switch::new(material3_text_field_disabled.clone())
+                    .a11y_label("Disable Text Field")
+                    .into_element(cx),
+                cx.text("Disabled"),
+                shadcn::Switch::new(material3_text_field_error.clone())
+                    .a11y_label("Text Field Error")
+                    .into_element(cx),
+                cx.text("Error"),
+            ]
+        },
+    ));
+    out.push(
+        material3::TextField::new(material3_text_field_value)
+            .label("Label")
+            .placeholder("Placeholder")
+            .disabled(disabled)
+            .error(error)
+            .into_element(cx),
+    );
+
+    out.push(cx.text("— Tabs —"));
+    out.push(
+        material3::Tabs::new(material3_tabs_value)
+            .a11y_label("Tabs")
+            .items(vec![
+                material3::TabItem::new("overview", "Overview"),
+                material3::TabItem::new("security", "Security"),
+                material3::TabItem::new("settings", "Settings"),
+            ])
+            .into_element(cx),
+    );
+
+    out
+}
+
 fn preview_material3_state_matrix(
     cx: &mut ElementContext<'_, App>,
-    material3_expressive: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -1343,10 +1581,6 @@ fn preview_material3_state_matrix(
     material3_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let expressive_enabled = cx
-        .get_model_copied(&material3_expressive, Invalidation::Layout)
-        .unwrap_or(false);
-
     let mut out: Vec<AnyElement> = Vec::new();
 
     out.push(cx.text(
@@ -1356,60 +1590,19 @@ fn preview_material3_state_matrix(
         "Tip: use keyboard Tab/Arrow/Home/End on Tabs/Radio/Menu; use Esc/outside press to close Menu.",
     ));
 
-    out.push(stack::hstack(
+    out.extend(material3_state_matrix_content(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            vec![
-                shadcn::Switch::new(material3_expressive.clone())
-                    .a11y_label("Enable Material 3 Expressive variant")
-                    .into_element(cx),
-                cx.text(if expressive_enabled {
-                    "Variant: Expressive (subtree override)"
-                } else {
-                    "Variant: Standard"
-                }),
-            ]
-        },
+        material3_checkbox,
+        material3_switch,
+        material3_radio_value,
+        material3_tabs_value,
+        material3_navigation_bar_value,
+        material3_text_field_value,
+        material3_text_field_disabled,
+        material3_text_field_error,
+        material3_menu_open,
+        last_action,
     ));
-
-    let content = if expressive_enabled {
-        material3::context::with_material_design_variant(
-            cx,
-            material3::MaterialDesignVariant::Expressive,
-            |cx| {
-                material3_state_matrix_content(
-                    cx,
-                    material3_checkbox,
-                    material3_switch,
-                    material3_radio_value,
-                    material3_tabs_value,
-                    material3_navigation_bar_value,
-                    material3_text_field_value,
-                    material3_text_field_disabled,
-                    material3_text_field_error,
-                    material3_menu_open,
-                    last_action,
-                )
-            },
-        )
-    } else {
-        material3_state_matrix_content(
-            cx,
-            material3_checkbox,
-            material3_switch,
-            material3_radio_value,
-            material3_tabs_value,
-            material3_navigation_bar_value,
-            material3_text_field_value,
-            material3_text_field_disabled,
-            material3_text_field_error,
-            material3_menu_open,
-            last_action,
-        )
-    };
-
-    out.extend(content);
     out
 }
 

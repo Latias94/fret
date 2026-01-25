@@ -133,6 +133,23 @@ This page validates the first Material 3 outcome-aligned component surface:
 This is intentionally *not* a full `@material/web` parity port: it focuses on the interaction + visual outcomes within Fret's retained scene model.
 "#;
 
+pub(crate) const DOC_MATERIAL3_GALLERY: &str = r#"
+## Material 3 Gallery
+
+This page is a compact, outcomes-first surface for visually scanning Material 3 components.
+
+Goals:
+- Provide a single place to spot styling drift quickly (colors, shapes, typography).
+- Make it easy to flip Standard vs Expressive outcomes while keeping the rest of the gallery stable.
+
+Notes:
+- This is not a pixel-perfect golden snapshot tool (yet). It is intended to guide refactors.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_GALLERY: &str = r#"
+Use the “Expressive” toggle at the top to switch the variant for this page.
+"#;
+
 pub(crate) const DOC_MATERIAL3_STATE_MATRIX: &str = r#"
 ## Material 3 State Matrix
 
