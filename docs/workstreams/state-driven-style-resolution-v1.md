@@ -18,6 +18,10 @@ Make “state → style” authoring consistent across ecosystem component libra
 - Worktree path: `F:\SourceCodes\Rust\fret-worktrees\state-driven-style-resolution-v1`
 - Branch: `refactor/state-driven-style-resolution-v1`
 
+Note: this workstream was initially executed in a dedicated worktree, but the resulting contracts
+and migrations have since been merged into `main`. The sections below reflect the current
+repository state, not the historical worktree.
+
 ## Current Baseline (main)
 
 - `WidgetStates` + `WidgetStateProperty<T>` exists in `fret-ui-kit`.
@@ -26,7 +30,14 @@ Make “state → style” authoring consistent across ecosystem component libra
 
 ## Worktree Progress
 
-- `ButtonStyle` exists and is exported in `fret-ui-shadcn` (v0: optional overrides; merged into the variant-derived defaults).
+- `fret-ui-shadcn` exports v1 `*Style` override surfaces for core interactive controls (ADR 1159).
+- `fret-ui-kit` exports shared helpers to resolve ADR 1159 override slots (`resolve_override_slot*`).
+- Some shadcn surfaces still use ad-hoc `PressableState` branching (see adoption snapshot).
+
+Material 3 is tracked separately:
+
+- `docs/workstreams/material3-todo.md`
+- `docs/workstreams/material3-style-api-alignment-v1.md`
 
 ## TODO (Priority Order)
 
@@ -100,6 +111,47 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - [x] SDSR-530 Material3: implement `Checkbox` + per-state `CheckboxStyle`.
 - [x] SDSR-540 Material3: implement `Switch` + per-state `SwitchStyle`.
 - [x] SDSR-550 Material3: implement `RadioGroup` + per-state `RadioGroupStyle`.
+
+Note: Material3 has since evolved into a broader Compose-inspired foundation refactor using the
+`md.sys.*` / `md.comp.*` token namespaces. The authoritative tracking docs are the Material3
+workstreams linked above.
+
+## Shadcn adoption snapshot (main)
+
+This snapshot focuses on “state → style” authoring consistency, not full visual parity.
+
+**Completed (exports `*Style` + `.style(...)`)**
+
+- `ecosystem/fret-ui-shadcn/src/button.rs`
+- `ecosystem/fret-ui-shadcn/src/checkbox.rs`
+- `ecosystem/fret-ui-shadcn/src/input.rs`
+- `ecosystem/fret-ui-shadcn/src/radio_group.rs`
+- `ecosystem/fret-ui-shadcn/src/select.rs`
+- `ecosystem/fret-ui-shadcn/src/slider.rs`
+- `ecosystem/fret-ui-shadcn/src/switch.rs`
+- `ecosystem/fret-ui-shadcn/src/tabs.rs`
+- `ecosystem/fret-ui-shadcn/src/toggle.rs`
+- `ecosystem/fret-ui-shadcn/src/toggle_group.rs`
+
+**Migrated to `WidgetStates` but no public `*Style` surface (token-driven only, for now)**
+
+- `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
+- `ecosystem/fret-ui-shadcn/src/menubar.rs`
+
+**Likely still ad-hoc `PressableState` branching (candidates for follow-up)**
+
+- `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
+- `ecosystem/fret-ui-shadcn/src/calendar.rs`
+- `ecosystem/fret-ui-shadcn/src/calendar_range.rs`
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`
+- `ecosystem/fret-ui-shadcn/src/command.rs`
+- `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+- `ecosystem/fret-ui-shadcn/src/dialog.rs`
+- `ecosystem/fret-ui-shadcn/src/input_group.rs`
+- `ecosystem/fret-ui-shadcn/src/item.rs`
+- `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
+- `ecosystem/fret-ui-shadcn/src/pagination.rs`
+- `ecosystem/fret-ui-shadcn/src/sidebar.rs`
 
 ## Milestones
 

@@ -78,6 +78,36 @@ fn widget_state_property_last_match_wins() {
 }
 
 #[test]
+fn resolve_override_slot_falls_back_when_override_is_none() {
+    let defaults = WidgetStateProperty::new(10).when(WidgetStates::HOVERED, 20);
+    let overrides = WidgetStateProperty::new(Some(99)).when(WidgetStates::HOVERED, None);
+
+    assert_eq!(
+        super::resolve_override_slot(Some(&overrides), &defaults, WidgetStates::empty()),
+        99
+    );
+    assert_eq!(
+        super::resolve_override_slot(Some(&overrides), &defaults, WidgetStates::HOVERED),
+        20
+    );
+}
+
+#[test]
+fn resolve_override_slot_opt_returns_override_when_present() {
+    let defaults = WidgetStateProperty::new(Some(10)).when(WidgetStates::HOVERED, Some(20));
+    let overrides = WidgetStateProperty::new(None).when(WidgetStates::HOVERED, Some(30));
+
+    assert_eq!(
+        super::resolve_override_slot_opt(Some(&overrides), &defaults, WidgetStates::empty()),
+        Some(10)
+    );
+    assert_eq!(
+        super::resolve_override_slot_opt(Some(&overrides), &defaults, WidgetStates::HOVERED),
+        Some(30)
+    );
+}
+
+#[test]
 fn color_fallback_theme_token_alpha_mul_derives_from_base_token() {
     let mut app = fret_app::App::default();
 
