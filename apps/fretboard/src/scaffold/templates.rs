@@ -263,7 +263,7 @@ __ADD_BTN_DEF__
     .border_1()
     .border_color(ColorRef::Color(theme.color_required("border")))
     .w_full()
-    .max_w(MetricRef::Px(Px(520.0)))
+    .max_w(Px(520.0))
     .into_element(cx);
 
     let page = ui::container(cx, |cx| {
@@ -612,7 +612,7 @@ __ADD_BTN_DEF__
         .border_1()
         .border_color(ColorRef::Color(theme.color_required("border")))
         .w_full()
-        .max_w(MetricRef::Px(Px(520.0)))
+        .max_w(Px(520.0))
         .into_element(cx);
 
         let page = ui::container(cx, |cx| {

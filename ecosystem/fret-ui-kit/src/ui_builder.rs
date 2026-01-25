@@ -236,16 +236,16 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
         })
     }
 
-    pub fn padding(self, padding: MetricRef) -> Self {
-        self.paddings(Edges4::all(padding))
+    pub fn padding(self, padding: impl Into<MetricRef>) -> Self {
+        self.paddings(Edges4::all(padding.into()))
     }
 
     pub fn padding_px(self, px: Px) -> Self {
-        self.padding(MetricRef::Px(px))
+        self.padding(px)
     }
 
     pub fn padding_space(self, space: Space) -> Self {
-        self.padding(MetricRef::space(space))
+        self.padding(space)
     }
 
     pub fn focused_border(self) -> Self {
@@ -491,7 +491,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.ml_neg(space))
     }
 
-    pub fn min_w(self, width: MetricRef) -> Self {
+    pub fn min_w(self, width: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.min_w(width))
     }
 
@@ -499,7 +499,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.min_w_space(width))
     }
 
-    pub fn min_h(self, height: MetricRef) -> Self {
+    pub fn min_h(self, height: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.min_h(height))
     }
 
@@ -515,7 +515,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.h(height))
     }
 
-    pub fn w_px(self, width: MetricRef) -> Self {
+    pub fn w_px(self, width: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.w_px(width))
     }
 
@@ -523,7 +523,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.w_space(width))
     }
 
-    pub fn h_px(self, height: MetricRef) -> Self {
+    pub fn h_px(self, height: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.h_px(height))
     }
 
@@ -531,7 +531,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.h_space(height))
     }
 
-    pub fn max_w(self, width: MetricRef) -> Self {
+    pub fn max_w(self, width: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.max_w(width))
     }
 
@@ -539,7 +539,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.max_w_space(width))
     }
 
-    pub fn max_h(self, height: MetricRef) -> Self {
+    pub fn max_h(self, height: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.max_h(height))
     }
 
@@ -674,19 +674,17 @@ impl<T: UiPatchTarget> UiBuilder<T> {
 }
 
 impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
-    pub fn gap(mut self, space: Space) -> Self {
-        self.inner.gap = MetricRef::space(space);
+    pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
+        self.inner.gap = gap.into();
         self
     }
 
-    pub fn gap_px(mut self, gap: Px) -> Self {
-        self.inner.gap = MetricRef::Px(gap);
-        self
+    pub fn gap_px(self, gap: Px) -> Self {
+        self.gap(gap)
     }
 
-    pub fn gap_metric(mut self, gap: MetricRef) -> Self {
-        self.inner.gap = gap;
-        self
+    pub fn gap_metric(self, gap: MetricRef) -> Self {
+        self.gap(gap)
     }
 
     pub fn justify(mut self, justify: Justify) -> Self {
