@@ -667,6 +667,7 @@ mod tests {
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::primitives::popover as radix_popover;
 
     #[derive(Default)]
     struct FakeServices;
@@ -734,6 +735,65 @@ mod tests {
             bounds,
             "combobox",
             |cx| vec![Combobox::new(model, open).items(items).into_element(cx)],
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_with_underlay(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<ComboboxItem>,
+        underlay_clicked: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "combobox-underlay",
+            move |cx| {
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_toggle_bool(&underlay_clicked);
+                        Vec::new()
+                    },
+                );
+                vec![
+                    underlay,
+                    Combobox::new(model, open).items(items).into_element(cx),
+                ]
+            },
         );
         ui.set_root(root);
         fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
@@ -1018,6 +1078,153 @@ mod tests {
             .expect("combobox search input node after typing");
         assert_eq!(input.role, SemanticsRole::ComboBox);
         assert_eq!(input.value.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn combobox_close_transition_disables_pointer_move_and_timer_events() {
+        use fret_core::{Event, Modifiers, MouseButton, MouseButtons};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            ComboboxItem::new("alpha", "Alpha"),
+            ComboboxItem::new("beta", "Beta"),
+            ComboboxItem::new("gamma", "Gamma"),
+        ];
+
+        // Frame 1: closed.
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            underlay_clicked.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open, capture overlay layer id.
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            underlay_clicked.clone(),
+        );
+        let overlay_id =
+            fret_ui_kit::OverlayController::stack_snapshot_for_window(&ui, &mut app, window)
+                .topmost_popover
+                .expect("expected an open combobox overlay");
+        let overlay_root_name = radix_popover::popover_root_name(overlay_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        let overlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, overlay_root).expect("overlay");
+        let overlay_layer = ui.node_layer(overlay_node).expect("overlay layer");
+
+        let info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == overlay_layer)
+            .expect("overlay layer info");
+        assert!(info.visible);
+        assert!(info.hit_testable);
+        assert!(info.wants_pointer_move_events);
+        assert!(info.wants_timer_events);
+
+        // Frame 3: close (close transition should remain present but be click-through).
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+            underlay_clicked.clone(),
+        );
+
+        let info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == overlay_layer)
+            .expect("overlay layer info");
+        assert!(info.visible);
+        assert!(!info.hit_testable);
+        assert!(!info.wants_pointer_move_events);
+        assert!(!info.wants_timer_events);
+
+        // Pointer interactions should go through while closing.
+        let underlay_pos = Point::new(Px(10.0), Px(230.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
+
+        // Move events should not install timers while closing (no interactive policies).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, fret_runtime::Effect::SetTimer { .. })),
+            "expected close transition to not arm timers; effects={effects:?}"
+        );
     }
 
     #[test]
