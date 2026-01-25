@@ -521,4 +521,38 @@ mod tests {
             "expected all snapshots removed"
         );
     }
+
+    #[test]
+    fn clear_snapshot_only_clears_base_not_pushed_overrides() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        let token = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+
+        svc.clear_snapshot(window);
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal),
+            "expected pushed override to remain after clearing base snapshot"
+        );
+
+        svc.remove_pushed_snapshot(window, token)
+            .expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected window to be cleared after removing last pushed override and base"
+        );
+    }
 }
