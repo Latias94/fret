@@ -2529,6 +2529,8 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     #[serde(default)]
+    pub all_layer_roots: Vec<u64>,
+    #[serde(default)]
     pub layer_visible_writes: Vec<UiLayerVisibleWriteV1>,
     #[serde(default)]
     pub overlay_policy_decisions: Vec<UiOverlayPolicyDecisionV1>,
@@ -2621,6 +2623,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_layers_in_paint_order()
                 .into_iter()
                 .map(UiLayerInfoV1::from_layer)
+                .collect(),
+            all_layer_roots: ui
+                .debug_layers_in_paint_order()
+                .into_iter()
+                .map(|l| l.root.data().as_ffi())
                 .collect(),
             layer_visible_writes: ui
                 .debug_layer_visible_writes()
@@ -3862,6 +3869,26 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub view_cache_reuse_roots: Vec<u64>,
     #[serde(default)]
     pub view_cache_reuse_root_element_counts: Vec<(u64, u32)>,
+    #[serde(default)]
+    pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementNodeEntryRootOverwriteV1 {
+    pub frame_id: u64,
+    pub element: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
+    pub old_root: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub old_root_path: Option<String>,
+    pub new_root: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub new_root_path: Option<String>,
+    pub old_node: u64,
+    pub new_node: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<UiSourceLocationV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3943,6 +3970,26 @@ impl ElementDiagnosticsSnapshotV1 {
                 .view_cache_reuse_root_element_counts
                 .into_iter()
                 .map(|(id, count)| (id.0, count))
+                .collect(),
+            node_entry_root_overwrites: snapshot
+                .node_entry_root_overwrites
+                .into_iter()
+                .map(|r| ElementNodeEntryRootOverwriteV1 {
+                    frame_id: r.frame_id.0,
+                    element: r.element.0,
+                    element_path: runtime.debug_path_for_element(window, r.element),
+                    old_root: r.old_root.0,
+                    old_root_path: runtime.debug_path_for_element(window, r.old_root),
+                    new_root: r.new_root.0,
+                    new_root_path: runtime.debug_path_for_element(window, r.new_root),
+                    old_node: r.old_node.data().as_ffi(),
+                    new_node: r.new_node.data().as_ffi(),
+                    location: Some(UiSourceLocationV1 {
+                        file: r.file.to_string(),
+                        line: r.line,
+                        column: r.column,
+                    }),
+                })
                 .collect(),
         }
     }

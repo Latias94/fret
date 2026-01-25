@@ -29,6 +29,7 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
+    pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
 }
 
 #[derive(Default)]
@@ -142,6 +143,8 @@ pub struct WindowElementState {
     continuous_frames: Arc<AtomicUsize>,
     #[cfg(feature = "diagnostics")]
     debug_identity: DebugIdentityRegistry,
+    #[cfg(feature = "diagnostics")]
+    debug_node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -155,6 +158,20 @@ pub(crate) struct NodeEntry {
     pub node: NodeId,
     pub last_seen_frame: FrameId,
     pub root: GlobalElementId,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct NodeEntryRootOverwrite {
+    pub frame_id: FrameId,
+    pub element: GlobalElementId,
+    pub old_root: GlobalElementId,
+    pub new_root: GlobalElementId,
+    pub old_node: NodeId,
+    pub new_node: NodeId,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
 }
 
 impl WindowElementState {
@@ -225,6 +242,8 @@ impl WindowElementState {
             self.debug_identity
                 .entries
                 .retain(|_, v| v.last_seen_frame.0 >= cutoff);
+            self.debug_node_entry_root_overwrites
+                .retain(|r| r.frame_id.0 >= cutoff);
         }
     }
 
@@ -563,7 +582,31 @@ impl WindowElementState {
             .find_map(|(&element, entry)| (entry.node == node).then_some(element))
     }
 
+    #[track_caller]
     pub(crate) fn set_node_entry(&mut self, id: GlobalElementId, entry: NodeEntry) {
+        #[cfg(feature = "diagnostics")]
+        if let Some(prev) = self.nodes.get(&id) {
+            if prev.root != entry.root {
+                let location = std::panic::Location::caller();
+                self.debug_node_entry_root_overwrites
+                    .push(NodeEntryRootOverwrite {
+                        frame_id: entry.last_seen_frame,
+                        element: id,
+                        old_root: prev.root,
+                        new_root: entry.root,
+                        old_node: prev.node,
+                        new_node: entry.node,
+                        file: location.file(),
+                        line: location.line(),
+                        column: location.column(),
+                    });
+                const MAX_RECORDS: usize = 256;
+                if self.debug_node_entry_root_overwrites.len() > MAX_RECORDS {
+                    let drain = self.debug_node_entry_root_overwrites.len() - MAX_RECORDS;
+                    self.debug_node_entry_root_overwrites.drain(0..drain);
+                }
+            }
+        }
         self.nodes.insert(id, entry);
     }
 
@@ -673,6 +716,7 @@ impl WindowElementState {
                 .collect(),
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
+            node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
         }
     }
 

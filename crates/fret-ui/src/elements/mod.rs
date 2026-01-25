@@ -13,9 +13,9 @@ pub use queries::{
     bounds_for_element, node_for_element, root_bounds_for_element, visual_bounds_for_element,
     with_element_cx,
 };
-#[cfg(feature = "diagnostics")]
-pub use runtime::WindowElementDiagnosticsSnapshot;
 pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};
+#[cfg(feature = "diagnostics")]
+pub use runtime::{NodeEntryRootOverwrite, WindowElementDiagnosticsSnapshot};
 
 pub(crate) use access::{
     clear_timer_target, is_pressed_pressable, observed_globals_for_element,
