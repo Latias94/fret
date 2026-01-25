@@ -28,10 +28,10 @@ Practical rule:
 
 This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
-- Golden files: `484`
+- Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `250` (`55.8%`)
-- Keys not referenced by tests: `198`
+- Keys referenced by tests: `253` (`56.5%`)
+- Keys not referenced by tests: `195`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -45,7 +45,7 @@ At the time of writing, the largest missing groups were:
 - `form` (19; field composition + validation chrome)
 - `typography` (13; baseline text metrics and prose defaults)
 - `input` (10; control chrome + stacking patterns)
-- `calendar` (4; primitives-heavy; tends to expose text metrics + grid layout edge cases)
+- `calendar` (1; primitives-heavy; tends to expose text metrics + grid layout edge cases)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were:
 
@@ -81,7 +81,7 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 ## What to do next (recommended order)
 
 1. **Gate missing primitives-heavy widgets** first (high churn risk):
-   - Remaining calendar variants (4 missing): `calendar-27`, `calendar-28`, `calendar-29`, `calendar-hijri`.
+   - Remaining calendar variants (1 missing): `calendar-hijri`.
 2. **Gate missing form composition + validation chrome** (high leverage):
    - `form-*` and any remaining `field-*` / `input-*` invalid variants
 3. **Gate missing medium-surface components** next:
