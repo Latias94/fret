@@ -224,6 +224,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] Tooltip token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/tooltip.rs`,
       `ecosystem/fret-ui-material3/src/tooltip.rs`.
+  - [x] Snackbar token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/snackbar.rs`,
+      `ecosystem/fret-ui-material3/src/snackbar.rs`.
 
 ### Interaction Outcomes
 
