@@ -45,6 +45,25 @@ fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
     }
 }
 
+fn capture_conflicts_with_layer(
+    arbitration: fret_ui::tree::UiInputArbitrationSnapshot,
+    layer: UiLayerId,
+) -> bool {
+    arbitration.pointer_capture_active
+        && (arbitration.pointer_capture_multiple_layers
+            || arbitration.pointer_capture_layer != Some(layer))
+}
+
+fn should_suspend_pointer_gating_for_capture(
+    open: bool,
+    capture_conflicts_with_layer: bool,
+    disable_outside_pointer_events: bool,
+    consume_outside_pointer_events: bool,
+) -> bool {
+    open && capture_conflicts_with_layer
+        && (disable_outside_pointer_events || consume_outside_pointer_events)
+}
+
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -479,33 +498,25 @@ pub fn render<H: UiHost>(
             entry.consume_outside_pointer_events = consume_outside_pointer_events;
             entry.disable_outside_pointer_events = disable_outside_pointer_events;
 
-            // Input arbitration: if the window currently has an active pointer capture in a
-            // *different* layer (viewport-style drags, resizers, etc.), menu-like overlays must
-            // not introduce pointer occlusion mid-capture. Force-close the overlay to avoid
-            // capture+occlusion overlap and keep routing deterministic.
-            if open_now
-                && (disable_outside_pointer_events || consume_outside_pointer_events)
-                && arbitration.pointer_capture_active
-            {
-                let trigger_node = fret_ui::elements::node_for_element(app, window, trigger);
-                let capture_is_foreign = if arbitration.pointer_capture_multiple_layers {
-                    true
-                } else {
-                    let captured_node = ui.any_captured_node();
-                    let captured_layer = captured_node.and_then(|n| ui.node_layer(n));
-                    let capture_belongs_to_overlay_layer = captured_layer == Some(entry.layer);
-                    let capture_belongs_to_trigger =
-                        captured_node.is_some() && captured_node == trigger_node;
-                    let capture_known = captured_node.is_some();
-                    capture_known
-                        && !capture_belongs_to_overlay_layer
-                        && !capture_belongs_to_trigger
-                };
-                if capture_is_foreign {
-                    let _ = app.models_mut().update(&open, |v| *v = false);
-                    open_now = false;
-                }
-            }
+            // Input arbitration: avoid introducing pointer occlusion mid-capture.
+            //
+            // Menu-like overlays (Radix `disableOutsidePointerEvents`) normally want to occlude
+            // underlay pointer input while open. If another layer is currently capturing the
+            // pointer (viewport drags, resizers, etc.), enabling occlusion can change routing
+            // semantics in surprising ways.
+            //
+            // Do not force-close the overlay here: open state is component-owned and closing as a
+            // side effect of input arbitration produces flicker and breaks pointer-open focus.
+            // Instead, temporarily suspend pointer gating until capture is released.
+            let capture_conflicts_with_layer =
+                capture_conflicts_with_layer(arbitration, entry.layer);
+            let suspend_pointer_gating_for_capture = should_suspend_pointer_gating_for_capture(
+                open_now,
+                capture_conflicts_with_layer,
+                disable_outside_pointer_events,
+                consume_outside_pointer_events,
+            );
+            let effective_interactive = open_now && !suspend_pointer_gating_for_capture;
 
             if open_now
                 && let Some(layer_root) = ui.layer_root(entry.layer)
@@ -547,7 +558,7 @@ pub fn render<H: UiHost>(
                 ui,
                 entry.layer,
                 true,
-                open_now,
+                effective_interactive,
                 NonModalDismissibleLayerPolicy {
                     dismissable_branches,
                     consume_outside_pointer_events,
@@ -734,6 +745,7 @@ pub fn render<H: UiHost>(
         seen_hover_overlays.insert(req.id);
 
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        let interactive = req.interactive && open_now;
         let root = fret_ui::declarative::render_root(
             ui,
             app,
@@ -762,7 +774,8 @@ pub fn render<H: UiHost>(
             if from_producer {
                 entry.last_seen_frame = frame_id;
             }
-            apply_hover_layer(ui, entry.layer, true, open_now);
+            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
+            apply_hover_layer(ui, entry.layer, present, interactive && present);
         });
     }
 
@@ -800,6 +813,7 @@ pub fn render<H: UiHost>(
         seen_tooltips.insert(req.id);
 
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        let interactive = req.interactive && open_now;
         let on_dismiss_request = req.on_dismiss_request.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let children = req.children;
@@ -837,9 +851,28 @@ pub fn render<H: UiHost>(
             if from_producer {
                 entry.last_seen_frame = frame_id;
             }
-            apply_tooltip_layer(ui, entry.layer, true, open_now);
+            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
+            let interactive = interactive && present;
 
-            ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
+            apply_tooltip_layer(ui, entry.layer, present, interactive);
+
+            let wants_outside_press_observer = req.on_dismiss_request.is_some();
+            let wants_pointer_move_events = req.on_pointer_move.is_some();
+
+            ui.set_layer_wants_pointer_down_outside_events(
+                entry.layer,
+                present && interactive && wants_outside_press_observer,
+            );
+            ui.set_layer_wants_pointer_move_events(
+                entry.layer,
+                present && interactive && wants_pointer_move_events,
+            );
+
+            if interactive {
+                ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
+            } else {
+                ui.set_layer_scroll_dismiss_elements(entry.layer, Vec::new());
+            }
         });
     }
 
