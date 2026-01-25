@@ -132,9 +132,10 @@ impl OverlayLayerState {
             present,
             interactive,
             // Non-modal overlays may rely on timers for small interaction policies (e.g. submenu
-            // safe-hover close delays). Keeping this enabled avoids requiring per-overlay opt-in
-            // plumbing while the overlay policy surface is still evolving.
-            wants_timer_events: present,
+            // safe-hover close delays). These policies should only run while the overlay is
+            // interactive. During close transitions (`present=true` but `interactive=false`), the
+            // layer must not participate in timer-driven interaction state machines.
+            wants_timer_events: present && interactive,
         }
     }
     fn toast(present: bool, wants_timer_events: bool) -> Self {
