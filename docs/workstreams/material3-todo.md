@@ -366,7 +366,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Add a Material 3 Text field gallery page for manual interaction verification.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TEXT_FIELD`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_text_field`).
-- [ ] Add a small, scripted interaction test harness for Material states (hover/press/ripple).
+- [x] Add a small, scripted interaction test harness for Material states (hover/press/ripple).
+  - Evidence: tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tabs_pressed_scene_structure_is_stable`).
 - [ ] Add golden-style visual snapshots per component state (light/dark, density variants).
 
 ## Proposed ADRs (drafts)

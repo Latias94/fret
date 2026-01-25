@@ -15,6 +15,59 @@ use fret_runtime::{
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SceneSig {
+    PushTransform,
+    PopTransform,
+    PushOpacity,
+    PopOpacity,
+    PushLayer,
+    PopLayer,
+    PushClipRect,
+    PushClipRRect,
+    PopClip,
+    PushEffect,
+    PopEffect,
+    Quad(DrawOrder),
+    Image(DrawOrder),
+    ImageRegion(DrawOrder),
+    MaskImage(DrawOrder),
+    SvgMaskIcon(DrawOrder),
+    SvgImage(DrawOrder),
+    Text(DrawOrder),
+    Path(DrawOrder),
+    ViewportSurface(DrawOrder),
+}
+
+fn scene_signature(scene: &Scene) -> Vec<SceneSig> {
+    scene
+        .ops()
+        .iter()
+        .map(|op| match *op {
+            SceneOp::PushTransform { .. } => SceneSig::PushTransform,
+            SceneOp::PopTransform => SceneSig::PopTransform,
+            SceneOp::PushOpacity { .. } => SceneSig::PushOpacity,
+            SceneOp::PopOpacity => SceneSig::PopOpacity,
+            SceneOp::PushLayer { .. } => SceneSig::PushLayer,
+            SceneOp::PopLayer => SceneSig::PopLayer,
+            SceneOp::PushClipRect { .. } => SceneSig::PushClipRect,
+            SceneOp::PushClipRRect { .. } => SceneSig::PushClipRRect,
+            SceneOp::PopClip => SceneSig::PopClip,
+            SceneOp::PushEffect { .. } => SceneSig::PushEffect,
+            SceneOp::PopEffect => SceneSig::PopEffect,
+            SceneOp::Quad { order, .. } => SceneSig::Quad(order),
+            SceneOp::Image { order, .. } => SceneSig::Image(order),
+            SceneOp::ImageRegion { order, .. } => SceneSig::ImageRegion(order),
+            SceneOp::MaskImage { order, .. } => SceneSig::MaskImage(order),
+            SceneOp::SvgMaskIcon { order, .. } => SceneSig::SvgMaskIcon(order),
+            SceneOp::SvgImage { order, .. } => SceneSig::SvgImage(order),
+            SceneOp::Text { order, .. } => SceneSig::Text(order),
+            SceneOp::Path { order, .. } => SceneSig::Path(order),
+            SceneOp::ViewportSurface { order, .. } => SceneSig::ViewportSurface(order),
+        })
+        .collect()
+}
+
 #[derive(Default)]
 struct TestHost {
     globals: HashMap<TypeId, Box<dyn Any>>,
@@ -1065,4 +1118,105 @@ fn switch_ripple_holds_for_minimum_press_duration_before_fade() {
         "expected to observe a keyboard ripple"
     );
     assert!(saw_fade, "expected the ripple to start fading");
+}
+
+#[test]
+fn tabs_pressed_scene_structure_is_stable() {
+    use std::sync::Arc;
+
+    use fret_ui_material3::{TabItem, Tabs};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+
+    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+        fret_ui_material3::tokens::v30::TypographyOptions::default(),
+        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+    );
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(240.0)),
+    );
+
+    let selected = app.models_mut().insert(Arc::<str>::from("b"));
+    let items = vec![
+        TabItem::new("a", "A").test_id("tab-a"),
+        TabItem::new("b", "B").test_id("tab-b"),
+        TabItem::new("c", "C").test_id("tab-c"),
+    ];
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let tabs = Tabs::new(selected.clone())
+                .items(items.clone())
+                .a11y_label("tabs")
+                .into_element(cx);
+            vec![with_padding(cx, Px(24.0), tabs)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let tab_b: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("tab-b") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected tab-b in semantics snapshot");
+    let tab_b_bounds = ui
+        .debug_node_visual_bounds(tab_b)
+        .expect("expected tab-b visual bounds");
+    let press_at = Point::new(
+        Px(tab_b_bounds.origin.x.0 + tab_b_bounds.size.width.0 * 0.5),
+        Px(tab_b_bounds.origin.y.0 + tab_b_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+
+    let mut baseline: Option<Vec<SceneSig>> = None;
+    for frame in 0..6 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        if frame < 2 {
+            continue;
+        }
+
+        let sig = scene_signature(&scene);
+        if let Some(prev) = baseline.as_ref() {
+            assert_eq!(
+                sig, *prev,
+                "expected Tabs to keep a stable scene structure while pressed"
+            );
+        } else {
+            baseline = Some(sig);
+        }
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
 }
