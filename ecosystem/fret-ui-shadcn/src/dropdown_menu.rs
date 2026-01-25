@@ -6020,4 +6020,197 @@ mod tests {
 
         app.cancel_drag(fret_core::PointerId(7));
     }
+
+    #[test]
+    fn dropdown_menu_cross_window_dock_drag_closes_open_menus_and_submenus() {
+        use slotmap::KeyData;
+
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+
+        let mut app = App::new();
+
+        let mut ui_a: UiTree<App> = UiTree::new();
+        ui_a.set_window(window_a);
+        let mut ui_b: UiTree<App> = UiTree::new();
+        ui_b.set_window(window_b);
+
+        let open_a = app.models_mut().insert(false);
+        let open_b = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        // Frame 1: closed, establish stable trigger bounds for both windows.
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let _ = render_frame(
+            &mut ui_b,
+            &mut app,
+            &mut services,
+            window_b,
+            bounds,
+            open_b.clone(),
+            entries.clone(),
+        );
+
+        // Frame 2: open both menus.
+        let _ = app.models_mut().update(&open_a, |v| *v = true);
+        let _ = app.models_mut().update(&open_b, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let _ = render_frame(
+            &mut ui_b,
+            &mut app,
+            &mut services,
+            window_b,
+            bounds,
+            open_b.clone(),
+            entries.clone(),
+        );
+
+        // Open the submenu in window A (keyboard).
+        let snap = ui_a.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui_a.set_focus(Some(more.id));
+
+        ui_a.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let snap = ui_a.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "expected submenu to be open before starting cross-window dock drag"
+        );
+
+        // Sanity: both open menus should install pointer occlusion.
+        let occlusion_a =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_a).pointer_occlusion;
+        let occlusion_b =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_b).pointer_occlusion;
+        assert_eq!(
+            occlusion_a,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+        );
+        assert_eq!(
+            occlusion_b,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+        );
+
+        // Frame 3: begin a cross-window dock drag in window A and enter window B.
+        app.begin_cross_window_drag_with_kind(
+            fret_core::PointerId(7),
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            window_a,
+            Point::new(Px(10.0), Px(10.0)),
+            (),
+        );
+        let drag = app.drag_mut(fret_core::PointerId(7)).expect("drag session");
+        drag.current_window = window_b;
+
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let _ = render_frame(
+            &mut ui_b,
+            &mut app,
+            &mut services,
+            window_b,
+            bounds,
+            open_b.clone(),
+            entries.clone(),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open_a),
+            Some(false),
+            "expected source window menu to close during dock drag"
+        );
+        assert_eq!(
+            app.models().get_copied(&open_b),
+            Some(false),
+            "expected current window menu to close during dock drag"
+        );
+
+        let occlusion_a =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_a).pointer_occlusion;
+        let occlusion_b =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_b).pointer_occlusion;
+        assert_eq!(
+            occlusion_a,
+            fret_ui::tree::PointerOcclusion::None,
+            "expected dock drag to clear pointer occlusion in source window"
+        );
+        assert_eq!(
+            occlusion_b,
+            fret_ui::tree::PointerOcclusion::None,
+            "expected dock drag to clear pointer occlusion in current window"
+        );
+
+        let snap = ui_a.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "expected submenu items to be removed after dock drag closes the menu"
+        );
+
+        app.cancel_drag(fret_core::PointerId(7));
+    }
 }
