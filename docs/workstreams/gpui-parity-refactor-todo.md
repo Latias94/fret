@@ -41,7 +41,7 @@ Each TODO is labeled:
 
 ## Near-term Focus (keep tight)
 
-- **MVP2-cache-005**: remove the “skip sweep under reuse” stopgap by relying on explicit cache-root liveness (reachability-based).
+- **MVP2-cache-005**: done (keep overlay/scroll-refresh harnesses green while refactoring other areas).
 - **MVP5-virt-001**: move VirtualList window derivation toward prepaint so window shifts do not necessarily imply cache-root rerender.
 - **MVP5-perf-002**: turn “notify hotspots no longer dominated by Pressable” into a repeatable perf gate (top bundles + callsites).
 

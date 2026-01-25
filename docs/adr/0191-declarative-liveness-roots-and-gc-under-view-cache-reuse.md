@@ -43,6 +43,18 @@ This ADR locks the contract needed to:
 - **Subtree membership list**: the per-reuse-root element list used to deterministically "touch" a
   retained subtree on cache-hit frames.
 
+## Implementation Mapping (Fret; non-normative)
+
+This section maps the normative terms to the current codebase to keep future refactors grounded.
+The contract is the source of truth; the mapping may evolve.
+
+- **Layer roots**: `UiTree::all_layer_roots` (`crates/fret-ui/src/tree/layers.rs`).
+- **View-cache reuse roots**: `WindowElementState::{mark_view_cache_reuse_root, view_cache_reuse_roots}` (`crates/fret-ui/src/elements/runtime.rs`).
+- **Subtree membership list**: `WindowElementState::view_cache_elements_for_root` (`crates/fret-ui/src/elements/runtime.rs`).
+- **GC reachability under reuse**: `crates/fret-ui/src/declarative/mount.rs` (see the `reachable_from_view_cache_roots` set and the sweep predicate).
+- **Removed-subtree attribution** (diagnostics): `UiDebugRemoveSubtreeRecord` exported from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+- **Ownership root**: `NodeEntry.root` (`crates/fret-ui/src/elements/runtime.rs`); cross-root overwrites must not be “repaired” implicitly (ADR 0191).
+
 ## Non-normative reference patterns (best practice survey)
 
 These systems converge on the same core idea: **GC must be reachability/ownership driven, not frame-age driven**.
@@ -58,6 +70,17 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
   - View caching is gated by "dirty views" (e.g. `WindowInvalidator.dirty_views`) plus a cache key (bounds/content mask/text style).
   - Cache hits still restore dependency tracking (e.g. extend `accessed_entities`) and preserve element-local state by "accessing" it as part of `prepaint`/`paint` replay.
   - Concretely, the per-frame element-state map is driven by an explicit "accessed set": reuse paths extend the next frame's accessed element-state keys from the recorded range, so a cache hit cannot accidentally drop state simply because a subtree did not rebuild.
+
+### Upstream anchors (non-normative; line numbers may drift)
+
+- **Zed / GPUI**
+  - `crates/gpui/src/window.rs`: `WindowInvalidator{ dirty_views }`, `WindowInvalidator::invalidate_view`, `Window::mark_view_dirty` (marks ancestor views dirty).
+    - Source: https://github.com/zed-industries/zed/blob/main/crates/gpui/src/window.rs
+  - `crates/gpui/src/view.rs`: view caching and reuse (`reuse_prepaint`, `reuse_paint`) + dependency tracking (`accessed_entities`).
+    - Source: https://github.com/zed-industries/zed/blob/main/crates/gpui/src/view.rs
+- **Flutter**
+  - `packages/flutter/lib/src/widgets/framework.dart`: `_InactiveElements`, `BuildOwner.finalizeTree`, `BuildOwner.deactivateChild`.
+    - Source: https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/framework.dart
 
 In all cases, "not rebuilt this frame" is not a signal for disposal. Liveness comes from explicit roots (composition/window roots) and ownership bookkeeping.
 
