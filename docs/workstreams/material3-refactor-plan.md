@@ -65,6 +65,8 @@ Current state in this worktree:
 - A token import + audit pipeline exists to keep scalar tokens aligned with Material Web v30.
 - Typed token helper modules are landing per component (including navigation surfaces) to reduce
   raw string usage and keep fallback behavior aligned with Material Web alias mapping.
+- A design-variant selection mechanism (Standard vs Expressive) is being introduced so components
+  can opt into `.expressive.*` token variants in a controlled way (global default + subtree override).
 
 ## Compose Multiplatform Baseline (Reference Architecture)
 

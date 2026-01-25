@@ -180,13 +180,20 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Add a minimal layout probe helper for measurement-driven visuals (1-frame latency).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/layout_probe.rs`,
     `ecosystem/fret-ui-material3/src/tabs.rs`
-- [ ] Decide whether we need a hoistable interaction source surface (Compose
+- [x] Decide whether we need a hoistable interaction source surface (Compose
   `MutableInteractionSource` analogue) or whether `PressableState` + foundation runtime state is
   sufficient for our current authoring model.
+  - Decision: keep `PressableState` + Material foundation state as the default for now; defer a
+    hoistable interaction source until a concrete preview/authoring need appears.
 - [x] Implement a MotionScheme mapping for the 6 canonical specs (standard) and expose it via the
   tree-local Material context override.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/motion_scheme.rs`,
     `ecosystem/fret-ui-material3/src/foundation/context.rs`
+- [x] Add a design variant selection mechanism (Standard vs Expressive) for component `.expressive.*`
+  token variants (global default + subtree override).
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/context.rs` (`MaterialDesignVariant`,
+    `theme_default_design_variant`, `with_material_design_variant`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.sys.fret.material.is-expressive`).
 - [ ] Extend MotionScheme mapping for Expressive tokens (when available in the token source of truth).
 - [ ] Decide how to represent spring configs long-term (ecosystem-only vs core mechanism).
 - [ ] Introduce typed token modules per component to reduce raw string key usage and centralize
