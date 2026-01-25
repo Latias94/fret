@@ -180,10 +180,10 @@ fn mvu_init_window<P: Program>(
 fn mvu_view<P: Program>(
     cx: &mut ElementContext<'_, App>,
     st: &mut MvuWindowState<P::State, P::Message>,
-) -> Vec<AnyElement> {
+) -> fret_bootstrap::ui_app_driver::ViewElements {
     cx.observe_model(&st.tick, Invalidation::Layout);
     st.router.clear();
-    P::view(cx, &mut st.user, &mut st.router)
+    P::view(cx, &mut st.user, &mut st.router).into()
 }
 
 fn mvu_on_command<P: Program>(
