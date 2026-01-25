@@ -858,6 +858,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         )?;
                     }
 
+                    if !reuse_process {
+                        clear_script_result_files(
+                            &resolved_script_result_path,
+                            &resolved_script_result_trigger_path,
+                        );
+                    }
+
                     let mut result = run_script_and_wait(
                         &src,
                         &resolved_script_path,
@@ -1019,6 +1026,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             timeout_ms,
                             poll_ms,
                         )?;
+                    }
+
+                    if !reuse_process {
+                        clear_script_result_files(
+                            &resolved_script_result_path,
+                            &resolved_script_result_trigger_path,
+                        );
                     }
 
                     let mut result = run_script_and_wait(
@@ -5502,6 +5516,11 @@ fn run_script_and_wait(
 
         std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
     }
+}
+
+fn clear_script_result_files(script_result_path: &Path, script_result_trigger_path: &Path) {
+    let _ = std::fs::remove_file(script_result_path);
+    let _ = std::fs::remove_file(script_result_trigger_path);
 }
 
 fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
