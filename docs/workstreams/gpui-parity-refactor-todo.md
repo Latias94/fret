@@ -175,6 +175,8 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Diagnostics:
     - `removed_subtrees` include `root_element_path` (when the element debug identity is still retained within the diagnostics lag window).
     - `removed_subtrees` include `root_parent_children_last_set_location` (when the parent has a recorded `set_children(..)` write in this run).
+    - `removed_subtrees` include `root_path_edge_ui_contains_child` / `root_path_edge_frame_contains_child` to pinpoint whether the parent chain is internally consistent
+      (and whether the authoritative `WindowFrame.children` agrees with `UiTree` edges).
     - If these fields are missing in a failing bundle, it usually means: the debug identity entry was pruned (not touched for `gc_lag_frames`), or the parent never issued a `set_children(..)` write in the current capture.
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
@@ -190,9 +192,16 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - `target/fret-diag-overlay-torture-cache005-newdiags/1769260341209-script-step-0010-click-no-semantics-match/bundle.json`
     - Repro note (diagnostics-only): set `FRET_UI_DISABLE_VIEW_CACHE_GC_STOPGAP=1` to force the same behavior without editing code.
       - `target/fret-diag-overlay-torture-cache005-stopgap-disabled/1769266528812-script-step-0010-click-no-semantics-match/bundle.json`
+      - `target/fret-diag-overlay-torture-cache005-stopgap-disabled-path-edges/1769304660925-script-step-0010-click-no-semantics-match/bundle.json`
   - Next:
     - In the failing bundle above, `ui-gallery-dialog-trigger` exists up to `frame_id=33`, then disappears on `frame_id=34` when `debug.removed_subtrees.len()` spikes (31).
       Use `frame_id=34` `debug.removed_subtrees[*].root/root_element/root_path` as the entry point for root-cause analysis.
+    - Observation (2026-01-25): in the `stopgap-disabled-path-edges` bundle, the subtree containing `ui-gallery-dialog-trigger` is removed as part of the max-`removed_nodes` record:
+      - `frame_id=34`: `removed_subtrees[*].root=4294967755`, `root_root=4294967733`, `root_layer=None`, `reachable_from_layer_roots=false`.
+      - `root_path_edge_ui_contains_child` and `root_path_edge_frame_contains_child` are all `1` for the full `root_path` hop chain, which suggests the subtree is internally consistent,
+        but the top `root_root` is an "island root" (not reachable from current layer roots), so it is treated as detached and swept.
+    - Next unblock target: explain why `root_root` becomes an island root on the failing frame (lost attachment to layer roots / window root), then make that attachment or liveness explicit
+      so we can remove the global `view_cache_has_reuse_roots` stopgap.
     - Observation (2026-01-24): in the failing bundles above, `ui-gallery-dialog-trigger` is last present at `frame_id=33` and is removed as part of the max-`removed_nodes` subtree at `frame_id=34`
       (the node id `4294967671` appears in `debug.removed_subtrees[*].removed_head`).
       The record reports `root_layer=None` and `reachable_from_layer_roots=false`, so the subtree is treated as detached at sweep time (not just missing a `last_seen_frame` touch).
