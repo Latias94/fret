@@ -1152,7 +1152,7 @@ impl UiGalleryDriver {
                                                 .bg(ColorRef::Color(theme.color_required("muted")))
                                                 .p(Space::N4),
                                             LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(280.0)))
+                                                .w_px(Px(280.0))
                                                 .h_full(),
                                         ),
                                         |cx| vec![cx.text("Sidebar (disabled)")],
@@ -1187,7 +1187,7 @@ impl UiGalleryDriver {
                                             .bg(ColorRef::Color(theme.color_required("muted")))
                                             .p(Space::N4),
                                         LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(280.0)))
+                                            .w_px(Px(280.0))
                                             .h_full(),
                                     ),
                                     |cx| vec![cx.text("Sidebar (disabled)")],

@@ -233,7 +233,7 @@ fn view(
         })
         .gap(Space::N2)
         .items_start()
-        .w_px(MetricRef::Px(Px(360.0)))
+        .w_px(Px(360.0))
         .h_full()
         .into_element(cx);
 

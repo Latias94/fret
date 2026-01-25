@@ -430,11 +430,7 @@ fn todo_panel(
     .into_element(cx);
 
     shadcn::Card::new([header, body])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(360.0)))
-                .h_full(),
-        )
+        .refine_layout(LayoutRefinement::default().w_px(Px(360.0)).h_full())
         .ui()
         .p_3()
         .into_element(cx)
@@ -507,7 +503,7 @@ fn external_panel(
     .border_1()
     .rounded(Radius::Md)
     .w_full()
-    .h_px(MetricRef::Px(Px(360.0)))
+    .h_px(Px(360.0))
     .into_element(cx);
 
     let body = shadcn::CardContent::new([viewport]).into_element(cx);

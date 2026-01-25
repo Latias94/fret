@@ -195,11 +195,7 @@ fn todo_panel(
     ]);
 
     shadcn::Card::new([header.into_element(cx), body.into_element(cx)])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(360.0)))
-                .h_full(),
-        )
+        .refine_layout(LayoutRefinement::default().w_px(Px(360.0)).h_full())
         .into_element(cx)
 }
 

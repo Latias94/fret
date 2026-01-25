@@ -179,8 +179,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         })
         .bg(ColorRef::Color(theme.color_required("muted")))
         .rounded(Radius::Full)
-        .w_px(MetricRef::Px(Px(32.0)))
-        .h_px(MetricRef::Px(Px(32.0)))
+        .w_px(Px(32.0))
+        .h_px(Px(32.0))
         .into_element(cx);
 
         [left, icon_bg]
@@ -197,7 +197,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         .items_center()
         .into_element(cx);
 
-    let list_max_h = MetricRef::Px(Px(260.0));
+    let list_max_h: MetricRef = Px(260.0).into();
 
     let tabs = shadcn::Tabs::new(st.filter.clone())
         .refine_layout(LayoutRefinement::default().w_full())
@@ -270,7 +270,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
     let card = shadcn::Card::new([header, content, footer])
         .ui()
         .w_full()
-        .max_w(MetricRef::Px(Px(460.0)))
+        .max_w(Px(460.0))
         .into_element(cx);
 
     let page = ui::container(cx, |cx| {

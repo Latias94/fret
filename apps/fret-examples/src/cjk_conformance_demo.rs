@@ -154,7 +154,7 @@ impl CjkConformanceDriver {
                 .ui()
                 .w_full()
                 .h_full()
-                .max_w(MetricRef::Px(Px(960.0)))
+                .max_w(Px(960.0))
                 .into_element(cx);
 
             let page = ui::container(cx, |cx| {

@@ -165,7 +165,7 @@ impl EmojiConformanceDriver {
                         .placeholder("Force emoji font (optional)")
                         .items(items)
                         .ui()
-                        .w_px(MetricRef::Px(Px(280.0)))
+                        .w_px(Px(280.0))
                         .into_element(cx),
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Outline)
@@ -254,7 +254,7 @@ impl EmojiConformanceDriver {
                     .ui()
                     .w_full()
                     .h_full()
-                    .max_w(MetricRef::Px(Px(960.0)))
+                    .max_w(Px(960.0))
                     .into_element(cx);
 
                 let page = ui::container(cx, |cx| {

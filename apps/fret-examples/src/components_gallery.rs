@@ -17,7 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
-use fret_ui_kit::{ColorRef, LayoutRefinement, MetricRef, OverlayController, Space, UiExt, ui};
+use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -281,9 +281,8 @@ impl ComponentsGalleryDriver {
                                                     )
                                                     .placeholder("Pick a theme")
                                                     .refine_layout(
-                                                        LayoutRefinement::default().w_px(
-                                                            MetricRef::Px(Px(260.0)),
-                                                        ),
+                                                        LayoutRefinement::default()
+                                                            .w_px(Px(260.0)),
                                                     )
                                                     .items([
                                                         shadcn::SelectItem::new(
@@ -531,9 +530,7 @@ impl ComponentsGalleryDriver {
                                                                 )
                                                                 .refine_layout(
                                                                     LayoutRefinement::default()
-                                                                        .w_px(MetricRef::Px(Px(
-                                                                            260.0,
-                                                                        ))),
+                                                                        .w_px(Px(260.0)),
                                                                 )
                                                                 .items(items.clone())
                                                                 .into_element(cx),
@@ -546,9 +543,7 @@ impl ComponentsGalleryDriver {
                                                                 )
                                                                 .refine_layout(
                                                                     LayoutRefinement::default()
-                                                                        .w_px(MetricRef::Px(Px(
-                                                                            260.0,
-                                                                        ))),
+                                                                        .w_px(Px(260.0)),
                                                                 )
                                                                 .items(items)
                                                                 .into_element(cx),
