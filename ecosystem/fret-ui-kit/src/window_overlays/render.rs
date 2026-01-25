@@ -168,14 +168,7 @@ fn apply_hover_layer_policy<H: UiHost>(
     present: bool,
     interactive: bool,
 ) {
-    ui.set_layer_visible(layer, present);
-    ui.set_layer_hit_testable(layer, present && interactive);
-    ui.set_layer_wants_pointer_down_outside_events(layer, false);
-    ui.set_layer_consume_pointer_down_outside_events(layer, false);
-    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
-    ui.set_layer_wants_pointer_move_events(layer, false);
-    ui.set_layer_wants_timer_events(layer, false);
-    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
+    apply_click_through_layer_policy(ui, layer, present, present && interactive, false, false);
 }
 
 fn apply_tooltip_layer_policy<H: UiHost>(
@@ -188,18 +181,30 @@ fn apply_tooltip_layer_policy<H: UiHost>(
 ) {
     // Tooltips are always click-through. "Interactive" controls whether we install observer hooks
     // while the tooltip is open (and must be disabled during close transitions).
-    ui.set_layer_visible(layer, present);
-    ui.set_layer_hit_testable(layer, false);
-    ui.set_layer_wants_pointer_down_outside_events(
+    apply_click_through_layer_policy(
+        ui,
         layer,
+        present,
+        false,
         present && interactive && wants_outside_press_observer,
-    );
-    ui.set_layer_consume_pointer_down_outside_events(layer, false);
-    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
-    ui.set_layer_wants_pointer_move_events(
-        layer,
         present && interactive && wants_pointer_move_events,
     );
+}
+
+fn apply_click_through_layer_policy<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    hit_testable: bool,
+    wants_pointer_down_outside_events: bool,
+    wants_pointer_move_events: bool,
+) {
+    ui.set_layer_visible(layer, present);
+    ui.set_layer_hit_testable(layer, hit_testable);
+    ui.set_layer_wants_pointer_down_outside_events(layer, wants_pointer_down_outside_events);
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_wants_pointer_move_events(layer, wants_pointer_move_events);
     ui.set_layer_wants_timer_events(layer, false);
     ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
 }
