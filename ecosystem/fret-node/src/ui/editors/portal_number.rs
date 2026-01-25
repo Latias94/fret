@@ -392,15 +392,16 @@ impl PortalNumberEditor {
                                             PortalTextStepMode::Normal
                                         };
 
-                                        host.dispatch_command(
-                                            Some(cx.window),
-                                            portal_step_text_command_with_mode(cmd_node, -1, mode),
-                                        );
-                                        fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
-                                    }));
-                                    vec![render_pressable_small_button(
-                                        cx,
-                                        &stepper_ui.button,
+                                     host.dispatch_command(
+                                         Some(cx.window),
+                                         portal_step_text_command_with_mode(cmd_node, -1, mode),
+                                     );
+                                     host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+                                     fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                                 }));
+                                 vec![render_pressable_small_button(
+                                     cx,
+                                     &stepper_ui.button,
                                         state,
                                         "-",
                                     )]
@@ -418,15 +419,16 @@ impl PortalNumberEditor {
                                             PortalTextStepMode::Normal
                                         };
 
-                                        host.dispatch_command(
-                                            Some(cx.window),
-                                            portal_step_text_command_with_mode(cmd_node, 1, mode),
-                                        );
-                                        fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
-                                    }));
-                                    vec![render_pressable_small_button(
-                                        cx,
-                                        &stepper_ui.button,
+                                     host.dispatch_command(
+                                         Some(cx.window),
+                                         portal_step_text_command_with_mode(cmd_node, 1, mode),
+                                     );
+                                     host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+                                     fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                                 }));
+                                 vec![render_pressable_small_button(
+                                     cx,
+                                     &stepper_ui.button,
                                         state,
                                         "+",
                                     )]
