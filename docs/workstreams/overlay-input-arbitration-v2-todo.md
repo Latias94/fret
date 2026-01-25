@@ -38,6 +38,7 @@ Keep this list short and evidence-backed:
     - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`dock_drag_closes_menu_like_overlay_and_disables_pointer_move_observers`)
     - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`dock_drag_cross_window_closes_menu_like_overlays_and_clears_occlusion`)
     - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_dock_drag_closes_menu_while_submenu_is_open`)
+    - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_cross_window_dock_drag_closes_open_menus_and_submenus`)
 - [x] OIA2-test-003 Viewport tool capture suppresses hover overlays/tooltips (ADR 0049 follow-up baseline).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (viewport capture suppression tests)
 - [x] OIA2-test-004 “Present vs interactive” close-transition invariants are locked by tests.
