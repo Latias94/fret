@@ -1429,8 +1429,7 @@ impl UiDiagnosticsService {
             .per_window
             .get(&window)
             .and_then(|ring| ring.last_pointer_position);
-        let hit_test = last_pointer_position
-            .map(|pos| UiHitTestSnapshotV1::from_hit_test(pos, ui.debug_hit_test(pos)));
+        let hit_test = last_pointer_position.map(|pos| UiHitTestSnapshotV1::from_tree(pos, ui));
 
         let element_diag = element_runtime.and_then(|runtime| {
             runtime.diagnostics_snapshot(window).map(|snapshot| {
@@ -4152,10 +4151,55 @@ pub struct UiHitTestSnapshotV1 {
     pub hit: Option<u64>,
     pub active_layer_roots: Vec<u64>,
     pub barrier_root: Option<u64>,
+    /// Stable, script-friendly labels for each scope root.
+    ///
+    /// Prefer this over `active_layer_roots` when validating behavior across refactors, since node
+    /// ids are not stable between runs.
+    #[serde(default)]
+    pub scope_roots: Vec<UiHitTestScopeRootV1>,
 }
 
 impl UiHitTestSnapshotV1 {
-    fn from_hit_test(position: Point, hit_test: UiDebugHitTest) -> Self {
+    fn from_tree(position: Point, ui: &UiTree<App>) -> Self {
+        let hit_test = ui.debug_hit_test(position);
+        let layers = ui.debug_layers_in_paint_order();
+        Self::from_hit_test_with_layers(position, hit_test, &layers)
+    }
+
+    fn from_hit_test_with_layers(
+        position: Point,
+        hit_test: UiDebugHitTest,
+        layers: &[UiDebugLayerInfo],
+    ) -> Self {
+        let mut scope_roots = Vec::new();
+        if let Some(root) = hit_test.barrier_root {
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "modal_barrier_root".to_string(),
+                root: key_to_u64(root),
+                layer_id: None,
+                pointer_occlusion: None,
+                blocks_underlay_input: None,
+                hit_testable: None,
+            });
+        }
+
+        let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
+        for layer in layers {
+            by_root.insert(layer.root, *layer);
+        }
+
+        for root in &hit_test.active_layer_roots {
+            let info = by_root.get(root).copied();
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "layer_root".to_string(),
+                root: key_to_u64(*root),
+                layer_id: info.map(|l| l.id.data().as_ffi()),
+                pointer_occlusion: info.map(|l| pointer_occlusion_label(l.pointer_occlusion)),
+                blocks_underlay_input: info.map(|l| l.blocks_underlay_input),
+                hit_testable: info.map(|l| l.hit_testable),
+            });
+        }
+
         Self {
             position: PointV1::from(position),
             hit: hit_test.hit.map(key_to_u64),
@@ -4165,8 +4209,27 @@ impl UiHitTestSnapshotV1 {
                 .map(key_to_u64)
                 .collect(),
             barrier_root: hit_test.barrier_root.map(key_to_u64),
+            scope_roots,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestScopeRootV1 {
+    /// Stable scope root kind (e.g. `modal_barrier_root`, `layer_root`).
+    pub kind: String,
+    /// Node id of the root (not stable between runs; treat as an in-run reference only).
+    pub root: u64,
+    /// When `kind=layer_root`, the corresponding layer id (if known).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layer_id: Option<u64>,
+    /// Pointer occlusion mode for the layer root (if known).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocks_underlay_input: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hit_testable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4412,6 +4475,15 @@ fn invalidation_label(inv: Invalidation) -> &'static str {
         Invalidation::HitTest => "hit_test",
         Invalidation::HitTestOnly => "hit_test_only",
     }
+}
+
+fn pointer_occlusion_label(occlusion: fret_ui::tree::PointerOcclusion) -> String {
+    match occlusion {
+        fret_ui::tree::PointerOcclusion::None => "none",
+        fret_ui::tree::PointerOcclusion::BlockMouse => "block_mouse",
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll => "block_mouse_except_scroll",
+    }
+    .to_string()
 }
 
 fn event_kind(event: &Event) -> String {
