@@ -94,7 +94,10 @@ This document is meant to stay “live” while we iterate. Update this section 
     `ecosystem/fret-ui-shadcn/src/ui_builder_ext/breadcrumb.rs`
 - [x] Fill P0 authoring gaps discovered during demo migration: px/metric-aware `gap` and one-value padding shorthands.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs` (`FlexBox` uses `MetricRef` for `gap`)
-  - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs` (`gap_px`, `gap_metric`, `padding_px`)
+  - Evidence: `ecosystem/fret-ui-kit/src/style/refs.rs` (`MetricRef: From<Px/Space/Radius>`)
+  - Evidence: `ecosystem/fret-ui-kit/src/style/layout.rs` (`w_px`/`min_w`/`max_w` accept `Into<MetricRef>`)
+  - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs` (`gap` accepts `Into<MetricRef>`, `padding_px`)
+  - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayRequest::*` accepts `IntoIterator<Item=AnyElement>`)
 - [x] Consolidate third-party “component integration contract” guidance (P2) with a short checklist.
   - Evidence: `docs/component-authoring-contracts.md`
   - Evidence: `docs/component-author-guide.md`
