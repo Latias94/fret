@@ -12,6 +12,15 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 
 - Plan: `docs/workstreams/material3-refactor-plan.md`
 
+## Related Workstreams
+
+Material3 alignment depends on the repository’s shared “state → style” infrastructure workstream.
+Prefer reusing these primitives over re-inventing per-component state precedence rules:
+
+- State-driven style resolution v1: `docs/workstreams/state-driven-style-resolution-v1.md`
+  - Contract gate: `docs/adr/1158-state-driven-style-resolution-v1.md`
+  - Ecosystem override surface: `docs/adr/1159-ecosystem-style-override-surface-v1.md`
+
 ## Goals
 
 - Provide a single crate surface: `ecosystem/fret-ui-material3`.
