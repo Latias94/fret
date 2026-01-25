@@ -294,49 +294,39 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
     let remove_cmd = CommandId::new(format!("{}{}", CMD_REMOVE_PREFIX, item.id));
 __REMOVE_BTN_DEF__
 
-    let props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_required("border")))
-            .rounded(Radius::Md)
-            .p(Space::N3),
-        LayoutRefinement::default().w_full(),
-    );
+    let label = cx.text_props(TextProps {
+        layout: Default::default(),
+        text: item.text.clone(),
+        style: None,
+        color: Some(theme.color_required(if done {
+            "muted-foreground"
+        } else {
+            "foreground"
+        })),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+    });
 
-    cx.container(props, |cx| [stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_between()
-            .items_center(),
-        |cx| {
-            let label = cx.text_props(TextProps {
-                layout: Default::default(),
-                text: item.text.clone(),
-                style: None,
-                color: Some(theme.color_required(if done {
-                    "muted-foreground"
-                } else {
-                    "foreground"
-                })),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-            });
+    let left = ui::h_flex(cx, |_cx| [checkbox.clone(), label])
+        .gap(Space::N3)
+        .items_center()
+        .flex_1()
+        .min_w_0()
+        .into_element(cx);
 
-            [
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().flex_1().min_w_0())
-                        .gap(Space::N3)
-                        .items_center(),
-                    |_cx| [checkbox.clone(), label],
-                ),
-                remove_btn.clone(),
-            ]
-        },
-    )])
+    let row = ui::h_flex(cx, |_cx| [left, remove_btn.clone()])
+        .w_full()
+        .justify_between()
+        .items_center()
+        .into_element(cx);
+
+    ui::container(cx, |_cx| [row])
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_required("border")))
+        .rounded(Radius::Md)
+        .p(Space::N3)
+        .w_full()
+        .into_element(cx)
 }
 
 fn on_command(
@@ -981,4 +971,43 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 - Next: edit `src/main.rs` and replace the view tree
 "#
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn opts() -> ScaffoldOptions {
+        ScaffoldOptions {
+            icon_pack: IconPack::Lucide,
+            command_palette: true,
+            ui_assets: false,
+        }
+    }
+
+    #[test]
+    fn todo_template_uses_default_authoring_dialect() {
+        let src = todo_template_main_rs("todo-app", opts());
+        assert!(src.contains("ui::container("));
+        assert!(src.contains("ui::h_flex("));
+        assert!(src.contains(".ui()"));
+        assert!(!src.contains("decl_style::container_props"));
+    }
+
+    #[test]
+    fn todo_mvu_template_uses_default_authoring_dialect() {
+        let src = todo_mvu_template_main_rs("todo-mvu-app", opts());
+        assert!(src.contains("ui::container("));
+        assert!(src.contains("ui::h_flex("));
+        assert!(src.contains(".ui()"));
+        assert!(!src.contains("decl_style::container_props"));
+    }
+
+    #[test]
+    fn hello_template_uses_default_authoring_dialect() {
+        let src = hello_template_main_rs("hello-app", opts());
+        assert!(src.contains("ui::v_flex("));
+        assert!(src.contains(".into_element(cx)"));
+        assert!(!src.contains("decl_style::container_props"));
+    }
 }
