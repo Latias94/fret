@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `242/448` (`54%`)
-- Next P0 gaps: calendar multiple selection (`calendar-03`), then forms/field validation chrome and carousel.
+- Keys referenced by tests: `243/448` (`54.2%`)
+- Next P0 gaps: calendar dropdown caption + popover composition (`calendar-22..30`, `calendar-32`, `calendar-hijri`), then forms/field validation chrome and carousel.
 
 ## Scope
 
@@ -206,8 +206,9 @@ Legend:
 | `combobox` | `Combobox` | Chrome+Layout |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `radio_group` | `RadioGroup` | Chrome+Layout |  |
-| `calendar` | `Calendar` | Chrome+Layout | Multi-month + locale + bounded month windows are gated (`calendar-02/05/07/09/11/12`). |
-| `calendar_range` | `CalendarRange` | Chrome+Layout | Multi-month + bounded month windows are gated (`calendar-11`). |
+| `calendar` | `Calendar` | Chrome+Layout | Single-date variants are gated, including multi-month + locale + bounded month windows (`calendar-02/05/09/11/12`). |
+| `calendar_range` | `CalendarRange` | Chrome+Layout | Range selection variants are gated, including multi-month (`calendar-07`). |
+| `calendar_multiple` | `CalendarMultiple` | Chrome+Layout | Multiple selection variants are gated, including multi-month `required` + `max` policy (`calendar-03`). |
 | `date_picker` | `DatePicker` | Chrome+Layout |  |
 | `date_range_picker` | `DateRangePicker` | Chrome+Layout |  |
 | `input` | `Input` | Chrome+Layout |  |

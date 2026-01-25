@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `242/448` keys referenced (`54%`)
+- shadcn-web `v4/new-york-v4`: `243/448` keys referenced (`54.2%`)
 
 ## Executive summary (current status + next targets)
 
@@ -47,8 +47,8 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Calendar multiple selection parity**
-   - Block: `calendar-03` (`mode="multiple"`, `max`, `required`) — requires a distinct selection model.
+1. **Calendar dropdown caption + popover composition**
+   - Blocks: `calendar-22..30`, `calendar-32` (`captionLayout="dropdown"`) and `calendar-hijri`.
 2. **Forms / Field validation chrome**
    - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
 3. **Carousel**
@@ -182,7 +182,7 @@ Conformance gates:
 ### `Calendar`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/calendar.tsx`
-- Fret: `ecosystem/fret-ui-shadcn/src/calendar.rs`, `ecosystem/fret-ui-shadcn/src/calendar_range.rs`
+- Fret: `ecosystem/fret-ui-shadcn/src/calendar.rs`, `ecosystem/fret-ui-shadcn/src/calendar_range.rs`, `ecosystem/fret-ui-shadcn/src/calendar_multiple.rs`
 - Gaps to check:
   - Grid row count (4/5/6 weeks) under different months/week-start values.
   - Cell sizing: `--cell-size` drives nav buttons, caption height/padding, and day cell min width.
@@ -198,6 +198,7 @@ Recent fixes:
   - Shared absolute `nav` over the months container.
   - Month-bounds gating (`startMonth`/`endMonth`) and `disableNavigation` parity (`calendar-11`).
   - Locale-aware month titles + day labels for Spanish (`calendar-12`).
+- Multiple selection (`mode="multiple"`) parity is now gated for `calendar-03` (including `required` + `max` selection policy).
 - Day buttons support `--cell-size` variants (per-golden) via `Calendar::{cell_size, show_week_number}` and
   nav button sizing.
 - `showOutsideDays=false` now keeps invisible outside-day placeholders (a11y-hidden) so x/y geometry matches.
@@ -208,7 +209,7 @@ Conformance gates:
 
 - Layout + a11y labels: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web`).
 - Variant geometry (single-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_*_geometry_matches`).
-- Variant geometry (multi-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_{02,05,07,09,11,12}_geometry_matches`).
+- Variant geometry (multi-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_{02,03,05,07,09,11,12}_geometry_matches`).
 
 ### `DropdownMenu`
 

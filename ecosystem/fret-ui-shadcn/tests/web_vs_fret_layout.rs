@@ -14642,6 +14642,13 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
         .map(|(d, _)| d)
         .collect();
 
+    let web_is_range_mode = find_first(&theme.root, &|n| {
+        class_has_token(n, "rdp-range_start")
+            || class_has_token(n, "rdp-range_middle")
+            || class_has_token(n, "rdp-range_end")
+    })
+    .is_some();
+
     let web_selected = web_day_buttons
         .iter()
         .find(|n| {
@@ -14741,7 +14748,7 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                     move |cx| vec![calendar.into_element(cx)],
                 )]
             }
-            _ => {
+            _ if web_is_range_mode => {
                 let (min, max) = web_selected_dates.iter().fold(
                     (web_selected_dates[0], web_selected_dates[0]),
                     |(min, max), d| (min.min(*d), max.max(*d)),
@@ -14752,6 +14759,40 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
                         to: Some(max),
                     });
                 let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                    .week_start(week_start)
+                    .show_outside_days(web_show_outside_days)
+                    .disable_outside_days(web_disable_outside_days)
+                    .show_week_number(web_show_week_number)
+                    .refine_style(chrome_override);
+                if let Some(cell_size) = cell_size {
+                    calendar = calendar.cell_size(cell_size);
+                }
+                if let Some(today) = web_today {
+                    calendar = calendar.today(today);
+                }
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        padding: fret_core::Edges {
+                            left: Px(web_origin_x),
+                            top: Px(web_origin_y),
+                            right: Px(0.0),
+                            bottom: Px(0.0),
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| vec![calendar.into_element(cx)],
+                )]
+            }
+            _ => {
+                let selected: Model<Vec<time::Date>> =
+                    cx.app.models_mut().insert(web_selected_dates.clone());
+                let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
                     .week_start(week_start)
                     .show_outside_days(web_show_outside_days)
                     .disable_outside_days(web_disable_outside_days)
@@ -15002,6 +15043,13 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
         .map(|(d, _)| d)
         .collect();
 
+    let web_is_range_mode = find_first(&theme.root, &|n| {
+        class_has_token(n, "rdp-range_start")
+            || class_has_token(n, "rdp-range_middle")
+            || class_has_token(n, "rdp-range_end")
+    })
+    .is_some();
+
     let web_selected = web_day_buttons
         .iter()
         .find(|n| {
@@ -15127,7 +15175,7 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                     move |cx| vec![calendar.into_element(cx)],
                 )]
             }
-            _ => {
+            _ if web_is_range_mode => {
                 let (min, max) = web_selected_dates.iter().fold(
                     (web_selected_dates[0], web_selected_dates[0]),
                     |(min, max), d| (min.min(*d), max.max(*d)),
@@ -15158,6 +15206,54 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
                 if let Some(today) = web_today {
                     calendar = calendar.today(today);
                 }
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        padding: fret_core::Edges {
+                            left: Px(web_origin_x),
+                            top: Px(web_origin_y),
+                            right: Px(0.0),
+                            bottom: Px(0.0),
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| vec![calendar.into_element(cx)],
+                )]
+            }
+            _ => {
+                let selected: Model<Vec<time::Date>> =
+                    cx.app.models_mut().insert(web_selected_dates.clone());
+                let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+                    .number_of_months(2)
+                    .locale(locale)
+                    .disable_navigation(web_disable_navigation)
+                    .week_start(week_start)
+                    .show_outside_days(web_show_outside_days)
+                    .disable_outside_days(web_disable_outside_days)
+                    .show_week_number(web_show_week_number)
+                    .refine_style(chrome_override);
+
+                if web_name == "calendar-03" {
+                    calendar = calendar.required(true).max(5);
+                }
+                if let Some(((start_month, start_year), (end_month, end_year))) = web_month_bounds {
+                    calendar = calendar.month_bounds(
+                        CalendarMonth::new(start_year, start_month),
+                        CalendarMonth::new(end_year, end_month),
+                    );
+                }
+                if let Some(cell_size) = cell_size {
+                    calendar = calendar.cell_size(cell_size);
+                }
+                if let Some(today) = web_today {
+                    calendar = calendar.today(today);
+                }
+
                 vec![cx.container(
                     ContainerProps {
                         layout: {
@@ -15374,6 +15470,11 @@ fn web_vs_fret_layout_calendar_31_geometry_matches() {
 #[test]
 fn web_vs_fret_layout_calendar_02_geometry_matches() {
     assert_calendar_multi_month_variant_geometry_matches_web("calendar-02");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_03_geometry_matches() {
+    assert_calendar_multi_month_variant_geometry_matches_web("calendar-03");
 }
 
 #[test]
