@@ -63,6 +63,12 @@ Each TODO is labeled:
     - `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`apply_click_through_layer_policy`)
     - `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs` (`resolve_branch_nodes_for_popover_request`)
 
+## P1 — Shadcn/Radix Conformance (Menu/Overlay Feel)
+
+- [x] OIA2-test-010 Close transition disables safe-hover observers/timers under occlusion (shadcn e2e).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_close_transition_disables_safe_hover_observers_and_timers`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
