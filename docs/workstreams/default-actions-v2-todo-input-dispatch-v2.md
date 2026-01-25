@@ -53,7 +53,15 @@ Anti-criteria (keep out of `DefaultAction`):
   - Decision: keep v2 limited to `FocusOnPointerDown` for now.
   - Rationale: all current candidates either encode design-system policy (Radix/shadcn), are
     widget-private state machines, or are better expressed as routing rules / overlay policy.
-- [ ] DA2-002 For each accepted `DefaultAction`, add:
+- [x] DA2-002 For each accepted `DefaultAction`, add:
   - a mechanism conformance test (near dispatch),
   - at least one ecosystem integration test proving composability.
-- [ ] DA2-003 Document “why not a DefaultAction” decisions to avoid drift.
+- [x] DA2-003 Document “why not a DefaultAction” decisions to avoid drift.
+  - Decision log: see “Candidate Actions (v2+)” table above.
+
+## Evidence (DA2-002)
+
+- Mechanism conformance:
+  - `crates/fret-ui/src/tree/tests/prevent_default.rs` (`prevent_default_focus_on_pointer_down_suppresses_default_focus`)
+- Ecosystem integration:
+  - `ecosystem/fret-ui-shadcn/tests/default_action_focus_on_pointer_down.rs`
