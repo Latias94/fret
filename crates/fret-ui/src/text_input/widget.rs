@@ -524,12 +524,11 @@ impl<H: UiHost> Widget<H> for TextInput {
         self.sync_chrome_from_theme(theme);
         self.sync_text_style_from_theme(theme);
         let focused = cx.focus == Some(cx.node);
+        let focus_visible = focused && crate::focus_visible::is_focus_visible(cx.app, cx.window);
         if !focused && self.is_ime_composing() {
             self.clear_ime_composition();
         }
-        let border_color = if focused && self.chrome_style.focus_ring.is_some() {
-            self.chrome_style.border_color
-        } else if focused {
+        let border_color = if focused && (focus_visible || self.chrome_style.focus_ring.is_none()) {
             self.chrome_style.border_color_focused
         } else {
             self.chrome_style.border_color
@@ -634,10 +633,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             corner_radii: self.chrome_style.corner_radii,
         });
 
-        if focused
-            && crate::focus_visible::is_focus_visible(cx.app, cx.window)
-            && let Some(mut ring) = self.chrome_style.focus_ring
-        {
+        if focus_visible && let Some(mut ring) = self.chrome_style.focus_ring {
             ring.corner_radii = self.chrome_style.corner_radii;
             crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
         }

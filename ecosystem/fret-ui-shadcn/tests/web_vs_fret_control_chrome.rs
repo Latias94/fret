@@ -2318,6 +2318,11 @@ fn web_vs_fret_input_demo_focus_ring_matches() {
     let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
     let (expected_ring_color, expected_ring_spread) =
         web_box_shadow_focus_ring(web_input).expect("web input focus ring");
+    let expected_border_color = web_input
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web input borderTopColor");
 
     let (snap, scene) = render_and_paint_with_focus_in_bounds(
         CoreSize::new(Px(1024.0), Px(768.0)),
@@ -2362,6 +2367,14 @@ fn web_vs_fret_input_demo_focus_ring_matches() {
         &expected_ring_color,
         0.06,
     );
+
+    let quad_input = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_color_close(
+        "input-demo focus border color",
+        quad_input.border_color,
+        expected_border_color,
+        0.06,
+    );
 }
 
 #[test]
@@ -2376,6 +2389,11 @@ fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
     let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
     let (expected_ring_color, expected_ring_spread) =
         web_box_shadow_focus_ring(web_input).expect("web input invalid focus ring");
+    let expected_border_color = web_input
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web input borderTopColor");
 
     let (snap, scene) = render_and_paint_with_focus_in_bounds(
         CoreSize::new(Px(1024.0), Px(768.0)),
@@ -2420,6 +2438,14 @@ fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
         "input-demo invalid focus ring color",
         ring_quad.border_color,
         &expected_ring_color,
+        0.06,
+    );
+
+    let quad_input = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_color_close(
+        "input-demo invalid focus border color",
+        quad_input.border_color,
+        expected_border_color,
         0.06,
     );
 }
