@@ -538,13 +538,12 @@ topics (if/when we implement them):
         `target/fret-diag-perf-vlist-window-boundary-sticky2/1769177002575-script-step-0027-wheel/bundle.json`.
     - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell/1769174146628-script-step-0027-wheel/bundle.json`
       - Takeaway: the boundary tick remains layout-dominated even without measurement, so the dominant cost is rebuilding/layouting the row subtree, not measuring it.
-    - Rejected (v1.1): per-row nested cache roots inside `VirtualList`.
-      - Attempt: wrap each row in a nested `ViewCache` boundary to reuse row layout/paint across window rebuilds.
-      - Issue: this breaks scripted interactions after `scroll_to_item` because semantics bounds for the target row end up in “content space” (large negative Y), so the injected click misses the button.
-      - Evidence bundle (diag run timeout at step 7):
-        `target/fret-diag-vlist-torture-smoke-rowcached3/1769223442870-script-step-0007-wait_until-timeout/bundle.json`
-      - Takeaway: before we encourage nested cache roots inside VirtualList, we need a stronger contract for scroll-child transforms + semantics bounds under view-cache reuse (fits `GPUI-MVP5-core-000` + ADR 0190 work).
-      - Note: one underlying caching pitfall (paint-cache replay not translating descendant bounds on parent translation) is now fixed, but we have not re-validated the full row-cached experiment yet.
+    - Validated (v1.1): per-row nested cache roots inside `VirtualList`.
+      - Attempt: wrap each row in a nested `ViewCache` boundary (`FRET_UI_GALLERY_VLIST_ROW_CACHE=1`) to reuse row layout/paint across window rebuilds.
+      - Fix: `ViewCacheProps::default().contained_layout` is now `false` (contained relayout is opt-in), so barrier-placed roots (VirtualList row placement) keep parent-provided bounds and do not get clobbered by out-of-band contained relayout.
+      - Evidence bundle (PASS; cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_ROW_CACHE=1`):
+        `target/fret-diag-vlist-rowcached-fixed2/1769346674136-ui-gallery-virtual-list-edit-9000/bundle.json`
+      - Takeaway: nested row caches are viable again for v1.1 experiments, but they do not replace ADR 0190: v1 still requires rerender when the visible-item set changes (window derivation is still render-driven).
   - Next (v2 direction; ADR 0190):
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
