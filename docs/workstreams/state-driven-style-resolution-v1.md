@@ -57,7 +57,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 
 - [x] SDSR-200 DropdownMenu items: unify hover/active/disabled/open states via `WidgetStates`.
 - [x] SDSR-201 Menubar items: unify hover/active/disabled/open states via `WidgetStates`.
-- [ ] SDSR-210 Tooltip / HoverCard: decide whether per-state styling is needed or keep policy-only (document rationale).
+- [x] SDSR-210 Tooltip / HoverCard: keep policy-only styling in v1 (document rationale).
 
 ### P3 — Token Naming + Slot Vocabulary
 
@@ -100,3 +100,6 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `crates/fret-ui/src/text_input/widget.rs`
 - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/menubar.rs`
+- `ecosystem/fret-ui-shadcn/src/tooltip.rs`
+- `ecosystem/fret-ui-shadcn/src/hover_card.rs`
+- SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
