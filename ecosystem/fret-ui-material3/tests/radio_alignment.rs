@@ -180,6 +180,36 @@ impl DragHost for TestHost {
         self.drags.remove(&pointer_id);
     }
 
+    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        self.drags.values().any(|session| predicate(session))
+    }
+
+    fn find_drag_pointer_id(
+        &self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<PointerId> {
+        self.drags
+            .iter()
+            .find_map(|(pointer_id, session)| predicate(session).then_some(*pointer_id))
+    }
+
+    fn cancel_drag_sessions(
+        &mut self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Vec<PointerId> {
+        let canceled: Vec<PointerId> = self
+            .drags
+            .iter()
+            .filter_map(|(pointer_id, session)| predicate(session).then_some(*pointer_id))
+            .collect();
+
+        for pointer_id in &canceled {
+            self.drags.remove(pointer_id);
+        }
+
+        canceled
+    }
+
     fn begin_drag_with_kind<T: Any>(
         &mut self,
         pointer_id: fret_core::PointerId,
@@ -316,6 +346,7 @@ fn pointer_up(pointer_id: PointerId, position: Point) -> Event {
         position,
         button: MouseButton::Left,
         modifiers: Modifiers::default(),
+        is_click: true,
         click_count: 1,
         pointer_type: PointerType::Mouse,
     })
