@@ -31,8 +31,20 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
 - **GPUI-style view caching**: cache hits reuse recorded frame ranges and keep view dependencies/state live because the view is still present in the window's view graph.
   - View caching is gated by "dirty views" (e.g. `WindowInvalidator.dirty_views`) plus a cache key (bounds/content mask/text style).
   - Cache hits still restore dependency tracking (e.g. extend `accessed_entities`) and preserve element-local state by "accessing" it as part of `prepaint`/`paint` replay.
+  - Concretely, the per-frame element-state map is driven by an explicit "accessed set": reuse paths extend the next frame's accessed element-state keys from the recorded range, so a cache hit cannot accidentally drop state simply because a subtree did not rebuild.
 
 In all cases, "not rebuilt this frame" is not a signal for disposal. Liveness comes from explicit roots (composition/window roots) and ownership bookkeeping.
+
+### Failure mode we are preventing (workstream MVP2-cache-005)
+
+The overlay torture regression (when the global stopgap is disabled) demonstrates a common pitfall in cached-subtree systems:
+
+- A subtree that the app still expects to be interactive (e.g. a semantics target) becomes an *island root*: it is no longer reachable from any installed layer root, and also no longer reachable from any ViewCache reuse root at sweep time.
+- Once it is an island, a reachability-based GC is allowed to collect it, and scripted clicks (or real pointer input) start failing as if the UI "randomly disappeared".
+
+In other words, the GC is correctly acting on the reachable graph it sees; the bug is that the ownership/attachment bookkeeping allowed a still-needed subtree to become structurally detached.
+
+The best-practice implication (seen in Flutter/React/Compose/GPUI) is that optimizations must not create implicit structural detaches, and root membership must be explicit and diagnosable.
 
 ### Derived best practices (applicable to Fret)
 
@@ -40,6 +52,7 @@ In all cases, "not rebuilt this frame" is not a signal for disposal. Liveness co
 2. **Make liveness a property of the ownership graph + root set**, not of incidental "visited this frame" behavior. Optimizations (like cached-subtree reuse) must not change lifetime semantics.
 3. **Make cache hits explicitly "touch" dependencies and state**, the same way a full rebuild would. In GPUI this happens by replaying prepaint/paint and restoring accessed dependencies; in Flutter it happens by staying in the active tree.
 4. **Keep multi-root ownership stable and diagnosable.** Cross-root identity reuse is either forbidden (bug) or must be modeled explicitly; "touch" paths must not silently reassign ownership.
+5. **Treat structural detaches as explicit lifecycle events.** Detach should be attributable (callsite/root), and there should be a clear policy for "inactive limbo" vs immediate disposal (Flutter's `_InactiveElements` is a proven pattern).
 
 ## Decision
 
@@ -113,6 +126,7 @@ This implies the following invariants:
 - **Only "rebuild" may call `set_children` for a node whose full child list is not known.** If we do not execute a subtree's render closure, we do not know its full child list for the current frame, so calling `set_children(..)` with an incomplete list is forbidden.
 - **Cache-hit must preserve attachment.** On reuse frames, the authoritative child-edge graph for the reused subtree MUST remain intact. It can be represented by retained `UiTree` edges, retained `WindowFrame` edges, or both; but the union must remain reachable from the liveness roots.
 - **Structural removal is a separate semantic event.** Detaching a child from a parent (e.g. `set_children` dropping a child, or explicitly removing a layer root) is equivalent to Flutter's `deactivateChild`: it is an explicit structural change and is the only time GC eligibility should meaningfully change (modulo lag).
+- **Structural detaches under reuse must be explainable.** If a subtree becomes an island while any reuse roots exist, the runtime MUST provide enough diagnostics to attribute the detach (parent + callsite + frame id), and this should be treated as a correctness bug until proven otherwise.
 
 Rationale:
 
@@ -133,6 +147,8 @@ When diagnostics are enabled and a subtree is removed during GC, a single `bundl
    - a record of `NodeEntry` root overwrites (element + old_root + new_root + debug paths).
 4. **Where did it become detached?**
    - best-effort attribution of the detach callsite (e.g. a parent `set_children` write) and the severed parent node's element/path, when available.
+5. **Was this a structural child swap?**
+   - for cache roots, export a small sample of `set_children` "before/after" child element ids (and best-effort debug paths) so we can detect accidental subtree replacement that explains the disappearance.
 
 ## Alternatives considered
 
