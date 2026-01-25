@@ -3351,10 +3351,16 @@ impl UiFrameStatsV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayerInfoV1 {
     pub id: String,
+    /// Numeric layer id (stable across `Debug` formatting changes; not stable between runs).
+    #[serde(default)]
+    pub layer_id: u64,
     pub root: u64,
     pub visible: bool,
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
+    /// Pointer occlusion mode for this layer root (when applicable).
+    #[serde(default)]
+    pub pointer_occlusion: String,
     pub wants_pointer_down_outside_events: bool,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
@@ -3364,10 +3370,12 @@ impl UiLayerInfoV1 {
     fn from_layer(layer: UiDebugLayerInfo) -> Self {
         Self {
             id: format!("{:?}", layer.id),
+            layer_id: layer.id.data().as_ffi(),
             root: key_to_u64(layer.root),
             visible: layer.visible,
             blocks_underlay_input: layer.blocks_underlay_input,
             hit_testable: layer.hit_testable,
+            pointer_occlusion: pointer_occlusion_label(layer.pointer_occlusion),
             wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
             wants_pointer_move_events: layer.wants_pointer_move_events,
             wants_timer_events: layer.wants_timer_events,
