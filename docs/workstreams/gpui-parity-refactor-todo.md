@@ -224,9 +224,9 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
       - ViewCache+Shell: `p50.total_time_us=29842` `p95.total_time_us=31073` (p50 layout `28267`, prepaint `24`, paint `1496`) (run dir: `target/fret-diag-perf-vlist-torture-cache-shell-r7-0125-1549`).
       - Note: wall-clock timings are noisy; use repeat percentiles for comparisons, and expect occasional spikes.
     - Smooth wheel (`tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
-      - Baseline: `p50.total_time_us=23495` `p95.total_time_us=31302` (p50 layout `23198`, prepaint `29`, paint `275`) (run dir: `target/fret-diag-perf-vlist-smooth-baseline-r7-reset-0125-1645`).
-      - ViewCache+Shell: `p50.total_time_us=26499` `p95.total_time_us=27031` (p50 layout `25788`, prepaint `26`, paint `730`) (run dir: `target/fret-diag-perf-vlist-smooth-cache-shell-r7-reset-0125-1649`).
-      - Note: the smooth-wheel script now uses `reset_diagnostics` to clear the diagnostics ring buffer after entering the view, reducing sensitivity to transient mount/settle spikes. (A longer scroll segment would still help by pushing unrelated frames out of the ring buffer.)
+      - Baseline: `p50.total_time_us=24038` `p95.total_time_us=24650` (p50 layout `23719`, prepaint `30`, paint `285`) (run dir: `target/fret-diag-perf-vlist-smooth-baseline-r7-steady-0125-1658`).
+      - ViewCache+Shell: `p50.total_time_us=27378` `p95.total_time_us=27998` (p50 layout `26366`, prepaint `25`, paint `878`) (run dir: `target/fret-diag-perf-vlist-smooth-cache-shell-r7-steady-0125-1702`).
+      - Note: the smooth-wheel script primes scroll first, then uses `reset_diagnostics` before the measured segment so the bundle captures steady-state scroll behavior (not the initial range-refresh / mount churn).
   - Commands:
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-torture-baseline-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 12 --repeat 7 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-torture-cache-shell-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 12 --repeat 7 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
