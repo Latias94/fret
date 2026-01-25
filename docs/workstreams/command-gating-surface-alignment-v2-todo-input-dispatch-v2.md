@@ -25,3 +25,8 @@ Each TODO is labeled:
   - Evidence anchors:
     - `crates/fret-launch/src/runner/desktop/windows_menu.rs` (`set_window_menu_bar`, `sync_command_gating_from_app`)
     - `crates/fret-launch/src/runner/desktop/macos_menu.rs` (`sync_command_gating_from_app`)
+
+- [x] CGSA2-rt-002 Lock base-vs-stack semantics for gating snapshots.
+  - Goal: `set_snapshot` updates the base snapshot without clobbering overlay-pushed snapshots.
+  - Evidence anchors:
+    - `crates/fret-runtime/src/window_command_gating.rs` (`setting_base_snapshot_does_not_override_stack_top`)

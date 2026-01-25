@@ -400,6 +400,43 @@ mod tests {
     }
 
     #[test]
+    fn setting_base_snapshot_does_not_override_stack_top() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        overlay_ctx.focus_is_text_input = false;
+        let token = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.ui_has_modal = false;
+        base_ctx.focus_is_text_input = true;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        assert!(
+            svc.snapshot(window).is_some_and(|s| {
+                s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input
+            }),
+            "expected stack top snapshot to remain effective after set_snapshot"
+        );
+
+        svc.remove_pushed_snapshot(window, token)
+            .expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| !s.input_ctx().ui_has_modal && s.input_ctx().focus_is_text_input),
+            "expected base snapshot to take effect after popping the overlay"
+        );
+    }
+
+    #[test]
     fn updating_pushed_snapshot_only_affects_that_entry() {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
