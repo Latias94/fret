@@ -1965,6 +1965,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn text_input_with_id_props(
+        &mut self,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> TextInputProps,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let props = f(cx, id);
+            cx.new_any_element(id, ElementKind::TextInput(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
     pub fn text_area(&mut self, props: TextAreaProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
