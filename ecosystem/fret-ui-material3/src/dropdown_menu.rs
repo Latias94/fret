@@ -25,6 +25,8 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::menu::{Menu, MenuEntry};
 use crate::motion::ms_to_frames;
+use crate::tokens::dropdown_menu as dropdown_menu_tokens;
+use crate::tokens::menu as menu_tokens;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DropdownMenuAlign {
@@ -154,22 +156,12 @@ impl DropdownMenu {
                 .unwrap_or(false);
 
             let open_ticks = ms_to_frames(
-                theme.duration_ms_by_key("md.sys.motion.duration.short4")
-                    .unwrap_or(200),
+                dropdown_menu_tokens::open_duration_ms(&theme),
             );
             let close_ticks = ms_to_frames(
-                theme.duration_ms_by_key("md.sys.motion.duration.short2")
-                    .unwrap_or(100),
+                dropdown_menu_tokens::close_duration_ms(&theme),
             );
-            let easing = theme
-                .easing_by_key("md.sys.motion.easing.emphasized")
-                .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"))
-                .unwrap_or(fret_ui::theme::CubicBezier {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: 1.0,
-                    y2: 1.0,
-                });
+            let easing = dropdown_menu_tokens::easing(&theme);
             let motion = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
                 is_open,
@@ -192,13 +184,9 @@ impl DropdownMenu {
                 };
                 let outer = overlay::outer_bounds_with_window_margin(cx.bounds, self.window_margin);
 
-                let menu_item_height = theme
-                    .metric_by_key("md.comp.menu.list-item.container.height")
-                    .unwrap_or(Px(48.0));
-                let divider_height = theme
-                    .metric_by_key("md.comp.menu.divider.height")
-                    .unwrap_or(Px(1.0));
-                let divider_margin = Px(8.0);
+                let menu_item_height = menu_tokens::list_item_height(&theme);
+                let divider_height = menu_tokens::divider_height(&theme);
+                let divider_margin = dropdown_menu_tokens::divider_margin_total(&theme);
 
                 let mut menu_entries = entries(cx);
                 if self.close_on_select {
@@ -229,7 +217,7 @@ impl DropdownMenu {
                 let placement =
                     popper::PopperContentPlacement::new(direction, side, align, self.side_offset)
                         .with_align_offset(self.align_offset)
-                        .with_collision_padding(Edges::all(Px(8.0)));
+                        .with_collision_padding(dropdown_menu_tokens::collision_padding(&theme));
                 let layout =
                     popper::popper_content_layout_sized(outer, anchor, estimated, placement);
 
