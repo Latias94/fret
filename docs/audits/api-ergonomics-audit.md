@@ -89,6 +89,7 @@ This document is meant to stay “live” while we iterate. Update this section 
   - Remaining: none.
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`ViewElements` return type for `UiAppDriver` view fns)
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs` (`*Request::new(..., children: impl IntoIterator<Item = AnyElement>)`)
   - Evidence: `ecosystem/fret-ui-kit/src/{ui,ui_builder}.rs`, `ecosystem/fret-ui-kit/src/declarative/{cached_subtree,chrome,dismissible,glass,pixelate,scroll,stack,visually_hidden}.rs`, `ecosystem/fret-ui-kit/src/primitives/{accordion,dismissable_layer,menu/*,popover,popper_content,roving_focus_group,tabs,toggle,toolbar}.rs`, `ecosystem/fret-ui-primitives/src/focus_scope.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/src/{breadcrumb,card,command,field,input_group,item,scroll_area,select,toggle,tooltip}.rs`,

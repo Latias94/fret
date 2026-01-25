@@ -22,6 +22,7 @@ use fret_ui_kit::primitives::direction as direction_prim;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::ops::{Deref, DerefMut};
 use std::sync::OnceLock;
 
 use fret_core::time::Instant;
@@ -29,7 +30,57 @@ use fret_core::time::Instant;
 #[cfg(feature = "diagnostics")]
 use crate::ui_diagnostics::UiDiagnosticsService;
 
-type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> Vec<AnyElement>;
+#[derive(Debug, Clone, Default)]
+pub struct ViewElements(Vec<AnyElement>);
+
+impl ViewElements {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self(children.into_iter().collect())
+    }
+}
+
+impl From<Vec<AnyElement>> for ViewElements {
+    fn from(value: Vec<AnyElement>) -> Self {
+        Self(value)
+    }
+}
+
+impl<const N: usize> From<[AnyElement; N]> for ViewElements {
+    fn from(value: [AnyElement; N]) -> Self {
+        Self::new(value)
+    }
+}
+
+impl std::iter::FromIterator<AnyElement> for ViewElements {
+    fn from_iter<T: IntoIterator<Item = AnyElement>>(iter: T) -> Self {
+        Self::new(iter)
+    }
+}
+
+impl Deref for ViewElements {
+    type Target = Vec<AnyElement>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ViewElements {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl IntoIterator for ViewElements {
+    type Item = AnyElement;
+    type IntoIter = std::vec::IntoIter<AnyElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> ViewElements;
 
 type EventHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &Event);
