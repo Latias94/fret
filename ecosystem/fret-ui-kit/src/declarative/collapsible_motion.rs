@@ -179,9 +179,9 @@ pub fn collapsible_height_wrapper_refinement(
         .min_h(MetricRef::Px(Px(0.0)))
         .overflow_hidden();
     if wants_height_animation {
-        wrapper = wrapper.h_px(MetricRef::Px(Px(measured_height.0 * progress)));
+        wrapper = wrapper.h_px(Px(measured_height.0 * progress));
     } else if !open && force_mount {
-        wrapper = wrapper.h_px(MetricRef::Px(Px(0.0)));
+        wrapper = wrapper.h_px(Px(0.0));
     }
 
     (should_render, wrapper)
