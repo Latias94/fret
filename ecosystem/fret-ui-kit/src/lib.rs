@@ -84,7 +84,7 @@ pub mod prelude {
 
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_runtime::{CommandId, Model};
-    pub use fret_ui::element::{AnyElement, TextProps};
+    pub use fret_ui::element::{AnyElement, AnyElementIterExt as _, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
 }
 
