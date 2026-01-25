@@ -2572,6 +2572,20 @@ pub struct UiCommandGatingTraceEntryV1 {
     pub source: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub menu_path: Option<String>,
+    /// Structured explanation of why the command is disabled (multiple blockers may apply).
+    #[serde(default)]
+    pub blocked_by: Vec<String>,
+    /// Best-effort detail fields to make debugging inconsistent gating easier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_available: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command_when: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub menu_when: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled_override: Option<bool>,
+    #[serde(default)]
+    pub command_registered: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -2675,68 +2689,111 @@ fn command_gating_trace_for_window(
         .into_iter()
         .take(MAX_TRACE_ENTRIES)
         .map(|c| {
-            let (mut enabled, mut reason, scope) =
-                command_gating_decision(app, &gating, &c.command);
-            if enabled
-                && let Some(menu_when) = c.menu_when.as_ref()
-                && !menu_when.eval(gating.input_ctx())
-            {
-                enabled = false;
-                reason = "menu_when_false".to_string();
-            }
+            let decision =
+                command_gating_decision_trace(app, &gating, &c.command, c.menu_when.as_ref());
 
             UiCommandGatingTraceEntryV1 {
                 command: c.command.as_str().to_string(),
-                enabled,
-                reason,
-                scope,
+                enabled: decision.enabled,
+                reason: decision.reason,
+                scope: decision.scope,
                 source: c.source.to_string(),
                 menu_path: c.menu_path,
+                blocked_by: decision.blocked_by,
+                action_available: decision.action_available,
+                command_when: decision.command_when,
+                menu_when: decision.menu_when,
+                enabled_override: decision.enabled_override,
+                command_registered: decision.command_registered,
             }
         })
         .collect()
 }
 
-fn command_gating_decision(
+#[derive(Debug, Clone)]
+struct UiCommandGatingDecisionTrace {
+    enabled: bool,
+    reason: String,
+    scope: String,
+    blocked_by: Vec<String>,
+    action_available: Option<bool>,
+    command_when: Option<bool>,
+    menu_when: Option<bool>,
+    enabled_override: Option<bool>,
+    command_registered: bool,
+}
+
+fn command_gating_decision_trace(
     app: &App,
     gating: &fret_runtime::WindowCommandGatingSnapshot,
     command: &fret_runtime::CommandId,
-) -> (bool, String, String) {
+    menu_when: Option<&fret_runtime::WhenExpr>,
+) -> UiCommandGatingDecisionTrace {
     let meta = app.commands().get(command.clone());
     let scope = meta
         .map(|m| format!("{:?}", m.scope))
         .unwrap_or_else(|| "Unknown".to_string());
 
-    // Mirror `WindowCommandGatingSnapshot::is_enabled_for_meta` precedence.
-    if let Some(meta) = meta
+    let mut blocked_by: Vec<String> = Vec::new();
+
+    let action_available = if let Some(meta) = meta
         && meta.scope == fret_runtime::CommandScope::Widget
         && let Some(map) = gating.action_availability()
         && let Some(is_available) = map.get(command).copied()
-        && !is_available
     {
-        let _ = meta;
-        return (false, "action_unavailable".to_string(), scope);
+        Some(is_available)
+    } else {
+        None
+    };
+    if action_available == Some(false) {
+        blocked_by.push("action_availability".to_string());
     }
 
-    if let Some(meta) = meta
-        && meta
-            .when
-            .as_ref()
-            .is_some_and(|w| !w.eval(gating.input_ctx()))
-    {
-        let _ = meta;
-        return (false, "when_false".to_string(), scope);
+    let command_when = meta.and_then(|m| m.when.as_ref().map(|w| w.eval(gating.input_ctx())));
+    if command_when == Some(false) {
+        blocked_by.push("when".to_string());
     }
 
-    if gating.enabled_overrides().get(command).copied() == Some(false) {
-        return (false, "disabled_override".to_string(), scope);
+    let enabled_override = gating.enabled_overrides().get(command).copied();
+    if enabled_override == Some(false) {
+        blocked_by.push("enabled_override".to_string());
     }
 
-    if meta.is_none() {
-        return (true, "unknown_command".to_string(), scope);
+    let menu_when = menu_when.map(|w| w.eval(gating.input_ctx()));
+    if menu_when == Some(false) {
+        blocked_by.push("menu_when".to_string());
     }
 
-    (true, "enabled".to_string(), scope)
+    let command_registered = meta.is_some();
+    let enabled = blocked_by.is_empty();
+
+    // Keep a stable "primary reason" string for backwards compatibility / easy grepping.
+    let reason = if blocked_by.iter().any(|b| b == "action_availability") {
+        "action_unavailable"
+    } else if blocked_by.iter().any(|b| b == "when") {
+        "when_false"
+    } else if blocked_by.iter().any(|b| b == "enabled_override") {
+        "disabled_override"
+    } else if blocked_by.iter().any(|b| b == "menu_when") {
+        "menu_when_false"
+    } else if !command_registered {
+        "unknown_command"
+    } else {
+        "enabled"
+    }
+    .to_string();
+
+    UiCommandGatingDecisionTrace {
+        enabled,
+        reason,
+        scope,
+        blocked_by,
+        action_available,
+        command_when,
+        menu_when,
+        enabled_override,
+        command_registered,
+    }
 }
 
 fn collect_menu_bar_commands(
