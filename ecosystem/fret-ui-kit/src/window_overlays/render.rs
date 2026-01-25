@@ -10,7 +10,7 @@ use fret_ui::action::{
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
-use fret_ui::tree::{PointerOcclusion, UiLayerId};
+use fret_ui::tree::{PointerOcclusion, UiInputArbitrationSnapshot, UiLayerId};
 use fret_ui::{Invalidation, UiHost, UiTree};
 
 use crate::primitives::dismissable_layer as dismissable_layer_prim;
@@ -92,6 +92,36 @@ fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
         ToastVariant::Loading => None,
         ToastVariant::Default => None,
     }
+}
+
+fn capture_conflicts_with_layer(arbitration: UiInputArbitrationSnapshot, layer: UiLayerId) -> bool {
+    arbitration.pointer_capture_active
+        && (arbitration.pointer_capture_multiple_layers
+            || arbitration.pointer_capture_layer != Some(layer))
+}
+
+fn non_modal_overlay_effective_interactive(
+    arbitration: UiInputArbitrationSnapshot,
+    layer: UiLayerId,
+    open_now: bool,
+    consume_outside_pointer_events: bool,
+    disable_outside_pointer_events: bool,
+) -> bool {
+    // Input arbitration: avoid introducing pointer occlusion or non-click-through semantics
+    // mid-capture.
+    //
+    // Menu-like overlays (Radix `disableOutsidePointerEvents`) and consuming popovers normally want
+    // to affect underlay pointer routing while open. If another layer is currently capturing the
+    // pointer (viewport drags, resizers, etc.), enabling gating can change routing semantics in
+    // surprising ways.
+    //
+    // Do not force-close the overlay here: open state is component-owned and closing as a side
+    // effect of input arbitration produces flicker and breaks pointer-open focus. Instead,
+    // temporarily suspend pointer gating until capture is released.
+    let suspend_pointer_gating_for_capture = open_now
+        && capture_conflicts_with_layer(arbitration, layer)
+        && (disable_outside_pointer_events || consume_outside_pointer_events);
+    open_now && !suspend_pointer_gating_for_capture
 }
 
 fn apply_non_modal_dismissible_layer_policy<H: UiHost>(
@@ -632,24 +662,13 @@ pub fn render<H: UiHost>(
             entry.consume_outside_pointer_events = consume_outside_pointer_events;
             entry.disable_outside_pointer_events = disable_outside_pointer_events;
 
-            // Input arbitration: avoid introducing pointer occlusion mid-capture.
-            //
-            // Menu-like overlays (Radix `disableOutsidePointerEvents`) normally want to occlude
-            // underlay pointer input while open. If another layer is currently capturing the
-            // pointer (viewport drags, resizers, etc.), enabling occlusion can change routing
-            // semantics in surprising ways.
-            //
-            // Do not force-close the overlay here: open state is component-owned and closing as a
-            // side effect of input arbitration produces flicker and breaks pointer-open focus.
-            // Instead, temporarily suppress pointer occlusion until capture is released.
-            let capture_conflicts_with_layer = arbitration.pointer_capture_active
-                && (arbitration.pointer_capture_multiple_layers
-                    || arbitration.pointer_capture_layer != Some(entry.layer));
-            let suspend_pointer_gating_for_capture = open_now
-                && capture_conflicts_with_layer
-                && (disable_outside_pointer_events || consume_outside_pointer_events);
-
-            let effective_interactive = open_now && !suspend_pointer_gating_for_capture;
+            let effective_interactive = non_modal_overlay_effective_interactive(
+                arbitration,
+                entry.layer,
+                open_now,
+                consume_outside_pointer_events,
+                disable_outside_pointer_events,
+            );
 
             if open_now
                 && let Some(layer_root) = ui.layer_root(entry.layer)
@@ -929,10 +948,7 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            let capture_conflicts_with_layer = arbitration.pointer_capture_active
-                && (arbitration.pointer_capture_multiple_layers
-                    || arbitration.pointer_capture_layer != Some(entry.layer));
-            let present = !capture_conflicts_with_layer;
+            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
             apply_hover_layer_policy(ui, entry.layer, present, interactive && present);
         });
     }
@@ -1004,10 +1020,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                 });
             entry.root_name = req.root_name.clone();
-            let capture_conflicts_with_layer = arbitration.pointer_capture_active
-                && (arbitration.pointer_capture_multiple_layers
-                    || arbitration.pointer_capture_layer != Some(entry.layer));
-            let present = !capture_conflicts_with_layer;
+            let present = !capture_conflicts_with_layer(arbitration, entry.layer);
             let interactive = interactive && present;
 
             apply_tooltip_layer_policy(
