@@ -1544,6 +1544,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-ui-material3"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+]
+
+[[package]]
 name = "fret-ui-primitives"
 version = "0.1.0"
 dependencies = [

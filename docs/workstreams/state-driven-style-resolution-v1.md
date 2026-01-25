@@ -92,6 +92,12 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - [x] SDSR-400 Avoid heap allocations in hot paths (e.g. store overrides inline or in smallvec; measure before changing).
 - [x] SDSR-410 Add utilities to compute `WidgetStates` from `PressableState` + focus-visible policy (reduce copy/paste).
 
+### P5 — Material 3 Pilot (Ecosystem)
+
+- [x] SDSR-500 Material3: add `fret-ui-material3` pilot crate.
+- [x] SDSR-510 Material3: implement a minimal `Button` (Filled/Outlined/Text) using ADR 1159 style shape.
+- [x] SDSR-520 Material3: document pilot token keys (`material3.button.*`).
+
 ## Milestones
 
 1. Define stable per-component style structs
@@ -130,6 +136,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-shadcn/src/select.rs`
 - `ecosystem/fret-ui-shadcn/src/slider.rs`
 - `ecosystem/fret-ui-shadcn/src/toggle_group.rs`
+- `ecosystem/fret-ui-material3/src/button.rs`
 - SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
 - SDSR-410 evidence: `WidgetStates::from_pressable(...)` in `ecosystem/fret-ui-kit/src/style/state.rs`, applied in `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`.
 - SDSR-300/310/320: `docs/shadcn-style-token-conventions.md`
@@ -139,3 +146,26 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - SDSR-150/151: `SwitchStyle` + `WidgetStates` in `ecosystem/fret-ui-shadcn/src/switch.rs` and `ecosystem/fret-ui-shadcn/src/lib.rs`
 - SDSR-160/161: `RadioGroupStyle` + `WidgetStates` in `ecosystem/fret-ui-shadcn/src/radio_group.rs` and `ecosystem/fret-ui-shadcn/src/lib.rs`
 - SDSR-170/171: `SelectStyle` + `WidgetStates` in `ecosystem/fret-ui-shadcn/src/select.rs` and `ecosystem/fret-ui-shadcn/src/lib.rs`
+
+## Material3 Pilot Token Keys (v0)
+
+This pilot intentionally starts with a small set of keys and falls back to existing theme tokens
+when missing.
+
+- Filled:
+  - `material3.button.filled.container`
+  - `material3.button.filled.label`
+  - `material3.button.filled.disabled.container`
+  - `material3.button.filled.disabled.label`
+- Outlined:
+  - `material3.button.outlined.label`
+  - `material3.button.outlined.outline`
+  - `material3.button.outlined.focus.outline`
+  - `material3.button.outlined.disabled.label`
+  - `material3.button.outlined.disabled.outline`
+- Text:
+  - `material3.button.text.label`
+  - `material3.button.text.disabled.label`
+- Shared state layers:
+  - `material3.button.state_layer.hover`
+  - `material3.button.state_layer.pressed`
