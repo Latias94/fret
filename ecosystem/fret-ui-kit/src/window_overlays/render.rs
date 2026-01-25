@@ -566,20 +566,14 @@ pub fn render<H: UiHost>(
         // Menu-like overlays that disable outside pointer interactions should *not* treat the
         // trigger as a branch: the trigger press must be considered "outside" so it can close the
         // overlay without activating the underlay.
-        let dismissable_branch_nodes = if disable_outside_pointer_events {
-            dismissable_layer_prim::resolve_branch_nodes_for_elements(
-                app,
-                window,
-                &req.dismissable_branches,
-            )
-        } else {
-            dismissable_layer_prim::resolve_branch_nodes_for_trigger_and_elements(
+        let dismissable_branch_nodes =
+            dismissable_layer_prim::resolve_branch_nodes_for_popover_request(
                 app,
                 window,
                 req.trigger,
                 &req.dismissable_branches,
-            )
-        };
+                disable_outside_pointer_events,
+            );
 
         let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
         if open_now
