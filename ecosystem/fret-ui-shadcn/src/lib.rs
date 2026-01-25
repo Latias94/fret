@@ -192,7 +192,9 @@ pub use popover::{
     PopoverSide, PopoverTitle, PopoverTrigger,
 };
 pub use progress::{Progress, progress};
-pub use radio_group::{RadioGroup, RadioGroupItem, radio_group, radio_group_uncontrolled};
+pub use radio_group::{
+    RadioGroup, RadioGroupItem, RadioGroupStyle, radio_group, radio_group_uncontrolled,
+};
 pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
