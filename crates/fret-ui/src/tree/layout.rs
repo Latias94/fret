@@ -27,7 +27,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut visited = HashMap::<NodeId, u8>::new();
         for change in changed {
-            let inv = match change.kind {
+            let mut inv = match change.kind {
                 crate::declarative::frame::ScrollHandleChangeKind::Layout => Invalidation::Layout,
                 crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
                     Invalidation::HitTestOnly
@@ -40,6 +40,108 @@ impl<H: UiHost> UiTree<H> {
             if bound.is_empty() {
                 continue;
             }
+
+            // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
+            // when offset/viewport/content are unchanged, which makes the change appear as
+            // "layout-affecting". For fixed-size virtual lists, we can consume the deferred
+            // request up-front (using cached metrics + viewport) and convert it into a simple
+            // offset update, avoiding a layout-driven consumption path.
+            if inv == Invalidation::Layout {
+                let mut consumed_scroll_to_item = false;
+                for element in &bound {
+                    if consumed_scroll_to_item {
+                        break;
+                    }
+                    let Some(node) = crate::declarative::node_for_element_in_window_frame(
+                        &mut *app, window, *element,
+                    ) else {
+                        continue;
+                    };
+                    let Some(record) =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                    else {
+                        continue;
+                    };
+                    let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                        record.instance
+                    else {
+                        continue;
+                    };
+                    if props.measure_mode != crate::element::VirtualListMeasureMode::Fixed {
+                        continue;
+                    }
+                    let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
+                    else {
+                        continue;
+                    };
+
+                    let applied = crate::elements::with_element_state(
+                        &mut *app,
+                        window,
+                        record.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+
+                            let viewport_size = props.scroll_handle.viewport_size();
+                            let viewport = match props.axis {
+                                fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return None;
+                            }
+
+                            let current = match props.axis {
+                                fret_core::Axis::Vertical => props.scroll_handle.offset().y,
+                                fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                            };
+                            let desired = state
+                                .metrics
+                                .scroll_offset_for_item(index, viewport, current, strategy);
+                            let desired = state.metrics.clamp_offset(desired, viewport);
+
+                            match props.axis {
+                                fret_core::Axis::Vertical => state.offset_y = desired,
+                                fret_core::Axis::Horizontal => state.offset_x = desired,
+                            }
+
+                            Some(desired)
+                        },
+                    );
+
+                    let Some(applied) = applied else {
+                        continue;
+                    };
+
+                    let prev = props.scroll_handle.offset();
+                    match props.axis {
+                        fret_core::Axis::Vertical => {
+                            props
+                                .scroll_handle
+                                .set_offset(fret_core::Point::new(prev.x, applied));
+                        }
+                        fret_core::Axis::Horizontal => {
+                            props
+                                .scroll_handle
+                                .set_offset(fret_core::Point::new(applied, prev.y));
+                        }
+                    }
+                    props.scroll_handle.clear_deferred_scroll_to_item();
+
+                    consumed_scroll_to_item = true;
+                    inv = Invalidation::HitTestOnly;
+                    self.request_redraw_coalesced(app);
+                }
+            }
+
+            let mut virtual_list_needs_refresh: Vec<NodeId> = Vec::new();
             for element in bound {
                 let Some(node) = crate::declarative::node_for_element_in_window_frame(
                     &mut *app, window, element,
@@ -53,6 +155,74 @@ impl<H: UiHost> UiTree<H> {
                     UiDebugInvalidationSource::Other,
                     UiDebugInvalidationDetail::ScrollHandle,
                 );
+
+                // Range escape detection: when scrolling only invalidates hit-testing/paint
+                // (`HitTestOnly`), a view-cache root can remain a cache hit and skip rebuilding the
+                // virtual list visible range. If the desired range escapes the mounted range,
+                // schedule a one-shot rerender of the nearest cache root.
+                if inv == Invalidation::HitTestOnly
+                    && self.view_cache_enabled()
+                    && let Some(record) =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                    && let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                        record.instance
+                {
+                    let requested_refresh = crate::elements::with_element_state(
+                        &mut *app,
+                        window,
+                        record.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+
+                            let viewport_size = props.scroll_handle.viewport_size();
+                            let viewport = match props.axis {
+                                fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return false;
+                            }
+
+                            let handle_offset = match props.axis {
+                                fret_core::Axis::Vertical => props.scroll_handle.offset().y,
+                                fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                            };
+                            let offset = state.metrics.clamp_offset(handle_offset, viewport);
+                            let Some(range) =
+                                state
+                                    .metrics
+                                    .visible_range(offset, viewport, props.overscan)
+                            else {
+                                return false;
+                            };
+                            crate::virtual_list::virtual_list_needs_visible_range_refresh(
+                                &props.visible_items,
+                                range,
+                            )
+                        },
+                    );
+                    self.debug_record_virtual_list_visible_range_check(requested_refresh);
+                    if requested_refresh {
+                        virtual_list_needs_refresh.push(node);
+                    }
+                }
+            }
+
+            for node in virtual_list_needs_refresh {
+                self.invalidate_with_source_and_detail(
+                    node,
+                    Invalidation::Paint,
+                    UiDebugInvalidationSource::Notify,
+                    UiDebugInvalidationDetail::ScrollHandle,
+                );
+                self.request_redraw_coalesced(app);
             }
         }
     }
