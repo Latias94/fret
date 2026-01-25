@@ -964,6 +964,10 @@ pub fn render<H: UiHost>(
     }
 
     for req in tooltip_requests {
+        if dock_drag_affects_window {
+            continue;
+        }
+
         seen_tooltips.insert(req.id);
 
         let interactive = req.interactive;

@@ -43,3 +43,4 @@ recipes = ["icons", "dep:fret-canvas"]
 fret-app = { path = "../../crates/fret-app" }
 serde.workspace = true
 serde_json.workspace = true
+slotmap.workspace = true

@@ -1536,6 +1536,7 @@ dependencies = [
  "fret-viewport-tooling",
  "serde",
  "serde_json",
+ "slotmap",
  "time",
  "tracing",
  "virtualizer",
