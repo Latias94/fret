@@ -425,7 +425,10 @@ impl TabsTrigger {
                             .update(&model_for_pointer, |v| *v = Some(value_for_pointer.clone()));
                         R::Continue
                     }
-                    TabsTriggerPointerDownAction::PreventFocus => R::SkipDefault,
+                    TabsTriggerPointerDownAction::PreventFocus => {
+                        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+                        R::SkipDefault
+                    }
                     TabsTriggerPointerDownAction::Ignore => R::Continue,
                 }
             }));
