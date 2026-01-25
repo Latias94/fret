@@ -3,7 +3,6 @@
 //! These tests are intentionally renderer-agnostic: they assert high-level stability and invariants
 //! by inspecting the `SceneOp` stream (op kinds + draw ordering), rather than pixel snapshots.
 
-#![cfg(feature = "material3_full")]
 #![allow(dead_code)]
 
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, Scene, SceneOp};

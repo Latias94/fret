@@ -53,7 +53,9 @@ pub use overlay_controller::{
     OverlayStackEntryKind, ToastLayerSpec, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
 };
 pub use window_overlays::{
-    DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
+    DEFAULT_MAX_TOASTS, ToastAction, ToastButtonStyle, ToastIconButtonStyle, ToastId,
+    ToastLayerStyle, ToastPosition, ToastRequest, ToastStore, ToastTextStyle, ToastVariant,
+    ToastVariantColors, ToastVariantPalette,
 };
 
 pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;

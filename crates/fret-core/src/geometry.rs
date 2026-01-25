@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
 use std::ops::{Add, Div, Mul, Sub};
 
 #[repr(transparent)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Px(pub f32);
 
 impl From<f32> for Px {
@@ -109,7 +111,7 @@ impl RectPx {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Corners {
     pub top_left: Px,
     pub top_right: Px,

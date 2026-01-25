@@ -1,211 +1,86 @@
+//! Material 3 text field (MVP).
+//!
+//! Outcome-oriented implementation:
+//! - Token-driven chrome via `md.comp.(outlined|filled)-text-field.*`.
+//! - Hover/focus/error/disabled outcomes via theme tokens (best-effort).
+
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, FontId, Px, SemanticsRole, TextStyle};
-use fret_runtime::{CommandId, Model};
+use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, InteractivityGateProps, Length, Overflow, SizeStyle, TextInputProps,
+    AnyElement, ContainerProps, FlexProps, HoverRegionProps, Length, MainAlign, Overflow,
+    PointerRegionProps, TextInputProps, TextProps,
 };
-use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{
-    ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetState,
-    WidgetStateProperty, WidgetStates,
-};
+use fret_ui::elements::ElementContext;
+use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
 
-#[derive(Debug, Clone, Default)]
-pub struct TextFieldStyle {
-    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub border_color_focused: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub focus_ring_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub text_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub placeholder_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+use crate::interaction::state_layer::StateLayerAnimator;
+use crate::tokens::text_field as text_field_tokens;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextFieldVariant {
+    #[default]
+    Outlined,
+    Filled,
 }
 
-impl TextFieldStyle {
-    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
-        self.background = Some(background);
-        self
-    }
-
-    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
-        self.border_color = Some(border_color);
-        self
-    }
-
-    pub fn border_color_focused(
-        mut self,
-        border_color_focused: WidgetStateProperty<Option<ColorRef>>,
-    ) -> Self {
-        self.border_color_focused = Some(border_color_focused);
-        self
-    }
-
-    pub fn focus_ring_color(
-        mut self,
-        focus_ring_color: WidgetStateProperty<Option<ColorRef>>,
-    ) -> Self {
-        self.focus_ring_color = Some(focus_ring_color);
-        self
-    }
-
-    pub fn text_color(mut self, text_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
-        self.text_color = Some(text_color);
-        self
-    }
-
-    pub fn placeholder_color(
-        mut self,
-        placeholder_color: WidgetStateProperty<Option<ColorRef>>,
-    ) -> Self {
-        self.placeholder_color = Some(placeholder_color);
-        self
-    }
-
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.background.is_some() {
-            self.background = other.background;
-        }
-        if other.border_color.is_some() {
-            self.border_color = other.border_color;
-        }
-        if other.border_color_focused.is_some() {
-            self.border_color_focused = other.border_color_focused;
-        }
-        if other.focus_ring_color.is_some() {
-            self.focus_ring_color = other.focus_ring_color;
-        }
-        if other.text_color.is_some() {
-            self.text_color = other.text_color;
-        }
-        if other.placeholder_color.is_some() {
-            self.placeholder_color = other.placeholder_color;
-        }
-        self
-    }
-}
-
-fn token(key: &'static str, fallback: ColorFallback) -> ColorRef {
-    ColorRef::Token { key, fallback }
-}
-
-fn default_style() -> (
-    WidgetStateProperty<Option<ColorRef>>,
-    WidgetStateProperty<Option<ColorRef>>,
-    WidgetStateProperty<Option<ColorRef>>,
-    WidgetStateProperty<Option<ColorRef>>,
-    WidgetStateProperty<Option<ColorRef>>,
-    WidgetStateProperty<Option<ColorRef>>,
-) {
-    let bg = WidgetStateProperty::new(Some(token(
-        "material3.text_field.container",
-        ColorFallback::ThemeSurfaceBackground,
-    )))
-    .when(
-        WidgetStates::DISABLED,
-        Some(token(
-            "material3.text_field.disabled.container",
-            ColorFallback::ThemeTokenAlphaMul {
-                key: "panel.background",
-                mul: 0.38,
-            },
-        )),
-    );
-
-    let border = WidgetStateProperty::new(Some(token(
-        "material3.text_field.outline",
-        ColorFallback::ThemePanelBorder,
-    )))
-    .when(
-        WidgetStates::DISABLED,
-        Some(token(
-            "material3.text_field.disabled.outline",
-            ColorFallback::ThemeTokenAlphaMul {
-                key: "border",
-                mul: 0.38,
-            },
-        )),
-    );
-
-    let border_focused = WidgetStateProperty::new(Some(token(
-        "material3.text_field.focus.outline",
-        ColorFallback::ThemeAccent,
-    )));
-
-    let ring = WidgetStateProperty::new(Some(token(
-        "material3.text_field.focus.ring",
-        ColorFallback::ThemeAccent,
-    )));
-
-    let text = WidgetStateProperty::new(Some(token(
-        "material3.text_field.text",
-        ColorFallback::ThemeTextPrimary,
-    )))
-    .when(
-        WidgetStates::DISABLED,
-        Some(token(
-            "material3.text_field.disabled.text",
-            ColorFallback::ThemeTextDisabled,
-        )),
-    );
-
-    let placeholder = WidgetStateProperty::new(Some(token(
-        "material3.text_field.placeholder",
-        ColorFallback::ThemeTextMuted,
-    )))
-    .when(
-        WidgetStates::DISABLED,
-        Some(token(
-            "material3.text_field.disabled.placeholder",
-            ColorFallback::ThemeTextDisabled,
-        )),
-    );
-
-    (bg, border, border_focused, ring, text, placeholder)
+#[derive(Debug, Default)]
+struct TextFieldRuntime {
+    float_target: bool,
+    float: StateLayerAnimator,
 }
 
 #[derive(Clone)]
 pub struct TextField {
     model: Model<String>,
-    a11y_label: Option<Arc<str>>,
-    a11y_role: Option<SemanticsRole>,
-    test_id: Option<Arc<str>>,
+    variant: TextFieldVariant,
+    label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
+    supporting_text: Option<Arc<str>>,
     disabled: bool,
-    submit_command: Option<CommandId>,
-    cancel_command: Option<CommandId>,
-    style: TextFieldStyle,
-    layout: LayoutRefinement,
+    error: bool,
+    a11y_label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for TextField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextField")
+            .field("variant", &self.variant)
+            .field("label", &self.label)
+            .field("placeholder", &self.placeholder)
+            .field("supporting_text", &self.supporting_text)
+            .field("disabled", &self.disabled)
+            .field("error", &self.error)
+            .field("a11y_label", &self.a11y_label)
+            .field("test_id", &self.test_id)
+            .finish()
+    }
 }
 
 impl TextField {
     pub fn new(model: Model<String>) -> Self {
         Self {
             model,
-            a11y_label: None,
-            a11y_role: None,
-            test_id: None,
+            variant: TextFieldVariant::default(),
+            label: None,
             placeholder: None,
+            supporting_text: None,
             disabled: false,
-            submit_command: None,
-            cancel_command: None,
-            style: TextFieldStyle::default(),
-            layout: LayoutRefinement::default(),
+            error: false,
+            a11y_label: None,
+            test_id: None,
         }
     }
 
-    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
-        self.a11y_label = Some(label.into());
+    pub fn variant(mut self, variant: TextFieldVariant) -> Self {
+        self.variant = variant;
         self
     }
 
-    pub fn a11y_role(mut self, role: SemanticsRole) -> Self {
-        self.a11y_role = Some(role);
-        self
-    }
-
-    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
-        self.test_id = Some(id.into());
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
         self
     }
 
@@ -214,182 +89,351 @@ impl TextField {
         self
     }
 
+    pub fn supporting_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.supporting_text = Some(text.into());
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
     }
 
-    pub fn submit_command(mut self, command: CommandId) -> Self {
-        self.submit_command = Some(command);
+    pub fn error(mut self, error: bool) -> Self {
+        self.error = error;
         self
     }
 
-    pub fn cancel_command(mut self, command: CommandId) -> Self {
-        self.cancel_command = Some(command);
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
         self
     }
 
-    pub fn style(mut self, style: TextFieldStyle) -> Self {
-        self.style = self.style.merged(style);
-        self
-    }
-
-    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
-        self.layout = self.layout.merge(layout);
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        cx.scope(|cx| {
+            let theme = Theme::global(&*cx.app).clone();
 
-        let (
-            default_bg,
-            default_border,
-            default_border_focused,
-            default_ring,
-            default_text,
-            default_placeholder,
-        ) = default_style();
-        let style_override = self.style;
+            let variant = self.variant;
+            let height = text_field_tokens::container_height(&theme, variant);
 
-        let model = self.model;
-        let disabled = self.disabled;
-        let a11y_label = self.a11y_label;
-        let a11y_role = self.a11y_role;
-        let test_id = self.test_id;
-        let placeholder = self.placeholder;
-        let submit_command = self.submit_command;
-        let cancel_command = self.cancel_command;
-
-        let layout = LayoutRefinement::default()
-            .min_h(MetricRef::Px(Px(40.0)))
-            .merge(self.layout);
-
-        let text_input = cx.text_input_with_id_props(move |cx, id| {
-            let focused = cx.is_focused_element(id);
-            let focus_visible =
-                focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
-
-            let mut states = WidgetStates::empty();
-            states.set(WidgetState::Disabled, disabled);
-            states.set(WidgetState::Focused, focused);
-            states.set(WidgetState::FocusVisible, focus_visible);
-
-            let bg_ref = style_override
-                .background
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_bg.resolve(states).clone());
-            let border_ref = style_override
-                .border_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_border.resolve(states).clone());
-            let border_focused_ref = style_override
-                .border_color_focused
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_border_focused.resolve(states).clone());
-            let ring_ref = style_override
-                .focus_ring_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_ring.resolve(states).clone());
-            let text_ref = style_override
-                .text_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_text.resolve(states).clone());
-            let placeholder_ref = style_override
-                .placeholder_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_placeholder.resolve(states).clone());
-
-            let bg = bg_ref.map(|c| c.resolve(&theme));
-            let border = border_ref.map(|c| c.resolve(&theme));
-            let border_focused = border_focused_ref.map(|c| c.resolve(&theme));
-            let ring_color = ring_ref.map(|c| c.resolve(&theme));
-            let text_color = text_ref.map(|c| c.resolve(&theme));
-            let placeholder_color = placeholder_ref.map(|c| c.resolve(&theme));
-
-            let radius = MetricRef::radius(Radius::Md).resolve(&theme);
-            let px = MetricRef::space(Space::N3).resolve(&theme);
-            let py = MetricRef::space(Space::N2).resolve(&theme);
-
-            let mut chrome = TextInputStyle::from_theme(theme.snapshot());
-            chrome.padding = Edges {
-                top: py,
-                right: px,
-                bottom: py,
-                left: px,
-            };
-            chrome.corner_radii = Corners::all(radius);
-            chrome.border = Edges::all(Px(1.0));
-            chrome.background = bg.unwrap_or(chrome.background);
-            if let Some(border) = border {
-                chrome.border_color = border;
-            }
-            if let Some(border_focused) = border_focused {
-                chrome.border_color_focused = border_focused;
-            }
-            if let Some(text_color) = text_color {
-                chrome.text_color = text_color;
-                chrome.caret_color = text_color;
-            }
-            if let Some(placeholder_color) = placeholder_color {
-                chrome.placeholder_color = placeholder_color;
-            }
-
-            let mut ring = decl_style::focus_ring(&theme, radius);
-            if let Some(ring_color) = ring_color {
-                ring.color = ring_color;
-            }
-            chrome.focus_ring = Some(ring);
-
-            let font_line_height = theme
-                .metric_by_key("font.line_height")
-                .unwrap_or_else(|| theme.metric_required("font.line_height"));
-            let text_style = TextStyle {
-                font: FontId::default(),
-                size: theme.metric_required("font.size"),
-                line_height: Some(font_line_height),
-                ..Default::default()
+            let mut hover_layout = fret_ui::element::LayoutStyle::default();
+            hover_layout.size.width = Length::Fill;
+            hover_layout.overflow = Overflow::Visible;
+            let hover = HoverRegionProps {
+                layout: hover_layout,
             };
 
-            let mut props = TextInputProps::new(model.clone());
-            props.a11y_label = a11y_label.clone();
-            props.a11y_role = a11y_role.or(Some(SemanticsRole::TextField));
-            props.test_id = test_id.clone();
-            props.placeholder = placeholder.clone();
-            props.chrome = chrome;
-            props.text_style = text_style;
-            props.submit_command = submit_command.clone();
-            props.cancel_command = cancel_command.clone();
+            let model = self.model.clone();
+            let variant_for_children = variant;
+            let label = self.label.clone();
+            let placeholder = self.placeholder.clone();
+            let supporting_text = self.supporting_text.clone();
+            let disabled = self.disabled;
+            let error = self.error;
+            let a11y_label = self
+                .a11y_label
+                .clone()
+                .or_else(|| label.clone())
+                .or_else(|| placeholder.clone());
+            let test_id = self.test_id.clone();
 
-            props.layout.size = SizeStyle {
-                width: Length::Fill,
-                min_width: Some(Px(0.0)),
-                min_height: Some(Px(40.0)),
-                ..Default::default()
-            };
-            props.layout.overflow = Overflow::Clip;
-            decl_style::apply_layout_refinement(&theme, layout.clone(), &mut props.layout);
+            cx.hover_region(hover, move |cx, hovered| {
+                let theme = Theme::global(&*cx.app).clone();
 
-            props
-        });
+                let mut focused = false;
+                let mut input_id = GlobalElementId(0);
+                let mut input_bg = theme
+                    .color_by_key("md.sys.color.surface")
+                    .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
+                let mut outline_width_for_notch = Px(0.0);
+                vec![cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.overflow = Overflow::Visible;
+                            layout
+                        },
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(4.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Start,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        let mut children: Vec<AnyElement> = Vec::new();
 
-        if !disabled {
-            return text_input;
-        }
+                        let input = cx.named("text_input", |cx| {
+                            let id = cx.root_id();
+                            input_id = id;
+                            focused = cx.is_focused_element(id);
 
-        cx.interactivity_gate_props(
-            InteractivityGateProps {
-                present: true,
-                interactive: false,
-                ..Default::default()
-            },
-            move |_cx| vec![text_input],
-        )
+                            let populated = cx
+                                .get_model_cloned(&model, Invalidation::Layout)
+                                .map(|v| !v.is_empty())
+                                .unwrap_or(false);
+
+                            let show_placeholder = if label.is_some() {
+                                focused && !populated
+                            } else {
+                                true
+                            };
+
+                            let mut props = TextInputProps::new(model.clone());
+                            props.layout.size.width = Length::Fill;
+                            props.layout.size.height = Length::Px(height);
+                            props.a11y_label = a11y_label.clone();
+                            props.a11y_role = Some(SemanticsRole::TextField);
+                            props.test_id = test_id.clone();
+                            props.placeholder = if show_placeholder {
+                                placeholder.clone()
+                            } else {
+                                None
+                            };
+
+                            let chrome = text_field_tokens::text_input_style(
+                                &theme,
+                                variant_for_children,
+                                focused,
+                                hovered,
+                                disabled,
+                                error,
+                            );
+                            input_bg = chrome.background;
+                            outline_width_for_notch = match variant_for_children {
+                                TextFieldVariant::Outlined => chrome.border.top,
+                                TextFieldVariant::Filled => Px(0.0),
+                            };
+                            props.chrome = chrome;
+                            props.text_style = theme
+                                .text_style_by_key("md.sys.typescale.body-large")
+                                .unwrap_or(TextStyle::default());
+
+                            cx.text_input(props)
+                        });
+
+                        let populated = cx
+                            .get_model_cloned(&model, Invalidation::Layout)
+                            .map(|v| !v.is_empty())
+                            .unwrap_or(false);
+                        let should_float = focused || populated;
+
+                        let now_frame = cx.frame_id.0;
+                        let duration_ms = theme
+                            .duration_ms_by_key("md.sys.motion.duration.short4")
+                            .unwrap_or(200);
+                        let easing = theme
+                            .easing_by_key("md.sys.motion.easing.standard")
+                            .unwrap_or(fret_ui::theme::CubicBezier {
+                                x1: 0.0,
+                                y1: 0.0,
+                                x2: 1.0,
+                                y2: 1.0,
+                            });
+
+                        let (progress, want_frames) =
+                            cx.with_state(TextFieldRuntime::default, |rt| {
+                                if rt.float_target != should_float {
+                                    rt.float_target = should_float;
+                                    rt.float.set_target(
+                                        now_frame,
+                                        if should_float { 1.0 } else { 0.0 },
+                                        duration_ms,
+                                        easing,
+                                    );
+                                }
+                                rt.float.advance(now_frame);
+                                (rt.float.value(), rt.float.is_active())
+                            });
+
+                        if want_frames {
+                            cx.request_animation_frame();
+                        }
+
+                        children.push(input);
+
+                        if let Some(label) = label.as_ref() {
+                            children.push(text_field_label(
+                                cx,
+                                &theme,
+                                variant_for_children,
+                                label.clone(),
+                                progress,
+                                hovered,
+                                disabled,
+                                error,
+                                focused,
+                                input_id,
+                                input_bg,
+                                outline_width_for_notch,
+                            ));
+                        }
+
+                        if let Some(text) = supporting_text.as_ref() {
+                            children.push(text_field_supporting_text(
+                                cx,
+                                &theme,
+                                variant_for_children,
+                                text.clone(),
+                                hovered,
+                                disabled,
+                                error,
+                                focused,
+                            ));
+                        }
+
+                        children
+                    },
+                )]
+            })
+        })
     }
+}
+
+fn lerp_px(a: Px, b: Px, t: f32) -> Px {
+    let t = t.clamp(0.0, 1.0);
+    Px(a.0 + (b.0 - a.0) * t)
+}
+
+fn lerp_f32(a: f32, b: f32, t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    a + (b - a) * t
+}
+
+fn interpolated_label_text_style(theme: &Theme, progress: f32) -> Option<TextStyle> {
+    let large = theme.text_style_by_key("md.sys.typescale.body-large")?;
+    let small = theme.text_style_by_key("md.sys.typescale.body-small")?;
+
+    if large.font != small.font || large.weight != small.weight || large.slant != small.slant {
+        return Some(if progress >= 0.5 { small } else { large });
+    }
+
+    let size = lerp_px(large.size, small.size, progress);
+    let line_height = match (large.line_height, small.line_height) {
+        (Some(a), Some(b)) => Some(lerp_px(a, b, progress)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    let letter_spacing_em = match (large.letter_spacing_em, small.letter_spacing_em) {
+        (Some(a), Some(b)) => Some(lerp_f32(a, b, progress)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+
+    Some(TextStyle {
+        font: large.font,
+        size,
+        weight: large.weight,
+        slant: large.slant,
+        line_height,
+        letter_spacing_em,
+    })
+}
+
+fn text_field_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    variant: TextFieldVariant,
+    text: Arc<str>,
+    progress: f32,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+    input_id: GlobalElementId,
+    input_bg: Color,
+    outline_width: Px,
+) -> AnyElement {
+    let style = interpolated_label_text_style(theme, progress)
+        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+
+    let y = lerp_px(Px(18.0), Px(6.0), progress);
+    let x = Px(16.0);
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.position = fret_ui::element::PositionStyle::Absolute;
+    layout.inset.top = Some(y);
+    layout.inset.left = Some(x);
+    layout.inset.right = Some(Px(16.0));
+    layout.overflow = Overflow::Visible;
+
+    let floated = progress >= 0.5;
+
+    let mut patch = ContainerProps::default();
+    if variant == TextFieldVariant::Outlined {
+        let patch_padding_x = Px(4.0);
+        let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
+        patch.padding = if floated {
+            Edges {
+                top: patch_padding_y,
+                right: patch_padding_x,
+                bottom: patch_padding_y,
+                left: patch_padding_x,
+            }
+        } else {
+            Edges::all(Px(0.0))
+        };
+        patch.background = floated.then_some(input_bg);
+    }
+
+    cx.pointer_region(
+        PointerRegionProps {
+            layout,
+            enabled: !disabled,
+        },
+        move |cx| {
+            let input_for_focus = input_id;
+            cx.pointer_region_on_pointer_down(Arc::new(move |host, _cx, _down| {
+                host.request_focus(input_for_focus);
+                true
+            }));
+
+            vec![cx.container(patch, move |cx| {
+                vec![cx.text_props(TextProps {
+                    layout: fret_ui::element::LayoutStyle::default(),
+                    text: text.clone(),
+                    style,
+                    color: Some(text_field_tokens::label_color(
+                        theme, variant, hovered, disabled, error, focused,
+                    )),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })]
+            })]
+        },
+    )
+}
+
+fn text_field_supporting_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    variant: TextFieldVariant,
+    text: Arc<str>,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> AnyElement {
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
+    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
+
+    cx.text_props(TextProps {
+        layout,
+        text,
+        style: theme.text_style_by_key("md.sys.typescale.body-small"),
+        color: Some(text_field_tokens::supporting_text_color(
+            theme, variant, hovered, disabled, error, focused,
+        )),
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
 }

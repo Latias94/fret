@@ -797,6 +797,7 @@ fn apply_markdown_demo_theme_tokens(app: &mut App) {
             url: theme.url.clone(),
             colors: HashMap::new(),
             metrics: HashMap::new(),
+            ..ThemeConfig::default()
         };
 
         cfg.metrics

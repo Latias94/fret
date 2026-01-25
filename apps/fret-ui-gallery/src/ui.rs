@@ -1,11 +1,13 @@
 use fret_app::{App, CommandId, Model};
-use fret_core::ImageId;
+use fret_core::{
+    Color as CoreColor, Corners, DrawOrder, Edges, ImageId, Point, Px, Rect, SceneOp, Size,
+};
 use fret_markdown as markdown;
 use fret_ui::Theme;
+use fret_ui::element::{CanvasProps, StackProps};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
-use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -164,7 +166,9 @@ pub(crate) fn sidebar_view(
             ChromeRefinement::default()
                 .bg(ColorRef::Color(theme.color_required("muted")))
                 .p(Space::N4),
-            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(280.0)))
+                .h_full(),
         ),
         |cx| {
             vec![stack::vstack(
@@ -288,7 +292,7 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("neutral/light", "Neutral (light)"),
                     shadcn::SelectItem::new("neutral/dark", "Neutral (dark)"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
                 .into_element(cx);
 
             let copy_actions = stack::hstack(
@@ -545,8 +549,6 @@ fn page_preview(
         ),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_SELECT => preview_select(cx, select_value, select_open),
-        PAGE_MATERIAL3_SELECT => preview_material3_select(cx),
-        PAGE_MATERIAL3_TEXT_FIELD => preview_material3_text_field(cx),
         PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
         PAGE_DATE_PICKER => preview_date_picker(
             cx,
@@ -566,16 +568,6 @@ fn page_preview(
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
-        #[cfg(not(feature = "material3_full"))]
-        PAGE_MATERIAL3_GALLERY => preview_material3_gallery(
-            cx,
-            material3_checkbox,
-            material3_switch,
-            material3_radio_value,
-            material3_text_field_value,
-            material3_text_field_disabled,
-        ),
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_GALLERY => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_gallery(
                 cx,
@@ -591,12 +583,6 @@ fn page_preview(
                 last_action.clone(),
             )
         }),
-        PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
-        PAGE_MATERIAL3_CHECKBOX => preview_material3_checkbox(cx, material3_checkbox),
-        PAGE_MATERIAL3_SWITCH => preview_material3_switch(cx, material3_switch),
-        PAGE_MATERIAL3_RADIO => preview_material3_radio(cx, material3_radio_value),
-
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_STATE_MATRIX => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_state_matrix(
@@ -614,7 +600,6 @@ fn page_preview(
                 )
             })
         }
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_TOUCH_TARGETS => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_touch_targets(
@@ -626,39 +611,54 @@ fn page_preview(
                 )
             })
         }
-        #[cfg(feature = "material3_full")]
+        PAGE_MATERIAL3_BUTTON => {
+            material3_scoped_page(cx, material3_expressive.clone(), preview_material3_button)
+        }
         PAGE_MATERIAL3_ICON_BUTTON => material3_scoped_page(
             cx,
             material3_expressive.clone(),
             preview_material3_icon_button,
         ),
-        #[cfg(feature = "material3_full")]
+        PAGE_MATERIAL3_CHECKBOX => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_checkbox(cx, material3_checkbox)
+        }),
+        PAGE_MATERIAL3_SWITCH => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_switch(cx, material3_switch)
+        }),
+        PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_radio(cx, material3_radio_value)
+        }),
+        PAGE_MATERIAL3_TEXT_FIELD => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_text_field(
+                    cx,
+                    material3_text_field_value,
+                    material3_text_field_disabled,
+                    material3_text_field_error,
+                )
+            })
+        }
         PAGE_MATERIAL3_TABS => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_tabs(cx, material3_tabs_value)
         }),
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_LIST => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_list(cx, material3_list_value)
         }),
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_NAVIGATION_BAR => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_navigation_bar(cx, material3_navigation_bar_value)
             })
         }
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_NAVIGATION_RAIL => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_navigation_rail(cx, material3_navigation_rail_value)
             })
         }
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_NAVIGATION_DRAWER => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_navigation_drawer(cx, material3_navigation_drawer_value)
             })
         }
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_modal_navigation_drawer(
@@ -668,19 +668,15 @@ fn page_preview(
                 )
             })
         }
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_DIALOG => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_dialog(cx, material3_dialog_open, last_action.clone())
         }),
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_MENU => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_menu(cx, material3_menu_open, last_action.clone())
         }),
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_SNACKBAR => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_snackbar(cx, last_action.clone())
         }),
-        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_TOOLTIP => {
             material3_scoped_page(cx, material3_expressive.clone(), preview_material3_tooltip)
         }
@@ -700,7 +696,6 @@ fn page_preview(
     .into_element(cx)
 }
 
-#[cfg(feature = "material3_full")]
 fn material3_scoped_page(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
@@ -727,7 +722,6 @@ fn material3_scoped_page(
     out
 }
 
-#[cfg(feature = "material3_full")]
 fn material3_variant_toggle_row(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
@@ -1013,7 +1007,11 @@ fn preview_view_cache(
                 .gap(Space::N1),
             |_cx| rows,
         )])
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(280.0))),
+        )
         .into_element(cx);
 
         vec![
@@ -1329,7 +1327,9 @@ fn preview_virtual_list_torture(
                     ChromeRefinement::default()
                         .bg(ColorRef::Color(background))
                         .p(Space::N2),
-                    LayoutRefinement::default().w_full().h_px(height_hint),
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(MetricRef::Px(height_hint)),
                 );
                 container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -1430,91 +1430,15 @@ fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     vec![
-        cx.text("Material 3 Buttons (pilot): state-driven tokens via `WidgetStates`."),
+        cx.text("Material 3 Buttons: token-driven colors + state layer + bounded ripple."),
         row(cx, material3::ButtonVariant::Filled, "Filled"),
+        row(cx, material3::ButtonVariant::Tonal, "Tonal"),
+        row(cx, material3::ButtonVariant::Elevated, "Elevated"),
         row(cx, material3::ButtonVariant::Outlined, "Outlined"),
         row(cx, material3::ButtonVariant::Text, "Text"),
     ]
 }
 
-#[cfg(not(feature = "material3_full"))]
-fn preview_material3_gallery(
-    cx: &mut ElementContext<'_, App>,
-    material3_checkbox: Model<bool>,
-    material3_switch: Model<bool>,
-    material3_radio_value: Model<Option<Arc<str>>>,
-    material3_text_field_value: Model<String>,
-    material3_text_field_disabled: Model<bool>,
-) -> Vec<AnyElement> {
-    let disabled = cx
-        .get_model_copied(&material3_text_field_disabled, Invalidation::Layout)
-        .unwrap_or(false);
-
-    vec![
-        cx.text("Material 3 Gallery (pilot): compact surface for SDSR-based components."),
-        cx.text("— Buttons —"),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            |cx| {
-                vec![
-                    material3::Button::new("Filled")
-                        .variant(material3::ButtonVariant::Filled)
-                        .into_element(cx),
-                    material3::Button::new("Outlined")
-                        .variant(material3::ButtonVariant::Outlined)
-                        .into_element(cx),
-                    material3::Button::new("Text")
-                        .variant(material3::ButtonVariant::Text)
-                        .into_element(cx),
-                ]
-            },
-        ),
-        cx.text("— Selection —"),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N3).items_center(),
-            |cx| {
-                vec![
-                    material3::Checkbox::new(material3_checkbox.clone())
-                        .a11y_label("Checkbox")
-                        .into_element(cx),
-                    material3::Switch::new(material3_switch.clone())
-                        .a11y_label("Switch")
-                        .into_element(cx),
-                    material3::RadioGroup::new(material3_radio_value.clone())
-                        .a11y_label("RadioGroup")
-                        .items([
-                            material3::RadioGroupItem::new("alpha", "Alpha"),
-                            material3::RadioGroupItem::new("beta", "Beta"),
-                            material3::RadioGroupItem::new("disabled", "Disabled").disabled(true),
-                        ])
-                        .into_element(cx),
-                ]
-            },
-        ),
-        cx.text("— TextField —"),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            |cx| {
-                vec![
-                    shadcn::Switch::new(material3_text_field_disabled.clone())
-                        .a11y_label("Disable TextField")
-                        .into_element(cx),
-                    cx.text("Disabled"),
-                ]
-            },
-        ),
-        material3::TextField::new(material3_text_field_value)
-            .a11y_label("Material3 text field")
-            .placeholder("Type here…")
-            .disabled(disabled)
-            .into_element(cx),
-    ]
-}
-
-#[cfg(feature = "material3_full")]
 fn preview_material3_gallery(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1674,7 +1598,6 @@ fn preview_material3_gallery(
     out
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_state_matrix(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1713,7 +1636,6 @@ fn preview_material3_state_matrix(
     out
 }
 
-#[cfg(feature = "material3_full")]
 fn material3_state_matrix_content(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1745,7 +1667,7 @@ fn material3_state_matrix_content(
     out.extend(preview_material3_radio(cx, material3_radio_value));
 
     out.push(cx.text("— Text Field —"));
-    out.extend(preview_material3_text_field_full(
+    out.extend(preview_material3_text_field(
         cx,
         material3_text_field_value,
         material3_text_field_disabled,
@@ -1767,7 +1689,6 @@ fn material3_state_matrix_content(
     out
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_touch_targets(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1988,7 +1909,6 @@ fn preview_material3_touch_targets(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_icons::ids;
 
@@ -2138,11 +2058,20 @@ fn preview_material3_radio(
         move |cx| {
             vec![
                 material3::RadioGroup::new(group_value.clone())
-                    .a11y_label("Material3 RadioGroup")
-                    .items([
-                        material3::RadioGroupItem::new("alpha", "Alpha"),
-                        material3::RadioGroupItem::new("beta", "Beta"),
-                        material3::RadioGroupItem::new("disabled", "Disabled").disabled(true),
+                    .a11y_label("Material 3 RadioGroup")
+                    .orientation(material3::RadioGroupOrientation::Horizontal)
+                    .gap(Px(8.0))
+                    .items(vec![
+                        material3::RadioGroupItem::new("Alpha")
+                            .a11y_label("Radio Alpha")
+                            .test_id("ui-gallery-material3-radio-a"),
+                        material3::RadioGroupItem::new("Beta")
+                            .a11y_label("Radio Beta")
+                            .test_id("ui-gallery-material3-radio-b"),
+                        material3::RadioGroupItem::new("Charlie")
+                            .a11y_label("Radio Charlie (disabled)")
+                            .disabled(true)
+                            .test_id("ui-gallery-material3-radio-c-disabled"),
                     ])
                     .into_element(cx),
                 cx.text(format!("value={}", current.as_ref())),
@@ -2152,14 +2081,13 @@ fn preview_material3_radio(
 
     vec![
         cx.text(
-            "RadioGroup (Material3 pilot): group-value binding + roving focus + state-driven outcomes.",
+            "Material 3 Radio: group-value binding + roving focus + typeahead + state layer + bounded ripple.",
         ),
         row,
     ]
 }
 
-#[cfg(feature = "material3_full")]
-fn preview_material3_text_field_full(
+fn preview_material3_text_field(
     cx: &mut ElementContext<'_, App>,
     value: Model<String>,
     disabled: Model<bool>,
@@ -2253,7 +2181,6 @@ fn preview_material3_text_field_full(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_tabs(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2303,7 +2230,6 @@ fn preview_material3_tabs(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_navigation_bar(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2337,7 +2263,6 @@ fn preview_material3_navigation_bar(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_navigation_rail(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2387,7 +2312,6 @@ fn preview_material3_navigation_rail(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_navigation_drawer(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2437,7 +2361,6 @@ fn preview_material3_navigation_drawer(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_modal_navigation_drawer(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -2540,7 +2463,6 @@ fn preview_material3_modal_navigation_drawer(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_dialog(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -2648,7 +2570,6 @@ fn preview_material3_dialog(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_menu(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -2749,7 +2670,6 @@ fn preview_material3_menu(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_list(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2821,7 +2741,6 @@ fn preview_material3_list(
     ]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_snackbar(
     cx: &mut ElementContext<'_, App>,
     last_action: Model<Arc<str>>,
@@ -2944,7 +2863,6 @@ fn preview_material3_snackbar(
     vec![card]
 }
 
-#[cfg(feature = "material3_full")]
 fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let content = material3::TooltipProvider::new().with(cx, |cx| {
         let outlined = material3::ButtonVariant::Outlined;
@@ -3140,7 +3058,11 @@ fn preview_avatar(
         .into_element(cx);
 
     let c = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("?").into_element(cx)])
-        .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(48.0)))
+                .h_px(MetricRef::Px(Px(48.0))),
+        )
         .into_element(cx);
 
     vec![
@@ -3162,16 +3084,16 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |cx| {
             vec![
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(180.0))))
                     .into_element(cx),
                 shadcn::Skeleton::new().into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
                     .into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
                     .into_element(cx),
             ]
         },
@@ -3206,7 +3128,11 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     );
 
     let scroll = shadcn::ScrollArea::new(vec![body])
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(240.0))),
+        )
         .into_element(cx);
 
     vec![
@@ -3508,7 +3434,7 @@ fn preview_select(
                 shadcn::SelectItem::new(value, label).test_id(test_id)
             })),
         )
-        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
         .into_element(cx);
 
     let selected = cx
@@ -3520,218 +3446,6 @@ fn preview_select(
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     vec![select, cx.text(format!("Selected: {selected}"))]
-}
-
-fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct Models {
-        value: Option<Model<Option<Arc<str>>>>,
-        open: Option<Model<bool>>,
-        value_override: Option<Model<Option<Arc<str>>>>,
-        open_override: Option<Model<bool>>,
-        disabled: Option<Model<bool>>,
-    }
-
-    let (value, open, value_override, open_override, disabled) =
-        cx.with_state(Models::default, |st| {
-            (
-                st.value.clone(),
-                st.open.clone(),
-                st.value_override.clone(),
-                st.open_override.clone(),
-                st.disabled.clone(),
-            )
-        });
-
-    let (value, open, value_override, open_override, disabled) =
-        match (value, open, value_override, open_override, disabled) {
-            (
-                Some(value),
-                Some(open),
-                Some(value_override),
-                Some(open_override),
-                Some(disabled),
-            ) => (value, open, value_override, open_override, disabled),
-            _ => {
-                let value = cx.app.models_mut().insert(None::<Arc<str>>);
-                let open = cx.app.models_mut().insert(false);
-                let value_override = cx.app.models_mut().insert(None::<Arc<str>>);
-                let open_override = cx.app.models_mut().insert(false);
-                let disabled = cx.app.models_mut().insert(false);
-                cx.with_state(Models::default, |st| {
-                    st.value = Some(value.clone());
-                    st.open = Some(open.clone());
-                    st.value_override = Some(value_override.clone());
-                    st.open_override = Some(open_override.clone());
-                    st.disabled = Some(disabled.clone());
-                });
-                (value, open, value_override, open_override, disabled)
-            }
-        };
-
-    let disabled_now = cx
-        .get_model_copied(&disabled, Invalidation::Layout)
-        .unwrap_or(false);
-
-    let toggle_disabled = shadcn::Button::new(if disabled_now { "Enable" } else { "Disable" })
-        .variant(shadcn::ButtonVariant::Outline)
-        .toggle_model(disabled.clone())
-        .into_element(cx);
-
-    let theme = Theme::global(&*cx.app).clone();
-    let override_style = material3::SelectStyle::default()
-        .trigger_border_color(WidgetStateProperty::new(None).when(
-            WidgetStates::FOCUS_VISIBLE,
-            Some(ColorRef::Color(theme.color_required("destructive"))),
-        ))
-        .option_background(
-            WidgetStateProperty::new(None).when(
-                WidgetStates::SELECTED,
-                Some(ColorRef::Color(
-                    theme
-                        .color_by_key("accent")
-                        .unwrap_or_else(|| theme.color_required("accent")),
-                )),
-            ),
-        );
-
-    let select = material3::Select::new(value.clone(), open.clone())
-        .placeholder("Default (pilot)")
-        .disabled(disabled_now)
-        .items([
-            material3::SelectItem::new("apple", "Apple"),
-            material3::SelectItem::new("banana", "Banana"),
-            material3::SelectItem::new("orange", "Orange").disabled(true),
-        ])
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
-        .into_element(cx);
-
-    let select_override = material3::Select::new(value_override.clone(), open_override.clone())
-        .placeholder("Override (focus outline = destructive)")
-        .disabled(disabled_now)
-        .style(override_style)
-        .items([
-            material3::SelectItem::new("apple", "Apple"),
-            material3::SelectItem::new("banana", "Banana"),
-            material3::SelectItem::new("orange", "Orange").disabled(true),
-        ])
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
-        .into_element(cx);
-
-    let selected = cx
-        .app
-        .models()
-        .read(&value, |v| v.clone())
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    vec![
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| vec![toggle_disabled],
-        ),
-        stack::vstack(
-            cx,
-            stack::VStackProps::default().gap(Space::N3),
-            |_cx| vec![select, select_override],
-        ),
-        cx.text(format!("Selected: {selected}")),
-        cx.text(
-            "Tip: Tab to focus the trigger (focus-visible ring), then Space/Enter/ArrowDown to open.",
-        ),
-    ]
-}
-
-fn preview_material3_text_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct Models {
-        model: Option<Model<String>>,
-        model_override: Option<Model<String>>,
-        disabled: Option<Model<bool>>,
-    }
-
-    let (model, model_override, disabled) = cx.with_state(Models::default, |st| {
-        (
-            st.model.clone(),
-            st.model_override.clone(),
-            st.disabled.clone(),
-        )
-    });
-    let (model, model_override, disabled) = match (model, model_override, disabled) {
-        (Some(model), Some(model_override), Some(disabled)) => (model, model_override, disabled),
-        _ => {
-            let model = cx.app.models_mut().insert(String::new());
-            let model_override = cx.app.models_mut().insert(String::new());
-            let disabled = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| {
-                st.model = Some(model.clone());
-                st.model_override = Some(model_override.clone());
-                st.disabled = Some(disabled.clone());
-            });
-            (model, model_override, disabled)
-        }
-    };
-
-    let disabled_now = cx
-        .get_model_copied(&disabled, Invalidation::Layout)
-        .unwrap_or(false);
-
-    let toggle_disabled = shadcn::Button::new(if disabled_now { "Enable" } else { "Disable" })
-        .variant(shadcn::ButtonVariant::Outline)
-        .toggle_model(disabled.clone())
-        .into_element(cx);
-
-    let clear = {
-        let model_for_clear = model.clone();
-        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            let _ = host.models_mut().update(&model_for_clear, |v| v.clear());
-            host.request_redraw(action_cx.window);
-        });
-        shadcn::Button::new("Clear")
-            .variant(shadcn::ButtonVariant::Secondary)
-            .on_activate(on_activate)
-            .into_element(cx)
-    };
-
-    let theme = Theme::global(&*cx.app).clone();
-    let override_style = material3::TextFieldStyle::default()
-        .border_color_focused(WidgetStateProperty::new(None).when(
-            WidgetStates::FOCUS_VISIBLE,
-            Some(ColorRef::Color(theme.color_required("destructive"))),
-        ))
-        .focus_ring_color(WidgetStateProperty::new(None).when(
-            WidgetStates::FOCUS_VISIBLE,
-            Some(ColorRef::Color(theme.color_required("destructive"))),
-        ));
-
-    let field = material3::TextField::new(model.clone())
-        .a11y_label("Material3 text field")
-        .placeholder("Default (pilot)")
-        .disabled(disabled_now)
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
-        .into_element(cx);
-
-    let field_override = material3::TextField::new(model_override.clone())
-        .a11y_label("Material3 text field (override)")
-        .placeholder("Override (focus ring = destructive)")
-        .disabled(disabled_now)
-        .style(override_style)
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
-        .into_element(cx);
-
-    vec![
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| vec![toggle_disabled, clear],
-        ),
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N3), |_cx| {
-            vec![field, field_override]
-        }),
-        cx.text("Tip: use Tab to focus the field and observe focus-visible ring behavior."),
-    ]
 }
 
 fn preview_combobox(
@@ -3825,7 +3539,11 @@ fn preview_resizable(
 
     let root = shadcn::ResizablePanelGroup::new(h_fractions)
         .axis(fret_core::Axis::Horizontal)
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(320.0))),
+        )
         .entries(vec![
             shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
                 .min_px(Px(140.0))
@@ -3947,7 +3665,11 @@ fn preview_data_table(
 
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(280.0))),
+        )
         .into_element(
             cx,
             assets.data.clone(),
@@ -3992,7 +3714,11 @@ fn preview_data_grid(
 
         let grid =
             shadcn::experimental::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
-                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(MetricRef::Px(Px(320.0))),
+                )
                 .into_element(
                     cx,
                     1,

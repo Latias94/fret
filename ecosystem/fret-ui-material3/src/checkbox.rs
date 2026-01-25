@@ -1,145 +1,58 @@
+//! Material 3 checkbox (MVP).
+//!
+//! Outcome-oriented implementation:
+//! - Token-driven sizing/colors via `md.comp.checkbox.*`.
+//! - State layer (hover/pressed/focus) + unbounded ripple using `fret_ui::paint`.
+
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, Rect, Size};
-use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, ContainerProps, PressableProps};
-use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::command::ElementCommandGatingExt as _;
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack::{HStackProps, hstack};
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::checkbox::{
-    CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool,
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, SvgFit};
+use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_runtime::Model;
+use fret_ui::action::{OnActivate, UiActionHostExt as _};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
+    PointerRegionProps, PressableA11y, PressableProps, SvgIconProps,
 };
-use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, ui,
+use fret_ui::elements::ElementContext;
+use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
+
+use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::indication::{
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
-
-fn token(key: &'static str, fallback: ColorFallback) -> ColorRef {
-    ColorRef::Token { key, fallback }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct CheckboxStyle {
-    pub container_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub outline_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub indicator_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub label_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-}
-
-impl CheckboxStyle {
-    pub fn container_background(
-        mut self,
-        container_background: WidgetStateProperty<Option<ColorRef>>,
-    ) -> Self {
-        self.container_background = Some(container_background);
-        self
-    }
-
-    pub fn outline_color(mut self, outline_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
-        self.outline_color = Some(outline_color);
-        self
-    }
-
-    pub fn indicator_color(
-        mut self,
-        indicator_color: WidgetStateProperty<Option<ColorRef>>,
-    ) -> Self {
-        self.indicator_color = Some(indicator_color);
-        self
-    }
-
-    pub fn label_color(mut self, label_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
-        self.label_color = Some(label_color);
-        self
-    }
-
-    pub fn merged(mut self, other: Self) -> Self {
-        if other.container_background.is_some() {
-            self.container_background = other.container_background;
-        }
-        if other.outline_color.is_some() {
-            self.outline_color = other.outline_color;
-        }
-        if other.indicator_color.is_some() {
-            self.indicator_color = other.indicator_color;
-        }
-        if other.label_color.is_some() {
-            self.label_color = other.label_color;
-        }
-        self
-    }
-}
-
-#[derive(Debug, Clone)]
-enum CheckboxCheckedModel {
-    Bool(Model<bool>),
-    OptionalBool(Model<Option<bool>>),
-    TriState(Model<CheckedState>),
-}
+use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::tokens::checkbox as checkbox_tokens;
 
 #[derive(Clone)]
 pub struct Checkbox {
-    checked: CheckboxCheckedModel,
-    label: Option<Arc<str>>,
+    checked: Model<bool>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
-    on_click: Option<CommandId>,
-    style: CheckboxStyle,
-    chrome: ChromeRefinement,
-    layout: LayoutRefinement,
+    on_activate: Option<OnActivate>,
+}
+
+impl std::fmt::Debug for Checkbox {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Checkbox")
+            .field("disabled", &self.disabled)
+            .field("a11y_label", &self.a11y_label)
+            .field("test_id", &self.test_id)
+            .field("on_activate", &self.on_activate.is_some())
+            .finish()
+    }
 }
 
 impl Checkbox {
-    pub fn new(model: Model<bool>) -> Self {
+    pub fn new(checked: Model<bool>) -> Self {
         Self {
-            checked: CheckboxCheckedModel::Bool(model),
-            label: None,
+            checked,
             disabled: false,
             a11y_label: None,
             test_id: None,
-            on_click: None,
-            style: CheckboxStyle::default(),
-            chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
+            on_activate: None,
         }
-    }
-
-    pub fn new_optional(model: Model<Option<bool>>) -> Self {
-        Self {
-            checked: CheckboxCheckedModel::OptionalBool(model),
-            label: None,
-            disabled: false,
-            a11y_label: None,
-            test_id: None,
-            on_click: None,
-            style: CheckboxStyle::default(),
-            chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
-        }
-    }
-
-    pub fn new_tristate(model: Model<CheckedState>) -> Self {
-        Self {
-            checked: CheckboxCheckedModel::TriState(model),
-            label: None,
-            disabled: false,
-            a11y_label: None,
-            test_id: None,
-            on_click: None,
-            style: CheckboxStyle::default(),
-            chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
-        }
-    }
-
-    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
-        self.label = Some(label.into());
-        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -157,275 +70,260 @@ impl Checkbox {
         self
     }
 
-    pub fn on_click(mut self, command: CommandId) -> Self {
-        self.on_click = Some(command);
-        self
-    }
-
-    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
-        self.chrome = self.chrome.merge(style);
-        self
-    }
-
-    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
-        self.layout = self.layout.merge(layout);
-        self
-    }
-
-    pub fn style(mut self, style: CheckboxStyle) -> Self {
-        self.style = self.style.merged(style);
+    /// Called after the checkbox toggles its `Model<bool>`.
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
-        let size = theme
-            .metric_by_key("material3.checkbox.size")
-            .unwrap_or(Px(18.0));
-        let radius = theme
-            .metric_by_key("material3.checkbox.radius")
-            .unwrap_or(Px(4.0));
-
-        let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-        let pad_y = MetricRef::space(Space::N1).resolve(&theme);
-
-        let focus_bounds = Rect::new(fret_core::Point::new(pad_x, pad_y), Size::new(size, size));
-
-        let ring_border = theme.color_required("ring");
-        let mut ring = decl_style::focus_ring(&theme, radius);
-        ring.color = ring_border;
-
-        let default_container_bg = WidgetStateProperty::new(None)
-            .when(
-                WidgetStates::HOVERED,
-                Some(token(
-                    "material3.checkbox.state_layer.hover",
-                    ColorFallback::ThemeTokenAlphaMul {
-                        key: "accent",
-                        mul: 0.08,
-                    },
-                )),
-            )
-            .when(
-                WidgetStates::ACTIVE,
-                Some(token(
-                    "material3.checkbox.state_layer.pressed",
-                    ColorFallback::ThemeTokenAlphaMul {
-                        key: "accent",
-                        mul: 0.12,
-                    },
-                )),
-            )
-            .when(
-                WidgetStates::SELECTED,
-                Some(token(
-                    "material3.checkbox.selected.container",
-                    ColorFallback::ThemeAccent,
-                )),
-            )
-            .when(WidgetStates::DISABLED, None);
-
-        let default_outline = WidgetStateProperty::new(Some(token(
-            "material3.checkbox.outline",
-            ColorFallback::ThemePanelBorder,
-        )))
-        .when(
-            WidgetStates::SELECTED,
-            Some(token(
-                "material3.checkbox.selected.outline",
-                ColorFallback::ThemeAccent,
-            )),
-        )
-        .when(
-            WidgetStates::FOCUS_VISIBLE,
-            Some(token(
-                "material3.checkbox.focus.outline",
-                ColorFallback::ThemeFocusRing,
-            )),
-        )
-        .when(
-            WidgetStates::DISABLED,
-            Some(token(
-                "material3.checkbox.disabled.outline",
-                ColorFallback::ThemeTokenAlphaMul {
-                    key: "border",
-                    mul: 0.38,
-                },
-            )),
-        );
-
-        let default_indicator = WidgetStateProperty::new(None)
-            .when(
-                WidgetStates::SELECTED,
-                Some(token(
-                    "material3.checkbox.selected.indicator",
-                    ColorFallback::ThemeTextPrimary,
-                )),
-            )
-            .when(WidgetStates::DISABLED, None);
-
-        let default_label_color = WidgetStateProperty::new(Some(token(
-            "material3.checkbox.label",
-            ColorFallback::ThemeTextPrimary,
-        )))
-        .when(
-            WidgetStates::DISABLED,
-            Some(token(
-                "material3.checkbox.disabled.label",
-                ColorFallback::ThemeTextDisabled,
-            )),
-        );
-
-        let chrome = self.chrome;
-        let style_override = self.style;
-        let label = self.label;
-        let a11y_label = self.a11y_label;
-        let test_id = self.test_id;
-        let on_click = self.on_click;
-        let disabled_explicit = self.disabled;
-        let checked = self.checked;
-
-        let disabled = disabled_explicit
-            || on_click
-                .as_ref()
-                .is_some_and(|cmd| !cx.command_is_enabled(cmd));
-
-        let layout = LayoutRefinement::default().merge(self.layout);
-        let pressable_layout = decl_style::layout_style(&theme, layout);
-
-        control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-            cx.pressable_dispatch_command_if_enabled_opt(on_click);
-
-            match &checked {
-                CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
-                CheckboxCheckedModel::OptionalBool(model) => {
-                    cx.pressable_update_model(model, |v| *v = toggle_optional_bool(*v));
-                }
-                CheckboxCheckedModel::TriState(model) => {
-                    cx.pressable_update_model(model, |v| *v = v.toggle());
-                }
-            }
-
+        cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let state = match &checked {
-                CheckboxCheckedModel::Bool(model) => {
-                    CheckedState::from(cx.watch_model(model).copied().unwrap_or(false))
-                }
-                CheckboxCheckedModel::OptionalBool(model) => {
-                    checked_state_from_optional_bool(cx.watch_model(model).copied().flatten())
-                }
-                CheckboxCheckedModel::TriState(model) => {
-                    cx.watch_model(model).copied().unwrap_or_default()
-                }
-            };
+            let size = checkbox_tokens::size_tokens(&theme);
 
-            let mut states = WidgetStates::from_pressable(cx, st, !disabled);
-            states.set(WidgetState::Selected, state.is_on());
+            cx.pressable_with_id_props(|cx, st, pressable_id| {
+                let enabled = !self.disabled;
 
-            let bg = style_override
-                .container_background
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_container_bg.resolve(states).clone())
-                .map(|c| c.resolve(&theme));
-            let outline = style_override
-                .outline_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_outline.resolve(states).clone())
-                .map(|c| c.resolve(&theme))
-                .unwrap_or(Color::TRANSPARENT);
-            let indicator = style_override
-                .indicator_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_indicator.resolve(states).clone())
-                .map(|c| c.resolve(&theme));
-            let label_color = style_override
-                .label_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_label_color.resolve(states).clone())
-                .map(|c| c.resolve(&theme))
-                .unwrap_or(theme.color_required("foreground"));
+                cx.key_add_on_key_down_for(pressable_id, consume_enter_key_handler());
 
-            let mut chrome_props =
-                decl_style::container_props(&theme, chrome.clone(), LayoutRefinement::default());
-            chrome_props.padding = Edges {
-                top: pad_y,
-                right: pad_x,
-                bottom: pad_y,
-                left: pad_x,
-            };
-            chrome_props.layout.size = pressable_layout.size;
+                let checked_model_for_toggle = self.checked.clone();
+                let enabled_for_toggle = enabled;
+                let user_activate = self.on_activate.clone();
+                cx.pressable_on_activate(Arc::new(move |host, action_cx, reason| {
+                    if enabled_for_toggle {
+                        let _ = host.update_model(&checked_model_for_toggle, |v| *v = !*v);
+                        host.request_redraw(action_cx.window);
+                    }
+                    if let Some(h) = user_activate.as_ref() {
+                        h(host, action_cx, reason);
+                    }
+                }));
 
-            let mut a11y = checkbox_a11y(a11y_label.clone().or_else(|| label.clone()), state);
-            a11y.test_id = test_id.clone();
-
-            let pressable_props = PressableProps {
-                layout: pressable_layout,
-                enabled: !disabled,
-                focusable: !disabled,
-                focus_ring: Some(ring),
-                focus_ring_bounds: Some(focus_bounds),
-                a11y,
-                ..Default::default()
-            };
-
-            let children = move |cx: &mut ElementContext<'_, H>| {
-                let box_layout = decl_style::layout_style(
-                    &theme,
-                    LayoutRefinement::default()
-                        .w_px(MetricRef::Px(size))
-                        .h_px(MetricRef::Px(size)),
-                );
-                let box_props = ContainerProps {
-                    layout: box_layout,
-                    padding: Edges::all(Px(0.0)),
-                    background: bg,
-                    shadow: None,
-                    border: Edges::all(Px(1.0)),
-                    border_color: Some(outline),
-                    corner_radii: Corners::all(radius),
-                    ..Default::default()
+                let corner_radii = Corners::all(Px(9999.0));
+                let pressable_props = PressableProps {
+                    enabled,
+                    focusable: enabled,
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::Checkbox),
+                        label: self.a11y_label.clone(),
+                        test_id: self.test_id.clone(),
+                        checked: Some(
+                            cx.get_model_copied(&self.checked, Invalidation::Layout)
+                                .unwrap_or(false),
+                        ),
+                        ..Default::default()
+                    },
+                    layout: {
+                        let mut l = fret_ui::element::LayoutStyle::default();
+                        l.overflow = Overflow::Visible;
+                        enforce_minimum_interactive_size(&mut l, &theme);
+                        l
+                    },
+                    focus_ring: Some(material_focus_ring_for_component(
+                        &theme,
+                        "md.comp.checkbox",
+                        corner_radii,
+                    )),
+                    focus_ring_bounds: None,
                 };
 
-                let mut children = Vec::new();
-                if let Some(indicator) = indicator {
-                    children.push(
-                        ui::label(cx, Arc::from("✓"))
-                            .text_color(ColorRef::Color(indicator))
-                            .into_element(cx),
-                    );
-                }
+                let pointer_region = cx.named("pointer_region", |cx| {
+                    let mut props = PointerRegionProps::default();
+                    props.enabled = enabled;
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.height = Length::Fill;
+                    cx.pointer_region(props, |cx| {
+                        cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
-                let box_el = cx.container(box_props, move |cx| {
-                    vec![hstack(
-                        cx,
-                        HStackProps::default().justify_center().items_center(),
-                        move |_cx| children,
-                    )]
+                        let now_frame = cx.frame_id.0;
+                        let focus_visible =
+                            fret_ui::focus_visible::is_focus_visible(&mut *cx.app, Some(cx.window));
+
+                        let is_pressed = enabled && st.pressed;
+                        let is_hovered = enabled && st.hovered;
+                        let is_focused = enabled && st.focused && focus_visible;
+
+                        let checked = cx
+                            .get_model_copied(&self.checked, Invalidation::Paint)
+                            .unwrap_or(false);
+
+                        let interaction = interaction_state(is_pressed, is_hovered, is_focused);
+                        let chrome = checkbox_tokens::chrome(&theme, checked, enabled, interaction);
+
+                        let state_layer_target = checkbox_tokens::state_layer_target_opacity(
+                            &theme,
+                            checked,
+                            enabled,
+                            interaction,
+                        );
+                        let state_layer_color =
+                            checkbox_tokens::state_layer_color(&theme, checked, interaction);
+
+                        let ripple_base_opacity =
+                            checkbox_tokens::pressed_state_layer_opacity(&theme, checked);
+                        let config = material_pressable_indication_config(
+                            &theme,
+                            Some(Px(size.state_layer.0 * 0.5)),
+                        );
+                        let overlay = material_ink_layer_for_pressable(
+                            cx,
+                            pressable_id,
+                            now_frame,
+                            Corners::all(Px(9999.0)),
+                            RippleClip::Bounded,
+                            state_layer_color,
+                            is_pressed,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                            false,
+                        );
+
+                        let content = checkbox_content(cx, size, chrome);
+                        let chrome = material_checkbox_chrome(cx, size, vec![overlay, content]);
+
+                        vec![centered_fill(cx, chrome)]
+                    })
                 });
 
-                let mut row_children = Vec::new();
-                row_children.push(box_el);
-                if let Some(label) = label.clone() {
-                    row_children.push(
-                        ui::label(cx, label)
-                            .text_color(ColorRef::Color(label_color))
-                            .into_element(cx),
-                    );
-                }
-
-                vec![hstack(
-                    cx,
-                    HStackProps::default().gap_x(Space::N2).items_center(),
-                    move |_cx| row_children,
-                )]
-            };
-
-            (pressable_props, chrome_props, children)
+                (pressable_props, vec![pointer_region])
+            })
         })
     }
+}
+
+fn interaction_state(
+    pressed: bool,
+    hovered: bool,
+    focused: bool,
+) -> checkbox_tokens::CheckboxInteraction {
+    if pressed {
+        checkbox_tokens::CheckboxInteraction::Pressed
+    } else if focused {
+        checkbox_tokens::CheckboxInteraction::Focused
+    } else if hovered {
+        checkbox_tokens::CheckboxInteraction::Hovered
+    } else {
+        checkbox_tokens::CheckboxInteraction::None
+    }
+}
+
+type CheckboxChrome = checkbox_tokens::CheckboxChrome;
+type CheckboxSizeTokens = checkbox_tokens::CheckboxSizeTokens;
+
+fn material_checkbox_chrome<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    size: CheckboxSizeTokens,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.layout.overflow = Overflow::Clip;
+    props.corner_radii = Corners::all(Px(9999.0));
+    props.layout.size.width = Length::Px(size.state_layer);
+    props.layout.size.height = Length::Px(size.state_layer);
+    cx.container(props, move |_cx| children)
+}
+
+fn checkbox_content<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    size: CheckboxSizeTokens,
+    chrome: CheckboxChrome,
+) -> AnyElement {
+    let box_el = checkbox_box(cx, size, chrome);
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = Length::Px(size.state_layer);
+    layout.size.height = Length::Px(size.state_layer);
+
+    cx.flex(
+        FlexProps {
+            layout,
+            direction: Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |_cx| vec![box_el],
+    )
+}
+
+fn checkbox_box<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    size: CheckboxSizeTokens,
+    chrome: CheckboxChrome,
+) -> AnyElement {
+    let corner_radii = Corners::all(size.container_corner);
+
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Px(size.container);
+    props.layout.size.height = Length::Px(size.container);
+    props.corner_radii = corner_radii;
+    props.background = chrome.container_bg;
+    props.border = Edges::all(chrome.outline_width);
+    props.border_color = chrome.outline_color;
+
+    cx.container(props, move |cx| {
+        if chrome.container_bg.is_some() {
+            let icon = material_icon(
+                cx,
+                &fret_icons::ids::ui::CHECK,
+                size.icon,
+                chrome.icon_color,
+            );
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Fill;
+            vec![cx.flex(
+                FlexProps {
+                    layout,
+                    direction: Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| vec![icon],
+            )]
+        } else {
+            Vec::new()
+        }
+    })
+}
+
+fn material_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    size: Px,
+    color: Color,
+) -> AnyElement {
+    let svg = svg_source_for_icon(cx, icon);
+
+    let mut props = SvgIconProps::new(svg);
+    props.fit = SvgFit::Contain;
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    props.color = color;
+    cx.svg_icon_props(props)
+}
+
+fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId) -> SvgSource {
+    let resolved = cx
+        .app
+        .with_global_mut(IconRegistry::default, |icons, _app| {
+            icons
+                .resolve_svg_owned(icon)
+                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
+        });
+
+    match resolved {
+        ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
+        ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
+    }
+}
+
+fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
+    Arc::new(|_host, _cx, down| matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter))
 }

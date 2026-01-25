@@ -272,15 +272,15 @@ let sw = m3::Switch::new(selected)
 "#;
 
 pub(crate) const DOC_MATERIAL3_RADIO: &str = r#"
-## RadioGroup (Material3 pilot)
+## Material 3 Radio (MVP)
 
-This page validates that the state-driven Material3 pilot surface can express a RadioGroup:
+This page validates a Material 3 radio button surface:
 
-- group-value binding (`Model<Option<Arc<str>>>`)
-- roving focus + keyboard navigation
-- state-driven hover/active/focus-visible outcomes
+- token-driven sizing + colors
+- state layer (hover / pressed / focus)
+- bounded ripple (pointer-origin)
 
-This is intentionally a minimal pilot; detailed Material3 parity work is tracked in the workstream.
+This page uses the group-value binding API (`Model<Option<Arc<str>>>`) so multiple items behave like a real radio group.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_RADIO: &str = r#"
@@ -289,13 +289,32 @@ use fret_ui_material3 as m3;
 use std::sync::Arc;
 
 let value = app.models_mut().insert(None::<Arc<str>>);
-let group = m3::RadioGroup::new(value)
-    .a11y_label("Options")
-    .items([
-        m3::RadioGroupItem::new("a", "A"),
-        m3::RadioGroupItem::new("b", "B"),
-        m3::RadioGroupItem::new("c", "C").disabled(true),
-    ])
+let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
+## Material 3 Text Field (MVP)
+
+This page validates Material 3 text field variants:
+
+- outlined: token-driven outline colors + widths (hover/focus/error/disabled)
+- filled: token-driven filled container + active indicator + hover state layer
+- label + placeholder outcomes (best-effort)
+- outlined: animated label float + an outline "notch" patch (best-effort)
+
+This is built on top of `fret-ui`'s `TextInput` mechanism widget (caret/selection/IME).
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TEXT_FIELD: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+let model = app.models_mut().insert(String::new());
+let tf = m3::TextField::new(model)
+    .variant(m3::TextFieldVariant::Filled)
+    .label("Name")
+    .placeholder("Type here")
     .into_element(cx);
 ```
 "#;
@@ -594,53 +613,6 @@ let open = app.models_mut().insert(false);
 let select = shadcn::Select::new(value, open)
     .placeholder("Pick a fruit")
     .items([shadcn::SelectItem::new("apple", "Apple")]);
-```
-"#;
-
-pub(crate) const DOC_MATERIAL3_SELECT: &str = r#"
-## Select (Material3 pilot)
-
-This page validates that the **state-driven style** surface is sufficient to build a Material-like
-select on top of Radix-shaped primitives:
-
-- trigger resolves colors from `WidgetStates` (hover/active/focus-visible/open/disabled),
-- content is mounted in a modal overlay layer (outside input is blocked while open),
-- options resolve state layers and selected styling via `WidgetStates`.
-
-This is intentionally a minimal pilot; typeahead/roving focus parity is tracked in the workstream.
-"#;
-
-pub(crate) const USAGE_MATERIAL3_SELECT: &str = r#"
-```rust
-use fret_ui_material3 as material3;
-
-let select = material3::Select::new(value, open)
-    .placeholder("Pick one…")
-    .items([
-        material3::SelectItem::new("apple", "Apple"),
-        material3::SelectItem::new("banana", "Banana"),
-    ])
-    .into_element(cx);
-```
-"#;
-
-pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
-## TextField (Material3 pilot)
-
-This page validates the "WidgetStates → TextInputStyle" mapping outcome:
-
-- focus-visible drives outline/ring styling (keyboard vs pointer),
-- disabled uses state-driven fallbacks,
-- overrides can partially override per-state values without deep merging.
-"#;
-
-pub(crate) const USAGE_MATERIAL3_TEXT_FIELD: &str = r#"
-```rust
-use fret_ui_material3 as material3;
-
-let field = material3::TextField::new(model)
-    .placeholder("Type here…")
-    .into_element(cx);
 ```
 "#;
 

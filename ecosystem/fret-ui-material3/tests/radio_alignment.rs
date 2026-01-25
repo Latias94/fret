@@ -1,5 +1,3 @@
-#![cfg(feature = "material3_full")]
-
 use std::{
     any::{Any, TypeId},
     collections::{HashMap, HashSet},
