@@ -47,6 +47,10 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/select.rs` (`select_close_transition_keeps_modal_barrier_blocking_underlay`)
 
+- [x] OIA2-test-006 Modal close transition keeps the barrier blocking underlay input (dialog).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`dialog_close_transition_keeps_modal_barrier_blocking_underlay`)
+
 ## P0 — Diagnostics & Debuggability
 
 - [x] OIA2-diag-010 Hit-test scope roots are exposed in diagnostics (baseline).

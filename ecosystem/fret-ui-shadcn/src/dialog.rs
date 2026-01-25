@@ -842,6 +842,91 @@ mod tests {
         trigger_id.expect("trigger id")
     }
 
+    fn render_dialog_frame_with_underlay(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        overlay_closable: bool,
+        underlay_activated: Model<bool>,
+    ) {
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dialog-underlay",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        Vec::new()
+                    },
+                );
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.left = Some(Px(20.0));
+                            layout.inset.top = Some(Px(20.0));
+                            layout.position = PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(&open);
+                        Vec::new()
+                    },
+                );
+
+                let dialog = Dialog::new(open.clone())
+                    .overlay_closable(overlay_closable)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let content = DialogContent::new(vec![
+                                ui::raw_text(cx, "dialog").into_element(cx),
+                            ])
+                            .into_element(cx);
+                            content
+                        },
+                    );
+
+                vec![underlay, dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
     fn apply_command_effects(ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices) {
         let effects = app.flush_effects();
         for effect in effects {
@@ -1066,6 +1151,159 @@ mod tests {
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn dialog_close_transition_keeps_modal_barrier_blocking_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices;
+
+        // Frame 1: closed.
+        render_dialog_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_activated.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open -> barrier root should exist.
+        render_dialog_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_activated.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected dialog to install a modal barrier root"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false) -> barrier must remain active.
+        render_dialog_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_activated.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected barrier root to remain while the dialog is closing"
+        );
+
+        // Click the underlay. The modal barrier should block the click-through while closing.
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while the dialog is closing"
+        );
+
+        // After the exit transition settles, the barrier must drop and the underlay becomes
+        // interactive again.
+        let settle_frames = overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+        for _ in 0..settle_frames {
+            render_dialog_frame_with_underlay(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+                underlay_activated.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_none(),
+            "expected barrier root to clear once the exit transition completes"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(true),
+            "underlay should activate once the barrier is removed"
+        );
     }
 
     #[test]
