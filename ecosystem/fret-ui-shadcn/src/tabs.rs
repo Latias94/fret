@@ -886,21 +886,9 @@ impl Tabs {
                                             cell.set(Some(_id.0));
                                         }
 
-                                        let mut states = WidgetStates::empty();
-                                        states.set(WidgetState::Disabled, item_disabled);
+                                        let mut states =
+                                            WidgetStates::from_pressable(cx, st, !item_disabled);
                                         states.set(WidgetState::Selected, active);
-                                        states.set(WidgetState::Active, st.pressed && !item_disabled);
-                                        states.set(WidgetState::Hovered, st.hovered && !item_disabled);
-                                        states.set(WidgetState::Focused, st.focused && !item_disabled);
-                                        states.set(
-                                            WidgetState::FocusVisible,
-                                            st.focused
-                                                && !item_disabled
-                                                && fret_ui::focus_visible::is_focus_visible(
-                                                    cx.app,
-                                                    Some(cx.window),
-                                                ),
-                                        );
 
                                         let fg_prop = style_override
                                             .trigger_foreground

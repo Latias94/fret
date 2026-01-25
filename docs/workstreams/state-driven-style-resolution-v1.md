@@ -68,7 +68,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 ### P4 — Performance & Ergonomics
 
 - [ ] SDSR-400 Avoid heap allocations in hot paths (e.g. store overrides inline or in smallvec; measure before changing).
-- [ ] SDSR-410 Add utilities to compute `WidgetStates` from `PressableState` + focus-visible policy (reduce copy/paste).
+- [x] SDSR-410 Add utilities to compute `WidgetStates` from `PressableState` + focus-visible policy (reduce copy/paste).
 
 ## Milestones
 
@@ -103,3 +103,4 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-shadcn/src/tooltip.rs`
 - `ecosystem/fret-ui-shadcn/src/hover_card.rs`
 - SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
+- SDSR-410 evidence: `WidgetStates::from_pressable(...)` in `ecosystem/fret-ui-kit/src/style/state.rs`, applied in `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`.

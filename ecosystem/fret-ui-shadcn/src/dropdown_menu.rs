@@ -1783,31 +1783,10 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     };
 
-                                                                    let mut states =
-                                                                        WidgetStates::empty();
-                                                                    states.set(
-                                                                        WidgetState::Disabled,
-                                                                        disabled,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Hovered,
-                                                                        st.hovered,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Active,
-                                                                        st.pressed,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Focused,
-                                                                        st.focused,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::FocusVisible,
-                                                                        st.focused
-                                                                            && fret_ui::focus_visible::is_focus_visible(
-                                                                                cx.app,
-                                                                                Some(cx.window),
-                                                                            ),
+                                                                    let states = WidgetStates::from_pressable(
+                                                                        cx,
+                                                                        st,
+                                                                        !disabled,
                                                                     );
 
                                                                     let row_bg_ref = item_bg
@@ -1948,31 +1927,10 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     };
 
-                                                                    let mut states =
-                                                                        WidgetStates::empty();
-                                                                    states.set(
-                                                                        WidgetState::Disabled,
-                                                                        disabled,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Hovered,
-                                                                        st.hovered,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Active,
-                                                                        st.pressed,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Focused,
-                                                                        st.focused,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::FocusVisible,
-                                                                        st.focused
-                                                                            && fret_ui::focus_visible::is_focus_visible(
-                                                                                cx.app,
-                                                                                Some(cx.window),
-                                                                            ),
+                                                                    let states = WidgetStates::from_pressable(
+                                                                        cx,
+                                                                        st,
+                                                                        !disabled,
                                                                     );
 
                                                                     let row_bg_ref = item_bg
@@ -2144,31 +2102,11 @@ impl DropdownMenu {
                                                                 };
 
                                                                 let mut states =
-                                                                    WidgetStates::empty();
-                                                                states.set(
-                                                                    WidgetState::Disabled,
-                                                                    disabled,
-                                                                );
-                                                                states.set(
-                                                                    WidgetState::Hovered,
-                                                                    st.hovered,
-                                                                );
-                                                                states.set(
-                                                                    WidgetState::Active,
-                                                                    st.pressed,
-                                                                );
-                                                                states.set(
-                                                                    WidgetState::Focused,
-                                                                    st.focused,
-                                                                );
-                                                                states.set(
-                                                                    WidgetState::FocusVisible,
-                                                                    st.focused
-                                                                        && fret_ui::focus_visible::is_focus_visible(
-                                                                            cx.app,
-                                                                            Some(cx.window),
-                                                                        ),
-                                                                );
+                                                                    WidgetStates::from_pressable(
+                                                                        cx,
+                                                                        st,
+                                                                        !disabled,
+                                                                    );
                                                                 states.set(
                                                                     WidgetState::Open,
                                                                     is_open_submenu,
@@ -2905,32 +2843,12 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut states =
-                                                                                WidgetStates::empty();
-                                                                            states.set(
-                                                                                WidgetState::Disabled,
-                                                                                disabled,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Hovered,
-                                                                                st.hovered,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Active,
-                                                                                st.pressed,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Focused,
-                                                                                st.focused,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::FocusVisible,
-                                                                                st.focused
-                                                                                    && fret_ui::focus_visible::is_focus_visible(
-                                                                                        cx.app,
-                                                                                        Some(cx.window),
-                                                                                    ),
-                                                                            );
+                                                                            let states =
+                                                                                WidgetStates::from_pressable(
+                                                                                    cx,
+                                                                                    st,
+                                                                                    !disabled,
+                                                                                );
 
                                                                             let row_bg_ref = item_bg
                                                                                 .resolve(states)
@@ -3053,32 +2971,12 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut states =
-                                                                                WidgetStates::empty();
-                                                                            states.set(
-                                                                                WidgetState::Disabled,
-                                                                                disabled,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Hovered,
-                                                                                st.hovered,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Active,
-                                                                                st.pressed,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Focused,
-                                                                                st.focused,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::FocusVisible,
-                                                                                st.focused
-                                                                                    && fret_ui::focus_visible::is_focus_visible(
-                                                                                        cx.app,
-                                                                                        Some(cx.window),
-                                                                                    ),
-                                                                            );
+                                                                            let states =
+                                                                                WidgetStates::from_pressable(
+                                                                                    cx,
+                                                                                    st,
+                                                                                    !disabled,
+                                                                                );
 
                                                                             let row_bg_ref = item_bg
                                                                                 .resolve(states)
@@ -3187,36 +3085,12 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut states =
-                                                                                WidgetStates::empty();
-                                                                            states.set(
-                                                                                WidgetState::Disabled,
-                                                                                disabled,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Hovered,
-                                                                                st.hovered,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Active,
-                                                                                st.pressed,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Focused,
-                                                                                st.focused,
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::FocusVisible,
-                                                                                st.focused
-                                                                                    && fret_ui::focus_visible::is_focus_visible(
-                                                                                        cx.app,
-                                                                                        Some(cx.window),
-                                                                                    ),
-                                                                            );
-                                                                            states.set(
-                                                                                WidgetState::Open,
-                                                                                false,
-                                                                            );
+                                                                            let states =
+                                                                                WidgetStates::from_pressable(
+                                                                                    cx,
+                                                                                    st,
+                                                                                    !disabled,
+                                                                                );
 
                                                                             let (bg_prop, fg_prop) =
                                                                                 if variant

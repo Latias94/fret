@@ -1154,19 +1154,7 @@ impl MenubarMenuEntries {
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                     menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
                 });
-                let mut states = WidgetStates::empty();
-                states.set(WidgetState::Disabled, !enabled);
-                states.set(WidgetState::Hovered, st.hovered);
-                states.set(WidgetState::Active, st.pressed);
-                states.set(WidgetState::Focused, st.focused);
-                states.set(
-                    WidgetState::FocusVisible,
-                    st.focused
-                        && fret_ui::focus_visible::is_focus_visible(
-                            cx.app,
-                            Some(cx.window),
-                        ),
-                );
+                let mut states = WidgetStates::from_pressable(cx, st, enabled);
                 states.set(WidgetState::Open, is_open);
 
                 let trigger_bg_prop = WidgetStateProperty::new(None)
@@ -1600,31 +1588,11 @@ impl MenubarMenuEntries {
                                                                     }
 
                                                                     let mut states =
-                                                                        WidgetStates::empty();
-                                                                    states.set(
-                                                                        WidgetState::Disabled,
-                                                                        !item_enabled,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Hovered,
-                                                                        st.hovered,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Active,
-                                                                        st.pressed,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Focused,
-                                                                        st.focused,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::FocusVisible,
-                                                                        st.focused
-                                                                            && fret_ui::focus_visible::is_focus_visible(
-                                                                                cx.app,
-                                                                                Some(cx.window),
-                                                                            ),
-                                                                    );
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
+                                                                        );
                                                                     states.set(WidgetState::Open, false);
 
                                                                     let highlight_bg =
@@ -1799,31 +1767,11 @@ impl MenubarMenuEntries {
                                                                     }
 
                                                                     let mut states =
-                                                                        WidgetStates::empty();
-                                                                    states.set(
-                                                                        WidgetState::Disabled,
-                                                                        !item_enabled,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Hovered,
-                                                                        st.hovered,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Active,
-                                                                        st.pressed,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Focused,
-                                                                        st.focused,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::FocusVisible,
-                                                                        st.focused
-                                                                            && fret_ui::focus_visible::is_focus_visible(
-                                                                                cx.app,
-                                                                                Some(cx.window),
-                                                                            ),
-                                                                    );
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
+                                                                        );
                                                                     states.set(WidgetState::Open, false);
 
                                                                     let highlight_bg =
@@ -2047,31 +1995,11 @@ impl MenubarMenuEntries {
                                                                      }
 
                                                                     let mut states =
-                                                                        WidgetStates::empty();
-                                                                    states.set(
-                                                                        WidgetState::Disabled,
-                                                                        !item_enabled,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Hovered,
-                                                                        st.hovered,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Active,
-                                                                        st.pressed,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Focused,
-                                                                        st.focused,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::FocusVisible,
-                                                                        st.focused
-                                                                            && fret_ui::focus_visible::is_focus_visible(
-                                                                                cx.app,
-                                                                                Some(cx.window),
-                                                                            ),
-                                                                    );
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
+                                                                        );
                                                                     states.set(
                                                                         WidgetState::Open,
                                                                         expanded.unwrap_or(false),
@@ -2230,31 +2158,11 @@ impl MenubarMenuEntries {
                                                                     );
 
                                                                     let mut states =
-                                                                        WidgetStates::empty();
-                                                                    states.set(
-                                                                        WidgetState::Disabled,
-                                                                        !item_enabled,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Hovered,
-                                                                        st.hovered,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Active,
-                                                                        st.pressed,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::Focused,
-                                                                        st.focused,
-                                                                    );
-                                                                    states.set(
-                                                                        WidgetState::FocusVisible,
-                                                                        st.focused
-                                                                            && fret_ui::focus_visible::is_focus_visible(
-                                                                                cx.app,
-                                                                                Some(cx.window),
-                                                                            ),
-                                                                    );
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
+                                                                        );
                                                                     states.set(WidgetState::Open, false);
 
                                                                     let highlight_bg =
@@ -2757,31 +2665,11 @@ impl MenubarMenuEntries {
                                                                                 }
 
                                                                                 let mut states =
-                                                                                    WidgetStates::empty();
-                                                                                states.set(
-                                                                                    WidgetState::Disabled,
-                                                                                    !item_enabled,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Hovered,
-                                                                                    st.hovered,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Active,
-                                                                                    st.pressed,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Focused,
-                                                                                    st.focused,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::FocusVisible,
-                                                                                    st.focused
-                                                                                        && fret_ui::focus_visible::is_focus_visible(
-                                                                                            cx.app,
-                                                                                            Some(cx.window),
-                                                                                        ),
-                                                                                );
+                                                                                    WidgetStates::from_pressable(
+                                                                                        cx,
+                                                                                        st,
+                                                                                        item_enabled,
+                                                                                    );
                                                                                 states.set(WidgetState::Open, false);
 
                                                                                 let highlight_bg = alpha_mul(
@@ -2932,31 +2820,11 @@ impl MenubarMenuEntries {
                                                                                 }
 
                                                                                 let mut states =
-                                                                                    WidgetStates::empty();
-                                                                                states.set(
-                                                                                    WidgetState::Disabled,
-                                                                                    !item_enabled,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Hovered,
-                                                                                    st.hovered,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Active,
-                                                                                    st.pressed,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Focused,
-                                                                                    st.focused,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::FocusVisible,
-                                                                                    st.focused
-                                                                                        && fret_ui::focus_visible::is_focus_visible(
-                                                                                            cx.app,
-                                                                                            Some(cx.window),
-                                                                                        ),
-                                                                                );
+                                                                                    WidgetStates::from_pressable(
+                                                                                        cx,
+                                                                                        st,
+                                                                                        item_enabled,
+                                                                                    );
                                                                                 states.set(WidgetState::Open, false);
 
                                                                                 let highlight_bg = alpha_mul(
@@ -3097,31 +2965,11 @@ impl MenubarMenuEntries {
                                                                                 }
 
                                                                                 let mut states =
-                                                                                    WidgetStates::empty();
-                                                                                states.set(
-                                                                                    WidgetState::Disabled,
-                                                                                    !item_enabled,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Hovered,
-                                                                                    st.hovered,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Active,
-                                                                                    st.pressed,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::Focused,
-                                                                                    st.focused,
-                                                                                );
-                                                                                states.set(
-                                                                                    WidgetState::FocusVisible,
-                                                                                    st.focused
-                                                                                        && fret_ui::focus_visible::is_focus_visible(
-                                                                                            cx.app,
-                                                                                            Some(cx.window),
-                                                                                        ),
-                                                                                );
+                                                                                    WidgetStates::from_pressable(
+                                                                                        cx,
+                                                                                        st,
+                                                                                        item_enabled,
+                                                                                    );
                                                                                 states.set(WidgetState::Open, false);
 
                                                                                 let highlight_bg =
