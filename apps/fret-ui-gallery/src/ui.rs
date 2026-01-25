@@ -320,60 +320,66 @@ pub(crate) fn content_view(
         },
     );
 
-    let preview_panel = page_preview(
-        cx,
-        theme,
-        selected,
-        view_cache_enabled,
-        view_cache_cache_shell,
-        view_cache_inner_enabled,
-        view_cache_popover_open,
-        view_cache_continuous,
-        view_cache_counter,
-        popover_open,
-        dialog_open,
-        alert_dialog_open,
-        sheet_open,
-        select_value,
-        select_open,
-        combobox_value,
-        combobox_open,
-        combobox_query,
-        date_picker_open,
-        date_picker_month,
-        date_picker_selected,
-        resizable_h_fractions,
-        resizable_v_fractions,
-        data_table_state,
-        data_grid_selected_row,
-        tabs_value,
-        accordion_value,
-        avatar_demo_image,
-        progress,
-        checkbox,
-        switch,
-        text_input,
-        text_area,
-        dropdown_open,
-        context_menu_open,
-        cmdk_open,
-        cmdk_query,
-        last_action,
-        virtual_list_torture_jump,
-        virtual_list_torture_edit_row,
-        virtual_list_torture_edit_text,
-        virtual_list_torture_scroll,
-    );
-    let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-        cx.text(docs_md)
-    } else {
-        markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
-    };
-    let usage_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-        cx.text(usage_md)
-    } else {
-        markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
-    };
+    let preview_panel = cx.keyed("ui_gallery.content.preview_panel", |cx| {
+        page_preview(
+            cx,
+            theme,
+            selected,
+            view_cache_enabled,
+            view_cache_cache_shell,
+            view_cache_inner_enabled,
+            view_cache_popover_open,
+            view_cache_continuous,
+            view_cache_counter,
+            popover_open,
+            dialog_open,
+            alert_dialog_open,
+            sheet_open,
+            select_value,
+            select_open,
+            combobox_value,
+            combobox_open,
+            combobox_query,
+            date_picker_open,
+            date_picker_month,
+            date_picker_selected,
+            resizable_h_fractions,
+            resizable_v_fractions,
+            data_table_state,
+            data_grid_selected_row,
+            tabs_value,
+            accordion_value,
+            avatar_demo_image,
+            progress,
+            checkbox,
+            switch,
+            text_input,
+            text_area,
+            dropdown_open,
+            context_menu_open,
+            cmdk_open,
+            cmdk_query,
+            last_action,
+            virtual_list_torture_jump,
+            virtual_list_torture_edit_row,
+            virtual_list_torture_edit_text,
+            virtual_list_torture_scroll,
+        )
+    });
+    let docs_panel = cx.keyed("ui_gallery.content.docs_panel", |cx| {
+        if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+            cx.text(docs_md)
+        } else {
+            markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
+        }
+    });
+    let usage_panel = cx.keyed("ui_gallery.content.usage_panel", |cx| {
+        if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+            cx.text(usage_md)
+        } else {
+            markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
+        }
+    });
 
     let tabs = if (bisect & BISECT_DISABLE_TABS) != 0 {
         stack::vstack(
@@ -395,31 +401,37 @@ pub(crate) fn content_view(
             .into_element(cx)
     };
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N6),
-        |_cx| vec![header, tabs],
-    );
+    let body = cx.keyed("ui_gallery.content_body", |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N6),
+            |_cx| vec![header, tabs],
+        )
+    });
     let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         body
     } else {
-        shadcn::ScrollArea::new(vec![body])
-            .refine_layout(LayoutRefinement::default().w_full().h_full())
-            .into_element(cx)
+        cx.keyed("ui_gallery.content_scroll_area", |cx| {
+            shadcn::ScrollArea::new(vec![body])
+                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .into_element(cx)
+        })
     };
 
-    cx.container(
-        decl_style::container_props(
-            theme,
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required("background")))
-                .p(Space::N6),
-            LayoutRefinement::default().w_full().h_full(),
-        ),
-        |_cx| vec![content],
-    )
+    cx.named("ui_gallery.content_view_root", |cx| {
+        cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(theme.color_required("background")))
+                    .p(Space::N6),
+                LayoutRefinement::default().w_full().h_full(),
+            ),
+            |_cx| vec![content],
+        )
+    })
 }
 
 fn page_preview(
