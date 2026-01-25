@@ -123,3 +123,5 @@ Each TODO is labeled:
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
 - Keep mechanism contracts in `crates/*` and policy in `ecosystem/*`.
 - Prefer adding/expanding conformance tests before larger refactors.
+- Modal close-transition conformance checks validate both `semantics_snapshot().barrier_root` and the underlying layer
+  flags (`blocks_underlay_input`, `hit_testable`) to prevent “looks modal but click-through” regressions.

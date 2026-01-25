@@ -2775,9 +2775,20 @@ mod tests {
         // Frame 3: closing (present=true, interactive=false) -> barrier must remain active.
         render_frame(&mut ui, &mut app, &mut services, 3);
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let barrier_root = snap
+            .barrier_root
+            .expect("expected barrier root to remain while the modal popover is closing");
+        let barrier_layer = ui.node_layer(barrier_root).expect("barrier layer");
+        let barrier = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == barrier_layer)
+            .expect("barrier debug layer info");
+        assert!(barrier.visible);
+        assert!(barrier.hit_testable);
         assert!(
-            snap.barrier_root.is_some(),
-            "expected barrier root to remain while the modal popover is closing"
+            barrier.blocks_underlay_input,
+            "expected modal barrier layer to block underlay input"
         );
 
         // Click the underlay. The modal barrier should block the click-through while closing.
