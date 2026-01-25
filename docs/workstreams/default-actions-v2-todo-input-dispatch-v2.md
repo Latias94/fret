@@ -63,5 +63,6 @@ Anti-criteria (keep out of `DefaultAction`):
 
 - Mechanism conformance:
   - `crates/fret-ui/src/tree/tests/prevent_default.rs` (`prevent_default_focus_on_pointer_down_suppresses_default_focus`)
+  - `crates/fret-ui/src/tree/tests/prevent_default.rs` (`stop_propagation_does_not_suppress_default_focus_on_pointer_down`)
 - Ecosystem integration:
   - `ecosystem/fret-ui-shadcn/tests/default_action_focus_on_pointer_down.rs`
