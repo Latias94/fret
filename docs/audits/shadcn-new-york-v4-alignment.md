@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `279/448` keys referenced (`62.3%`)
+- shadcn-web `v4/new-york-v4`: `292/448` keys referenced (`65.2%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -35,7 +35,7 @@ These areas have multiple geometry + overlay placement/chrome gates and tend to 
   portal placement gate for `sidebar-13` (`*.open.json`).
 - **Calendar (single-month variants)**: day grid geometry + ARIA label strings; outside-days + week number
   behaviors that are easy to drift when refactoring.
-- **Typography / Progress**: focused paint/geometry gates for high-leverage styling primitives.
+- **Typography**: breadth gates for `typography-*` pages (geometry + recorded text style inputs; inline-code padding tolerates sub-pixel rounding).
 
 These gates do **not** imply full parity; they are simply the most effective early tripwires we have so far.
 
@@ -44,16 +44,15 @@ These gates do **not** imply full parity; they are simply the most effective ear
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
-- `typography` (13 variants): prose defaults + text metric edge cases.
 - `spinner` / `item` (17 variants combined): smaller-but-frequent controls and list patterns that tend to
   expose padding/centering drift.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Typography breadth**
-   - Gate remaining typography pages that are sensitive to font metrics and baseline rounding.
-2. **Spinner + item patterns**
+1. **Spinner + item patterns**
    - Gate remaining `spinner-*` and `item-*` pages to catch padding/centering drift in common list rows.
+2. **Input patterns**
+   - Gate remaining `input-*` pages (control chrome + stacking) once spinner/item primitives are stable.
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
 second wave (because we can keep the matrix small and stable).

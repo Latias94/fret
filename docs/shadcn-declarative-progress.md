@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `279/448` (`62.3%`)
-- Next P0 gaps: typography breadth, then spinner/item patterns.
+- Keys referenced by tests: `292/448` (`65.2%`)
+- Next P0 gaps: spinner/item patterns, then input patterns.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,7 +38,7 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
-- Gate remaining `typography-*` pages (geometry-first; keep font-metrics sensitivity in check).
+- Gate remaining `spinner-*` and `item-*` pages (geometry-first; keep font-metrics sensitivity in check).
 
 P1:
 
