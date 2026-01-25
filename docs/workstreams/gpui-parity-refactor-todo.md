@@ -172,6 +172,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Progress (v1):
     - Repair parent pointers for nodes reachable from layer roots before running the declarative GC sweep (`UiTree::repair_parent_pointers_from_layer_roots`).
     - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness) as the foundation for removing the global stopgap gate.
+    - GC reachability classification unions `UiTree` + `WindowFrame` retained child edges (unit test: `gc_reachability_unions_ui_and_window_frame_children` in `crates/fret-ui/src/declarative/mount.rs`).
   - Remaining:
     - The GC sweep still has a conservative global stopgap: if any cache root is in reuse, stale/detached nodes are not swept this frame.
       Removing this currently regresses `ui-gallery-overlay-torture.json` (fails at step 10 with `click_no_semantics_match` under cache+shell).
@@ -179,7 +180,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - Anchor: `crates/fret-ui/src/declarative/mount.rs` (`view_cache_has_reuse_roots` guard in the GC retain pass).
     - Explain why a subtree that should still be live becomes unreachable from *both* liveness sources on the failing frame:
       - identify the `root_root_parent_sever_parent` node (map to element id + debug path + whether it is a cache root / reuse root),
-      - verify whether the `set_children` call at `mount.rs:1162` is being fed an incomplete child list in a cache-hit/transition scenario (forbidden by ADR 0191),
+      - verify whether the `set_children` call at `mount.rs:1162` represents an intentional cache-root child swap (and identify old/new child element identities),
       - verify the expected cache root is present in `window_state.view_cache_reuse_roots()` and has a complete recorded subtree-element list (and whether it is being invalidated/cleared prematurely).
     - Verify we are not accidentally overwriting element-root ownership during “touch existing subtree” paths:
       - add debug-only diagnostics when updating `NodeEntry.root` for an element that already has a different `root`,
@@ -256,9 +257,12 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - If `reachable_from_layer_roots` remains `false` for the subtree that contains the missing semantics target, prioritize explaining *why it became detached*:
         - export whether the parent still referenced the removed root via `ui.children(parent)` and/or `WindowFrame.children[parent]` on the failing frame.
           - `debug.removed_subtrees[*].root_parent_children_contains_root` / `root_parent_frame_children_contains_root` + corresponding `*_len` fields.
-        - if both `root_parent_children_contains_root=true` and `root_parent_frame_children_contains_root=true` but `reachable_from_layer_roots=false`,
-          suspect the reachability walker is missing an edge higher in the chain because `push_existing_subtree_children(..)` prefers `ui.children(..)` over `WindowFrame.children[..]`
-          (consider unioning both sources for GC reachability classification).
+        - Note: GC reachability already unions `UiTree` + `WindowFrame` child edges (and is covered by a unit test in `crates/fret-ui/src/declarative/mount.rs`).
+          If both parent-edge checks are `true` but `reachable_from_layer_roots=false`, suspect the subtree became detached higher in the chain (missing root in the liveness root set)
+          or identity/ownership bookkeeping drift that caused an "island root".
+        - Export cache-root `set_children` samples (child element id + best-effort debug path) so accidental subtree swaps are explainable from a single failing bundle:
+          - `debug.cache_roots[*].children_last_set_{old,new}_elements_head`
+          - `debug.cache_roots[*].children_last_set_{old,new}_elements_head_paths`
       - Confirm whether parent-pointer repair is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the repair seed set if needed.
     - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
 
