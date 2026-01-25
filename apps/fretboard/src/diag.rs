@@ -953,6 +953,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+                        let top_view_cache_contained_relayouts =
+                            top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                        let top_set_children_barrier_writes =
+                            top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
+                        let top_barrier_relayouts_scheduled =
+                            top.map(|r| r.barrier_relayouts_scheduled).unwrap_or(0);
+                        let top_barrier_relayouts_performed =
+                            top.map(|r| r.barrier_relayouts_performed).unwrap_or(0);
+                        let top_virtual_list_visible_range_checks = top
+                            .map(|r| r.virtual_list_visible_range_checks)
+                            .unwrap_or(0);
+                        let top_virtual_list_visible_range_refreshes = top
+                            .map(|r| r.virtual_list_visible_range_refreshes)
+                            .unwrap_or(0);
 
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
@@ -964,6 +978,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 "top_paint_time_us": top_paint,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
+                                "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                                "top_set_children_barrier_writes": top_set_children_barrier_writes,
+                                "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
+                                "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
+                                "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
+                                "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
                                 "bundle": bundle_path.display().to_string(),
                             }));
                         } else {
@@ -1140,6 +1160,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+                    let top_view_cache_contained_relayouts =
+                        top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                    let top_set_children_barrier_writes =
+                        top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
+                    let top_barrier_relayouts_scheduled =
+                        top.map(|r| r.barrier_relayouts_scheduled).unwrap_or(0);
+                    let top_barrier_relayouts_performed =
+                        top.map(|r| r.barrier_relayouts_performed).unwrap_or(0);
+                    let top_virtual_list_visible_range_checks = top
+                        .map(|r| r.virtual_list_visible_range_checks)
+                        .unwrap_or(0);
+                    let top_virtual_list_visible_range_refreshes = top
+                        .map(|r| r.virtual_list_visible_range_refreshes)
+                        .unwrap_or(0);
 
                     runs_total.push(top_total);
                     runs_layout.push(top_layout);
@@ -1153,6 +1187,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "top_paint_time_us": top_paint,
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
+                        "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                        "top_set_children_barrier_writes": top_set_children_barrier_writes,
+                        "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
+                        "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
+                        "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
+                        "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
                         "bundle": bundle_path.display().to_string(),
                     }));
 
@@ -1173,6 +1213,50 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                 if runs_total.len() == repeat {
                     if stats_json {
+                        let mut top_view_cache_contained_relayouts: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_set_children_barrier_writes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_barrier_relayouts_scheduled: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_barrier_relayouts_performed: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_virtual_list_visible_range_checks: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_virtual_list_visible_range_refreshes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        for run in &runs_json {
+                            top_view_cache_contained_relayouts.push(
+                                run.get("top_view_cache_contained_relayouts")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_set_children_barrier_writes.push(
+                                run.get("top_set_children_barrier_writes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_barrier_relayouts_scheduled.push(
+                                run.get("top_barrier_relayouts_scheduled")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_barrier_relayouts_performed.push(
+                                run.get("top_barrier_relayouts_performed")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_virtual_list_visible_range_checks.push(
+                                run.get("top_virtual_list_visible_range_checks")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_virtual_list_visible_range_refreshes.push(
+                                run.get("top_virtual_list_visible_range_refreshes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                        }
                         perf_json_rows.push(serde_json::json!({
                             "script": src.display().to_string(),
                             "sort": sort.as_str(),
@@ -1183,6 +1267,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 "layout_time_us": summarize_times_us(&runs_layout),
                                 "prepaint_time_us": summarize_times_us(&runs_prepaint),
                                 "paint_time_us": summarize_times_us(&runs_paint),
+                                "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
+                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
+                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
+                                "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
+                                "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
+                                "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
                             },
                             "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
                                 "top_total_time_us": us,
@@ -2770,6 +2860,12 @@ struct BundleStatsSnapshotRow {
     cache_roots: u32,
     cache_roots_reused: u32,
     cache_replayed_ops: u64,
+    view_cache_contained_relayouts: u32,
+    set_children_barrier_writes: u32,
+    barrier_relayouts_scheduled: u32,
+    barrier_relayouts_performed: u32,
+    virtual_list_visible_range_checks: u32,
+    virtual_list_visible_range_refreshes: u32,
     top_cache_roots: Vec<BundleStatsCacheRoot>,
     top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
     model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
@@ -2988,7 +3084,7 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} contained_relayouts={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
@@ -3004,6 +3100,12 @@ impl BundleStatsReport {
                 row.cache_roots,
                 row.cache_roots_reused,
                 row.cache_replayed_ops,
+                row.view_cache_contained_relayouts,
+                row.set_children_barrier_writes,
+                row.barrier_relayouts_scheduled,
+                row.barrier_relayouts_performed,
+                row.virtual_list_visible_range_checks,
+                row.virtual_list_visible_range_refreshes,
                 row.invalidation_walk_calls,
                 row.invalidation_walk_nodes,
                 row.invalidation_walk_calls_hover,
@@ -4595,6 +4697,36 @@ fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let view_cache_contained_relayouts = stats
+                .and_then(|m| m.get("view_cache_contained_relayouts"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let set_children_barrier_writes = stats
+                .and_then(|m| m.get("set_children_barrier_writes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let barrier_relayouts_scheduled = stats
+                .and_then(|m| m.get("barrier_relayouts_scheduled"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let barrier_relayouts_performed = stats
+                .and_then(|m| m.get("barrier_relayouts_performed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let virtual_list_visible_range_checks = stats
+                .and_then(|m| m.get("virtual_list_visible_range_checks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let virtual_list_visible_range_refreshes = stats
+                .and_then(|m| m.get("virtual_list_visible_range_refreshes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
 
             let propagated_model_change_models = stats
                 .and_then(|m| m.get("model_change_models"))
@@ -4866,6 +4998,12 @@ fn bundle_stats_from_json_with_options(
                 cache_roots,
                 cache_roots_reused,
                 cache_replayed_ops,
+                view_cache_contained_relayouts,
+                set_children_barrier_writes,
+                barrier_relayouts_scheduled,
+                barrier_relayouts_performed,
+                virtual_list_visible_range_checks,
+                virtual_list_visible_range_refreshes,
                 top_cache_roots,
                 top_layout_engine_solves,
                 model_change_hotspots,
