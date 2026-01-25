@@ -4012,6 +4012,15 @@ mod tests {
             "expected modal context menu to install pointer occlusion"
         );
 
+        let overlay_id = OverlayController::stack_snapshot_for_window(&ui, &mut app, window)
+            .topmost_popover
+            .expect("expected an open context menu overlay");
+        let overlay_root_name = menu::context_menu_root_name(overlay_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        let overlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, overlay_root).expect("overlay");
+        let overlay_layer = ui.node_layer(overlay_node).expect("overlay layer");
+
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let underlay_node = snap
             .nodes
@@ -4075,6 +4084,16 @@ mod tests {
             fret_ui::tree::PointerOcclusion::None,
             "expected close transition to drop pointer occlusion (click-through)"
         );
+
+        let info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == overlay_layer)
+            .expect("overlay layer info");
+        assert!(info.visible);
+        assert!(!info.hit_testable);
+        assert!(!info.wants_pointer_move_events);
+        assert!(!info.wants_timer_events);
 
         // Click again while the menu is still present: must activate/focus the underlay now.
         ui.dispatch_event(
@@ -4206,6 +4225,15 @@ mod tests {
             Px(more.bounds.origin.y.0 + more.bounds.size.height.0 / 2.0),
         );
 
+        let overlay_id = OverlayController::stack_snapshot_for_window(&ui, &mut app, window)
+            .topmost_popover
+            .expect("expected an open context menu overlay");
+        let overlay_root_name = menu::context_menu_root_name(overlay_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        let overlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, overlay_root).expect("overlay");
+        let overlay_layer = ui.node_layer(overlay_node).expect("overlay layer");
+
         // Close via outside click to enter the close transition (present=true, interactive=false).
         let underlay_pos = Point::new(Px(10.0), Px(230.0));
         ui.dispatch_event(
@@ -4254,6 +4282,16 @@ mod tests {
             fret_ui::tree::PointerOcclusion::None,
             "expected close transition to be click-through"
         );
+
+        let info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == overlay_layer)
+            .expect("overlay layer info");
+        assert!(info.visible);
+        assert!(!info.hit_testable);
+        assert!(!info.wants_pointer_move_events);
+        assert!(!info.wants_timer_events);
 
         ui.dispatch_event(
             &mut app,
