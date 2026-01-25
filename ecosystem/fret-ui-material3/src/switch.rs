@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, KeyCode, Px, Rect, SemanticsRole, Size};
+use fret_core::{Corners, Edges, KeyCode, Px, Rect, SemanticsRole, Size};
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -23,6 +23,7 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
+use crate::tokens::switch as switch_tokens;
 
 #[derive(Clone)]
 pub struct Switch {
@@ -147,14 +148,21 @@ impl Switch {
 
                         let interaction = interaction_state(is_pressed, is_hovered, is_focused);
 
-                        let state_layer_target = switch_state_layer_target_opacity(
+                        let tokens_interaction = match interaction {
+                            Interaction::None => switch_tokens::SwitchInteraction::None,
+                            Interaction::Hovered => switch_tokens::SwitchInteraction::Hovered,
+                            Interaction::Focused => switch_tokens::SwitchInteraction::Focused,
+                            Interaction::Pressed => switch_tokens::SwitchInteraction::Pressed,
+                        };
+
+                        let state_layer_target = switch_tokens::state_layer_target_opacity(
                             &theme,
                             selected,
                             enabled,
-                            interaction,
+                            tokens_interaction,
                         );
                         let state_layer_color =
-                            switch_state_layer_color(&theme, selected, interaction);
+                            switch_tokens::state_layer_color(&theme, selected, tokens_interaction);
 
                         #[derive(Default)]
                         struct SwitchThumbRuntime {
@@ -191,7 +199,8 @@ impl Switch {
                         let track =
                             switch_track(cx, &theme, size, selected, enabled, interaction, geom);
 
-                        let ripple_base_opacity = switch_ripple_base_opacity(&theme, selected);
+                        let ripple_base_opacity =
+                            switch_tokens::pressed_state_layer_opacity(&theme, selected);
                         let config = material_pressable_indication_config(
                             &theme,
                             Some(Px(size.state_layer.0 * 0.5)),
@@ -253,11 +262,6 @@ fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Interaction
     } else {
         Interaction::None
     }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -325,62 +329,6 @@ fn switch_size_tokens(theme: &Theme) -> SwitchSizeTokens {
     }
 }
 
-fn switch_state_layer_target_opacity(
-    theme: &Theme,
-    selected: bool,
-    enabled: bool,
-    interaction: Interaction,
-) -> f32 {
-    if !enabled {
-        return 0.0;
-    }
-
-    let group = if selected { "selected" } else { "unselected" };
-    match interaction {
-        Interaction::Pressed => theme
-            .number_by_key(&format!(
-                "md.comp.switch.{group}.pressed.state-layer.opacity"
-            ))
-            .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-            .unwrap_or(0.1),
-        Interaction::Focused => theme
-            .number_by_key(&format!("md.comp.switch.{group}.focus.state-layer.opacity"))
-            .or_else(|| theme.number_by_key("md.sys.state.focus.state-layer-opacity"))
-            .unwrap_or(0.1),
-        Interaction::Hovered => theme
-            .number_by_key(&format!("md.comp.switch.{group}.hover.state-layer.opacity"))
-            .or_else(|| theme.number_by_key("md.sys.state.hover.state-layer-opacity"))
-            .unwrap_or(0.08),
-        Interaction::None => 0.0,
-    }
-}
-
-fn switch_ripple_base_opacity(theme: &Theme, selected: bool) -> f32 {
-    let group = if selected { "selected" } else { "unselected" };
-    theme
-        .number_by_key(&format!(
-            "md.comp.switch.{group}.pressed.state-layer.opacity"
-        ))
-        .or_else(|| theme.number_by_key("md.sys.state.pressed.state-layer-opacity"))
-        .unwrap_or(0.1)
-}
-
-fn switch_state_layer_color(theme: &Theme, selected: bool, interaction: Interaction) -> Color {
-    let group = if selected { "selected" } else { "unselected" };
-    let key = match interaction {
-        Interaction::Pressed => format!("md.comp.switch.{group}.pressed.state-layer.color"),
-        Interaction::Focused => format!("md.comp.switch.{group}.focus.state-layer.color"),
-        Interaction::Hovered => format!("md.comp.switch.{group}.hover.state-layer.color"),
-        Interaction::None => format!("md.comp.switch.{group}.hover.state-layer.color"),
-    };
-
-    theme.color_by_key(&key).unwrap_or_else(|| {
-        theme
-            .color_by_key("md.sys.color.primary")
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
-    })
-}
-
 #[derive(Debug, Clone, Copy)]
 struct SwitchGeometry {
     handle_x: Px,
@@ -440,7 +388,13 @@ fn switch_track<H: UiHost>(
     interaction: Interaction,
     geom: SwitchGeometry,
 ) -> AnyElement {
-    let colors = switch_chrome(theme, selected, enabled, interaction);
+    let tokens_interaction = match interaction {
+        Interaction::None => switch_tokens::SwitchInteraction::None,
+        Interaction::Hovered => switch_tokens::SwitchInteraction::Hovered,
+        Interaction::Focused => switch_tokens::SwitchInteraction::Focused,
+        Interaction::Pressed => switch_tokens::SwitchInteraction::Pressed,
+    };
+    let colors = switch_tokens::chrome(theme, selected, enabled, tokens_interaction);
 
     let mut track = ContainerProps::default();
     track.layout.size.width = Length::Px(size.track_width);
@@ -465,134 +419,6 @@ fn switch_track<H: UiHost>(
 
         vec![cx.container(handle, |_cx| Vec::new())]
     })
-}
-
-#[derive(Debug, Clone, Copy)]
-struct SwitchChrome {
-    track_color: Color,
-    outline_color: Option<Color>,
-    handle_color: Color,
-}
-
-fn switch_chrome(
-    theme: &Theme,
-    selected: bool,
-    enabled: bool,
-    interaction: Interaction,
-) -> SwitchChrome {
-    if !enabled {
-        let track_base = if selected {
-            theme.color_by_key("md.comp.switch.disabled.selected.track.color")
-        } else {
-            theme.color_by_key("md.comp.switch.disabled.unselected.track.color")
-        }
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-
-        let track_opacity = theme
-            .number_by_key("md.comp.switch.disabled.track.opacity")
-            .unwrap_or(0.12);
-        let track_color = alpha_mul(track_base, track_opacity);
-
-        let handle_base = if selected {
-            theme
-                .color_by_key("md.comp.switch.disabled.selected.handle.color")
-                .or_else(|| theme.color_by_key("md.sys.color.surface"))
-        } else {
-            theme
-                .color_by_key("md.comp.switch.disabled.unselected.handle.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        }
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-
-        let handle_opacity = if selected {
-            theme.number_by_key("md.comp.switch.disabled.selected.handle.opacity")
-        } else {
-            theme.number_by_key("md.comp.switch.disabled.unselected.handle.opacity")
-        }
-        .unwrap_or(0.38);
-        let handle_color = alpha_mul(handle_base, handle_opacity);
-
-        let outline_color = if selected {
-            None
-        } else {
-            theme
-                .color_by_key("md.comp.switch.disabled.unselected.track.outline.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                .map(|c| alpha_mul(c, handle_opacity))
-        };
-
-        return SwitchChrome {
-            track_color,
-            outline_color,
-            handle_color,
-        };
-    }
-
-    let group = if selected { "selected" } else { "unselected" };
-    let state = match interaction {
-        Interaction::Pressed => "pressed",
-        Interaction::Focused => "focus",
-        Interaction::Hovered => "hover",
-        Interaction::None => "",
-    };
-
-    let track_key = if state.is_empty() {
-        format!("md.comp.switch.{group}.track.color")
-    } else {
-        format!("md.comp.switch.{group}.{state}.track.color")
-    };
-    let handle_key = if state.is_empty() {
-        format!("md.comp.switch.{group}.handle.color")
-    } else {
-        format!("md.comp.switch.{group}.{state}.handle.color")
-    };
-
-    let track_color = theme.color_by_key(&track_key).unwrap_or_else(|| {
-        if selected {
-            theme
-                .color_by_key("md.sys.color.primary")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
-        } else {
-            theme
-                .color_by_key("md.sys.color.surface-container-highest")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container-highest"))
-        }
-    });
-
-    let handle_color = theme.color_by_key(&handle_key).unwrap_or_else(|| {
-        if selected {
-            theme
-                .color_by_key("md.sys.color.on-primary")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.on-primary"))
-        } else {
-            theme
-                .color_by_key("md.sys.color.outline")
-                .unwrap_or_else(|| theme.color_required("md.sys.color.outline"))
-        }
-    });
-
-    let outline_color = if selected {
-        None
-    } else {
-        let outline_key = if state.is_empty() {
-            "md.comp.switch.unselected.track.outline.color".to_string()
-        } else {
-            format!("md.comp.switch.unselected.{state}.track.outline.color")
-        };
-        Some(
-            theme
-                .color_by_key(&outline_key)
-                .or_else(|| theme.color_by_key("md.sys.color.outline"))
-                .unwrap_or_else(|| theme.color_required("md.sys.color.outline")),
-        )
-    };
-
-    SwitchChrome {
-        track_color,
-        outline_color,
-        handle_color,
-    }
 }
 
 fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {

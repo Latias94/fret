@@ -111,6 +111,7 @@ mod tests {
             include_str!("foundation/tokens.rs"),
             include_str!("tokens/icon_button.rs"),
             include_str!("tokens/button.rs"),
+            include_str!("tokens/switch.rs"),
         ];
 
         for src in sources {
@@ -192,6 +193,7 @@ mod tests {
             include_str!("foundation/tokens.rs"),
             include_str!("tokens/icon_button.rs"),
             include_str!("tokens/button.rs"),
+            include_str!("tokens/switch.rs"),
         ];
 
         let mut keys: Vec<&str> = sources
