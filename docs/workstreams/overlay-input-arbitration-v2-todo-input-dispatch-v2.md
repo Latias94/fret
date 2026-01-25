@@ -69,6 +69,10 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_close_transition_disables_safe_hover_observers_and_timers`)
 
+- [x] OIA2-test-011 Close transition disables safe-hover observers/timers (menubar e2e).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_disables_safe_hover_observers_and_timers`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
