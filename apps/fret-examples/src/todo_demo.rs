@@ -399,7 +399,7 @@ fn todo_list_panel(
             filtered
                 .iter()
                 .map(|(t, done)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done)))
-                .collect::<Vec<_>>()
+                .elements()
         },
     );
 

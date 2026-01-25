@@ -467,7 +467,7 @@ fn todo_list_panel(
                 .map(|(t, done, remove_cmd)| {
                     cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done, remove_cmd.clone()))
                 })
-                .collect::<Vec<_>>()
+                .elements()
         },
     );
 
