@@ -2881,6 +2881,14 @@ pub struct UiRemovedSubtreeV1 {
     pub reachable_from_layer_roots: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reachable_from_view_cache_roots: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_root_path: Option<String>,
     #[serde(default)]
     pub root_children_len: u32,
     #[serde(default)]
@@ -2953,6 +2961,16 @@ impl UiRemovedSubtreeV1 {
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
 
+        let trigger_element_path = r.trigger_element.and_then(|element| {
+            element_runtime_state
+                .and_then(|runtime| runtime.debug_path_for_element(window, element))
+        });
+
+        let trigger_element_root_path = r.trigger_element_root.and_then(|element| {
+            element_runtime_state
+                .and_then(|runtime| runtime.debug_path_for_element(window, element))
+        });
+
         let root_path = r.root_path[..(r.root_path_len as usize).min(r.root_path.len())].to_vec();
         let root_path_edge_len = (r.root_path_edge_len as usize)
             .min(r.root_path_edge_ui_contains_child.len())
@@ -2990,6 +3008,10 @@ impl UiRemovedSubtreeV1 {
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
             reachable_from_layer_roots: r.reachable_from_layer_roots,
             reachable_from_view_cache_roots: r.reachable_from_view_cache_roots,
+            trigger_element: r.trigger_element.map(|e| e.0),
+            trigger_element_root: r.trigger_element_root.map(|e| e.0),
+            trigger_element_path,
+            trigger_element_root_path,
             root_children_len: r.root_children_len,
             root_parent_children_len: r.root_parent_children_len,
             root_parent_children_contains_root: r.root_parent_children_contains_root,

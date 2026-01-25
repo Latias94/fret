@@ -96,6 +96,14 @@ pub(crate) fn node_for_element_in_window_frame<H: UiHost>(
     })
 }
 
+#[derive(Clone, Copy)]
+struct StaleNodeRecord {
+    node: NodeId,
+    element: GlobalElementId,
+    #[cfg(feature = "diagnostics")]
+    element_root: GlobalElementId,
+}
+
 fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: FrameId) {
     if window_frame.frame_id != frame_id {
         window_frame.frame_id = frame_id;
@@ -339,8 +347,7 @@ where
         // case, do not sweep: treat reachability from the layer roots as authoritative for
         // liveness.
         let liveness_roots = ui.all_layer_roots();
-        let mut stale_nodes: Vec<NodeId> = Vec::new();
-        let mut stale_elements: Vec<GlobalElementId> = Vec::new();
+        let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
@@ -381,13 +388,17 @@ where
             if reachable.contains(&entry.node) {
                 return true;
             }
-            stale_nodes.push(entry.node);
-            stale_elements.push(*id);
+            stale.push(StaleNodeRecord {
+                node: entry.node,
+                element: *id,
+                #[cfg(feature = "diagnostics")]
+                element_root: entry.root,
+            });
             false
         });
 
-        for element in stale_elements {
-            window_state.forget_view_cache_subtree_elements(element);
+        for record in &stale {
+            window_state.forget_view_cache_subtree_elements(record.element);
         }
 
         #[cfg(feature = "diagnostics")]
@@ -411,7 +422,8 @@ where
             None
         };
 
-        for node in stale_nodes {
+        for record in stale {
+            let node = record.node;
             #[cfg(feature = "diagnostics")]
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
@@ -453,6 +465,8 @@ where
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_view_cache_roots,
+                    trigger_element: Some(record.element),
+                    trigger_element_root: Some(record.element_root),
                     path_edge_len,
                     path_edge_frame_contains_child,
                 })
@@ -661,8 +675,7 @@ where
         // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
         // only detached nodes that have been stale beyond the configured lag window.
         let liveness_roots = ui.all_layer_roots();
-        let mut stale_nodes: Vec<NodeId> = Vec::new();
-        let mut stale_elements: Vec<GlobalElementId> = Vec::new();
+        let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
         window_state.retain_nodes(|id, entry| {
@@ -705,13 +718,17 @@ where
             if reachable.contains(&entry.node) {
                 return true;
             }
-            stale_nodes.push(entry.node);
-            stale_elements.push(*id);
+            stale.push(StaleNodeRecord {
+                node: entry.node,
+                element: *id,
+                #[cfg(feature = "diagnostics")]
+                element_root: entry.root,
+            });
             false
         });
 
-        for element in stale_elements {
-            window_state.forget_view_cache_subtree_elements(element);
+        for record in &stale {
+            window_state.forget_view_cache_subtree_elements(record.element);
         }
 
         #[cfg(feature = "diagnostics")]
@@ -735,7 +752,8 @@ where
             None
         };
 
-        for node in stale_nodes {
+        for record in stale {
+            let node = record.node;
             #[cfg(feature = "diagnostics")]
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
@@ -777,6 +795,8 @@ where
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_view_cache_roots,
+                    trigger_element: Some(record.element),
+                    trigger_element_root: Some(record.element_root),
                     path_edge_len,
                     path_edge_frame_contains_child,
                 })

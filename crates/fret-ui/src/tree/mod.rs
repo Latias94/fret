@@ -515,6 +515,8 @@ pub struct UiDebugRemoveSubtreeFrameContext {
     pub root_frame_instance_present: bool,
     pub root_frame_children_len: Option<u32>,
     pub root_reachable_from_view_cache_roots: Option<bool>,
+    pub trigger_element: Option<GlobalElementId>,
+    pub trigger_element_root: Option<GlobalElementId>,
     pub path_edge_len: u8,
     /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
     /// contains the child node:
@@ -545,6 +547,8 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub root_layer: Option<UiLayerId>,
     pub reachable_from_layer_roots: bool,
     pub reachable_from_view_cache_roots: Option<bool>,
+    pub trigger_element: Option<GlobalElementId>,
+    pub trigger_element_root: Option<GlobalElementId>,
     pub root_children_len: u32,
     pub root_parent_children_len: Option<u32>,
     pub root_parent_children_contains_root: Option<bool>,
@@ -2465,6 +2469,8 @@ impl<H: UiHost> UiTree<H> {
                     .unwrap_or([2u8; 16]);
                 let reachable_from_view_cache_roots =
                     frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
+                let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
+                let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
                 let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                     frame_context
                         .map(|ctx| {
@@ -2494,6 +2500,8 @@ impl<H: UiHost> UiTree<H> {
                         root_layer,
                         reachable_from_layer_roots,
                         reachable_from_view_cache_roots,
+                        trigger_element,
+                        trigger_element_root,
                         root_children_len,
                         root_parent_children_len,
                         root_parent_children_contains_root,
@@ -2550,6 +2558,8 @@ impl<H: UiHost> UiTree<H> {
                 .unwrap_or([2u8; 16]);
             let reachable_from_view_cache_roots =
                 frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
+            let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
+            let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
             let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                 frame_context
                     .map(|ctx| {
@@ -2599,6 +2609,8 @@ impl<H: UiHost> UiTree<H> {
                     root_layer,
                     reachable_from_layer_roots,
                     reachable_from_view_cache_roots,
+                    trigger_element,
+                    trigger_element_root,
                     root_children_len,
                     root_parent_children_len,
                     root_parent_children_contains_root,
