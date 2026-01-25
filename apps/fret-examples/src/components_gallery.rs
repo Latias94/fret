@@ -17,7 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
-use fret_ui_kit::{ColorRef, Edges4, LayoutRefinement, MetricRef, OverlayController, Space, UiExt, ui};
+use fret_ui_kit::{ColorRef, LayoutRefinement, MetricRef, OverlayController, Space, UiExt, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -1169,7 +1169,7 @@ impl ComponentsGalleryDriver {
                     })
                     .size_full()
                     .gap(Space::N3)
-                    .paddings(Edges4::all(MetricRef::Px(padding)))
+                    .padding_px(padding)
                     .bg(ColorRef::Color(bg))
                     .into_element(cx)]
             });

@@ -236,6 +236,18 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
         })
     }
 
+    pub fn padding(self, padding: MetricRef) -> Self {
+        self.paddings(Edges4::all(padding))
+    }
+
+    pub fn padding_px(self, px: Px) -> Self {
+        self.padding(MetricRef::Px(px))
+    }
+
+    pub fn padding_space(self, space: Space) -> Self {
+        self.padding(MetricRef::space(space))
+    }
+
     pub fn focused_border(self) -> Self {
         self.style_with(ChromeRefinement::focused_border)
     }
@@ -663,7 +675,17 @@ impl<T: UiPatchTarget> UiBuilder<T> {
 
 impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
     pub fn gap(mut self, space: Space) -> Self {
-        self.inner.gap = space;
+        self.inner.gap = MetricRef::space(space);
+        self
+    }
+
+    pub fn gap_px(mut self, gap: Px) -> Self {
+        self.inner.gap = MetricRef::Px(gap);
+        self
+    }
+
+    pub fn gap_metric(mut self, gap: MetricRef) -> Self {
+        self.inner.gap = gap;
         self
     }
 

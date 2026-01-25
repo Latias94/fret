@@ -92,6 +92,9 @@ This document is meant to stay “live” while we iterate. Update this section 
   - Evidence: `ecosystem/fret-ui-kit/src/{ui,ui_builder}.rs`, `ecosystem/fret-ui-kit/src/declarative/{cached_subtree,chrome,dismissible,glass,pixelate,scroll,stack,visually_hidden}.rs`, `ecosystem/fret-ui-kit/src/primitives/{accordion,dismissable_layer,menu/*,popover,popper_content,roving_focus_group,tabs,toggle,toolbar}.rs`, `ecosystem/fret-ui-primitives/src/focus_scope.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/src/{breadcrumb,card,command,field,input_group,item,scroll_area,select,toggle,tooltip}.rs`,
     `ecosystem/fret-ui-shadcn/src/ui_builder_ext/breadcrumb.rs`
+- [x] Fill P0 authoring gaps discovered during demo migration: px/metric-aware `gap` and one-value padding shorthands.
+  - Evidence: `ecosystem/fret-ui-kit/src/ui.rs` (`FlexBox` uses `MetricRef` for `gap`)
+  - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs` (`gap_px`, `gap_metric`, `padding_px`)
 - [x] Consolidate third-party “component integration contract” guidance (P2) with a short checklist.
   - Evidence: `docs/component-authoring-contracts.md`
   - Evidence: `docs/component-author-guide.md`

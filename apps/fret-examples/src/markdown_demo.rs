@@ -15,7 +15,7 @@ use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::GlobalWatchExt as _;
 use fret_ui_kit::declarative::scroll as decl_scroll;
-use fret_ui_kit::{ColorRef, Edges4, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ColorRef, LayoutRefinement, MetricRef, Space, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -517,7 +517,7 @@ $$
                 cx.watch_global::<Theme>().layout().observe();
 
                 let theme = Theme::global(&*cx.app).clone();
-                let padding_md = MetricRef::Px(theme.metric_required("metric.padding.md"));
+                let padding_md = theme.metric_required("metric.padding.md");
 
                 let content = ui::v_flex(cx, |cx| {
                     cx.observe_model(&wrap_code, Invalidation::Layout);
@@ -554,15 +554,15 @@ $$
                             .min_h(MetricRef::Px(Px(0.0))),
                         true,
                         |cx| {
-                                 ui::container(cx, |cx| {
-                                     [markdown::Markdown::new(markdown_source.clone())
-                                         .into_element_with(cx, &components)]
-                                 })
-                                 .w_full()
-                                 .paddings(Edges4::all(padding_md.clone()))
-                                 .into_element(cx)
-                             },
-                         );
+                            ui::container(cx, |cx| {
+                                [markdown::Markdown::new(markdown_source.clone())
+                                    .into_element_with(cx, &components)]
+                            })
+                            .w_full()
+                            .padding_px(padding_md)
+                            .into_element(cx)
+                        },
+                    );
 
                     [
                         cx.text("markdown_demo"),
@@ -570,12 +570,12 @@ $$
                         toggles,
                         scroll,
                     ]
-                     })
-                     .w_full()
-                     .h_full()
-                     .gap(Space::N3)
-                     .paddings(Edges4::all(padding_md.clone()))
-                     .into_element(cx);
+                })
+                .w_full()
+                .h_full()
+                .gap(Space::N3)
+                .padding_px(padding_md)
+                .into_element(cx);
 
                 vec![
                     ui::container(cx, |_cx| [content])

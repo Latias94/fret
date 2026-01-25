@@ -8,8 +8,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::declarative::style as decl_style;
 use crate::declarative::text as decl_text;
 use crate::{
-    ChromeRefinement, Items, Justify, LayoutRefinement, Space, UiBuilder, UiIntoElement, UiPatch,
-    UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    ChromeRefinement, Items, Justify, LayoutRefinement, MetricRef, Space, UiBuilder, UiIntoElement,
+    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 /// A patchable flex layout constructor for authoring ergonomics.
@@ -21,7 +21,7 @@ pub struct FlexBox<H, F> {
     pub(crate) chrome: ChromeRefinement,
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
-    pub(crate) gap: Space,
+    pub(crate) gap: MetricRef,
     pub(crate) justify: Justify,
     pub(crate) items: Items,
     pub(crate) wrap: bool,
@@ -39,7 +39,7 @@ impl<H, F> FlexBox<H, F> {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             direction,
-            gap: Space::N0,
+            gap: MetricRef::space(Space::N0),
             justify: Justify::Start,
             items,
             wrap: false,
@@ -70,7 +70,7 @@ where
 
         let container = decl_style::container_props(theme, self.chrome, self.layout);
 
-        let gap = decl_style::space(theme, self.gap);
+        let gap = self.gap.resolve(theme);
         let flex_props = FlexProps {
             direction: self.direction,
             gap,
