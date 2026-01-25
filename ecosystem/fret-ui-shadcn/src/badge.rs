@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::Color;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
@@ -19,6 +20,7 @@ pub enum BadgeVariant {
 pub struct Badge {
     label: Arc<str>,
     variant: BadgeVariant,
+    children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -28,9 +30,15 @@ impl Badge {
         Self {
             label: label.into(),
             variant: BadgeVariant::Default,
+            children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
     }
 
     pub fn variant(mut self, variant: BadgeVariant) -> Self {
@@ -49,7 +57,14 @@ impl Badge {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        badge_with_patch(cx, self.label, self.variant, self.chrome, self.layout)
+        badge_with_patch(
+            cx,
+            self.label,
+            self.variant,
+            self.children,
+            self.chrome,
+            self.layout,
+        )
     }
 }
 
@@ -84,6 +99,7 @@ pub fn badge<H: UiHost>(
         cx,
         label,
         variant,
+        Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
     )
@@ -93,6 +109,7 @@ fn badge_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: impl Into<Arc<str>>,
     variant: BadgeVariant,
+    children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
 ) -> AnyElement {
@@ -130,15 +147,30 @@ fn badge_with_patch<H: UiHost>(
         .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     cx.container(props, |cx| {
-        vec![
-            ui::text(cx, label)
-                .text_size_px(text_px)
-                .line_height_px(line_height)
-                .font_semibold()
-                .nowrap()
-                .text_color(ColorRef::Color(fg))
-                .h_px(MetricRef::Px(line_height))
-                .into_element(cx),
-        ]
+        let label = ui::text(cx, label)
+            .text_size_px(text_px)
+            .line_height_px(line_height)
+            .font_semibold()
+            .nowrap()
+            .text_color(ColorRef::Color(fg))
+            .h_px(MetricRef::Px(line_height))
+            .into_element(cx);
+
+        if children.is_empty() {
+            vec![label]
+        } else {
+            let mut content = Vec::with_capacity(children.len() + 1);
+            content.extend(children);
+            content.push(label);
+
+            vec![stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .justify_center()
+                    .items_center()
+                    .gap_x(Space::N1),
+                |_cx| content,
+            )]
+        }
     })
 }

@@ -14,11 +14,11 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `292/448` keys referenced (`65.2%`)
+- shadcn-web `v4/new-york-v4`: `323/448` keys referenced (`72.1%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
-- `calendar` (34), `button` (25), `form` (19), `navigation` (17), `input` (17), `sidebar` (16)
+- `calendar` (34), `input` (27), `button` (25), `form` (19), `navigation` (17), `sidebar` (16)
 
 ## Executive summary (current status + next targets)
 
@@ -44,15 +44,17 @@ These gates do **not** imply full parity; they are simply the most effective ear
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
-- `spinner` / `item` (17 variants combined): smaller-but-frequent controls and list patterns that tend to
-  expose padding/centering drift.
+- `login` / `otp` / `signup` (5 each): common form flows that exercise input + layout primitives.
+- `textarea` / `empty` / `resizable` / `native` (4 each): recurring layout patterns.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Spinner + item patterns**
-   - Gate remaining `spinner-*` and `item-*` pages to catch padding/centering drift in common list rows.
-2. **Input patterns**
-   - Gate remaining `input-*` pages (control chrome + stacking) once spinner/item primitives are stable.
+1. **Small auth families**
+   - Gate `login-*`, `signup-*` for breadth wins and common form flows.
+2. **Textarea / empty / resizable / native**
+   - Gate these recurring layout patterns (they tend to expose flex/grid/overflow edge cases).
+3. **Chart push**
+   - Treat `chart-*` as a dedicated sprint (surface area is large; likely needs new audit notes + more selective gates).
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
 second wave (because we can keep the matrix small and stable).

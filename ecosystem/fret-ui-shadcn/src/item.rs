@@ -3,12 +3,15 @@ use std::sync::Arc;
 use fret_core::{Color, Edges, Px, TextOverflow, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, GridProps, MainAlign,
+    PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space, ui,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemVariant {
@@ -78,27 +81,72 @@ fn base_item_border_color(theme: &Theme, variant: ItemVariant) -> Option<Color> 
 
 #[derive(Debug, Clone)]
 pub struct ItemGroup {
+    kind: ItemGroupKind,
+    layout: LayoutRefinement,
+    gap: Option<Px>,
     children: Vec<AnyElement>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ItemGroupKind {
+    #[default]
+    Column,
+    Grid {
+        cols: u16,
+    },
 }
 
 impl ItemGroup {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            kind: ItemGroupKind::Column,
+            layout: LayoutRefinement::default().w_full(),
+            gap: None,
+            children,
+        }
+    }
+
+    pub fn grid(mut self, cols: u16) -> Self {
+        self.kind = ItemGroupKind::Grid { cols: cols.max(1) };
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn gap(mut self, gap: Px) -> Self {
+        self.gap = Some(gap);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let layout = decl_style::layout_style(&theme, self.layout);
+        let gap = self.gap.unwrap_or(Px(0.0));
         let children = self.children;
-        cx.column(
-            ColumnProps {
-                layout,
-                gap: Px(0.0),
-                ..Default::default()
-            },
-            move |_cx| children,
-        )
+
+        match self.kind {
+            ItemGroupKind::Column => cx.column(
+                ColumnProps {
+                    layout,
+                    gap,
+                    ..Default::default()
+                },
+                move |_cx| children,
+            ),
+            ItemGroupKind::Grid { cols } => cx.grid(
+                GridProps {
+                    layout,
+                    cols,
+                    gap,
+                    ..Default::default()
+                },
+                move |_cx| children,
+            ),
+        }
     }
 }
 
@@ -148,6 +196,7 @@ impl Default for ItemSeparator {
 #[derive(Debug, Clone)]
 pub struct ItemMedia {
     variant: ItemMediaVariant,
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
@@ -156,12 +205,18 @@ impl ItemMedia {
         let children = children.into_iter().collect();
         Self {
             variant: ItemMediaVariant::default(),
+            layout: LayoutRefinement::default(),
             children,
         }
     }
 
     pub fn variant(mut self, variant: ItemMediaVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -190,7 +245,10 @@ impl ItemMedia {
             }
         };
 
-        let mut layout = LayoutRefinement::default().flex_none().flex_shrink_0();
+        let mut layout = LayoutRefinement::default()
+            .merge(self.layout)
+            .flex_none()
+            .flex_shrink_0();
         if let Some(s) = size {
             layout = layout.w_px(MetricRef::Px(s)).h_px(MetricRef::Px(s));
         }
@@ -202,13 +260,17 @@ impl ItemMedia {
 
         let children = self.children;
         cx.container(props, move |cx| {
-            let inner_layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+            let inner_layout = if size.is_some() {
+                decl_style::layout_style(&theme, LayoutRefinement::default().size_full())
+            } else {
+                decl_style::layout_style(&theme, LayoutRefinement::default())
+            };
+            let gap = MetricRef::space(Space::N2).resolve(&theme);
             vec![cx.flex(
                 FlexProps {
                     layout: inner_layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
+                    gap,
                     padding: Edges::all(Px(0.0)),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
@@ -222,16 +284,25 @@ impl ItemMedia {
 
 #[derive(Debug, Clone)]
 pub struct ItemContent {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
     gap: Option<Px>,
+    justify: MainAlign,
+    align: CrossAlign,
 }
 
 impl ItemContent {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self {
+            layout: LayoutRefinement::default()
+                .flex_1()
+                .min_w_0()
+                .overflow_hidden(),
             children,
             gap: None,
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
         }
     }
 
@@ -240,19 +311,37 @@ impl ItemContent {
         self
     }
 
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn justify(mut self, justify: MainAlign) -> Self {
+        self.justify = justify;
+        self
+    }
+
+    pub fn align(mut self, align: CrossAlign) -> Self {
+        self.align = align;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = self
             .gap
             .unwrap_or_else(|| MetricRef::space(Space::N1).resolve(&theme));
-        let layout =
-            decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
+        let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
-        cx.column(
-            ColumnProps {
+        cx.flex(
+            FlexProps {
                 layout,
+                direction: fret_core::Axis::Vertical,
                 gap,
-                ..Default::default()
+                padding: Edges::all(Px(0.0)),
+                justify: self.justify,
+                align: self.align,
+                wrap: false,
             },
             move |_cx| children,
         )
@@ -261,22 +350,28 @@ impl ItemContent {
 
 #[derive(Debug, Clone)]
 pub struct ItemActions {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
 impl ItemActions {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            layout: LayoutRefinement::default(),
+            children,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default().flex_none().flex_shrink_0(),
-        );
+        let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -295,19 +390,30 @@ impl ItemActions {
 
 #[derive(Debug, Clone)]
 pub struct ItemHeader {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
 impl ItemHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            layout: LayoutRefinement::default()
+                .w_full()
+                .basis(LengthRefinement::Fill),
+            children,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -326,17 +432,43 @@ impl ItemHeader {
 
 #[derive(Debug, Clone)]
 pub struct ItemFooter {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
 impl ItemFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            layout: LayoutRefinement::default()
+                .w_full()
+                .basis(LengthRefinement::Fill),
+            children,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        ItemHeader::new(self.children).into_element(cx)
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N2).resolve(&theme);
+        let layout = decl_style::layout_style(&theme, self.layout);
+        let children = self.children;
+        cx.flex(
+            FlexProps {
+                layout,
+                direction: fret_core::Axis::Horizontal,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::SpaceBetween,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| children,
+        )
     }
 }
 
@@ -431,7 +563,7 @@ impl Item {
             enabled: true,
             children,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default().w_full(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -541,7 +673,7 @@ impl Item {
                     props.layout.size = pressable_layout.size;
 
                     let inner_layout =
-                        decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+                        decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
 
                     let children = children.clone();
                     vec![cx.container(props, move |cx| {
@@ -554,7 +686,7 @@ impl Item {
                                 padding: Edges::all(Px(0.0)),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
-                                wrap: false,
+                                wrap: true,
                             },
                             move |_cx| (*children).clone(),
                         )]
@@ -580,7 +712,7 @@ impl Item {
 
             cx.container(props, move |cx| {
                 let inner_layout =
-                    decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+                    decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
                 vec![cx.flex(
                     FlexProps {
                         layout: inner_layout,
@@ -589,7 +721,7 @@ impl Item {
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
-                        wrap: false,
+                        wrap: true,
                     },
                     move |_cx| (*children).clone(),
                 )]

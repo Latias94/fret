@@ -16,6 +16,14 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
+#[derive(Debug, Clone, Copy, Default)]
+struct BorderWidthOverride {
+    top: Option<Px>,
+    right: Option<Px>,
+    bottom: Option<Px>,
+    left: Option<Px>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum InputGroupControlKind {
     #[default]
@@ -45,6 +53,8 @@ pub struct InputGroup {
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    border_width_override: BorderWidthOverride,
+    corner_radii_override: Option<Corners>,
 }
 
 impl std::fmt::Debug for InputGroup {
@@ -97,6 +107,8 @@ impl InputGroup {
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            border_width_override: BorderWidthOverride::default(),
+            corner_radii_override: None,
         }
     }
 
@@ -210,6 +222,37 @@ impl InputGroup {
         self
     }
 
+    /// Overrides per-edge border widths (in px) for this input group's outer chrome.
+    ///
+    /// This is primarily used to match upstream `ButtonGroup` border-merge outcomes.
+    pub fn border_left_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.left = Some(border);
+        self
+    }
+
+    pub fn border_right_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.right = Some(border);
+        self
+    }
+
+    pub fn border_top_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.top = Some(border);
+        self
+    }
+
+    pub fn border_bottom_width_override(mut self, border: Px) -> Self {
+        self.border_width_override.bottom = Some(border);
+        self
+    }
+
+    /// Overrides per-corner radii (in px) for this input group's outer chrome.
+    ///
+    /// This is primarily used to match upstream `ButtonGroup` corner-merge outcomes.
+    pub fn corner_radii_override(mut self, corners: Corners) -> Self {
+        self.corner_radii_override = Some(corners);
+        self
+    }
+
     /// Apply the upstream `aria-invalid` error state chrome (group border + focus ring color).
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
@@ -262,6 +305,8 @@ impl InputGroup {
         let cancel_command = self.cancel_command;
         let model = self.model;
         let textarea_min_height = self.textarea_min_height;
+        let border_width_override = self.border_width_override;
+        let corner_radii_override = self.corner_radii_override;
 
         let (border_color, focus_border_color, focus_ring) = {
             let mut ring = decl_style::focus_ring(&theme, resolved.radius);
@@ -284,17 +329,39 @@ impl InputGroup {
             }
         };
 
+        let mut root_border = Edges::all(resolved.border_width);
+        if let Some(border) = border_width_override.top {
+            root_border.top = border;
+        }
+        if let Some(border) = border_width_override.right {
+            root_border.right = border;
+        }
+        if let Some(border) = border_width_override.bottom {
+            root_border.bottom = border;
+        }
+        if let Some(border) = border_width_override.left {
+            root_border.left = border;
+        }
+        let root_corner_radii =
+            corner_radii_override.unwrap_or_else(|| Corners::all(resolved.radius));
+
+        // Web: in block layouts (`data-align=block-*`), the input ends up 2px shorter than `h-9`
+        // because the outer border consumes 1px at both block edges. In inline layouts, the input
+        // keeps `h-9` and simply overflows into the border area.
+        let block_control_min_height =
+            Px((resolved.min_height.0 - root_border.top.0 - root_border.bottom.0).max(0.0));
+
         cx.container(
             fret_ui::element::ContainerProps {
                 layout: root_layout,
                 background: None,
                 shadow: Some(decl_style::shadow_xs(&theme, resolved.radius)),
-                border: Edges::all(resolved.border_width),
+                border: root_border,
                 border_color: Some(border_color),
                 focus_ring,
                 focus_border_color,
                 focus_within: true,
-                corner_radii: Corners::all(resolved.radius),
+                corner_radii: root_corner_radii,
                 ..Default::default()
             },
             |cx| {
@@ -340,7 +407,7 @@ impl InputGroup {
                                 LayoutRefinement::default()
                                     .w_full()
                                     .min_w_0()
-                                    .min_h(fret_ui_kit::MetricRef::Px(resolved.min_height)),
+                                    .min_h(fret_ui_kit::MetricRef::Px(block_control_min_height)),
                             );
                             cx.text_input(input)
                         }

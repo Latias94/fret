@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `292/448` (`65.2%`)
-- Next P0 gaps: spinner/item patterns, then input patterns.
+- Keys referenced by tests: `323/448` (`72.1%`)
+- Next P0 gaps: small auth + textarea/empty/resizable/native; then chart.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,11 +38,12 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
-- Gate remaining `spinner-*` and `item-*` pages (geometry-first; keep font-metrics sensitivity in check).
+- Gate small auth + form families: `login-*`, `otp-*`, `signup-*`.
+- Gate recurring layout patterns: `textarea-*`, `empty-*`, `resizable-*`, `native-*`.
 
 P1:
 
-- Gate remaining `spinner-*` and `item-*` pages (high-frequency primitives).
+- Gate `textarea-*`, `empty-*`, `resizable-*`, `native-*` (shared layout primitives; good breadth wins).
 
 P2:
 

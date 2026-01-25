@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `292` (`65.2%`)
-- Keys not referenced by tests: `156`
+- Keys referenced by tests: `323` (`72.1%`)
+- Keys not referenced by tests: `125`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -42,26 +42,31 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
-- `input` (10; control chrome + stacking patterns)
-- `spinner` (9; control chrome + layout + visual alignment)
-- `item` (8; list row chrome + slot alignment)
+- `login` / `otp` / `signup` (5 each; common form + input patterns)
+- `textarea` / `empty` / `resizable` / `native` (4 each; recurring layout patterns)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
 
 - `calendar` (34)
+- `input` (27)
 - `button` (25)
 - `form` (19)
 - `navigation` (17)
-- `input` (17)
 - `sidebar` (16)
+- `typography` (14)
 - `toggle` (13)
+- `spinner` (10)
+- `sheet` (10)
 - `dropdown` (10)
 - `scroll` (10)
-- `sheet` (10)
-- `field` (9)
+- `item` (10)
 - `menubar` (9)
+- `field` (9)
 - `breadcrumb` (9)
+- `combobox` (7)
+- `context` (7)
+- `select` (7)
 - `carousel` (6)
 
 Recompute locally:
@@ -82,8 +87,9 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## What to do next (recommended order)
 
-1. **Finish the small missing families** (fast breadth gains):
-   - Spinner + item patterns (`spinner-*`, `item-*`)
+1. **Finish the remaining small missing families** (fast breadth gains):
+   - Small auth + form families (`login-*`, `otp-*`, `signup-*`)
+   - Recurring layout patterns (`textarea-*`, `empty-*`, `resizable-*`, `native-*`)
 2. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
 3. **Add constrained viewport variants** early for overlay-like components:
    - menus/listboxes: max-height clamp + scroll buttons + row height (treat “menu height” as a styling outcome)

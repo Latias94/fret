@@ -69,8 +69,8 @@ impl Spinner {
         let color = self
             .color
             .map(|c| c.resolve(&theme))
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or_else(|| theme.color_required("muted-foreground"));
+            .or_else(|| theme.color_by_key("foreground"))
+            .unwrap_or_else(|| theme.color_required("foreground"));
 
         let svg: SvgSource =
             cx.app

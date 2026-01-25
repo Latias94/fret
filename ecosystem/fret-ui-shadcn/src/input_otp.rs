@@ -1,10 +1,12 @@
 use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     PositionStyle, SizeStyle, TextInputProps,
 };
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
@@ -128,9 +130,9 @@ impl InputOtp {
         let resolved =
             resolve_input_chrome(&theme, self.size, &self.chrome, InputTokenKeys::none());
 
-        let slot_w = Px(self.size.input_h(&theme).0.max(0.0));
+        let slot_w = Px(resolved.min_height.0.max(0.0));
         let slot_h = Px(resolved.min_height.0.max(0.0));
-        let gap = otp_gap(&theme);
+        let group_gap = otp_gap(&theme);
 
         let font_line_height = theme.metric_required("font.line_height");
         let slot_text_style = TextStyle {
@@ -153,21 +155,128 @@ impl InputOtp {
             |cx| {
                 let mut out: Vec<AnyElement> = Vec::new();
 
-                let mut slots: Vec<AnyElement> = Vec::new();
-                for idx in 0..length {
-                    if idx > 0 && self.group_size.is_some_and(|g| g >= 1 && idx % g == 0) {
-                        let sep_layout = LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(Px(12.0)),
-                                height: Length::Px(slot_h),
+                let group_size = self.group_size.unwrap_or(length).max(1);
+                let mut groups: Vec<(usize, usize)> = Vec::new();
+                let mut start = 0;
+                while start < length {
+                    let end = (start + group_size).min(length);
+                    groups.push((start, end));
+                    start = end;
+                }
+
+                let mut pieces: Vec<AnyElement> = Vec::new();
+                for (group_idx, (start, end)) in groups.iter().copied().enumerate() {
+                    let mut slots: Vec<AnyElement> = Vec::new();
+                    for idx in start..end {
+                        let is_first = idx == start;
+                        let is_last = idx + 1 == end;
+
+                        let ch = chars.get(idx).copied();
+                        let text: Arc<str> = ch
+                            .map(|c| Arc::from(c.to_string()))
+                            .unwrap_or_else(|| Arc::from(""));
+
+                        let bg = resolved.background;
+                        let border = resolved.border_width;
+                        let border_color = resolved.border_color;
+                        let radius = resolved.radius;
+                        let fg = resolved.text_color;
+
+                        let corner_radii = Corners {
+                            top_left: if is_first { radius } else { Px(0.0) },
+                            bottom_left: if is_first { radius } else { Px(0.0) },
+                            top_right: if is_last { radius } else { Px(0.0) },
+                            bottom_right: if is_last { radius } else { Px(0.0) },
+                        };
+
+                        let slot_border = Edges {
+                            top: border,
+                            right: border,
+                            bottom: border,
+                            left: if is_first { border } else { Px(0.0) },
+                        };
+
+                        let slot_text_style_for_slot = slot_text_style.clone();
+                        slots.push(cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Px(slot_w),
+                                        height: Length::Px(slot_h),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                padding: Edges::all(Px(0.0)),
+                                background: Some(bg),
+                                shadow: Some(decl_style::shadow_xs(&theme, radius)),
+                                border: slot_border,
+                                border_color: Some(border_color),
+                                corner_radii,
                                 ..Default::default()
                             },
-                            ..Default::default()
-                        };
-                        let slot_text_style_for_sep = slot_text_style.clone();
-                        slots.push(cx.flex(
+                            move |cx| {
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        direction: Axis::Horizontal,
+                                        gap: Px(0.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Center,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |cx| {
+                                        let style = slot_text_style_for_slot.clone();
+                                        let mut label = ui::label(cx, text)
+                                            .text_size_px(style.size)
+                                            .font_weight(style.weight)
+                                            .text_color(ColorRef::Color(fg))
+                                            .nowrap();
+                                        if let Some(line_height) = style.line_height {
+                                            label = label.line_height_px(line_height);
+                                        }
+                                        if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                            label = label.letter_spacing_em(letter_spacing_em);
+                                        }
+                                        vec![label.into_element(cx)]
+                                    },
+                                )]
+                            },
+                        ));
+                    }
+
+                    pieces.push(cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| slots,
+                    ));
+
+                    if group_idx + 1 < groups.len() {
+                        pieces.push(cx.flex(
                             FlexProps {
-                                layout: sep_layout,
+                                layout: LayoutStyle {
+                                    size: SizeStyle {
+                                        width: Length::Px(Px(24.0)),
+                                        height: Length::Px(Px(24.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
                                 direction: Axis::Horizontal,
                                 gap: Px(0.0),
                                 padding: Edges::all(Px(0.0)),
@@ -176,97 +285,28 @@ impl InputOtp {
                                 wrap: false,
                             },
                             move |cx| {
-                                let style = slot_text_style_for_sep.clone();
-                                let mut label = ui::label(cx, Arc::from("•"))
-                                    .text_size_px(style.size)
-                                    .font_weight(style.weight)
-                                    .text_color(ColorRef::Color(separator_color))
-                                    .nowrap();
-                                if let Some(line_height) = style.line_height {
-                                    label = label.line_height_px(line_height);
-                                }
-                                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                    label = label.letter_spacing_em(letter_spacing_em);
-                                }
-                                vec![label.into_element(cx)]
+                                vec![decl_icon::icon_with(
+                                    cx,
+                                    IconId::new_static("lucide.minus"),
+                                    Some(Px(24.0)),
+                                    Some(ColorRef::Color(separator_color)),
+                                )]
                             },
                         ));
                     }
-
-                    let ch = chars.get(idx).copied();
-                    let text: Arc<str> = ch
-                        .map(|c| Arc::from(c.to_string()))
-                        .unwrap_or_else(|| Arc::from(""));
-
-                    let slot_layout = LayoutStyle {
-                        size: SizeStyle {
-                            width: Length::Px(slot_w),
-                            height: Length::Px(slot_h),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-
-                    let bg = resolved.background;
-                    let border = resolved.border_width;
-                    let border_color = resolved.border_color;
-                    let radius = resolved.radius;
-                    let fg = resolved.text_color;
-
-                    let slot_text_style_for_slot = slot_text_style.clone();
-                    slots.push(cx.container(
-                        ContainerProps {
-                            layout: slot_layout,
-                            padding: Edges::all(Px(0.0)),
-                            background: Some(bg),
-                            shadow: None,
-                            border: Edges::all(border),
-                            border_color: Some(border_color),
-                            corner_radii: Corners::all(radius),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle::default(),
-                                    direction: Axis::Horizontal,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Center,
-                                    align: CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    let style = slot_text_style_for_slot.clone();
-                                    let mut label = ui::label(cx, text)
-                                        .text_size_px(style.size)
-                                        .font_weight(style.weight)
-                                        .text_color(ColorRef::Color(fg))
-                                        .nowrap();
-                                    if let Some(line_height) = style.line_height {
-                                        label = label.line_height_px(line_height);
-                                    }
-                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                        label = label.letter_spacing_em(letter_spacing_em);
-                                    }
-                                    vec![label.into_element(cx)]
-                                },
-                            )]
-                        },
-                    ));
                 }
 
                 out.push(cx.flex(
                     FlexProps {
                         layout: LayoutStyle::default(),
                         direction: Axis::Horizontal,
-                        gap,
+                        gap: group_gap,
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |_cx| slots,
+                    move |_cx| pieces,
                 ));
 
                 let mut chrome = TextInputStyle::from_theme(theme.snapshot());
