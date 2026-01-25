@@ -206,6 +206,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] Tabs token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/tabs.rs`,
       `ecosystem/fret-ui-material3/src/tabs.rs`.
+  - [x] Menu token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/menu.rs`,
+      `ecosystem/fret-ui-material3/src/menu.rs`.
 
 ### Interaction Outcomes
 
