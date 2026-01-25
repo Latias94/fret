@@ -102,6 +102,15 @@ Each TODO is labeled:
     - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_does_not_drive_submenu_timers`)
     - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_is_click_through_and_drops_pointer_occlusion`)
 
+- [x] OIA2-test-018 Close transition is click-through and drops occlusion (dropdown menu).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_close_transition_is_click_through_and_drops_pointer_occlusion`)
+
+- [x] OIA2-test-019 Close transition remains click-through and drops occlusion (menubar).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_remains_click_through`)
+    - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_disables_safe_hover_observers_and_timers`)
+
 - [x] OIA2-test-013 Close transition disables pointer-move observers and timers (combobox popover).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/combobox.rs` (`combobox_close_transition_disables_pointer_move_and_timer_events`)
