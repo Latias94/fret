@@ -10,7 +10,8 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize,
+    Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 fn contains_svg_icon_like(el: &AnyElement) -> bool {
@@ -59,83 +60,184 @@ impl ButtonSize {
     }
 }
 
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
+pub(crate) struct ButtonVariantStyle {
+    pub background: WidgetStateProperty<ColorRef>,
+    pub border_color: WidgetStateProperty<ColorRef>,
+    pub foreground: ColorRef,
+}
+
+fn token(key: &'static str, fallback: ColorFallback) -> ColorRef {
+    ColorRef::Token { key, fallback }
+}
+
+pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
+    let transparent = ColorRef::Color(Color::TRANSPARENT);
+
+    match variant {
+        ButtonVariant::Default => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token("primary", ColorFallback::ThemeAccent))
+                .when(
+                    WidgetStates::HOVERED,
+                    token(
+                        "primary.hover.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "primary",
+                            mul: 0.9,
+                        },
+                    ),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    token(
+                        "primary.active.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "primary",
+                            mul: 0.8,
+                        },
+                    ),
+                ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: token("primary-foreground", ColorFallback::ThemeTextPrimary),
+        },
+        ButtonVariant::Destructive => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token("destructive", ColorFallback::ThemeAccent))
+                .when(
+                    WidgetStates::HOVERED,
+                    token(
+                        "destructive.hover.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "destructive",
+                            mul: 0.9,
+                        },
+                    ),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    token(
+                        "destructive.active.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "destructive",
+                            mul: 0.8,
+                        },
+                    ),
+                ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: ColorRef::Color(Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            }),
+        },
+        ButtonVariant::Secondary => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token(
+                "secondary",
+                ColorFallback::ThemePanelBackground,
+            ))
+            .when(
+                WidgetStates::HOVERED,
+                token(
+                    "secondary.hover.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "secondary",
+                        mul: 0.8,
+                    },
+                ),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                token(
+                    "secondary.active.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "secondary",
+                        mul: 0.7,
+                    },
+                ),
+            ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: token("secondary-foreground", ColorFallback::ThemeTextPrimary),
+        },
+        ButtonVariant::Outline => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token(
+                "background",
+                ColorFallback::ThemeSurfaceBackground,
+            ))
+            .when(
+                WidgetStates::HOVERED,
+                token("accent", ColorFallback::ThemeHoverBackground),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                token(
+                    "accent.active.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "accent",
+                        mul: 0.8,
+                    },
+                ),
+            ),
+            border_color: WidgetStateProperty::new(token(
+                "border",
+                ColorFallback::ThemePanelBorder,
+            ))
+            .when(
+                WidgetStates::FOCUS_VISIBLE,
+                token("ring", ColorFallback::ThemeFocusRing),
+            ),
+            foreground: token("foreground", ColorFallback::ThemeTextPrimary),
+        },
+        ButtonVariant::Ghost => ButtonVariantStyle {
+            background: WidgetStateProperty::new(transparent.clone())
+                .when(
+                    WidgetStates::HOVERED,
+                    token("accent", ColorFallback::ThemeHoverBackground),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    token(
+                        "accent.active.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "accent",
+                            mul: 0.8,
+                        },
+                    ),
+                ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: token("foreground", ColorFallback::ThemeTextPrimary),
+        },
+        ButtonVariant::Link => ButtonVariantStyle {
+            background: WidgetStateProperty::new(transparent.clone()),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: token("primary", ColorFallback::ThemeAccent),
+        },
+    }
 }
 
 pub(crate) fn variant_colors(
     theme: &Theme,
     variant: ButtonVariant,
 ) -> (Color, Color, Color, Color, Color) {
-    let transparent = Color::TRANSPARENT;
+    let style = variant_style(variant);
 
-    let bg_primary = theme.color_required("primary");
-    let fg_primary = theme.color_required("primary-foreground");
+    let bg = style
+        .background
+        .resolve(WidgetStates::empty())
+        .resolve(theme);
+    let bg_hover = style
+        .background
+        .resolve(WidgetStates::HOVERED)
+        .resolve(theme);
+    let bg_active = style
+        .background
+        .resolve(WidgetStates::ACTIVE)
+        .resolve(theme);
+    let border = style
+        .border_color
+        .resolve(WidgetStates::empty())
+        .resolve(theme);
+    let fg = style.foreground.resolve(theme);
 
-    let bg_secondary = theme.color_required("secondary");
-    let fg_secondary = theme.color_required("secondary-foreground");
-
-    let bg_destructive = theme.color_required("destructive");
-    let fg_white = Color {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
-        a: 1.0,
-    };
-
-    let fg_default = theme.color_required("foreground");
-
-    let bg_accent = theme.color_required("accent");
-
-    let bg_background = theme.color_required("background");
-
-    let border = theme.color_required("border");
-
-    match variant {
-        ButtonVariant::Default => (
-            bg_primary,
-            alpha_mul(bg_primary, 0.9),
-            alpha_mul(bg_primary, 0.8),
-            transparent,
-            fg_primary,
-        ),
-        ButtonVariant::Destructive => (
-            bg_destructive,
-            alpha_mul(bg_destructive, 0.9),
-            alpha_mul(bg_destructive, 0.8),
-            transparent,
-            fg_white,
-        ),
-        ButtonVariant::Secondary => (
-            bg_secondary,
-            alpha_mul(bg_secondary, 0.8),
-            alpha_mul(bg_secondary, 0.7),
-            transparent,
-            fg_secondary,
-        ),
-        ButtonVariant::Outline => (
-            bg_background,
-            bg_accent,
-            alpha_mul(bg_accent, 0.8),
-            border,
-            fg_default,
-        ),
-        ButtonVariant::Ghost => (
-            transparent,
-            bg_accent,
-            alpha_mul(bg_accent, 0.8),
-            transparent,
-            fg_default,
-        ),
-        ButtonVariant::Link => (
-            transparent,
-            transparent,
-            transparent,
-            transparent,
-            bg_primary,
-        ),
-    }
+    (bg, bg_hover, bg_active, border, fg)
 }
 
 pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
@@ -316,7 +418,7 @@ impl Button {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
-            let (bg, bg_hover, bg_active, border_color, fg) = variant_colors(&theme, self.variant);
+            let variant_style = variant_style(self.variant);
             let shadow_radius = self.size.component_size().control_radius(&theme);
             let shadow = (self.variant == ButtonVariant::Outline)
                 .then(|| decl_style::shadow_xs(&theme, shadow_radius));
@@ -368,7 +470,6 @@ impl Button {
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
-            let variant = self.variant;
             let border_override = self.border_override;
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
@@ -392,23 +493,19 @@ impl Button {
                     cx.pressable_toggle_bool(&model);
                 }
 
-                let hovered = st.hovered && !disabled;
-                let pressed = st.pressed && !disabled;
-                let focused = st.focused && !disabled;
+                let mut states = WidgetStates::empty();
+                states.set(WidgetState::Disabled, disabled);
+                states.set(WidgetState::Hovered, st.hovered && !disabled);
+                states.set(WidgetState::Active, st.pressed && !disabled);
+                states.set(WidgetState::Focused, st.focused && !disabled);
 
-                let (bg, mut border_color, fg) = if pressed {
-                    (bg_active, border_color, fg)
-                } else if hovered {
-                    (bg_hover, border_color, fg)
-                } else {
-                    (bg, border_color, fg)
-                };
+                let focus_visible =
+                    st.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+                states.set(WidgetState::FocusVisible, focus_visible && !disabled);
 
-                if focused && variant == ButtonVariant::Outline && !user_border_override {
-                    border_color = theme
-                        .color_by_key("ring")
-                        .unwrap_or_else(|| theme.color_required("ring"));
-                }
+                let bg = variant_style.background.resolve(states).clone();
+                let border_color = variant_style.border_color.resolve(states).clone();
+                let fg = variant_style.foreground.clone();
 
                 let padding = if is_icon {
                     ChromeRefinement::default()
@@ -438,10 +535,10 @@ impl Button {
                 });
 
                 if !user_bg_override {
-                    chrome.background = Some(ColorRef::Color(bg));
+                    chrome.background = Some(bg);
                 }
                 if !user_border_override {
-                    chrome.border_color = Some(ColorRef::Color(border_color));
+                    chrome.border_color = Some(border_color);
                 }
                 chrome = chrome.merge(user_chrome.clone());
 
@@ -498,7 +595,7 @@ impl Button {
                                 .line_height_px(text_line_height)
                                 .font_weight(text_weight)
                                 .nowrap()
-                                .text_color(ColorRef::Color(fg))
+                                .text_color(fg.clone())
                                 .into_element(cx),
                         ]
                     } else {
@@ -786,6 +883,15 @@ mod tests {
         let node =
             elements::node_for_element(&mut app, window, id).expect("button node id resolved");
         ui.set_focus(Some(node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
 
         // Second frame: re-render with focus applied and capture the element tree.
         app.set_frame_id(FrameId(2));

@@ -40,7 +40,8 @@ pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
-    MetricRef, OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space,
+    MetricRef, OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space, WidgetState,
+    WidgetStateProperty, WidgetStates,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
@@ -75,6 +76,7 @@ pub mod prelude {
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge,
         MetricRef, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+        WidgetState, WidgetStateProperty, WidgetStates,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};
