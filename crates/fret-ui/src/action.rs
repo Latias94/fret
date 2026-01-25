@@ -4,8 +4,8 @@ use fret_core::{
     PointerId, PointerType,
 };
 use fret_runtime::{
-    CommandId, DragHost, DragKindId, DragSession, Effect, Model, ModelStore, TickId, TimerToken,
-    WeakModel,
+    CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, Model, ModelStore, TickId,
+    TimerToken, WeakModel,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -311,6 +311,7 @@ pub trait UiPointerActionHost: UiFocusActionHost + UiDragActionHost {
     fn capture_pointer(&mut self);
     fn release_pointer_capture(&mut self);
     fn set_cursor_icon(&mut self, icon: CursorIcon);
+    fn prevent_default(&mut self, action: DefaultAction);
 }
 
 pub struct UiActionHostAdapter<'a, H: UiHost> {
