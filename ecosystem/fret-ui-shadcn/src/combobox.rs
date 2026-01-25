@@ -1173,6 +1173,10 @@ mod tests {
             .expect("overlay layer info");
         assert!(info.visible);
         assert!(!info.hit_testable);
+        assert_eq!(
+            info.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
         assert!(!info.wants_pointer_move_events);
         assert!(!info.wants_timer_events);
 
