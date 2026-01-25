@@ -85,7 +85,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 
 ### P4 — Performance & Ergonomics
 
-- [ ] SDSR-400 Avoid heap allocations in hot paths (e.g. store overrides inline or in smallvec; measure before changing).
+- [x] SDSR-400 Avoid heap allocations in hot paths (e.g. store overrides inline or in smallvec; measure before changing).
 - [x] SDSR-410 Add utilities to compute `WidgetStates` from `PressableState` + focus-visible policy (reduce copy/paste).
 
 ## Milestones

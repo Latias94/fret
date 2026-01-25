@@ -22,6 +22,7 @@ fret-icons = { path = "../fret-icons", optional = true }
 tracing.workspace = true
 time.workspace = true
 virtualizer.workspace = true
+smallvec.workspace = true
 
 [features]
 # Default to a minimal, third-party-friendly foundation surface.

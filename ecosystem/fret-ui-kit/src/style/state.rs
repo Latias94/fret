@@ -2,6 +2,7 @@ use std::ops::{BitOr, BitOrAssign};
 
 use fret_ui::element::PressableState;
 use fret_ui::{ElementContext, UiHost};
+use smallvec::SmallVec;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
@@ -98,14 +99,14 @@ impl BitOrAssign for WidgetStates {
 #[derive(Debug, Clone)]
 pub struct WidgetStateProperty<T> {
     default: T,
-    overrides: Vec<(WidgetStates, T)>,
+    overrides: SmallVec<[(WidgetStates, T); 4]>,
 }
 
 impl<T> WidgetStateProperty<T> {
     pub fn new(default: T) -> Self {
         Self {
             default,
-            overrides: Vec::new(),
+            overrides: SmallVec::new(),
         }
     }
 
