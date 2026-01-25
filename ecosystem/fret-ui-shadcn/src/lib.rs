@@ -215,7 +215,7 @@ pub use sidebar::{
     SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 };
 pub use skeleton::Skeleton;
-pub use slider::{Slider, slider};
+pub use slider::{Slider, SliderStyle, slider};
 pub use sonner::{
     Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise, ToastRequest,
     ToastVariant, Toaster,

@@ -103,7 +103,7 @@ Evidence anchors:
 - `ecosystem/fret-ui-kit/src/style/tests.rs` (unit tests for state precedence + fallback behavior)
 - `ecosystem/fret-ui-shadcn/src/button.rs` (pilot: button background uses per-state tokens with fallback; outline border respects focus-visible)
 - Shared override patterns: `docs/shadcn-style-override-patterns.md`
-- Additional v1 `*Style` surfaces: `ecosystem/fret-ui-shadcn/src/{checkbox,radio_group,select,switch,toggle,tabs,input}.rs`
+- Additional v1 `*Style` surfaces: `ecosystem/fret-ui-shadcn/src/{checkbox,radio_group,select,slider,switch,toggle,tabs,input}.rs`
 
 Known gaps:
 

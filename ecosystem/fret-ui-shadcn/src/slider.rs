@@ -13,88 +13,109 @@ use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::slider as radix_slider;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, WidgetState, WidgetStateProperty, WidgetStates,
+};
+
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
 
 #[derive(Debug, Clone)]
 pub struct SliderStyle {
-    pub track_height: Px,
-    pub track_background: Color,
-    pub track_border: Edges,
-    pub track_border_color: Color,
-    pub range_background: Color,
-    pub thumb_size: Px,
-    pub thumb_background: Color,
-    pub thumb_border: Edges,
-    pub thumb_border_color: Color,
-    pub focus_ring: Option<fret_ui::element::RingStyle>,
+    pub track_height: Option<Px>,
+    pub track_background: Option<WidgetStateProperty<ColorRef>>,
+    pub track_border_color: Option<WidgetStateProperty<ColorRef>>,
+    pub range_background: Option<WidgetStateProperty<ColorRef>>,
+    pub thumb_size: Option<Px>,
+    pub thumb_background: Option<WidgetStateProperty<ColorRef>>,
+    pub thumb_border_color: Option<WidgetStateProperty<ColorRef>>,
+    pub thumb_ring_color: Option<WidgetStateProperty<ColorRef>>,
 }
 
 impl Default for SliderStyle {
     fn default() -> Self {
         Self {
-            track_height: Px(4.0),
-            track_background: Color {
-                r: 0.2,
-                g: 0.2,
-                b: 0.25,
-                a: 1.0,
-            },
-            track_border: Edges::all(Px(0.0)),
-            track_border_color: Color::TRANSPARENT,
-            range_background: Color {
-                r: 0.45,
-                g: 0.7,
-                b: 1.0,
-                a: 1.0,
-            },
-            thumb_size: Px(16.0),
-            thumb_background: Color {
-                r: 0.12,
-                g: 0.12,
-                b: 0.16,
-                a: 1.0,
-            },
-            thumb_border: Edges::all(Px(1.0)),
-            thumb_border_color: Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.35,
-            },
-            focus_ring: None,
+            track_height: None,
+            track_background: None,
+            track_border_color: None,
+            range_background: None,
+            thumb_size: None,
+            thumb_background: None,
+            thumb_border_color: None,
+            thumb_ring_color: None,
         }
     }
 }
 
 impl SliderStyle {
-    pub fn from_theme(theme: &Theme) -> Self {
-        let snapshot = theme.snapshot();
-        Self {
-            track_height: theme
-                .metric_by_key("component.slider.track_height")
-                .unwrap_or(Px(4.0)),
-            track_background: theme
-                .color_by_key("muted")
-                .unwrap_or(snapshot.colors.panel_background),
-            track_border: Edges::all(Px(0.0)),
-            track_border_color: Color::TRANSPARENT,
-            range_background: theme
-                .color_by_key("primary")
-                .or_else(|| theme.color_by_key("accent"))
-                .unwrap_or(snapshot.colors.accent),
-            thumb_size: theme
-                .metric_by_key("component.slider.thumb_size")
-                .unwrap_or(Px(16.0)),
-            thumb_background: theme
-                .color_by_key("background")
-                .unwrap_or(snapshot.colors.surface_background),
-            thumb_border: Edges::all(Px(1.0)),
-            thumb_border_color: theme
-                .color_by_key("input")
-                .or_else(|| theme.color_by_key("border"))
-                .unwrap_or(snapshot.colors.panel_border),
-            focus_ring: None,
+    pub fn track_height(mut self, track_height: Px) -> Self {
+        self.track_height = Some(track_height);
+        self
+    }
+
+    pub fn track_background(mut self, track_background: WidgetStateProperty<ColorRef>) -> Self {
+        self.track_background = Some(track_background);
+        self
+    }
+
+    pub fn track_border_color(mut self, track_border_color: WidgetStateProperty<ColorRef>) -> Self {
+        self.track_border_color = Some(track_border_color);
+        self
+    }
+
+    pub fn range_background(mut self, range_background: WidgetStateProperty<ColorRef>) -> Self {
+        self.range_background = Some(range_background);
+        self
+    }
+
+    pub fn thumb_size(mut self, thumb_size: Px) -> Self {
+        self.thumb_size = Some(thumb_size);
+        self
+    }
+
+    pub fn thumb_background(mut self, thumb_background: WidgetStateProperty<ColorRef>) -> Self {
+        self.thumb_background = Some(thumb_background);
+        self
+    }
+
+    pub fn thumb_border_color(mut self, thumb_border_color: WidgetStateProperty<ColorRef>) -> Self {
+        self.thumb_border_color = Some(thumb_border_color);
+        self
+    }
+
+    pub fn thumb_ring_color(mut self, thumb_ring_color: WidgetStateProperty<ColorRef>) -> Self {
+        self.thumb_ring_color = Some(thumb_ring_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.track_height.is_some() {
+            self.track_height = other.track_height;
         }
+        if other.track_background.is_some() {
+            self.track_background = other.track_background;
+        }
+        if other.track_border_color.is_some() {
+            self.track_border_color = other.track_border_color;
+        }
+        if other.range_background.is_some() {
+            self.range_background = other.range_background;
+        }
+        if other.thumb_size.is_some() {
+            self.thumb_size = other.thumb_size;
+        }
+        if other.thumb_background.is_some() {
+            self.thumb_background = other.thumb_background;
+        }
+        if other.thumb_border_color.is_some() {
+            self.thumb_border_color = other.thumb_border_color;
+        }
+        if other.thumb_ring_color.is_some() {
+            self.thumb_ring_color = other.thumb_ring_color;
+        }
+        self
     }
 }
 
@@ -110,7 +131,7 @@ pub struct Slider {
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
-    style: Option<SliderStyle>,
+    style: SliderStyle,
 }
 
 impl Slider {
@@ -126,7 +147,7 @@ impl Slider {
             test_id: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            style: None,
+            style: SliderStyle::default(),
         }
     }
 
@@ -186,7 +207,7 @@ impl Slider {
     }
 
     pub fn style(mut self, style: SliderStyle) -> Self {
-        self.style = Some(style);
+        self.style = self.style.merged(style);
         self
     }
 
@@ -220,21 +241,16 @@ pub fn slider<H: UiHost>(
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
-    style: Option<SliderStyle>,
+    style: SliderStyle,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
-
-    let style = style.unwrap_or_else(|| {
-        let mut style = SliderStyle::from_theme(&theme);
-        let radius = Px((style.thumb_size.0 * 0.5).max(0.0));
-        style.focus_ring = Some(decl_style::focus_ring(&theme, radius));
-        style
-    });
 
     cx.scope(|cx| {
         #[derive(Default)]
         struct DragIndexState {
             model: Option<Model<usize>>,
+            dragging: Option<Model<bool>>,
+            hovered: Option<Model<bool>>,
         }
 
         let drag_index_model = cx.with_state(DragIndexState::default, |st| st.model.clone());
@@ -248,12 +264,98 @@ pub fn slider<H: UiHost>(
             drag_index_model
         };
 
+        let dragging_model = cx.with_state(DragIndexState::default, |st| st.dragging.clone());
+        let dragging_model = if let Some(dragging_model) = dragging_model {
+            dragging_model
+        } else {
+            let dragging_model = cx.app.models_mut().insert(false);
+            cx.with_state(DragIndexState::default, |st| {
+                st.dragging = Some(dragging_model.clone());
+            });
+            dragging_model
+        };
+
+        let hovered_model = cx.with_state(DragIndexState::default, |st| st.hovered.clone());
+        let hovered_model = if let Some(hovered_model) = hovered_model {
+            hovered_model
+        } else {
+            let hovered_model = cx.app.models_mut().insert(false);
+            cx.with_state(DragIndexState::default, |st| {
+                st.hovered = Some(hovered_model.clone());
+            });
+            hovered_model
+        };
+
+        let snapshot = theme.snapshot();
+        let enabled = !disabled;
+
+        let SliderStyle {
+            track_height: track_height_override,
+            track_background,
+            track_border_color,
+            range_background,
+            thumb_size: thumb_size_override,
+            thumb_background,
+            thumb_border_color,
+            thumb_ring_color,
+        } = style;
+
+        let track_height = track_height_override.unwrap_or_else(|| {
+            theme
+                .metric_by_key("component.slider.track_height")
+                .unwrap_or(Px(4.0))
+        });
+        let thumb_size = thumb_size_override.unwrap_or_else(|| {
+            theme
+                .metric_by_key("component.slider.thumb_size")
+                .unwrap_or(Px(16.0))
+        });
+
+        let track_bg = theme
+            .color_by_key("muted")
+            .unwrap_or(snapshot.colors.panel_background);
+        let range_bg = theme
+            .color_by_key("primary")
+            .or_else(|| theme.color_by_key("accent"))
+            .unwrap_or(snapshot.colors.accent);
+        let thumb_bg = theme
+            .color_by_key("background")
+            .unwrap_or(snapshot.colors.surface_background);
+        let thumb_border = theme
+            .color_by_key("input")
+            .or_else(|| theme.color_by_key("border"))
+            .unwrap_or(snapshot.colors.panel_border);
+        let ring_color = theme.color_required("ring");
+
+        let default_track_background = WidgetStateProperty::new(ColorRef::Color(track_bg));
+        let default_track_border_color =
+            WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT)).when(
+                WidgetStates::ACTIVE,
+                ColorRef::Color(alpha_mul(ring_color, 0.55)),
+            );
+        let default_range_background = WidgetStateProperty::new(ColorRef::Color(range_bg));
+        let default_thumb_background = WidgetStateProperty::new(ColorRef::Color(thumb_bg));
+        let default_thumb_border_color = WidgetStateProperty::new(ColorRef::Color(thumb_border))
+            .when(
+                WidgetStates::ACTIVE,
+                ColorRef::Color(alpha_mul(ring_color, 0.85)),
+            )
+            .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_color));
+        let default_thumb_ring_color = WidgetStateProperty::new(ColorRef::Color(ring_color));
+
+        let track_background = track_background.unwrap_or(default_track_background);
+        let track_border_color = track_border_color.unwrap_or(default_track_border_color);
+        let range_background = range_background.unwrap_or(default_range_background);
+        let thumb_background = thumb_background.unwrap_or(default_thumb_background);
+        let thumb_border_color = thumb_border_color.unwrap_or(default_thumb_border_color);
+        let thumb_ring_color = thumb_ring_color.unwrap_or(default_thumb_ring_color);
+
         let mut root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
         root_layout.overflow = fret_ui::element::Overflow::Visible;
 
         // Match shadcn/Radix DOM semantics: the layout height follows the track, while the thumb
         // is allowed to overflow (hit-testing is not clipped unless overflow=Clip).
-        let root_h = style.track_height.0.max(0.0);
+        let root_h = track_height.0.max(0.0);
 
         let mut semantics_layout = root_layout;
         semantics_layout.size.height = Length::Px(Px(root_h));
@@ -301,12 +403,20 @@ pub fn slider<H: UiHost>(
         let min_value = min;
         let max_value = max;
         let step_value = step;
-        let thumb_size = style.thumb_size;
+        let thumb_size = thumb_size;
         let min_steps_between_thumbs_value = min_steps_between_thumbs;
         let model_on_down = model.clone();
         let model_on_move = model.clone();
         let drag_index_on_down = drag_index_model.clone();
         let drag_index_on_move = drag_index_model.clone();
+        let dragging_on_down = dragging_model.clone();
+        let dragging_on_move = dragging_model.clone();
+        let dragging_on_up = dragging_model.clone();
+        let dragging_on_cancel = dragging_model.clone();
+        let hovered_on_down = hovered_model.clone();
+        let hovered_on_move = hovered_model.clone();
+        let hovered_on_up = hovered_model.clone();
+        let hovered_on_cancel = hovered_model.clone();
 
         cx.semantics_with_id(semantics, |cx, semantics_id| {
             let active_thumb_focus_target: Rc<Cell<Option<GlobalElementId>>> =
@@ -325,6 +435,8 @@ pub fn slider<H: UiHost>(
                     );
                     host.set_cursor_icon(CursorIcon::Pointer);
                     host.capture_pointer();
+                    let _ = host.models_mut().update(&dragging_on_down, |v| *v = true);
+                    let _ = host.models_mut().update(&hovered_on_down, |v| *v = true);
 
                     let bounds = host.bounds();
                     let next_index = radix_slider::start_slider_drag_from_pointer_x(
@@ -349,9 +461,12 @@ pub fn slider<H: UiHost>(
             let on_move = Arc::new(
                 move |host: &mut dyn UiPointerActionHost, cx: ActionCx, mv: PointerMoveCx| {
                     host.set_cursor_icon(CursorIcon::Pointer);
+                    let hovered = host.bounds().contains(mv.position);
+                    let _ = host.models_mut().update(&hovered_on_move, |v| *v = hovered);
                     if !mv.buttons.left {
                         return false;
                     }
+                    let _ = host.models_mut().update(&dragging_on_move, |v| *v = true);
 
                     let bounds = host.bounds();
                     let value_index_to_change = host
@@ -384,17 +499,56 @@ pub fn slider<H: UiHost>(
                         return false;
                     }
                     host.release_pointer_capture();
+                    let _ = host.models_mut().update(&dragging_on_up, |v| *v = false);
+                    let hovered = host.bounds().contains(up.position);
+                    let _ = host.models_mut().update(&hovered_on_up, |v| *v = hovered);
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
+            let on_cancel = Arc::new(
+                move |host: &mut dyn UiPointerActionHost, cx: ActionCx, _cancel| {
+                    host.release_pointer_capture();
+                    let _ = host
+                        .models_mut()
+                        .update(&dragging_on_cancel, |v| *v = false);
+                    let _ = host.models_mut().update(&hovered_on_cancel, |v| *v = false);
                     host.request_redraw(cx.window);
                     true
                 },
             );
 
             let track_top = 0.0;
-            let thumb_r = Px(style.thumb_size.0.max(0.0) * 0.5);
+            let thumb_r = Px(thumb_size.0.max(0.0) * 0.5);
 
             let mut root_container =
                 decl_style::container_props(&theme, chrome.clone(), LayoutRefinement::default());
             root_container.layout = semantics_layout;
+
+            let is_dragging = cx.app.models().get_copied(&dragging_model).unwrap_or(false);
+            let is_hovered = cx.app.models().get_copied(&hovered_model).unwrap_or(false);
+
+            let mut root_states = WidgetStates::default();
+            root_states.set(WidgetState::Disabled, !enabled);
+            root_states.set(WidgetState::Hovered, is_hovered && enabled);
+            root_states.set(WidgetState::Active, is_dragging && enabled);
+
+            let track_bg = track_background
+                .resolve(root_states)
+                .clone()
+                .resolve(&theme);
+            let track_border_color = track_border_color
+                .resolve(root_states)
+                .clone()
+                .resolve(&theme);
+            let range_bg = range_background
+                .resolve(root_states)
+                .clone()
+                .resolve(&theme);
+
+            let track_border = Edges::all(Px(0.0));
+            let thumb_border = Edges::all(Px(1.0));
 
             let track = ContainerProps {
                 layout: LayoutStyle {
@@ -408,17 +562,17 @@ pub fn slider<H: UiHost>(
                     },
                     size: fret_ui::element::SizeStyle {
                         width: Length::Fill,
-                        height: Length::Px(style.track_height),
+                        height: Length::Px(track_height),
                         ..Default::default()
                     },
                     ..Default::default()
                 },
                 padding: Edges::all(Px(0.0)),
-                background: Some(style.track_background),
+                background: Some(track_bg),
                 shadow: None,
-                border: style.track_border,
-                border_color: Some(style.track_border_color),
-                corner_radii: Corners::all(Px(style.track_height.0.max(0.0) * 0.5)),
+                border: track_border,
+                border_color: Some(track_border_color),
+                corner_radii: Corners::all(Px(track_height.0.max(0.0) * 0.5)),
                 ..Default::default()
             };
 
@@ -431,6 +585,7 @@ pub fn slider<H: UiHost>(
                 cx.pointer_region_on_pointer_down(on_down);
                 cx.pointer_region_on_pointer_move(on_move);
                 cx.pointer_region_on_pointer_up(on_up);
+                cx.pointer_region_on_pointer_cancel(on_cancel);
 
                 let grow_left = range_start_t.clamp(0.0, 1.0);
                 let grow_range = (range_end_t - range_start_t).clamp(0.0, 1.0);
@@ -441,7 +596,7 @@ pub fn slider<H: UiHost>(
                 flex_segment_layout.flex.shrink = 1.0;
                 flex_segment_layout.flex.basis = Length::Px(Px(0.0));
 
-                let corner_radius = Px(style.track_height.0.max(0.0) * 0.5);
+                let corner_radius = Px(track_height.0.max(0.0) * 0.5);
 
                 vec![cx.container(root_container, |cx| {
                     let track_el = cx.container(track, |cx| {
@@ -473,7 +628,7 @@ pub fn slider<H: UiHost>(
                         };
                         let range = ContainerProps {
                             layout: range_layout,
-                            background: Some(style.range_background),
+                            background: Some(range_bg),
                             corner_radii: Corners::all(corner_radius),
                             ..Default::default()
                         };
@@ -511,7 +666,7 @@ pub fn slider<H: UiHost>(
                                 },
                                 size: fret_ui::element::SizeStyle {
                                     width: Length::Fill,
-                                    height: Length::Px(style.track_height),
+                                    height: Length::Px(track_height),
                                     ..Default::default()
                                 },
                                 ..Default::default()
@@ -532,30 +687,12 @@ pub fn slider<H: UiHost>(
                         };
 
                         let mut thumb_layout = LayoutStyle::default();
-                        thumb_layout.size.width = Length::Px(style.thumb_size);
-                        thumb_layout.size.height = Length::Px(style.thumb_size);
+                        thumb_layout.size.width = Length::Px(thumb_size);
+                        thumb_layout.size.height = Length::Px(thumb_size);
                         thumb_layout.flex.shrink = 0.0;
                         thumb_layout.margin = MarginEdges {
                             left: MarginEdge::Px(Px(-thumb_r.0)),
                             right: MarginEdge::Px(Px(-thumb_r.0)),
-                            ..Default::default()
-                        };
-
-                        let thumb = ContainerProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            padding: Edges::all(Px(0.0)),
-                            background: Some(style.thumb_background),
-                            shadow: None,
-                            border: style.thumb_border,
-                            border_color: Some(style.thumb_border_color),
-                            corner_radii: Corners::all(thumb_r),
                             ..Default::default()
                         };
 
@@ -650,7 +787,85 @@ pub fn slider<H: UiHost>(
                                     if thumb_index == active_index {
                                         active_thumb_focus_target.set(Some(thumb_semantics_id));
                                     }
-                                    vec![cx.container(thumb, |_| Vec::new())]
+
+                                    let is_focused = cx.is_focused_element(thumb_semantics_id);
+                                    let focus_visible = is_focused
+                                        && fret_ui::focus_visible::is_focus_visible(
+                                            cx.app,
+                                            Some(cx.window),
+                                        );
+                                    let active_idx =
+                                        cx.app.models().get_copied(&drag_index_model).unwrap_or(0);
+
+                                    let mut thumb_states = WidgetStates::default();
+                                    thumb_states.set(WidgetState::Disabled, !enabled);
+                                    thumb_states.set(WidgetState::Hovered, is_hovered && enabled);
+                                    thumb_states.set(
+                                        WidgetState::Active,
+                                        is_dragging && enabled && active_idx == thumb_index,
+                                    );
+                                    thumb_states
+                                        .set(WidgetState::FocusVisible, focus_visible && enabled);
+
+                                    let bg = thumb_background
+                                        .resolve(thumb_states)
+                                        .clone()
+                                        .resolve(&theme);
+                                    let border_color = thumb_border_color
+                                        .resolve(thumb_states)
+                                        .clone()
+                                        .resolve(&theme);
+
+                                    let layout_fill = LayoutStyle {
+                                        size: fret_ui::element::SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    };
+
+                                    let thumb = ContainerProps {
+                                        layout: layout_fill,
+                                        padding: Edges::all(Px(0.0)),
+                                        background: Some(bg),
+                                        shadow: None,
+                                        border: thumb_border,
+                                        border_color: Some(border_color),
+                                        corner_radii: Corners::all(thumb_r),
+                                        ..Default::default()
+                                    };
+
+                                    if !focus_visible || !enabled {
+                                        return vec![cx.container(thumb, |_| Vec::new())];
+                                    }
+
+                                    let ring_color = thumb_ring_color
+                                        .resolve(thumb_states)
+                                        .clone()
+                                        .resolve(&theme);
+                                    let ring = ContainerProps {
+                                        layout: layout_fill,
+                                        padding: Edges::all(Px(0.0)),
+                                        background: Some(Color::TRANSPARENT),
+                                        shadow: None,
+                                        border: Edges::all(Px(2.0)),
+                                        border_color: Some(ring_color),
+                                        corner_radii: Corners::all(thumb_r),
+                                        ..Default::default()
+                                    };
+
+                                    vec![cx.stack_props(
+                                        fret_ui::element::StackProps {
+                                            layout: layout_fill,
+                                        },
+                                        |cx| {
+                                            vec![
+                                                cx.container(ring, |_| Vec::new()),
+                                                cx.container(thumb, |_| Vec::new()),
+                                            ]
+                                        },
+                                    )]
                                 }),
                                 cx.container(right, |_| Vec::new()),
                             ]
