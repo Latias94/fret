@@ -25,6 +25,9 @@ fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let base_radius = theme.metric_required("metric.radius.lg");
     let rounded_xl = Px(base_radius.0 + 4.0);
 
+    // shadcn/ui v4 card base:
+    // - `rounded-xl border bg-card text-card-foreground shadow-sm`
+    // - `flex flex-col gap-6 py-6` (gap handled by the inner vstack)
     ChromeRefinement::default()
         .merge(ChromeRefinement {
             radius: Some(MetricRef::Px(rounded_xl)),
@@ -33,6 +36,7 @@ fn card_chrome(theme: &Theme) -> ChromeRefinement {
         .border_1()
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
+        .py(Space::N6)
 }
 
 #[derive(Debug, Clone)]
@@ -74,7 +78,9 @@ impl Card {
         shadcn_layout::container_vstack(
             cx,
             props,
-            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            stack::VStackProps::default()
+                .gap(Space::N6)
+                .layout(LayoutRefinement::default().w_full()),
             children,
         )
     }
@@ -102,7 +108,8 @@ impl CardHeader {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
-            ChromeRefinement::default().p(Space::N6),
+            // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+            ChromeRefinement::default().px(Space::N6),
             LayoutRefinement::default().w_full(),
         );
         let children = self.children;
@@ -110,7 +117,7 @@ impl CardHeader {
             cx,
             props,
             stack::VStackProps::default()
-                .gap(Space::N1p5)
+                .gap(Space::N2)
                 .layout(LayoutRefinement::default().w_full()),
             children,
         )
@@ -132,7 +139,8 @@ impl CardContent {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
-            ChromeRefinement::default().p(Space::N6).pt(Space::N0),
+            // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
+            ChromeRefinement::default().px(Space::N6),
             LayoutRefinement::default().w_full(),
         );
         let children = self.children;
@@ -160,7 +168,8 @@ impl CardFooter {
         let theme = Theme::global(&*cx.app).clone();
         let props = decl_style::container_props(
             &theme,
-            ChromeRefinement::default().p(Space::N6).pt(Space::N0),
+            // shadcn/ui v4: `flex items-center px-6` (no default y padding; gap comes from the Card root).
+            ChromeRefinement::default().px(Space::N6),
             LayoutRefinement::default().w_full(),
         );
         let children = self.children;
