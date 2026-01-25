@@ -89,6 +89,27 @@ All Material 3 `*Style` structs must provide:
 
 - `fn merged(self, other: Self) -> Self` (shallow, right-biased)
 
+## Current adoption snapshot (main)
+
+This snapshot is intentionally “API-shape only”: it tracks whether a component exposes a public
+ADR 1159-style override surface, not whether it is visually aligned with Material.
+
+| Component | File | Has `*Style` | Has `.style(...)` | ADR 1159 shape | Notes |
+|---|---|---:|---:|---:|---|
+| Select | `ecosystem/fret-ui-material3/src/select.rs` | Yes (`SelectStyle`) | Yes | Yes | Trigger + option slots use `Option<WidgetStateProperty<Option<ColorRef>>>`. |
+| RadioGroup | `ecosystem/fret-ui-material3/src/radio_group.rs` | Yes (`RadioGroupStyle`) | Yes | Yes | Items + icon/label/indicator slots use ADR 1159 shape. |
+| Button | `ecosystem/fret-ui-material3/src/button.rs` | No | N/A | No | Uses foundation + tokens; needs a public `ButtonStyle` surface if we want consistent overrides. |
+| IconButton | `ecosystem/fret-ui-material3/src/icon_button.rs` | No | N/A | No | Same as Button. |
+| Checkbox | `ecosystem/fret-ui-material3/src/checkbox.rs` | No | N/A | No | Same; currently outcome-oriented implementation. |
+| Switch | `ecosystem/fret-ui-material3/src/switch.rs` | No | N/A | No | Same; currently outcome-oriented implementation. |
+| Radio | `ecosystem/fret-ui-material3/src/radio.rs` | No | N/A | No | Uses foundation + tokens; no public override surface yet. |
+| Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | No | N/A | No | Uses foundation + tokens; no public override surface yet. |
+| TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | No | N/A | No | Uses `md.*` tokens but does not expose ADR 1159-style overrides (also has `error` as a bespoke boolean). |
+| Menu | `ecosystem/fret-ui-material3/src/menu.rs` | No | N/A | No | Policy-heavy; needs a careful, minimal override surface if we expose one. |
+| Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | No | N/A | No | Same as Menu (overlay surface + motion + focus). |
+| Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | No | N/A | No | Often provider-driven; may stay policy-only in v1. |
+| Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | No | N/A | No | Typically a higher-level pattern; likely v2. |
+
 ## Implementation plan
 
 Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
@@ -170,4 +191,3 @@ Options:
 - Material foundation: `ecosystem/fret-ui-material3/src/foundation/*`
 - Material components: `ecosystem/fret-ui-material3/src/*.rs`
 - Gallery: `apps/fret-ui-gallery/src/{spec.rs,ui.rs,docs.rs}`
-
