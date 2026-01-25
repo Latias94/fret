@@ -1338,6 +1338,21 @@ fn preview_material3_state_matrix(
     material3_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct State {
+        expressive: Option<Model<bool>>,
+    }
+
+    let expressive = cx.with_state(State::default, |st| st.expressive.clone());
+    let expressive = expressive.unwrap_or_else(|| {
+        let model = cx.app.models_mut().insert(false);
+        cx.with_state(State::default, |st| st.expressive = Some(model.clone()));
+        model
+    });
+    let expressive_enabled = cx
+        .get_model_copied(&expressive, Invalidation::Layout)
+        .unwrap_or(false);
+
     let mut out: Vec<AnyElement> = Vec::new();
 
     out.push(cx.text(
@@ -1346,6 +1361,78 @@ fn preview_material3_state_matrix(
     out.push(cx.text(
         "Tip: use keyboard Tab/Arrow/Home/End on Tabs/Radio/Menu; use Esc/outside press to close Menu.",
     ));
+
+    out.push(stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Switch::new(expressive.clone())
+                    .a11y_label("Enable Material 3 Expressive variant")
+                    .into_element(cx),
+                cx.text(if expressive_enabled {
+                    "Variant: Expressive (subtree override)"
+                } else {
+                    "Variant: Standard"
+                }),
+            ]
+        },
+    ));
+
+    let content = if expressive_enabled {
+        material3::context::with_material_design_variant(
+            cx,
+            material3::MaterialDesignVariant::Expressive,
+            |cx| {
+                material3_state_matrix_content(
+                    cx,
+                    material3_checkbox,
+                    material3_switch,
+                    material3_radio_value,
+                    material3_tabs_value,
+                    material3_navigation_bar_value,
+                    material3_text_field_value,
+                    material3_text_field_disabled,
+                    material3_text_field_error,
+                    material3_menu_open,
+                    last_action,
+                )
+            },
+        )
+    } else {
+        material3_state_matrix_content(
+            cx,
+            material3_checkbox,
+            material3_switch,
+            material3_radio_value,
+            material3_tabs_value,
+            material3_navigation_bar_value,
+            material3_text_field_value,
+            material3_text_field_disabled,
+            material3_text_field_error,
+            material3_menu_open,
+            last_action,
+        )
+    };
+
+    out.extend(content);
+    out
+}
+
+fn material3_state_matrix_content(
+    cx: &mut ElementContext<'_, App>,
+    material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
+    material3_navigation_bar_value: Model<Arc<str>>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+    material3_text_field_error: Model<bool>,
+    material3_menu_open: Model<bool>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    let mut out: Vec<AnyElement> = Vec::new();
 
     out.push(cx.text("— Buttons —"));
     out.extend(preview_material3_button(cx));

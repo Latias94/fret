@@ -423,6 +423,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_BUTTON`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_button`),
     `apps/fret-ui-gallery/src/driver.rs` (v30 token injection via `extend_tokens_from_config`).
+- [x] Add a state-matrix-level variant toggle (Standard vs Expressive) to exercise subtree overrides.
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_state_matrix`).
 - [x] Add a Material 3 IconButton gallery page for manual interaction verification.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_ICON_BUTTON`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_icon_button`).
