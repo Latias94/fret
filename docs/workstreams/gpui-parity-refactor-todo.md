@@ -238,6 +238,7 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     - [x] Wrap heavyweight rows in per-row view-cache roots (stable per-item identity).
     - [x] Export VirtualList scroll/range diagnostics counters (range recompute, children churn, barrier relayouts) to bundles to make regressions explainable.
       - Fields: `set_children_barrier_writes`, `barrier_relayouts_scheduled`, `barrier_relayouts_performed`, `virtual_list_visible_range_checks`, `virtual_list_visible_range_refreshes`.
+      - Tooling: `fretboard diag perf --json` includes these counters in both per-run rows and summarized percentiles (so perf diffs don't require manually inspecting bundle dumps).
       - Evidence: `crates/fret-ui/src/tree/mod.rs` (`UiDebugFrameStats`, `debug_record_virtual_list_visible_range_check`),
         `crates/fret-ui/src/tree/layout.rs` (`barrier_relayouts_performed`),
         `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` export),
