@@ -27,8 +27,8 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::SpringAnimator;
+use crate::tokens::tabs as tabs_tokens;
 
 #[derive(Debug, Default, Clone)]
 struct TabListLayoutRuntime {
@@ -168,14 +168,8 @@ impl Tabs {
                 ..Default::default()
             };
 
-            let container_height = theme
-                .metric_by_key("md.comp.primary-navigation-tab.container.height")
-                .unwrap_or(Px(48.0));
-            let tokens = MaterialTokenResolver::new(&theme);
-            let container_bg = tokens.color_comp_or_sys(
-                "md.comp.primary-navigation-tab.container.color",
-                "md.sys.color.surface-container",
-            );
+            let container_height = tabs_tokens::container_height(&theme);
+            let container_bg = tabs_tokens::container_background(&theme);
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
@@ -434,20 +428,22 @@ fn material_primary_tab<H: UiHost>(
                 let is_hovered = enabled && st.hovered;
                 let is_focused = enabled && st.focused && focus_visible;
 
-                let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                let label_color = primary_tab_label_color(theme, selected, interaction);
-                let state_layer_color = primary_tab_state_layer_color(theme, selected, interaction);
-                let state_layer_target = primary_tab_state_layer_opacity(
-                    theme, selected, is_pressed, is_hovered, is_focused,
-                );
+                let interaction = if is_pressed {
+                    tabs_tokens::TabInteraction::Pressed
+                } else if is_focused {
+                    tabs_tokens::TabInteraction::Focused
+                } else if is_hovered {
+                    tabs_tokens::TabInteraction::Hovered
+                } else {
+                    tabs_tokens::TabInteraction::Default
+                };
 
-                let ripple_base_opacity = theme
-                    .number_by_key(if selected {
-                        "md.comp.primary-navigation-tab.active.pressed.state-layer.opacity"
-                    } else {
-                        "md.comp.primary-navigation-tab.inactive.pressed.state-layer.opacity"
-                    })
-                    .unwrap_or(0.1);
+                let label_color = tabs_tokens::label_color(theme, selected, interaction);
+                let state_layer_color =
+                    tabs_tokens::state_layer_color(theme, selected, interaction);
+                let state_layer_target =
+                    tabs_tokens::state_layer_opacity(theme, selected, interaction);
+                let ripple_base_opacity = tabs_tokens::pressed_state_layer_opacity(theme, selected);
                 let config = material_pressable_indication_config(theme, None);
                 let ink = material_ink_layer_for_pressable(
                     cx,
@@ -541,24 +537,14 @@ fn primary_tab_list_indicator<H: UiHost>(
 
         let (target_x, target_width, target_height, color) = if tab_count > 0 {
             if let Some(tab_bounds) = tab_bounds {
-                let height = theme
-                    .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
-                    .unwrap_or(Px(3.0));
-                let color = MaterialTokenResolver::new(theme).color_comp_or_sys(
-                    "md.comp.primary-navigation-tab.active-indicator.color",
-                    "md.sys.color.primary",
-                );
+                let height = tabs_tokens::active_indicator_height(theme);
+                let color = tabs_tokens::active_indicator_color(theme);
                 let x = tab_bounds.origin.x.0 - container_bounds.origin.x.0;
                 (x, tab_bounds.size.width.0, height.0, color)
             } else if let Some(idx) = selected_idx {
                 let tab_width_px = container_bounds.size.width.0 / (tab_count as f32);
-                let height = theme
-                    .metric_by_key("md.comp.primary-navigation-tab.active-indicator.height")
-                    .unwrap_or(Px(3.0));
-                let color = MaterialTokenResolver::new(theme).color_comp_or_sys(
-                    "md.comp.primary-navigation-tab.active-indicator.color",
-                    "md.sys.color.primary",
-                );
+                let height = tabs_tokens::active_indicator_height(theme);
+                let color = tabs_tokens::active_indicator_color(theme);
                 (tab_width_px * (idx as f32), tab_width_px, height.0, color)
             } else {
                 (0.0, 0.0, 0.0, Color::TRANSPARENT)
@@ -567,14 +553,7 @@ fn primary_tab_list_indicator<H: UiHost>(
             (0.0, 0.0, 0.0, Color::TRANSPARENT)
         };
 
-        let corner_radii = theme
-            .corners_by_key("md.comp.primary-navigation-tab.active-indicator.shape")
-            .unwrap_or(Corners {
-                top_left: Px(3.0),
-                top_right: Px(3.0),
-                bottom_right: Px(0.0),
-                bottom_left: Px(0.0),
-            });
+        let corner_radii = tabs_tokens::active_indicator_shape(theme);
 
         let spring = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
         let (x, width, height, want_frames) =
@@ -641,155 +620,4 @@ fn primary_tab_list_indicator<H: UiHost>(
             }
         })
     })
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum InteractionState {
-    Default,
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> InteractionState {
-    if pressed {
-        InteractionState::Pressed
-    } else if focused {
-        InteractionState::Focused
-    } else if hovered {
-        InteractionState::Hovered
-    } else {
-        InteractionState::Default
-    }
-}
-
-fn primary_tab_label_color(theme: &Theme, active: bool, interaction: InteractionState) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => {
-                "md.comp.primary-navigation-tab.with-label-text.active.focus.label-text.color"
-            }
-            InteractionState::Hovered => {
-                "md.comp.primary-navigation-tab.with-label-text.active.hover.label-text.color"
-            }
-            InteractionState::Pressed => {
-                "md.comp.primary-navigation-tab.with-label-text.active.pressed.label-text.color"
-            }
-            InteractionState::Default => {
-                "md.comp.primary-navigation-tab.with-label-text.active.label-text.color"
-            }
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => {
-                "md.comp.primary-navigation-tab.with-label-text.inactive.focus.label-text.color"
-            }
-            InteractionState::Hovered => {
-                "md.comp.primary-navigation-tab.with-label-text.inactive.hover.label-text.color"
-            }
-            InteractionState::Pressed => {
-                "md.comp.primary-navigation-tab.with-label-text.inactive.pressed.label-text.color"
-            }
-            InteractionState::Default => {
-                "md.comp.primary-navigation-tab.with-label-text.inactive.label-text.color"
-            }
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| {
-            if active {
-                theme.color_by_key("md.sys.color.primary")
-            } else {
-                theme.color_by_key("md.sys.color.on-surface-variant")
-            }
-        })
-        .unwrap_or_else(|| {
-            if active {
-                theme.color_required("md.sys.color.primary")
-            } else {
-                theme.color_required("md.sys.color.on-surface-variant")
-            }
-        })
-}
-
-fn primary_tab_state_layer_color(
-    theme: &Theme,
-    active: bool,
-    interaction: InteractionState,
-) -> Color {
-    let key = if active {
-        match interaction {
-            InteractionState::Focused => {
-                "md.comp.primary-navigation-tab.active.focus.state-layer.color"
-            }
-            InteractionState::Hovered => {
-                "md.comp.primary-navigation-tab.active.hover.state-layer.color"
-            }
-            InteractionState::Pressed => {
-                "md.comp.primary-navigation-tab.active.pressed.state-layer.color"
-            }
-            InteractionState::Default => {
-                "md.comp.primary-navigation-tab.active.hover.state-layer.color"
-            }
-        }
-    } else {
-        match interaction {
-            InteractionState::Focused => {
-                "md.comp.primary-navigation-tab.inactive.focus.state-layer.color"
-            }
-            InteractionState::Hovered => {
-                "md.comp.primary-navigation-tab.inactive.hover.state-layer.color"
-            }
-            InteractionState::Pressed => {
-                "md.comp.primary-navigation-tab.inactive.pressed.state-layer.color"
-            }
-            InteractionState::Default => {
-                "md.comp.primary-navigation-tab.inactive.hover.state-layer.color"
-            }
-        }
-    };
-
-    theme
-        .color_by_key(key)
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
-}
-
-fn primary_tab_state_layer_opacity(
-    theme: &Theme,
-    active: bool,
-    pressed: bool,
-    hovered: bool,
-    focused: bool,
-) -> f32 {
-    if pressed {
-        return theme
-            .number_by_key(if active {
-                "md.comp.primary-navigation-tab.active.pressed.state-layer.opacity"
-            } else {
-                "md.comp.primary-navigation-tab.inactive.pressed.state-layer.opacity"
-            })
-            .unwrap_or(0.1);
-    }
-    if focused {
-        return theme
-            .number_by_key(if active {
-                "md.comp.primary-navigation-tab.active.focus.state-layer.opacity"
-            } else {
-                "md.comp.primary-navigation-tab.inactive.focus.state-layer.opacity"
-            })
-            .unwrap_or(0.1);
-    }
-    if hovered {
-        return theme
-            .number_by_key(if active {
-                "md.comp.primary-navigation-tab.active.hover.state-layer.opacity"
-            } else {
-                "md.comp.primary-navigation-tab.inactive.hover.state-layer.opacity"
-            })
-            .unwrap_or(0.08);
-    }
-    0.0
 }

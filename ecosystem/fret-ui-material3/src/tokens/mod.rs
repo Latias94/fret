@@ -10,3 +10,4 @@ pub(crate) mod icon_button;
 pub(crate) mod material_web_v30;
 pub(crate) mod radio;
 pub(crate) mod switch;
+pub(crate) mod tabs;
