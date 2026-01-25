@@ -27,7 +27,8 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::overlay_motion;
@@ -1540,6 +1541,10 @@ impl DropdownMenu {
                                                         icon_muted_fg: fret_core::Color,
                                                         destructive_fg: fret_core::Color,
                                                         destructive_bg: fret_core::Color,
+                                                        item_bg: WidgetStateProperty<ColorRef>,
+                                                        item_fg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_bg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_fg: WidgetStateProperty<ColorRef>,
                                                         row_height: Px,
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
@@ -1554,6 +1559,7 @@ impl DropdownMenu {
 
                                                     fn render_entries<H: UiHost>(
                                                         cx: &mut ElementContext<'_, H>,
+                                                        theme: &Theme,
                                                         entries: &[DropdownMenuEntry],
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
@@ -1573,12 +1579,18 @@ impl DropdownMenu {
                                                         let text_style = env.text_style.clone();
                                                         let text_disabled = env.text_disabled;
                                                         let label_fg = env.label_fg;
-                                                        let accent = env.accent;
-                                                        let accent_fg = env.accent_fg;
-                                                        let fg = env.fg;
+                                                        let _accent = env.accent;
+                                                        let _accent_fg = env.accent_fg;
+                                                        let _fg = env.fg;
                                                         let icon_muted_fg = env.icon_muted_fg;
-                                                        let destructive_fg = env.destructive_fg;
-                                                        let destructive_bg = env.destructive_bg;
+                                                        let _destructive_fg = env.destructive_fg;
+                                                        let _destructive_bg = env.destructive_bg;
+                                                        let item_bg = env.item_bg.clone();
+                                                        let item_fg = env.item_fg.clone();
+                                                        let destructive_item_bg =
+                                                            env.destructive_item_bg.clone();
+                                                        let destructive_item_fg =
+                                                            env.destructive_item_fg.clone();
                                                         let row_height = env.row_height;
                                                         let window_margin = env.window_margin;
                                                         let submenu_min_width = env.submenu_min_width;
@@ -1629,7 +1641,7 @@ impl DropdownMenu {
                                                     }
                                                     DropdownMenuEntry::Group(group) => {
                                                         let children =
-                                                            render_entries(cx, &group.entries, item_ix, env);
+                                                            render_entries(cx, theme, &group.entries, item_ix, env);
                                                         out.push(menu_structural_group(
                                                             cx,
                                                             fret_core::SemanticsRole::Group,
@@ -1648,7 +1660,7 @@ impl DropdownMenu {
                                                             })
                                                             .collect();
                                                         let children =
-                                                            render_entries(cx, &items, item_ix, env);
+                                                            render_entries(cx, theme, &items, item_ix, env);
                                                         out.push(menu_structural_group(
                                                             cx,
                                                             fret_core::SemanticsRole::Group,
@@ -1771,16 +1783,43 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     };
 
-                                                                    let mut row_bg =
-                                                                        fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
+                                                                    let mut states =
+                                                                        WidgetStates::empty();
+                                                                    states.set(
+                                                                        WidgetState::Disabled,
+                                                                        disabled,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Hovered,
+                                                                        st.hovered,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Active,
+                                                                        st.pressed,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Focused,
+                                                                        st.focused,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::FocusVisible,
+                                                                        st.focused
+                                                                            && fret_ui::focus_visible::is_focus_visible(
+                                                                                cx.app,
+                                                                                Some(cx.window),
+                                                                            ),
+                                                                    );
+
+                                                                    let row_bg_ref = item_bg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_fg_ref = item_fg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_bg =
+                                                                        row_bg_ref.resolve(theme);
+                                                                    let row_fg =
+                                                                        row_fg_ref.resolve(theme);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -1909,16 +1948,43 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     };
 
-                                                                    let mut row_bg =
-                                                                        fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
+                                                                    let mut states =
+                                                                        WidgetStates::empty();
+                                                                    states.set(
+                                                                        WidgetState::Disabled,
+                                                                        disabled,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Hovered,
+                                                                        st.hovered,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Active,
+                                                                        st.pressed,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Focused,
+                                                                        st.focused,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::FocusVisible,
+                                                                        st.focused
+                                                                            && fret_ui::focus_visible::is_focus_visible(
+                                                                                cx.app,
+                                                                                Some(cx.window),
+                                                                            ),
+                                                                    );
+
+                                                                    let row_bg_ref = item_bg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_fg_ref = item_fg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_bg =
+                                                                        row_bg_ref.resolve(theme);
+                                                                    let row_fg =
+                                                                        row_fg_ref.resolve(theme);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -2077,27 +2143,55 @@ impl DropdownMenu {
                                                                     ..Default::default()
                                                                 };
 
-                                                                let mut row_bg = fret_core::Color::TRANSPARENT;
-                                                                let mut row_fg = if variant == DropdownMenuItemVariant::Destructive {
-                                                                    destructive_fg
-                                                                } else {
-                                                                    fg
-                                                                };
-                                                                if st.hovered
-                                                                    || st.pressed
-                                                                    || st.focused
-                                                                    || is_open_submenu
-                                                                {
+                                                                let mut states =
+                                                                    WidgetStates::empty();
+                                                                states.set(
+                                                                    WidgetState::Disabled,
+                                                                    disabled,
+                                                                );
+                                                                states.set(
+                                                                    WidgetState::Hovered,
+                                                                    st.hovered,
+                                                                );
+                                                                states.set(
+                                                                    WidgetState::Active,
+                                                                    st.pressed,
+                                                                );
+                                                                states.set(
+                                                                    WidgetState::Focused,
+                                                                    st.focused,
+                                                                );
+                                                                states.set(
+                                                                    WidgetState::FocusVisible,
+                                                                    st.focused
+                                                                        && fret_ui::focus_visible::is_focus_visible(
+                                                                            cx.app,
+                                                                            Some(cx.window),
+                                                                        ),
+                                                                );
+                                                                states.set(
+                                                                    WidgetState::Open,
+                                                                    is_open_submenu,
+                                                                );
+
+                                                                let (bg_prop, fg_prop) =
                                                                     if variant
                                                                         == DropdownMenuItemVariant::Destructive
                                                                     {
-                                                                        row_bg = destructive_bg;
-                                                                        row_fg = destructive_fg;
+                                                                        (
+                                                                            &destructive_item_bg,
+                                                                            &destructive_item_fg,
+                                                                        )
                                                                     } else {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
-                                                                }
+                                                                        (&item_bg, &item_fg)
+                                                                    };
+
+                                                                let row_bg_ref =
+                                                                    bg_prop.resolve(states).clone();
+                                                                let row_fg_ref =
+                                                                    fg_prop.resolve(states).clone();
+                                                                let row_bg =
+                                                                    row_bg_ref.resolve(theme);
 
                                                                 let trailing = if has_submenu {
                                                                     trailing.clone()
@@ -2136,13 +2230,14 @@ impl DropdownMenu {
                                                                         } else if reserve_leading_slot_enabled {
                                                                             row.push(menu_icon_slot_empty(cx));
                                                                         }
+                                                                        let row_fg_ref = row_fg_ref.clone();
                                                                         let style = text_style.clone();
                                                                         let mut text = ui::text(cx, label.clone())
                                                                             .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
                                                                             .text_size_px(style.size)
                                                                             .font_weight(style.weight)
                                                                             .nowrap()
-                                                                            .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                            .text_color(row_fg_ref);
 
                                                                         if let Some(line_height) = style.line_height {
                                                                             text = text.line_height_px(line_height);
@@ -2221,6 +2316,84 @@ impl DropdownMenu {
                                                         icon_muted_fg,
                                                         destructive_fg,
                                                         destructive_bg,
+                                                        item_bg: WidgetStateProperty::new(ColorRef::Color(
+                                                            fret_core::Color::TRANSPARENT,
+                                                        ))
+                                                        .when(WidgetStates::HOVERED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::ACTIVE, ColorRef::Color(accent))
+                                                        .when(WidgetStates::FOCUSED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::OPEN, ColorRef::Color(accent))
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        item_fg: WidgetStateProperty::new(ColorRef::Color(fg))
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
+                                                        destructive_item_bg: WidgetStateProperty::new(
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        destructive_item_fg: WidgetStateProperty::new(
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
                                                         row_height,
                                                         window_margin,
                                                         submenu_min_width,
@@ -2243,6 +2416,7 @@ impl DropdownMenu {
 
                                                     render_entries(
                                                         cx,
+                                                        &theme,
                                                         entries.as_ref(),
                                                         &mut item_ix,
                                                         &env,
@@ -2497,6 +2671,10 @@ impl DropdownMenu {
                                                         fg: fret_core::Color,
                                                         destructive_fg: fret_core::Color,
                                                         destructive_bg: fret_core::Color,
+                                                        item_bg: WidgetStateProperty<ColorRef>,
+                                                        item_fg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_bg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_fg: WidgetStateProperty<ColorRef>,
                                                         row_height: Px,
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
@@ -2509,6 +2687,7 @@ impl DropdownMenu {
 
                                                     fn render_entries<H: UiHost>(
                                                         cx: &mut ElementContext<'_, H>,
+                                                        theme: &Theme,
                                                         entries: &[DropdownMenuEntry],
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
@@ -2528,11 +2707,17 @@ impl DropdownMenu {
                                                         let text_style = env.text_style.clone();
                                                         let text_disabled = env.text_disabled;
                                                         let label_fg = env.label_fg;
-                                                        let accent = env.accent;
-                                                        let accent_fg = env.accent_fg;
-                                                        let fg = env.fg;
-                                                        let destructive_fg = env.destructive_fg;
-                                                        let destructive_bg = env.destructive_bg;
+                                                        let _accent = env.accent;
+                                                        let _accent_fg = env.accent_fg;
+                                                        let _fg = env.fg;
+                                                        let _destructive_fg = env.destructive_fg;
+                                                        let _destructive_bg = env.destructive_bg;
+                                                        let item_bg = env.item_bg.clone();
+                                                        let item_fg = env.item_fg.clone();
+                                                        let destructive_item_bg =
+                                                            env.destructive_item_bg.clone();
+                                                        let destructive_item_fg =
+                                                            env.destructive_item_fg.clone();
                                                         let _row_height = env.row_height;
                                                         let _window_margin = env.window_margin;
                                                         let _submenu_min_width = env.submenu_min_width;
@@ -2582,6 +2767,7 @@ impl DropdownMenu {
                                                             DropdownMenuEntry::Group(group) => {
                                                                 let children = render_entries(
                                                                     cx,
+                                                                    theme,
                                                                     &group.entries,
                                                                     item_ix,
                                                                     env,
@@ -2604,7 +2790,7 @@ impl DropdownMenu {
                                                                     })
                                                                     .collect();
                                                                 let children =
-                                                                    render_entries(cx, &items, item_ix, env);
+                                                                    render_entries(cx, theme, &items, item_ix, env);
                                                                 rows.push(menu_structural_group(
                                                                     cx,
                                                                     fret_core::SemanticsRole::Group,
@@ -2719,13 +2905,43 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut row_bg =
-                                                                                fret_core::Color::TRANSPARENT;
-                                                                            let mut row_fg = fg;
-                                                                            if st.hovered || st.pressed || st.focused {
-                                                                                row_bg = accent;
-                                                                                row_fg = accent_fg;
-                                                                            }
+                                                                            let mut states =
+                                                                                WidgetStates::empty();
+                                                                            states.set(
+                                                                                WidgetState::Disabled,
+                                                                                disabled,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Hovered,
+                                                                                st.hovered,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Active,
+                                                                                st.pressed,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Focused,
+                                                                                st.focused,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::FocusVisible,
+                                                                                st.focused
+                                                                                    && fret_ui::focus_visible::is_focus_visible(
+                                                                                        cx.app,
+                                                                                        Some(cx.window),
+                                                                                    ),
+                                                                            );
+
+                                                                            let row_bg_ref = item_bg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_fg_ref = item_fg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_bg =
+                                                                                row_bg_ref.resolve(theme);
+                                                                            let row_fg =
+                                                                                row_fg_ref.resolve(theme);
 
                                                                             let trailing = trailing.clone().or_else(|| {
                                                                                 command.as_ref().and_then(|cmd| {
@@ -2837,13 +3053,43 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut row_bg =
-                                                                                fret_core::Color::TRANSPARENT;
-                                                                            let mut row_fg = fg;
-                                                                            if st.hovered || st.pressed || st.focused {
-                                                                                row_bg = accent;
-                                                                                row_fg = accent_fg;
-                                                                            }
+                                                                            let mut states =
+                                                                                WidgetStates::empty();
+                                                                            states.set(
+                                                                                WidgetState::Disabled,
+                                                                                disabled,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Hovered,
+                                                                                st.hovered,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Active,
+                                                                                st.pressed,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Focused,
+                                                                                st.focused,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::FocusVisible,
+                                                                                st.focused
+                                                                                    && fret_ui::focus_visible::is_focus_visible(
+                                                                                        cx.app,
+                                                                                        Some(cx.window),
+                                                                                    ),
+                                                                            );
+
+                                                                            let row_bg_ref = item_bg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_fg_ref = item_fg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_bg =
+                                                                                row_bg_ref.resolve(theme);
+                                                                            let row_fg =
+                                                                                row_fg_ref.resolve(theme);
 
                                                                             let trailing = trailing.clone().or_else(|| {
                                                                                 command.as_ref().and_then(|cmd| {
@@ -2941,26 +3187,57 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut row_bg =
-                                                                                fret_core::Color::TRANSPARENT;
-                                                                            let mut row_fg = if variant
-                                                                                == DropdownMenuItemVariant::Destructive
-                                                                            {
-                                                                                destructive_fg
-                                                                            } else {
-                                                                                fg
-                                                                            };
-                                                                            if st.hovered || st.pressed || st.focused {
+                                                                            let mut states =
+                                                                                WidgetStates::empty();
+                                                                            states.set(
+                                                                                WidgetState::Disabled,
+                                                                                disabled,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Hovered,
+                                                                                st.hovered,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Active,
+                                                                                st.pressed,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Focused,
+                                                                                st.focused,
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::FocusVisible,
+                                                                                st.focused
+                                                                                    && fret_ui::focus_visible::is_focus_visible(
+                                                                                        cx.app,
+                                                                                        Some(cx.window),
+                                                                                    ),
+                                                                            );
+                                                                            states.set(
+                                                                                WidgetState::Open,
+                                                                                false,
+                                                                            );
+
+                                                                            let (bg_prop, fg_prop) =
                                                                                 if variant
                                                                                     == DropdownMenuItemVariant::Destructive
                                                                                 {
-                                                                                    row_bg = destructive_bg;
-                                                                                    row_fg = destructive_fg;
+                                                                                    (
+                                                                                        &destructive_item_bg,
+                                                                                        &destructive_item_fg,
+                                                                                    )
                                                                                 } else {
-                                                                                    row_bg = accent;
-                                                                                    row_fg = accent_fg;
-                                                                                }
-                                                                            }
+                                                                                    (&item_bg, &item_fg)
+                                                                                };
+
+                                                                            let row_bg_ref = bg_prop
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_fg_ref = fg_prop
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_bg =
+                                                                                row_bg_ref.resolve(theme);
 
                                                                             let trailing = trailing.clone().or_else(|| {
                                                                                 command.as_ref().and_then(|cmd| {
@@ -2994,13 +3271,14 @@ impl DropdownMenu {
                                                                                     } else if reserve_leading_slot_enabled {
                                                                                         row.push(menu_icon_slot_empty(cx));
                                                                                     }
+                                                                                    let row_fg_ref = row_fg_ref.clone();
                                                                                     let style = text_style.clone();
                                                                                     let mut text = ui::text(cx, label.clone())
                                                                                         .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
                                                                                         .text_size_px(style.size)
                                                                                         .font_weight(style.weight)
                                                                                         .nowrap()
-                                                                                        .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                                        .text_color(row_fg_ref);
 
                                                                                     if let Some(line_height) = style.line_height {
                                                                                         text = text.line_height_px(line_height);
@@ -3066,6 +3344,84 @@ impl DropdownMenu {
                                                         fg,
                                                         destructive_fg,
                                                         destructive_bg,
+                                                        item_bg: WidgetStateProperty::new(ColorRef::Color(
+                                                            fret_core::Color::TRANSPARENT,
+                                                        ))
+                                                        .when(WidgetStates::HOVERED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::ACTIVE, ColorRef::Color(accent))
+                                                        .when(WidgetStates::FOCUSED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::OPEN, ColorRef::Color(accent))
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        item_fg: WidgetStateProperty::new(ColorRef::Color(fg))
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
+                                                        destructive_item_bg: WidgetStateProperty::new(
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        destructive_item_fg: WidgetStateProperty::new(
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
                                                         row_height,
                                                         window_margin,
                                                         submenu_min_width,
@@ -3083,6 +3439,7 @@ impl DropdownMenu {
 
                                                     let rows = render_entries(
                                                         cx,
+                                                        &theme,
                                                         submenu_entries.as_ref(),
                                                         &mut item_ix,
                                                         &env,
