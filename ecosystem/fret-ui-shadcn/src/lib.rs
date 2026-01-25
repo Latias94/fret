@@ -204,7 +204,7 @@ pub use scroll_area::{
 };
 pub use select::{
     Select, SelectAlign, SelectEntry, SelectGroup, SelectItem, SelectLabel, SelectSeparator,
-    SelectSide, select,
+    SelectSide, SelectStyle, select,
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{

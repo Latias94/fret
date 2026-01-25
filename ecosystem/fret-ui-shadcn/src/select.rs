@@ -31,7 +31,8 @@ use fret_ui_kit::recipes::input::{
 };
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, WidgetState,
+    WidgetStateProperty, WidgetStates, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -531,6 +532,46 @@ struct BorderWidthOverride {
     left: Option<Px>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct SelectStyle {
+    pub trigger_border_color: Option<WidgetStateProperty<ColorRef>>,
+    pub option_background: Option<WidgetStateProperty<ColorRef>>,
+    pub option_foreground: Option<WidgetStateProperty<ColorRef>>,
+}
+
+impl SelectStyle {
+    pub fn trigger_border_color(
+        mut self,
+        trigger_border_color: WidgetStateProperty<ColorRef>,
+    ) -> Self {
+        self.trigger_border_color = Some(trigger_border_color);
+        self
+    }
+
+    pub fn option_background(mut self, option_background: WidgetStateProperty<ColorRef>) -> Self {
+        self.option_background = Some(option_background);
+        self
+    }
+
+    pub fn option_foreground(mut self, option_foreground: WidgetStateProperty<ColorRef>) -> Self {
+        self.option_foreground = Some(option_foreground);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.trigger_border_color.is_some() {
+            self.trigger_border_color = other.trigger_border_color;
+        }
+        if other.option_background.is_some() {
+            self.option_background = other.option_background;
+        }
+        if other.option_foreground.is_some() {
+            self.option_foreground = other.option_foreground;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Select {
     model: Model<Option<Arc<str>>>,
@@ -543,6 +584,7 @@ pub struct Select {
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: SelectStyle,
     align: SelectAlign,
     side: SelectSide,
     align_offset: Px,
@@ -569,6 +611,7 @@ impl Select {
             on_dismiss_request: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: SelectStyle::default(),
             align: SelectAlign::default(),
             side: SelectSide::default(),
             align_offset: Px(0.0),
@@ -662,6 +705,11 @@ impl Select {
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn style(mut self, style: SelectStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -762,6 +810,7 @@ impl Select {
             self.on_dismiss_request,
             self.chrome,
             self.layout,
+            self.style,
             self.align,
             self.side,
             self.align_offset,
@@ -800,6 +849,7 @@ pub fn select<H: UiHost>(
         None,
         ChromeRefinement::default(),
         layout,
+        SelectStyle::default(),
         SelectAlign::default(),
         SelectSide::default(),
         Px(0.0),
@@ -826,6 +876,7 @@ fn select_impl<H: UiHost>(
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: SelectStyle,
     align: SelectAlign,
     side: SelectSide,
     align_offset: Px,
@@ -964,6 +1015,9 @@ fn select_impl<H: UiHost>(
                 .or_else(|| theme.color_by_key("destructive/20"))
                 .unwrap_or(border_color);
         }
+
+        let style_for_trigger = style.clone();
+        let style_for_options = style;
 
         let enabled = !disabled;
         let item_len = count_items(entries);
@@ -1182,11 +1236,21 @@ fn select_impl<H: UiHost>(
                 host.request_redraw(action_cx.window);
             }));
 
-            let border_color = if st.hovered || st.pressed || st.focused {
-                alpha_mul(border_focus, 0.85)
-            } else {
-                border
-            };
+            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+            states.set(WidgetState::Open, is_open);
+
+            let highlight = ColorRef::Color(alpha_mul(border_focus, 0.85));
+            let default_border_color = WidgetStateProperty::new(ColorRef::Color(border))
+                .when(WidgetStates::HOVERED, highlight.clone())
+                .when(WidgetStates::ACTIVE, highlight.clone())
+                .when(WidgetStates::FOCUS_VISIBLE, highlight.clone())
+                .when(WidgetStates::OPEN, highlight);
+
+            let border_prop = style_for_trigger
+                .trigger_border_color
+                .as_ref()
+                .unwrap_or(&default_border_color);
+            let border_color = border_prop.resolve(states).clone().resolve(&theme);
 
             let mut props = PressableProps {
                 layout: trigger_layout,
@@ -1956,6 +2020,8 @@ fn select_impl<H: UiHost>(
                                                                                 mouse_open_guard_for_content.clone();
 
                                                                             let value_key = item.value.clone();
+                                                                            let style_for_item =
+                                                                                style_for_options.clone();
 
                                                                             out.push(cx.keyed(value_key, move |cx| {
                                                                                 cx.pressable_with_id(
@@ -2032,26 +2098,67 @@ fn select_impl<H: UiHost>(
                                                                                         .or_else(|| theme.color_by_key("accent.foreground"))
                                                                                         .unwrap_or_else(|| theme.color_required("accent.foreground"));
 
-                                                                                    let mut bg = Color::TRANSPARENT;
-                                                                                    let mut fg = if item_disabled {
-                                                                                        alpha_mul(fg_muted, 0.8)
-                                                                                    } else {
-                                                                                        fg
-                                                                                    };
-                                                                                    if is_active || st.hovered || st.pressed {
-                                                                                        bg = bg_accent;
-                                                                                        fg = fg_accent;
-                                                                                    }
+                                                                                    let item_enabled = !item_disabled;
+
+                                                                                    let mut states = WidgetStates::from_pressable(cx, st, item_enabled);
+                                                                                    states.set(WidgetState::Focused, is_active);
+                                                                                    states.set(WidgetState::Selected, is_selected);
+
+                                                                                    let default_bg = WidgetStateProperty::new(
+                                                                                        ColorRef::Color(Color::TRANSPARENT),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::FOCUSED,
+                                                                                        ColorRef::Color(bg_accent),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::HOVERED,
+                                                                                        ColorRef::Color(bg_accent),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::ACTIVE,
+                                                                                        ColorRef::Color(bg_accent),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        ColorRef::Color(Color::TRANSPARENT),
+                                                                                    );
+
+                                                                                    let default_fg = WidgetStateProperty::new(ColorRef::Color(fg))
+                                                                                        .when(
+                                                                                            WidgetStates::FOCUSED,
+                                                                                            ColorRef::Color(fg_accent),
+                                                                                        )
+                                                                                        .when(
+                                                                                            WidgetStates::HOVERED,
+                                                                                            ColorRef::Color(fg_accent),
+                                                                                        )
+                                                                                        .when(
+                                                                                            WidgetStates::ACTIVE,
+                                                                                            ColorRef::Color(fg_accent),
+                                                                                        )
+                                                                                        .when(
+                                                                                            WidgetStates::DISABLED,
+                                                                                            ColorRef::Color(alpha_mul(fg_muted, 0.8)),
+                                                                                        );
+
+                                                                                    let bg_prop = style_for_item
+                                                                                        .option_background
+                                                                                        .as_ref()
+                                                                                        .unwrap_or(&default_bg);
+                                                                                    let fg_prop = style_for_item
+                                                                                        .option_foreground
+                                                                                        .as_ref()
+                                                                                        .unwrap_or(&default_fg);
+
+                                                                                    let bg = bg_prop.resolve(states).clone().resolve(&theme);
+                                                                                    let fg = fg_prop.resolve(states).clone().resolve(&theme);
 
                                                                                     let icon = decl_icon::icon_with(
                                                                                         cx,
                                                                                         ids::ui::CHECK,
                                                                                         Some(Px(16.0)),
-                                                                                        Some(ColorRef::Color(if item_disabled {
-                                                                                            alpha_mul(fg_muted, 0.8)
-                                                                                        } else {
-                                                                                            fg
-                                                                                        })),
+                                                                                        Some(ColorRef::Color(fg)),
                                                                                     );
                                                                                     let icon = cx.opacity(
                                                                                         if is_selected { 1.0 } else { 0.0 },

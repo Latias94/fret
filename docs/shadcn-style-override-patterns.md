@@ -100,6 +100,7 @@ Recommended baseline:
 - `ButtonStyle`: `ecosystem/fret-ui-shadcn/src/button.rs`
 - `CheckboxStyle`: `ecosystem/fret-ui-shadcn/src/checkbox.rs`
 - `RadioGroupStyle`: `ecosystem/fret-ui-shadcn/src/radio_group.rs`
+- `SelectStyle`: `ecosystem/fret-ui-shadcn/src/select.rs`
 - `SwitchStyle`: `ecosystem/fret-ui-shadcn/src/switch.rs`
 - `ToggleStyle`: `ecosystem/fret-ui-shadcn/src/toggle.rs`
 - `TabsStyle`: `ecosystem/fret-ui-shadcn/src/tabs.rs`
