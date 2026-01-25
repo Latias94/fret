@@ -198,6 +198,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       vs. becoming a fully-detached island.
     - `removed_subtrees` include `trigger_element` / `trigger_element_root` and `trigger_element_root_path` to identify which element-runtime root produced the sweep.
     - `debug.all_layer_roots` (derived from `layers_in_paint_order`) makes the GC liveness roots explicit per snapshot.
+    - `element_runtime.view_cache_reuse_root_element_samples` includes a per-reuse-root `(root_element -> node)` mapping plus a bounded head/tail sample of the recorded subtree element list.
     - `element_runtime.node_entry_root_overwrites` records `NodeEntry.root` ownership overwrites (element + old/new root + debug paths + callsite).
     - If these fields are missing in a failing bundle, it usually means: the debug identity entry was pruned (not touched for `gc_lag_frames`), or the parent never issued a `set_children(..)` write in the current capture.
   - Evidence (pass under reuse + shell):
