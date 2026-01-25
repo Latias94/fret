@@ -415,6 +415,7 @@ pub enum OverlayStackEntryKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WindowOverlayStackEntry {
+    pub layer_id: fret_ui::tree::UiLayerId,
     pub kind: OverlayStackEntryKind,
     pub id: Option<GlobalElementId>,
     pub open: bool,
@@ -678,6 +679,7 @@ impl OverlayController {
                 (OverlayStackEntryKind::Unknown, None, false)
             };
             stack.push(WindowOverlayStackEntry {
+                layer_id: layer.id,
                 kind,
                 id,
                 open,

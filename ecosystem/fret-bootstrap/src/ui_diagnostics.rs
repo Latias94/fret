@@ -2485,6 +2485,9 @@ pub struct UiTreeDebugSnapshotV1 {
     /// to higher-level overlay concepts (popover/modal/tooltip/hover), without relying on logs.
     #[serde(default)]
     pub overlay_stack: Option<UiOverlayStackSnapshotV1>,
+    /// Cross-linked, script-friendly summary of how input arbitration relates to the overlay stack.
+    #[serde(default)]
+    pub overlay_arbitration_summary: Option<UiOverlayArbitrationSummaryV1>,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
     ///
     /// This is intended for debugging cross-surface inconsistencies (menus vs palette vs buttons)
@@ -2509,6 +2512,10 @@ impl UiTreeDebugSnapshotV1 {
         overlay_stack: Option<UiOverlayStackSnapshotV1>,
         max_gating_trace_entries: usize,
     ) -> Self {
+        let input_arbitration =
+            UiInputArbitrationSnapshotV1::from_snapshot(ui.input_arbitration_snapshot());
+        let overlay_arbitration_summary =
+            overlay_arbitration_summary(&input_arbitration, overlay_stack.as_ref());
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
             invalidation_walks: ui
@@ -2569,10 +2576,9 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiLayoutEngineSolveV1::from_solve)
                 .collect(),
-            input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
-                ui.input_arbitration_snapshot(),
-            ),
+            input_arbitration,
             overlay_stack,
+            overlay_arbitration_summary,
             command_gating_trace: command_gating_trace_for_window(
                 app,
                 window,
@@ -2614,6 +2620,9 @@ pub struct UiOverlayStackSnapshotV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiOverlayStackEntryV1 {
+    /// Numeric layer id (stable across `Debug` formatting changes; not stable between runs).
+    #[serde(default)]
+    pub layer_id: u64,
     #[serde(default)]
     pub kind: String,
     #[serde(default)]
@@ -2632,6 +2641,73 @@ pub struct UiOverlayStackEntryV1 {
     pub pointer_occlusion: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiOverlayArbitrationSummaryV1 {
+    #[serde(default)]
+    pub pointer_occlusion: String,
+    #[serde(default)]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    #[serde(default)]
+    pub topmost_pointer_occluding_overlay: Option<u64>,
+    #[serde(default)]
+    pub topmost_pointer_occluding_overlay_layer_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub topmost_pointer_occluding_overlay_path: Option<String>,
+    #[serde(default)]
+    pub mismatch: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mismatch_reason: Option<String>,
+}
+
+fn overlay_arbitration_summary(
+    input: &UiInputArbitrationSnapshotV1,
+    overlay: Option<&UiOverlayStackSnapshotV1>,
+) -> Option<UiOverlayArbitrationSummaryV1> {
+    let Some(overlay) = overlay else {
+        return None;
+    };
+
+    let topmost = overlay.topmost_pointer_occluding_overlay;
+    let topmost_layer_id = topmost.and_then(|id| {
+        overlay
+            .stack
+            .iter()
+            .find(|e| e.element == Some(id))
+            .map(|e| e.layer_id)
+    });
+
+    let mut mismatch = false;
+    let mut mismatch_reason: Option<String> = None;
+
+    if input.pointer_occlusion != "none" && topmost.is_none() {
+        mismatch = true;
+        mismatch_reason = Some(
+            "pointer occlusion is active but overlay stack has no occluding overlay".to_string(),
+        );
+    } else if input.pointer_occlusion_layer_id.is_some()
+        && topmost_layer_id.is_some()
+        && input.pointer_occlusion_layer_id != topmost_layer_id
+    {
+        mismatch = true;
+        mismatch_reason = Some(
+            "pointer occlusion layer id does not match topmost occluding overlay layer id"
+                .to_string(),
+        );
+    }
+
+    Some(UiOverlayArbitrationSummaryV1 {
+        pointer_occlusion: input.pointer_occlusion.clone(),
+        pointer_occlusion_layer_id: input.pointer_occlusion_layer_id,
+        topmost_pointer_occluding_overlay: topmost,
+        topmost_pointer_occluding_overlay_layer_id: topmost_layer_id,
+        topmost_pointer_occluding_overlay_path: overlay
+            .topmost_pointer_occluding_overlay_path
+            .clone(),
+        mismatch,
+        mismatch_reason,
+    })
+}
+
 fn overlay_stack_snapshot_for_window(
     app: &mut App,
     window: AppWindowId,
@@ -2645,6 +2721,7 @@ fn overlay_stack_snapshot_for_window(
         .stack
         .into_iter()
         .map(|e| UiOverlayStackEntryV1 {
+            layer_id: e.layer_id.data().as_ffi(),
             kind: format!("{:?}", e.kind),
             element: e.id.map(|id| id.0),
             element_path: None,
@@ -3978,6 +4055,55 @@ mod hit_test_scope_root_label_tests {
             snap.scope_roots
                 .iter()
                 .any(|r| r.kind == "layer_root" && r.label.contains("pointer_occlusion="))
+        );
+    }
+}
+
+#[cfg(test)]
+mod overlay_arbitration_summary_tests {
+    use super::*;
+
+    #[test]
+    fn overlay_arbitration_summary_detects_layer_id_mismatch() {
+        let input = UiInputArbitrationSnapshotV1 {
+            modal_barrier_root: None,
+            pointer_occlusion: "block_mouse_except_scroll".to_string(),
+            pointer_occlusion_layer_id: Some(123),
+            pointer_capture_active: false,
+            pointer_capture_layer_id: None,
+            pointer_capture_multiple_layers: false,
+        };
+
+        let overlay = UiOverlayStackSnapshotV1 {
+            stack: vec![UiOverlayStackEntryV1 {
+                layer_id: 456,
+                kind: "Popover".to_string(),
+                element: Some(1),
+                element_path: None,
+                open: true,
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                pointer_occlusion: "block_mouse_except_scroll".to_string(),
+            }],
+            topmost_overlay: Some(1),
+            topmost_overlay_path: None,
+            topmost_popover: Some(1),
+            topmost_popover_path: None,
+            topmost_modal: None,
+            topmost_modal_path: None,
+            topmost_pointer_occluding_overlay: Some(1),
+            topmost_pointer_occluding_overlay_path: None,
+        };
+
+        let summary = overlay_arbitration_summary(&input, Some(&overlay)).expect("summary");
+        assert!(summary.mismatch);
+        assert!(
+            summary
+                .mismatch_reason
+                .as_deref()
+                .is_some_and(|r| r.contains("does not match")),
+            "expected mismatch reason"
         );
     }
 }
