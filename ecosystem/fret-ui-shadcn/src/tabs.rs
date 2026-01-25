@@ -135,7 +135,7 @@ pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 #[derive(Debug, Clone, Default)]
 pub struct TabsStyle {
     pub trigger_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub trigger_foreground: Option<WidgetStateProperty<ColorRef>>,
+    pub trigger_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
     pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
@@ -148,7 +148,10 @@ impl TabsStyle {
         self
     }
 
-    pub fn trigger_foreground(mut self, trigger_foreground: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn trigger_foreground(
+        mut self,
+        trigger_foreground: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.trigger_foreground = Some(trigger_foreground);
         self
     }
@@ -890,28 +893,23 @@ impl Tabs {
                                             WidgetStates::from_pressable(cx, st, !item_disabled);
                                         states.set(WidgetState::Selected, active);
 
-                                        let fg_prop = style_override
+                                        let fg_ref = style_override
                                             .trigger_foreground
                                             .as_ref()
-                                            .unwrap_or(&default_trigger_fg);
-                                        let bg_prop = style_override
+                                            .and_then(|p| p.resolve(states).clone())
+                                            .unwrap_or_else(|| default_trigger_fg.resolve(states).clone());
+                                        let fg = fg_ref.resolve(&theme);
+                                        let bg = style_override
                                             .trigger_background
                                             .as_ref()
-                                            .unwrap_or(&default_trigger_bg);
-                                        let border_prop = style_override
+                                            .and_then(|p| p.resolve(states).clone())
+                                            .or_else(|| default_trigger_bg.resolve(states).clone())
+                                            .map(|bg| bg.resolve(&theme));
+                                        let border = style_override
                                             .trigger_border_color
                                             .as_ref()
-                                            .unwrap_or(&default_trigger_border);
-
-                                        let fg_ref = fg_prop.resolve(states).clone();
-                                        let fg = fg_ref.resolve(&theme);
-                                        let bg = bg_prop
-                                            .resolve(states)
-                                            .clone()
-                                            .map(|bg| bg.resolve(&theme));
-                                        let border = border_prop
-                                            .resolve(states)
-                                            .clone()
+                                            .and_then(|p| p.resolve(states).clone())
+                                            .or_else(|| default_trigger_border.resolve(states).clone())
                                             .map(|border| border.resolve(&theme))
                                             .unwrap_or(Color::TRANSPARENT);
 

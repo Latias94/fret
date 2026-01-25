@@ -107,7 +107,7 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
 #[derive(Debug, Clone, Default)]
 pub struct ToggleStyle {
     pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub foreground: Option<WidgetStateProperty<ColorRef>>,
+    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
     pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
@@ -117,7 +117,7 @@ impl ToggleStyle {
         self
     }
 
-    pub fn foreground(mut self, foreground: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.foreground = Some(foreground);
         self
     }
@@ -367,37 +367,25 @@ impl Toggle {
             cx.pressable_toggle_bool(&model);
 
             let on = cx.watch_model(&model).copied().unwrap_or(false);
-            let mut states = WidgetStates::empty();
-            states.set(WidgetState::Disabled, disabled);
+            let mut states = WidgetStates::from_pressable(cx, state, !disabled);
             states.set(WidgetState::Selected, on);
-            states.set(WidgetState::Active, state.pressed && !disabled);
-            states.set(
-                WidgetState::Hovered,
-                state.hovered && !state.pressed && !disabled,
-            );
-            states.set(WidgetState::Focused, state.focused && !disabled);
 
-            let focus_visible = state.focused
-                && !disabled
-                && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
-            states.set(WidgetState::FocusVisible, focus_visible);
-
-            let bg_prop = style_override
-                .background
-                .as_ref()
-                .unwrap_or(&default_background);
-            let fg_prop = style_override
+            let fg = style_override
                 .foreground
                 .as_ref()
-                .unwrap_or(&default_foreground);
-            let border_prop = style_override
+                .and_then(|p| p.resolve(states).clone())
+                .unwrap_or_else(|| default_foreground.resolve(states).clone());
+
+            let bg = style_override
+                .background
+                .as_ref()
+                .and_then(|p| p.resolve(states).clone())
+                .or_else(|| default_background.resolve(states).clone());
+            let border_color = style_override
                 .border_color
                 .as_ref()
-                .unwrap_or(&default_border_color);
-
-            let bg = bg_prop.resolve(states).clone();
-            let fg = fg_prop.resolve(states).clone();
-            let border_color = border_prop.resolve(states).clone();
+                .and_then(|p| p.resolve(states).clone())
+                .or_else(|| default_border_color.resolve(states).clone());
 
             let mut chrome_props = decl_style::container_props(
                 &theme,

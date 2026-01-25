@@ -62,8 +62,8 @@ fn checkbox_ring_color(theme: &Theme) -> Color {
 #[derive(Debug, Clone, Default)]
 pub struct CheckboxStyle {
     pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub border_color: Option<WidgetStateProperty<ColorRef>>,
-    pub foreground: Option<WidgetStateProperty<ColorRef>>,
+    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
 impl CheckboxStyle {
@@ -72,12 +72,12 @@ impl CheckboxStyle {
         self
     }
 
-    pub fn border_color(mut self, border_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.border_color = Some(border_color);
         self
     }
 
-    pub fn foreground(mut self, foreground: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.foreground = Some(foreground);
         self
     }
@@ -313,26 +313,26 @@ impl Checkbox {
                 let mut states = WidgetStates::from_pressable(cx, st, !disabled);
                 states.set(WidgetState::Selected, is_on);
 
-                let bg_prop = style_override
+                let bg = style_override
                     .background
                     .as_ref()
-                    .unwrap_or(&default_background);
-                let border_prop = style_override
-                    .border_color
-                    .as_ref()
-                    .unwrap_or(&default_border_color);
-                let fg_prop = style_override
-                    .foreground
-                    .as_ref()
-                    .unwrap_or(&default_foreground);
-
-                let bg = bg_prop
-                    .resolve(states)
-                    .clone()
+                    .and_then(|p| p.resolve(states).clone())
+                    .or_else(|| default_background.resolve(states).clone())
                     .map(|bg| bg.resolve(&theme))
                     .unwrap_or(Color::TRANSPARENT);
-                let border_color = border_prop.resolve(states).clone().resolve(&theme);
-                let fg = fg_prop.resolve(states).clone().resolve(&theme);
+
+                let border_color = style_override
+                    .border_color
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| default_border_color.resolve(states).clone())
+                    .resolve(&theme);
+                let fg = style_override
+                    .foreground
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| default_foreground.resolve(states).clone())
+                    .resolve(&theme);
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,

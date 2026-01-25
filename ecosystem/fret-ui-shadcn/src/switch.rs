@@ -77,23 +77,29 @@ fn switch_ring_color(theme: &Theme) -> Color {
 
 #[derive(Debug, Clone, Default)]
 pub struct SwitchStyle {
-    pub track_background: Option<WidgetStateProperty<ColorRef>>,
-    pub thumb_background: Option<WidgetStateProperty<ColorRef>>,
-    pub border_color: Option<WidgetStateProperty<ColorRef>>,
+    pub track_background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub thumb_background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
 impl SwitchStyle {
-    pub fn track_background(mut self, track_background: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn track_background(
+        mut self,
+        track_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.track_background = Some(track_background);
         self
     }
 
-    pub fn thumb_background(mut self, thumb_background: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn thumb_background(
+        mut self,
+        thumb_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.thumb_background = Some(thumb_background);
         self
     }
 
-    pub fn border_color(mut self, border_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.border_color = Some(border_color);
         self
     }
@@ -309,22 +315,24 @@ impl Switch {
                 let mut states = WidgetStates::from_pressable(cx, st, !disabled);
                 states.set(WidgetState::Selected, on);
 
-                let track_prop = style_override
+                let bg = style_override
                     .track_background
                     .as_ref()
-                    .unwrap_or(&default_track_background);
-                let thumb_prop = style_override
-                    .thumb_background
-                    .as_ref()
-                    .unwrap_or(&default_thumb_background);
-                let border_prop = style_override
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| default_track_background.resolve(states).clone())
+                    .resolve(&theme);
+                let border_color = style_override
                     .border_color
                     .as_ref()
-                    .unwrap_or(&default_border_color);
-
-                let bg = track_prop.resolve(states).clone().resolve(&theme);
-                let border_color = border_prop.resolve(states).clone().resolve(&theme);
-                let thumb_color = thumb_prop.resolve(states).clone().resolve(&theme);
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| default_border_color.resolve(states).clone())
+                    .resolve(&theme);
+                let thumb_color = style_override
+                    .thumb_background
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| default_thumb_background.resolve(states).clone())
+                    .resolve(&theme);
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,

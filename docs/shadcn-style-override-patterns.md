@@ -33,17 +33,23 @@ Expose a per-control `*Style` struct that:
 
 For interactive controls, prefer:
 
-- `Option<WidgetStateProperty<T>>`
+- `Option<WidgetStateProperty<Option<T>>>`
 
-Examples: background, foreground, border color, ring color.
+The inner `Option<T>` enables **partial overrides**:
+
+- `Some(T)`: override the slot for the current state
+- `None`: do not override; fall back to the widget's default style for this state
+
+Component code should apply this at resolve-time (resolve override → `Option<T>`; if `None`, use
+the default property's resolved value).
 
 ### 2) Optional surfaces (background may be absent)
 
-If the slot itself is optional (e.g. transparent background vs “unset”), prefer:
+If the final widget output is “optional” (e.g. background can be absent), still prefer the same
+shape and treat “no background” as a policy choice:
 
-- `Option<WidgetStateProperty<Option<T>>>`
-
-This lets callers explicitly override a state to `None` without inventing a sentinel value.
+- use theme tokens and fallbacks for defaults,
+- use transparent colors when you need an explicit “clear” outcome (avoid `Option<Option<T>>`).
 
 ### 3) Non-stateful values
 

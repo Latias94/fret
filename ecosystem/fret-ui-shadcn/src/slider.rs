@@ -25,13 +25,13 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 #[derive(Debug, Clone)]
 pub struct SliderStyle {
     pub track_height: Option<Px>,
-    pub track_background: Option<WidgetStateProperty<ColorRef>>,
-    pub track_border_color: Option<WidgetStateProperty<ColorRef>>,
-    pub range_background: Option<WidgetStateProperty<ColorRef>>,
+    pub track_background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub track_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub range_background: Option<WidgetStateProperty<Option<ColorRef>>>,
     pub thumb_size: Option<Px>,
-    pub thumb_background: Option<WidgetStateProperty<ColorRef>>,
-    pub thumb_border_color: Option<WidgetStateProperty<ColorRef>>,
-    pub thumb_ring_color: Option<WidgetStateProperty<ColorRef>>,
+    pub thumb_background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub thumb_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub thumb_ring_color: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
 impl Default for SliderStyle {
@@ -55,17 +55,26 @@ impl SliderStyle {
         self
     }
 
-    pub fn track_background(mut self, track_background: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn track_background(
+        mut self,
+        track_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.track_background = Some(track_background);
         self
     }
 
-    pub fn track_border_color(mut self, track_border_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn track_border_color(
+        mut self,
+        track_border_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.track_border_color = Some(track_border_color);
         self
     }
 
-    pub fn range_background(mut self, range_background: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn range_background(
+        mut self,
+        range_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.range_background = Some(range_background);
         self
     }
@@ -75,17 +84,26 @@ impl SliderStyle {
         self
     }
 
-    pub fn thumb_background(mut self, thumb_background: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn thumb_background(
+        mut self,
+        thumb_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.thumb_background = Some(thumb_background);
         self
     }
 
-    pub fn thumb_border_color(mut self, thumb_border_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn thumb_border_color(
+        mut self,
+        thumb_border_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.thumb_border_color = Some(thumb_border_color);
         self
     }
 
-    pub fn thumb_ring_color(mut self, thumb_ring_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn thumb_ring_color(
+        mut self,
+        thumb_ring_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.thumb_ring_color = Some(thumb_ring_color);
         self
     }
@@ -291,13 +309,13 @@ pub fn slider<H: UiHost>(
 
         let SliderStyle {
             track_height: track_height_override,
-            track_background,
-            track_border_color,
-            range_background,
+            track_background: track_background_override,
+            track_border_color: track_border_color_override,
+            range_background: range_background_override,
             thumb_size: thumb_size_override,
-            thumb_background,
-            thumb_border_color,
-            thumb_ring_color,
+            thumb_background: thumb_background_override,
+            thumb_border_color: thumb_border_color_override,
+            thumb_ring_color: thumb_ring_color_override,
         } = style;
 
         let track_height = track_height_override.unwrap_or_else(|| {
@@ -342,13 +360,6 @@ pub fn slider<H: UiHost>(
             )
             .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_color));
         let default_thumb_ring_color = WidgetStateProperty::new(ColorRef::Color(ring_color));
-
-        let track_background = track_background.unwrap_or(default_track_background);
-        let track_border_color = track_border_color.unwrap_or(default_track_border_color);
-        let range_background = range_background.unwrap_or(default_range_background);
-        let thumb_background = thumb_background.unwrap_or(default_thumb_background);
-        let thumb_border_color = thumb_border_color.unwrap_or(default_thumb_border_color);
-        let thumb_ring_color = thumb_ring_color.unwrap_or(default_thumb_ring_color);
 
         let mut root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
         root_layout.overflow = fret_ui::element::Overflow::Visible;
@@ -534,17 +545,20 @@ pub fn slider<H: UiHost>(
             root_states.set(WidgetState::Hovered, is_hovered && enabled);
             root_states.set(WidgetState::Active, is_dragging && enabled);
 
-            let track_bg = track_background
-                .resolve(root_states)
-                .clone()
+            let track_bg = track_background_override
+                .as_ref()
+                .and_then(|p| p.resolve(root_states).clone())
+                .unwrap_or_else(|| default_track_background.resolve(root_states).clone())
                 .resolve(&theme);
-            let track_border_color = track_border_color
-                .resolve(root_states)
-                .clone()
+            let track_border_color = track_border_color_override
+                .as_ref()
+                .and_then(|p| p.resolve(root_states).clone())
+                .unwrap_or_else(|| default_track_border_color.resolve(root_states).clone())
                 .resolve(&theme);
-            let range_bg = range_background
-                .resolve(root_states)
-                .clone()
+            let range_bg = range_background_override
+                .as_ref()
+                .and_then(|p| p.resolve(root_states).clone())
+                .unwrap_or_else(|| default_range_background.resolve(root_states).clone())
                 .resolve(&theme);
 
             let track_border = Edges::all(Px(0.0));
@@ -807,13 +821,19 @@ pub fn slider<H: UiHost>(
                                     thumb_states
                                         .set(WidgetState::FocusVisible, focus_visible && enabled);
 
-                                    let bg = thumb_background
-                                        .resolve(thumb_states)
-                                        .clone()
+                                    let bg = thumb_background_override
+                                        .as_ref()
+                                        .and_then(|p| p.resolve(thumb_states).clone())
+                                        .unwrap_or_else(|| {
+                                            default_thumb_background.resolve(thumb_states).clone()
+                                        })
                                         .resolve(&theme);
-                                    let border_color = thumb_border_color
-                                        .resolve(thumb_states)
-                                        .clone()
+                                    let border_color = thumb_border_color_override
+                                        .as_ref()
+                                        .and_then(|p| p.resolve(thumb_states).clone())
+                                        .unwrap_or_else(|| {
+                                            default_thumb_border_color.resolve(thumb_states).clone()
+                                        })
                                         .resolve(&theme);
 
                                     let layout_fill = LayoutStyle {
@@ -840,9 +860,12 @@ pub fn slider<H: UiHost>(
                                         return vec![cx.container(thumb, |_| Vec::new())];
                                     }
 
-                                    let ring_color = thumb_ring_color
-                                        .resolve(thumb_states)
-                                        .clone()
+                                    let ring_color = thumb_ring_color_override
+                                        .as_ref()
+                                        .and_then(|p| p.resolve(thumb_states).clone())
+                                        .unwrap_or_else(|| {
+                                            default_thumb_ring_color.resolve(thumb_states).clone()
+                                        })
                                         .resolve(&theme);
                                     let ring = ContainerProps {
                                         layout: layout_fill,

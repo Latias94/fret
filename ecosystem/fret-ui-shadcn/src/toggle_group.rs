@@ -444,8 +444,8 @@ impl ToggleGroup {
             )
             .when(WidgetStates::DISABLED, None);
 
-        let item_background_prop = item_background.unwrap_or(default_item_background);
-        let item_border_color_prop = item_border_color.unwrap_or(default_item_border_color);
+        let item_background_override = item_background;
+        let item_border_color_override = item_border_color;
 
         let mut group_props = decl_style::container_props(&theme, chrome, layout);
         group_props.corner_radii = Corners::all(radius);
@@ -476,8 +476,10 @@ impl ToggleGroup {
         };
 
         cx.container(group_props, move |cx| {
-            let item_background_prop = item_background_prop.clone();
-            let item_border_color_prop = item_border_color_prop.clone();
+            let item_background_override = item_background_override.clone();
+            let item_border_color_override = item_border_color_override.clone();
+            let default_item_background = default_item_background.clone();
+            let default_item_border_color = default_item_border_color.clone();
 
             let flex = FlexProps {
                 direction: match orientation {
@@ -588,8 +590,10 @@ impl ToggleGroup {
                     );
 
                     let item_theme = theme.clone();
-                    let item_background_prop = item_background_prop.clone();
-                    let item_border_color_prop = item_border_color_prop.clone();
+                    let item_background_override = item_background_override.clone();
+                    let item_border_color_override = item_border_color_override.clone();
+                    let default_item_background = default_item_background.clone();
+                    let default_item_border_color = default_item_border_color.clone();
 
                     out.push(cx.keyed(value.clone(), move |cx| {
                         cx.pressable(
@@ -629,12 +633,18 @@ impl ToggleGroup {
                                 states.set(WidgetState::Selected, on);
 
                                 let mut props = base_props;
-                                let bg = item_background_prop.resolve(states).clone();
+                                let bg = item_background_override
+                                    .as_ref()
+                                    .and_then(|p| p.resolve(states).clone())
+                                    .or_else(|| default_item_background.resolve(states).clone());
                                 if let Some(bg) = bg {
                                     props.background = Some(bg.resolve(&item_theme));
                                 }
 
-                                let border_color = item_border_color_prop.resolve(states).clone();
+                                let border_color = item_border_color_override
+                                    .as_ref()
+                                    .and_then(|p| p.resolve(states).clone())
+                                    .or_else(|| default_item_border_color.resolve(states).clone());
                                 if let Some(border_color) = border_color {
                                     props.border_color = Some(border_color.resolve(&item_theme));
                                 }

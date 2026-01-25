@@ -3,6 +3,7 @@
 Contract gate:
 
 - `docs/adr/1158-state-driven-style-resolution-v1.md`
+- `docs/adr/1159-ecosystem-style-override-surface-v1.md`
 
 ## Goal
 
@@ -41,6 +42,9 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
   - `*Style` structs with `Option<WidgetStateProperty<...>>` fields.
   - `merged()` semantics (right-biased overrides, no deep merge).
   - Per-control `style(...)` builder method.
+
+- [x] SDSR-030 Standardize stateful `*Style` slots to `WidgetStateProperty<Option<T>>` and resolve-time fallback (Flutter-style partial overrides).
+- [x] SDSR-031 Add ADR 1159 for the ecosystem `*Style` override surface and update `docs/shadcn-style-override-patterns.md`.
 
 ### P1 — Migrate Core Interactive Controls
 

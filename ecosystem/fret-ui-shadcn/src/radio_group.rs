@@ -125,23 +125,29 @@ impl RadioGroupItem {
 
 #[derive(Debug, Clone, Default)]
 pub struct RadioGroupStyle {
-    pub icon_border_color: Option<WidgetStateProperty<ColorRef>>,
-    pub label_color: Option<WidgetStateProperty<ColorRef>>,
-    pub indicator_color: Option<WidgetStateProperty<ColorRef>>,
+    pub icon_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub label_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub indicator_color: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
 impl RadioGroupStyle {
-    pub fn icon_border_color(mut self, icon_border_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn icon_border_color(
+        mut self,
+        icon_border_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.icon_border_color = Some(icon_border_color);
         self
     }
 
-    pub fn label_color(mut self, label_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn label_color(mut self, label_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.label_color = Some(label_color);
         self
     }
 
-    pub fn indicator_color(mut self, indicator_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn indicator_color(
+        mut self,
+        indicator_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.indicator_color = Some(indicator_color);
         self
     }
@@ -404,24 +410,28 @@ impl RadioGroup {
                                             WidgetStates::from_pressable(cx, st, item_enabled);
                                         states.set(WidgetState::Selected, checked);
 
-                                        let border_prop = style_override
+                                        let border_color = style_override
                                             .icon_border_color
                                             .as_ref()
-                                            .unwrap_or(&default_icon_border_color);
-                                        let label_prop = style_override
+                                            .and_then(|p| p.resolve(states).clone())
+                                            .unwrap_or_else(|| {
+                                                default_icon_border_color.resolve(states).clone()
+                                            })
+                                            .resolve(&theme);
+                                        let fg = style_override
                                             .label_color
                                             .as_ref()
-                                            .unwrap_or(&default_label_color);
-                                        let indicator_prop = style_override
+                                            .and_then(|p| p.resolve(states).clone())
+                                            .unwrap_or_else(|| default_label_color.resolve(states).clone())
+                                            .resolve(&theme);
+                                        let dot = style_override
                                             .indicator_color
                                             .as_ref()
-                                            .unwrap_or(&default_indicator_color);
-
-                                        let border_color =
-                                            border_prop.resolve(states).clone().resolve(&theme);
-                                        let fg = label_prop.resolve(states).clone().resolve(&theme);
-                                        let dot =
-                                            indicator_prop.resolve(states).clone().resolve(&theme);
+                                            .and_then(|p| p.resolve(states).clone())
+                                            .unwrap_or_else(|| {
+                                                default_indicator_color.resolve(states).clone()
+                                            })
+                                            .resolve(&theme);
 
                                         let icon_layout = decl_style::layout_style(
                                             &theme,

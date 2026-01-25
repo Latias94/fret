@@ -11,28 +11,28 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize,
-    Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
+    Space, WidgetStateProperty, WidgetStates, ui,
 };
 
 #[derive(Debug, Clone, Default)]
 pub struct ButtonStyle {
-    pub background: Option<WidgetStateProperty<ColorRef>>,
-    pub foreground: Option<WidgetStateProperty<ColorRef>>,
-    pub border_color: Option<WidgetStateProperty<ColorRef>>,
+    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
 impl ButtonStyle {
-    pub fn background(mut self, background: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.background = Some(background);
         self
     }
 
-    pub fn foreground(mut self, foreground: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.foreground = Some(foreground);
         self
     }
 
-    pub fn border_color(mut self, border_color: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.border_color = Some(border_color);
         self
     }
@@ -555,32 +555,23 @@ impl Button {
                     cx.pressable_toggle_bool(&model);
                 }
 
-                let mut states = WidgetStates::empty();
-                states.set(WidgetState::Disabled, disabled);
-                states.set(WidgetState::Hovered, st.hovered && !disabled);
-                states.set(WidgetState::Active, st.pressed && !disabled);
-                states.set(WidgetState::Focused, st.focused && !disabled);
+                let states = WidgetStates::from_pressable(cx, st, !disabled);
 
-                let focus_visible =
-                    st.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
-                states.set(WidgetState::FocusVisible, focus_visible && !disabled);
-
-                let bg_prop = style_override
+                let bg = style_override
                     .background
                     .as_ref()
-                    .unwrap_or(&variant_style.background);
-                let fg_prop = style_override
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| variant_style.background.resolve(states).clone());
+                let fg = style_override
                     .foreground
                     .as_ref()
-                    .unwrap_or(&variant_style.foreground);
-                let border_prop = style_override
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| variant_style.foreground.resolve(states).clone());
+                let border_color = style_override
                     .border_color
                     .as_ref()
-                    .unwrap_or(&variant_style.border_color);
-
-                let bg = bg_prop.resolve(states).clone();
-                let fg = fg_prop.resolve(states).clone();
-                let border_color = border_prop.resolve(states).clone();
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| variant_style.border_color.resolve(states).clone());
 
                 let padding = if is_icon {
                     ChromeRefinement::default()

@@ -534,26 +534,32 @@ struct BorderWidthOverride {
 
 #[derive(Debug, Clone, Default)]
 pub struct SelectStyle {
-    pub trigger_border_color: Option<WidgetStateProperty<ColorRef>>,
-    pub option_background: Option<WidgetStateProperty<ColorRef>>,
-    pub option_foreground: Option<WidgetStateProperty<ColorRef>>,
+    pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub option_background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub option_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
 }
 
 impl SelectStyle {
     pub fn trigger_border_color(
         mut self,
-        trigger_border_color: WidgetStateProperty<ColorRef>,
+        trigger_border_color: WidgetStateProperty<Option<ColorRef>>,
     ) -> Self {
         self.trigger_border_color = Some(trigger_border_color);
         self
     }
 
-    pub fn option_background(mut self, option_background: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn option_background(
+        mut self,
+        option_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.option_background = Some(option_background);
         self
     }
 
-    pub fn option_foreground(mut self, option_foreground: WidgetStateProperty<ColorRef>) -> Self {
+    pub fn option_foreground(
+        mut self,
+        option_foreground: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
         self.option_foreground = Some(option_foreground);
         self
     }
@@ -580,6 +586,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
@@ -607,6 +614,7 @@ impl Select {
             placeholder: Arc::from("Select..."),
             disabled: false,
             a11y_label: None,
+            trigger_test_id: None,
             aria_invalid: false,
             on_dismiss_request: None,
             chrome: ChromeRefinement::default(),
@@ -681,6 +689,11 @@ impl Select {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
         self
     }
 
@@ -806,6 +819,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.a11y_label,
+            self.trigger_test_id,
             self.aria_invalid,
             self.on_dismiss_request,
             self.chrome,
@@ -845,6 +859,7 @@ pub fn select<H: UiHost>(
         placeholder,
         disabled,
         a11y_label,
+        None,
         false,
         None,
         ChromeRefinement::default(),
@@ -872,6 +887,7 @@ fn select_impl<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    trigger_test_id: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
@@ -1246,11 +1262,12 @@ fn select_impl<H: UiHost>(
                 .when(WidgetStates::FOCUS_VISIBLE, highlight.clone())
                 .when(WidgetStates::OPEN, highlight);
 
-            let border_prop = style_for_trigger
+            let border_color = style_for_trigger
                 .trigger_border_color
                 .as_ref()
-                .unwrap_or(&default_border_color);
-            let border_color = border_prop.resolve(states).clone().resolve(&theme);
+                .and_then(|p| p.resolve(states).clone())
+                .unwrap_or_else(|| default_border_color.resolve(states).clone())
+                .resolve(&theme);
 
             let mut props = PressableProps {
                 layout: trigger_layout,
@@ -1269,6 +1286,7 @@ fn select_impl<H: UiHost>(
             let listbox_id_for_trigger =
                 radix_select::select_listbox_semantics_id(cx, overlay_root_name.as_str());
             props.a11y.controls_element = Some(listbox_id_for_trigger.0);
+            props.a11y.test_id = trigger_test_id.clone();
 
             if motion.present && enabled {
                 let debug_item_aligned = std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
@@ -2142,17 +2160,18 @@ fn select_impl<H: UiHost>(
                                                                                             ColorRef::Color(alpha_mul(fg_muted, 0.8)),
                                                                                         );
 
-                                                                                    let bg_prop = style_for_item
+                                                                                    let bg = style_for_item
                                                                                         .option_background
                                                                                         .as_ref()
-                                                                                        .unwrap_or(&default_bg);
-                                                                                    let fg_prop = style_for_item
+                                                                                        .and_then(|p| p.resolve(states).clone())
+                                                                                        .unwrap_or_else(|| default_bg.resolve(states).clone())
+                                                                                        .resolve(&theme);
+                                                                                    let fg = style_for_item
                                                                                         .option_foreground
                                                                                         .as_ref()
-                                                                                        .unwrap_or(&default_fg);
-
-                                                                                    let bg = bg_prop.resolve(states).clone().resolve(&theme);
-                                                                                    let fg = fg_prop.resolve(states).clone().resolve(&theme);
+                                                                                        .and_then(|p| p.resolve(states).clone())
+                                                                                        .unwrap_or_else(|| default_fg.resolve(states).clone())
+                                                                                        .resolve(&theme);
 
                                                                                     let icon = decl_icon::icon_with(
                                                                                         cx,
