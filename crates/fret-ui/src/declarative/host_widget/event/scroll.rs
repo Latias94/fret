@@ -17,7 +17,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         fret_core::PointerEvent::Wheel {
             delta, modifiers, ..
         } => {
-            let consumed = crate::elements::with_element_state(
+            let (consumed, needs_visible_range_refresh) = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
                 this.element,
@@ -67,9 +67,18 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                                     .set_offset(fret_core::Point::new(next, prev.y));
                             }
                         }
-                        true
+                        let needs_refresh = state
+                            .metrics
+                            .visible_range(next, viewport, props.overscan)
+                            .is_some_and(|range| {
+                                crate::virtual_list::virtual_list_needs_visible_range_refresh(
+                                    &props.visible_items,
+                                    range,
+                                )
+                            });
+                        (true, needs_refresh)
                     } else {
-                        false
+                        (false, false)
                     }
                 },
             );
@@ -84,6 +93,13 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                 // hit-testing must be invalidated to refresh coordinate mapping under the
                 // updated offset. This does not force a layout pass.
                 cx.invalidate_self(Invalidation::HitTestOnly);
+                if needs_visible_range_refresh {
+                    // In view-cache mode, per-frame VirtualList `visible_items` are computed during
+                    // the declarative render pass. If the scroll delta escapes the currently
+                    // mounted range, force a one-shot rerender of the nearest cache root so the
+                    // visible range can be rebuilt.
+                    cx.notify();
+                }
                 cx.request_redraw();
                 cx.stop_propagation();
             }

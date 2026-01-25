@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 #[test]
@@ -429,6 +430,222 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
         after_push_transforms[0].contains("-20"),
         "expected scroll transform to include the wheel delta (-20px): {:?}",
         after_push_transforms[0]
+    );
+}
+
+#[test]
+fn virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let render_calls: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        render_calls: Arc<AtomicUsize>,
+    ) -> AnyElement {
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Fill;
+        cache.cache_key = 1;
+        cx.view_cache(cache, move |cx| {
+            render_calls.fetch_add(1, Ordering::SeqCst);
+            vec![cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                        .collect::<Vec<_>>()
+                },
+            )]
+        })
+    }
+
+    // Frame 0: establish viewport size so the visible range can be computed.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: mount initial visible rows (0..=4).
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    assert_eq!(ui.children(list_node).len(), 5);
+    app.advance_frame();
+
+    // Frame 2: allow any one-time layout-driven invalidations (viewport/content size) to settle.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 3: cache hit; render closure should be skipped.
+    let calls_before_wheel = render_calls.load(Ordering::SeqCst);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel,
+        "expected view-cache root to be a cache hit before wheel scroll"
+    );
+    let cache_node = ui.children(root)[0];
+    let _list_node = ui.children(cache_node)[0];
+
+    // Wheel-scroll far enough that the desired visible range no longer overlaps the mounted rows.
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: fret_core::Point::new(Px(5.0), Px(5.0)),
+            delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        scroll_handle.offset().y,
+        Px(80.0),
+        "expected wheel scroll to update the bound scroll handle"
+    );
+
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel,
+        "expected wheel scroll to schedule rerender without breaking the current cache-hit frame"
+    );
+    assert!(
+        !ui.should_reuse_view_cache_node(cache_node),
+        "expected wheel scroll to notify the view-cache root for a one-shot rerender"
+    );
+    app.advance_frame();
+
+    // Frame 4: rerender should run once to rebuild the visible range.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel.saturating_add(1),
+        "expected exactly one rerender after visible-range refresh"
+    );
+
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![8, 9, 10, 11, 12]
+    );
+    assert_eq!(ui.children(list_node).len(), 5);
+
+    app.advance_frame();
+
+    // Frame 5: allow any one-time post-refresh invalidations to settle.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 6: cache hit again (steady-state).
+    let calls_after_settle = render_calls.load(Ordering::SeqCst);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_after_settle,
+        "expected view-cache root to return to cache-hit steady state"
     );
 }
 
