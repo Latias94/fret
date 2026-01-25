@@ -104,6 +104,7 @@ Recommended baseline:
 - `SliderStyle`: `ecosystem/fret-ui-shadcn/src/slider.rs`
 - `SwitchStyle`: `ecosystem/fret-ui-shadcn/src/switch.rs`
 - `ToggleStyle`: `ecosystem/fret-ui-shadcn/src/toggle.rs`
+- `ToggleGroupStyle`: `ecosystem/fret-ui-shadcn/src/toggle_group.rs`
 - `TabsStyle`: `ecosystem/fret-ui-shadcn/src/tabs.rs`
 - `InputStyle` (focus-specific v0 shape): `ecosystem/fret-ui-shadcn/src/input.rs`
 
