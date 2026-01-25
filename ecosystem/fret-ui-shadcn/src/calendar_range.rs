@@ -284,7 +284,7 @@ impl CalendarRange {
                                 };
                                 cx.text_props(props)
                             })
-                            .collect()
+                            .collect::<Vec<_>>()
                     },
                 );
 

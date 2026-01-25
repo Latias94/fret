@@ -60,9 +60,10 @@ impl<H, F> UiPatchTarget for FlexBox<H, F> {
 impl<H, F> UiSupportsChrome for FlexBox<H, F> {}
 impl<H, F> UiSupportsLayout for FlexBox<H, F> {}
 
-impl<H: UiHost, F> FlexBox<H, F>
+impl<H: UiHost, F, I> FlexBox<H, F>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
@@ -91,23 +92,25 @@ where
 ///
 /// Usage:
 /// - `ui::h_flex(cx, |cx| vec![...]).gap(Space::N2).px_2().into_element(cx)`
-pub fn h_flex<H: UiHost, F>(
+pub fn h_flex<H: UiHost, F, I>(
     _cx: &mut ElementContext<'_, H>,
     children: F,
 ) -> UiBuilder<FlexBox<H, F>>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(FlexBox::new(Axis::Horizontal, children))
 }
 
 /// Returns a patchable vertical flex layout builder.
-pub fn v_flex<H: UiHost, F>(
+pub fn v_flex<H: UiHost, F, I>(
     _cx: &mut ElementContext<'_, H>,
     children: F,
 ) -> UiBuilder<FlexBox<H, F>>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(FlexBox::new(Axis::Vertical, children))
 }
@@ -145,9 +148,10 @@ impl<H, F> UiPatchTarget for ContainerBox<H, F> {
 impl<H, F> UiSupportsChrome for ContainerBox<H, F> {}
 impl<H, F> UiSupportsLayout for ContainerBox<H, F> {}
 
-impl<H: UiHost, F> ContainerBox<H, F>
+impl<H: UiHost, F, I> ContainerBox<H, F>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
@@ -161,12 +165,13 @@ where
 ///
 /// Usage:
 /// - `ui::container(cx, |cx| vec![...]).px_2().into_element(cx)`
-pub fn container<H: UiHost, F>(
+pub fn container<H: UiHost, F, I>(
     _cx: &mut ElementContext<'_, H>,
     children: F,
 ) -> UiBuilder<ContainerBox<H, F>>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(ContainerBox::new(children))
 }
@@ -205,9 +210,10 @@ impl<H, F> UiPatchTarget for StackBox<H, F> {
 impl<H, F> UiSupportsChrome for StackBox<H, F> {}
 impl<H, F> UiSupportsLayout for StackBox<H, F> {}
 
-impl<H: UiHost, F> StackBox<H, F>
+impl<H: UiHost, F, I> StackBox<H, F>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
@@ -224,12 +230,13 @@ where
 ///
 /// Usage:
 /// - `ui::stack(cx, |cx| vec![...]).inset(Space::N2).into_element(cx)`
-pub fn stack<H: UiHost, F>(
+pub fn stack<H: UiHost, F, I>(
     _cx: &mut ElementContext<'_, H>,
     children: F,
 ) -> UiBuilder<StackBox<H, F>>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(StackBox::new(children))
 }
