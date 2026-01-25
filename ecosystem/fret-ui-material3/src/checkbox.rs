@@ -22,6 +22,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::tokens::checkbox as checkbox_tokens;
 
 #[derive(Clone)]
 pub struct Checkbox {
@@ -78,7 +79,7 @@ impl Checkbox {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let size = checkbox_size_tokens(&theme);
+            let size = checkbox_tokens::size_tokens(&theme);
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -147,15 +148,19 @@ impl Checkbox {
                             .unwrap_or(false);
 
                         let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                        let chrome = checkbox_chrome(&theme, checked, enabled, interaction);
+                        let chrome = checkbox_tokens::chrome(&theme, checked, enabled, interaction);
 
-                        let state_layer_target = checkbox_state_layer_target_opacity(
-                            &theme, enabled, is_pressed, is_hovered, is_focused,
+                        let state_layer_target = checkbox_tokens::state_layer_target_opacity(
+                            &theme,
+                            checked,
+                            enabled,
+                            interaction,
                         );
                         let state_layer_color =
-                            checkbox_state_layer_color(&theme, checked, interaction);
+                            checkbox_tokens::state_layer_color(&theme, checked, interaction);
 
-                        let ripple_base_opacity = checkbox_ripple_base_opacity(&theme, checked);
+                        let ripple_base_opacity =
+                            checkbox_tokens::pressed_state_layer_opacity(&theme, checked);
                         let config = material_pressable_indication_config(
                             &theme,
                             Some(Px(size.state_layer.0 * 0.5)),
@@ -187,230 +192,24 @@ impl Checkbox {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Interaction {
-    None,
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Interaction {
-    if pressed {
-        Interaction::Pressed
-    } else if focused {
-        Interaction::Focused
-    } else if hovered {
-        Interaction::Hovered
-    } else {
-        Interaction::None
-    }
-}
-
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
-}
-
-#[derive(Debug, Clone, Copy)]
-struct CheckboxSizeTokens {
-    container: Px,
-    icon: Px,
-    state_layer: Px,
-    container_corner: Px,
-}
-
-fn checkbox_size_tokens(theme: &Theme) -> CheckboxSizeTokens {
-    let container = theme
-        .metric_by_key("md.comp.checkbox.container.size")
-        .unwrap_or(Px(18.0));
-    let icon = theme
-        .metric_by_key("md.comp.checkbox.icon.size")
-        .unwrap_or(container);
-    let state_layer = theme
-        .metric_by_key("md.comp.checkbox.state-layer.size")
-        .unwrap_or(Px(40.0));
-    let container_corner = theme
-        .metric_by_key("md.comp.checkbox.container.shape")
-        .unwrap_or(Px(2.0));
-
-    CheckboxSizeTokens {
-        container,
-        icon,
-        state_layer,
-        container_corner,
-    }
-}
-
-fn checkbox_state_layer_target_opacity(
-    theme: &Theme,
-    enabled: bool,
+fn interaction_state(
     pressed: bool,
     hovered: bool,
     focused: bool,
-) -> f32 {
-    if !enabled {
-        return 0.0;
-    }
+) -> checkbox_tokens::CheckboxInteraction {
     if pressed {
-        return theme
-            .number_by_key("md.sys.state.pressed.state-layer-opacity")
-            .unwrap_or(0.1);
-    }
-    if focused {
-        return theme
-            .number_by_key("md.sys.state.focus.state-layer-opacity")
-            .unwrap_or(0.1);
-    }
-    if hovered {
-        return theme
-            .number_by_key("md.sys.state.hover.state-layer-opacity")
-            .unwrap_or(0.08);
-    }
-    0.0
-}
-
-fn checkbox_state_layer_color(theme: &Theme, checked: bool, interaction: Interaction) -> Color {
-    let (group, suffix) = if checked {
-        (
-            "md.comp.checkbox.selected",
-            match interaction {
-                Interaction::Pressed => "pressed.state-layer.color",
-                Interaction::Focused => "focus.state-layer.color",
-                Interaction::Hovered => "hover.state-layer.color",
-                Interaction::None => "hover.state-layer.color",
-            },
-        )
+        checkbox_tokens::CheckboxInteraction::Pressed
+    } else if focused {
+        checkbox_tokens::CheckboxInteraction::Focused
+    } else if hovered {
+        checkbox_tokens::CheckboxInteraction::Hovered
     } else {
-        (
-            "md.comp.checkbox.unselected",
-            match interaction {
-                Interaction::Pressed => "pressed.state-layer.color",
-                Interaction::Focused => "focus.state-layer.color",
-                Interaction::Hovered => "hover.state-layer.color",
-                Interaction::None => "hover.state-layer.color",
-            },
-        )
-    };
-
-    theme
-        .color_by_key(&format!("{group}.{suffix}"))
-        .or_else(|| theme.color_by_key("md.sys.color.primary"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.primary"))
-}
-
-fn checkbox_ripple_base_opacity(theme: &Theme, checked: bool) -> f32 {
-    let key = if checked {
-        "md.comp.checkbox.selected.pressed.state-layer.opacity"
-    } else {
-        "md.comp.checkbox.unselected.pressed.state-layer.opacity"
-    };
-
-    theme.number_by_key(key).unwrap_or_else(|| {
-        theme
-            .number_by_key("md.sys.state.pressed.state-layer-opacity")
-            .unwrap_or(0.1)
-    })
-}
-
-#[derive(Debug, Clone, Copy)]
-struct CheckboxChrome {
-    container_bg: Option<Color>,
-    outline_width: Px,
-    outline_color: Option<Color>,
-    icon_color: Color,
-}
-
-fn checkbox_chrome(
-    theme: &Theme,
-    checked: bool,
-    enabled: bool,
-    interaction: Interaction,
-) -> CheckboxChrome {
-    if checked {
-        let mut container = theme
-            .color_by_key("md.comp.checkbox.selected.container.color")
-            .or_else(|| theme.color_by_key("md.sys.color.primary"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.primary"));
-        let mut icon_color = theme
-            .color_by_key("md.comp.checkbox.selected.icon.color")
-            .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-primary"));
-
-        if !enabled {
-            let opacity = theme
-                .number_by_key("md.comp.checkbox.selected.disabled.container.opacity")
-                .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-                .unwrap_or(0.38);
-            container = alpha_mul(
-                theme
-                    .color_by_key("md.comp.checkbox.selected.disabled.container.color")
-                    .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-                    .unwrap_or(container),
-                opacity,
-            );
-            icon_color = theme
-                .color_by_key("md.comp.checkbox.selected.disabled.icon.color")
-                .or_else(|| theme.color_by_key("md.sys.color.surface"))
-                .unwrap_or(icon_color);
-        }
-
-        CheckboxChrome {
-            container_bg: Some(container),
-            outline_width: theme
-                .metric_by_key("md.comp.checkbox.selected.outline.width")
-                .unwrap_or(Px(0.0)),
-            outline_color: None,
-            icon_color,
-        }
-    } else {
-        let outline_width = if enabled {
-            theme
-                .metric_by_key("md.comp.checkbox.unselected.outline.width")
-                .unwrap_or(Px(2.0))
-        } else {
-            theme
-                .metric_by_key("md.comp.checkbox.unselected.disabled.outline.width")
-                .unwrap_or(Px(2.0))
-        };
-
-        let base_outline = match interaction {
-            Interaction::Pressed => theme
-                .color_by_key("md.comp.checkbox.unselected.pressed.outline.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface")),
-            Interaction::Focused => theme
-                .color_by_key("md.comp.checkbox.unselected.focus.outline.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface")),
-            Interaction::Hovered => theme
-                .color_by_key("md.comp.checkbox.unselected.hover.outline.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface")),
-            Interaction::None => theme
-                .color_by_key("md.comp.checkbox.unselected.outline.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant")),
-        }
-        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"));
-
-        let outline_color = if enabled {
-            base_outline
-        } else {
-            let opacity = theme
-                .number_by_key("md.comp.checkbox.unselected.disabled.container.opacity")
-                .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
-                .unwrap_or(0.38);
-            base_outline.map(|c| alpha_mul(c, opacity))
-        };
-
-        CheckboxChrome {
-            container_bg: None,
-            outline_width,
-            outline_color,
-            icon_color: theme
-                .color_by_key("md.comp.checkbox.selected.icon.color")
-                .or_else(|| theme.color_by_key("md.sys.color.on-primary"))
-                .unwrap_or_else(|| theme.color_required("md.sys.color.on-primary")),
-        }
+        checkbox_tokens::CheckboxInteraction::None
     }
 }
+
+type CheckboxChrome = checkbox_tokens::CheckboxChrome;
+type CheckboxSizeTokens = checkbox_tokens::CheckboxSizeTokens;
 
 fn material_checkbox_chrome<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
