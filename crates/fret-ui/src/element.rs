@@ -480,7 +480,7 @@ impl Default for ViewCacheProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
-            contained_layout: true,
+            contained_layout: false,
             cache_key: 0,
         }
     }
