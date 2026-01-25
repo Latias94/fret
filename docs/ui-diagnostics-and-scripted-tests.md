@@ -98,17 +98,21 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
 
 2. Run a predefined suite and report the slowest frames:
 
-   - Reuse an already-running app:
+    - Reuse an already-running app:
 
-     - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
+      - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
 
-     - Machine-readable JSON:
+      - Machine-readable JSON:
 
-       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
+        - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
 
-   - Or launch a fresh process per script (clean state, slower):
+      - Repeatable perf summary (helps reduce noise; nearest-rank p50/p95 across N runs):
 
-     - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+        - `cargo run -p fretboard -- diag perf ui-gallery --repeat 7 --warmup-frames 5 --sort time --json`
+
+    - Or launch a fresh process per script (clean state, slower):
+
+      - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
