@@ -140,7 +140,7 @@ impl MvuProgram for TodoMvuProgram {
         cx: &mut ElementContext<'_, App>,
         st: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
-    ) -> Vec<AnyElement> {
+    ) -> Elements {
         let theme = Theme::global(&*cx.app).clone();
 
         let filter_value = cx
@@ -380,6 +380,7 @@ impl MvuProgram for TodoMvuProgram {
             },
             move |_cx| [page],
         )]
+        .into()
     }
 }
 

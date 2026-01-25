@@ -174,9 +174,9 @@ impl MvuProgram for TodoMvuInteropProgram {
         cx: &mut ElementContext<'_, App>,
         st: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
-    ) -> Vec<AnyElement> {
+    ) -> Elements {
         let Some(models) = embedded::models(&*cx.app, cx.window) else {
-            return vec![cx.text("Embedded viewport models are not installed.")];
+            return vec![cx.text("Embedded viewport models are not installed.")].into();
         };
 
         let theme = Theme::global(&*cx.app).clone();
@@ -219,7 +219,7 @@ impl MvuProgram for TodoMvuInteropProgram {
         .h_full()
         .into_element(cx);
 
-        vec![root]
+        vec![root].into()
     }
 }
 

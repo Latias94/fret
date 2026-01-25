@@ -546,7 +546,7 @@ impl MvuProgram for TodoProgram {
         cx: &mut ElementContext<'_, App>,
         st: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
-    ) -> Vec<AnyElement> {
+    ) -> Elements {
         let todos = cx
             .watch_model(&st.todos)
             .layout()
@@ -629,7 +629,7 @@ __ADD_BTN_DEF__
         .h_full()
         .into_element(cx);
 
-        vec![page]
+        vec![page].into()
     }
 }
 

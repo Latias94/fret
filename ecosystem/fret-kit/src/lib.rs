@@ -70,7 +70,8 @@ pub mod prelude {
     pub use fret_runtime::CommandId;
     pub use fret_runtime::Model;
     pub use fret_ui::element::{
-        AnyElement, AnyElementIterExt, HoverRegionProps, Length, SemanticsProps, TextProps,
+        AnyElement, AnyElementIterExt, Elements, HoverRegionProps, Length, SemanticsProps,
+        TextProps,
     };
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
     pub use fret_ui_kit::declarative::ModelWatchExt;

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use fret_app::App;
 use fret_core::{AppWindowId, UiServices};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::AnyElement;
+use fret_ui::element::Elements;
 use fret_ui::{ElementContext, Invalidation, UiTree};
 
 use crate::{BootstrapError, Result, UiAppBuilder, UiAppDriver};
@@ -75,7 +75,7 @@ pub trait Program: 'static {
         cx: &mut ElementContext<'_, App>,
         state: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
-    ) -> Vec<AnyElement>;
+    ) -> Elements;
 }
 
 #[derive(Debug)]
