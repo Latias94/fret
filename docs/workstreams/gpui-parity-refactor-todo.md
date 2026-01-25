@@ -160,6 +160,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
 - [!] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
   - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
+  - Contract: `docs/adr/0191-declarative-liveness-roots-and-gc-under-view-cache-reuse.md` (Accepted).
   - Current evidence (stopgap disabled): the swept subtree that contains `ui-gallery-dialog-trigger` is classified as a fully-detached *island* at sweep time:
     - `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false` in `removed_subtrees`.
     - `root_path_edge_ui_contains_child` / `root_path_edge_frame_contains_child` remain `1` along the recorded parent chain, suggesting subtree-local edges are still self-consistent.
