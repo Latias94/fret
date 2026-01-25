@@ -1,5 +1,6 @@
 use super::*;
 
+use fret_runtime::GlobalsHost;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
@@ -81,6 +82,141 @@ fn view_cache_skips_child_render_when_clean_and_preserves_element_state() {
             "debug identity should survive cache-hit frames"
         );
     }
+}
+
+#[test]
+fn view_cache_subtree_membership_keeps_detached_children_alive_under_cache_hit() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+        runtime.set_gc_lag_frames(0);
+    });
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders_outer = Arc::new(AtomicUsize::new(0));
+    let renders_inner = Arc::new(AtomicUsize::new(0));
+    let outer_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+    let leaf_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+
+    let mut root: Option<NodeId> = None;
+
+    for frame in 0..2 {
+        let renders_outer = renders_outer.clone();
+        let renders_inner = renders_inner.clone();
+        let outer_id_for_render = outer_id.clone();
+        let leaf_id_for_render = leaf_id.clone();
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-membership-under-detach",
+            move |cx| {
+                let outer = cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                    renders_outer.fetch_add(1, Ordering::SeqCst);
+                    let inner = cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                        renders_inner.fetch_add(1, Ordering::SeqCst);
+                        let leaf = cx.text("leaf");
+                        *leaf_id_for_render.lock().unwrap() = Some(leaf.id);
+                        cx.with_state_for(leaf.id, || 123u32, |_| {});
+                        vec![leaf]
+                    });
+                    vec![inner]
+                });
+                *outer_id_for_render.lock().unwrap() = Some(outer.id);
+                vec![outer]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        if frame == 0 {
+            let outer_element = outer_id
+                .lock()
+                .unwrap()
+                .expect("outer cache root should be set");
+            let outer_node =
+                app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+                    runtime
+                        .for_window_mut(window)
+                        .node_entry(outer_element)
+                        .expect("outer cache root must have a node entry")
+                        .node
+                });
+
+            let detached_child = ui
+                .children(outer_node)
+                .first()
+                .copied()
+                .expect("outer cache root should have a child node");
+
+            // Simulate bookkeeping drift: sever the child edge without triggering invalidations,
+            // then remove the cached frame-child entry so the next cache-hit frame cannot reach
+            // the subtree via child edges. Liveness must still be preserved via the ViewCache
+            // subtree membership list (ADR 0191).
+            ui.debug_sever_child_edge_without_invalidation(outer_node, detached_child);
+            app.with_global_mut_untracked(
+                crate::declarative::frame::ElementFrame::default,
+                |frame, _| {
+                    let window_frame = frame
+                        .windows
+                        .get_mut(&window)
+                        .expect("window frame should exist");
+                    window_frame.children.remove(&outer_node);
+                },
+            );
+        }
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders_outer.load(Ordering::SeqCst),
+        1,
+        "outer view cache should hit (child render closure should not rerun)"
+    );
+    assert_eq!(
+        renders_inner.load(Ordering::SeqCst),
+        1,
+        "inner view cache should only render on the initial cache-miss frame"
+    );
+
+    let leaf = leaf_id.lock().unwrap().expect("leaf id should be recorded");
+    let value = crate::elements::with_element_state(&mut app, window, leaf, || 0u32, |v| *v);
+    assert_eq!(
+        value, 123,
+        "leaf element state should survive cache-hit frames even if child edges drift"
+    );
+
+    let leaf_node_entry_exists = app
+        .with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+            runtime.for_window_mut(window).node_entry(leaf).is_some()
+        });
+    assert!(
+        leaf_node_entry_exists,
+        "leaf node entry should remain alive under cache-hit liveness bookkeeping"
+    );
 }
 
 #[test]

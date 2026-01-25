@@ -2324,6 +2324,23 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn debug_sever_child_edge_without_invalidation(
+        &mut self,
+        parent: NodeId,
+        child: NodeId,
+    ) {
+        let Some(parent_node) = self.nodes.get_mut(parent) else {
+            return;
+        };
+        parent_node.children.retain(|&c| c != child);
+        if let Some(child_node) = self.nodes.get_mut(child) {
+            if child_node.parent == Some(parent) {
+                child_node.parent = None;
+            }
+        }
+    }
+
     #[track_caller]
     pub(crate) fn set_children_in_mount(&mut self, parent: NodeId, children: Vec<NodeId>) {
         let Some(_old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
