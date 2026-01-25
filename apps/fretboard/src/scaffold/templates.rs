@@ -232,28 +232,16 @@ __ADD_BTN_DEF__
         .submit_command(CommandId::new(CMD_ADD))
         .into_element(cx);
 
-    let input_row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
-            .items_center(),
-        |_cx| [input, add_btn],
-    );
+    let input_row = ui::h_flex(cx, |_cx| [input, add_btn])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
+        .into_element(cx);
 
-    let rows = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3),
-        |cx| todos.iter().map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, t))),
-    );
-
-    let chrome = ChromeRefinement::default()
-        .bg(ColorRef::Color(theme.color_required("background")))
-        .rounded(Radius::Lg)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_required("border")));
+    let rows = ui::v_flex(cx, |cx| todos.iter().map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, t))))
+        .gap(Space::N3)
+        .w_full()
+        .into_element(cx);
 
     let card = shadcn::Card::new([
         shadcn::CardHeader::new([
@@ -262,37 +250,35 @@ __ADD_BTN_DEF__
         ])
         .into_element(cx),
         shadcn::CardContent::new([
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N4),
-                |_cx| [input_row, rows],
-            ),
+            ui::v_flex(cx, |_cx| [input_row, rows])
+                .gap(Space::N4)
+                .w_full()
+                .into_element(cx),
         ])
         .into_element(cx),
     ])
-    .refine_style(chrome)
-    .refine_layout(LayoutRefinement::default().w_full().max_w(MetricRef::Px(Px(520.0))))
+    .ui()
+    .bg(ColorRef::Color(theme.color_required("background")))
+    .rounded(Radius::Lg)
+    .border_1()
+    .border_color(ColorRef::Color(theme.color_required("border")))
+    .w_full()
+    .max_w(MetricRef::Px(Px(520.0)))
     .into_element(cx);
 
-    let page = cx.container(
-        decl_style::container_props(
-            &theme,
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required("muted")))
-                .p(Space::N6),
-            LayoutRefinement::default().w_full().h_full(),
-        ),
-        |cx| [stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .justify_center()
-                    .items_center(),
-                |_cx| [card],
-            )],
-    );
+    let page = ui::container(cx, |cx| {
+        [ui::v_flex(cx, |_cx| [card])
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            .into_element(cx)]
+    })
+    .bg(ColorRef::Color(theme.color_required("muted")))
+    .p(Space::N6)
+    .w_full()
+    .h_full()
+    .into_element(cx);
 
     vec![page]
 }
@@ -595,33 +581,25 @@ __ADD_BTN_DEF__
             .submit_command(add_cmd)
             .into_element(cx);
 
-        let input_row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2)
-                .items_center(),
-            |_cx| [input, add_btn],
-        );
+        let input_row = ui::h_flex(cx, |_cx| [input, add_btn])
+            .gap(Space::N2)
+            .items_center()
+            .w_full()
+            .into_element(cx);
 
-        let rows = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N3),
-            |cx| todos.iter().map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, msg, t))),
-        );
+        let rows = ui::v_flex(cx, |cx| {
+            todos
+                .iter()
+                .map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, msg, t)))
+        })
+        .gap(Space::N3)
+        .w_full()
+        .into_element(cx);
 
         let clear_done = shadcn::Button::new("Clear done")
             .variant(shadcn::ButtonVariant::Secondary)
             .on_click(msg.cmd(Msg::ClearDone))
             .into_element(cx);
-
-        let chrome = ChromeRefinement::default()
-            .bg(ColorRef::Color(theme.color_required("background")))
-            .rounded(Radius::Lg)
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_required("border")));
 
         let card = shadcn::Card::new([
             shadcn::CardHeader::new([
@@ -631,37 +609,35 @@ __ADD_BTN_DEF__
             ])
             .into_element(cx),
             shadcn::CardContent::new([
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .gap(Space::N4),
-                    |_cx| [input_row, rows, clear_done],
-                ),
+                ui::v_flex(cx, |_cx| [input_row, rows, clear_done])
+                    .gap(Space::N4)
+                    .w_full()
+                    .into_element(cx),
             ])
             .into_element(cx),
         ])
-        .refine_style(chrome)
-        .refine_layout(LayoutRefinement::default().w_full().max_w(MetricRef::Px(Px(520.0))))
+        .ui()
+        .bg(ColorRef::Color(theme.color_required("background")))
+        .rounded(Radius::Lg)
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_required("border")))
+        .w_full()
+        .max_w(MetricRef::Px(Px(520.0)))
         .into_element(cx);
 
-        let page = cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("muted")))
-                    .p(Space::N6),
-                LayoutRefinement::default().w_full().h_full(),
-            ),
-            |cx| [stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .justify_center()
-                        .items_center(),
-                    |_cx| [card],
-                )],
-        );
+        let page = ui::container(cx, |cx| {
+            [ui::v_flex(cx, |_cx| [card])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+                .into_element(cx)]
+        })
+        .bg(ColorRef::Color(theme.color_required("muted")))
+        .p(Space::N6)
+        .w_full()
+        .h_full()
+        .into_element(cx);
 
         vec![page]
     }
@@ -683,49 +659,39 @@ fn todo_row(
     let remove_cmd = msg.cmd(Msg::Remove(item.id));
 __REMOVE_BTN_DEF__
 
-    let props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_required("border")))
-            .rounded(Radius::Md)
-            .p(Space::N3),
-        LayoutRefinement::default().w_full(),
-    );
+    let label = cx.text_props(TextProps {
+        layout: Default::default(),
+        text: item.text.clone(),
+        style: None,
+        color: Some(theme.color_required(if done {
+            "muted-foreground"
+        } else {
+            "foreground"
+        })),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+    });
 
-    cx.container(props, |cx| [stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_between()
-                .items_center(),
-            |cx| {
-                let label = cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: item.text.clone(),
-                    style: None,
-                    color: Some(theme.color_required(if done {
-                        "muted-foreground"
-                    } else {
-                        "foreground"
-                    })),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                });
+    let left = ui::h_flex(cx, |_cx| [checkbox.clone(), label])
+        .gap(Space::N3)
+        .items_center()
+        .flex_1()
+        .min_w_0()
+        .into_element(cx);
 
-                [
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().flex_1().min_w_0())
-                            .gap(Space::N3)
-                            .items_center(),
-                        |_cx| [checkbox.clone(), label],
-                    ),
-                    remove_btn.clone(),
-                ]
-            },
-        )])
+    let row = ui::h_flex(cx, |_cx| [left, remove_btn.clone()])
+        .w_full()
+        .justify_between()
+        .items_center()
+        .into_element(cx);
+
+    ui::container(cx, |_cx| [row])
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_required("border")))
+        .rounded(Radius::Md)
+        .p(Space::N3)
+        .w_full()
+        .into_element(cx)
 }
 "#;
 
@@ -759,23 +725,20 @@ fn main() -> anyhow::Result<()> {{
 fn init_window(_app: &mut App, _window: AppWindowId) {{}}
 
 fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {{
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .gap(Space::N4)
-            .items_center()
-            .justify_center(),
-        |cx| {{
-            [
-                shadcn::Label::new("Hello, world!").into_element(cx),
-                shadcn::Button::new("Click me")
-                    .on_click(CMD_CLICK)
-                    .into_element(cx),
+    vec![ui::v_flex(cx, |cx| {{
+        [
+            shadcn::Label::new("Hello, world!").into_element(cx),
+            shadcn::Button::new("Click me")
+                .on_click(CMD_CLICK)
+                .into_element(cx),
 __PALETTE_BUTTON__
-            ]
-        }},
-    )]
+        ]
+    }})
+    .size_full()
+    .gap(Space::N4)
+    .items_center()
+    .justify_center()
+    .into_element(cx)]
 }}
 
 fn on_command(
