@@ -2906,10 +2906,20 @@ pub struct UiRemovedSubtreeV1 {
     pub root_root_parent_sever_parent_children_last_set_new_elements_head_paths: Vec<String>,
     #[serde(default)]
     pub root_layer: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_layer_visible: Option<bool>,
     #[serde(default)]
     pub reachable_from_layer_roots: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reachable_from_view_cache_roots: Option<bool>,
+    #[serde(default)]
+    pub unreachable_from_liveness_roots: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub liveness_layer_roots_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view_cache_reuse_roots_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view_cache_reuse_root_nodes_len: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trigger_element: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3134,8 +3144,13 @@ impl UiRemovedSubtreeV1 {
             root_root_parent_sever_parent_children_last_set_new_elements_head,
             root_root_parent_sever_parent_children_last_set_new_elements_head_paths,
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
+            root_layer_visible: r.root_layer_visible,
             reachable_from_layer_roots: r.reachable_from_layer_roots,
             reachable_from_view_cache_roots: r.reachable_from_view_cache_roots,
+            unreachable_from_liveness_roots: r.unreachable_from_liveness_roots,
+            liveness_layer_roots_len: r.liveness_layer_roots_len,
+            view_cache_reuse_roots_len: r.view_cache_reuse_roots_len,
+            view_cache_reuse_root_nodes_len: r.view_cache_reuse_root_nodes_len,
             trigger_element: r.trigger_element.map(|e| e.0),
             trigger_element_root: r.trigger_element_root.map(|e| e.0),
             trigger_element_in_view_cache_keep_alive: r.trigger_element_in_view_cache_keep_alive,

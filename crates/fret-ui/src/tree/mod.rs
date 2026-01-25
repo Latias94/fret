@@ -528,6 +528,9 @@ pub struct UiDebugRemoveSubtreeFrameContext {
     pub root_frame_instance_present: bool,
     pub root_frame_children_len: Option<u32>,
     pub root_reachable_from_view_cache_roots: Option<bool>,
+    pub liveness_layer_roots_len: u32,
+    pub view_cache_reuse_roots_len: u32,
+    pub view_cache_reuse_root_nodes_len: u32,
     pub trigger_element: Option<GlobalElementId>,
     pub trigger_element_root: Option<GlobalElementId>,
     pub trigger_element_in_view_cache_keep_alive: Option<bool>,
@@ -560,8 +563,13 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub root_parent_element: Option<GlobalElementId>,
     pub root_root: Option<NodeId>,
     pub root_layer: Option<UiLayerId>,
+    pub root_layer_visible: Option<bool>,
     pub reachable_from_layer_roots: bool,
     pub reachable_from_view_cache_roots: Option<bool>,
+    pub unreachable_from_liveness_roots: bool,
+    pub liveness_layer_roots_len: Option<u32>,
+    pub view_cache_reuse_roots_len: Option<u32>,
+    pub view_cache_reuse_root_nodes_len: Option<u32>,
     pub trigger_element: Option<GlobalElementId>,
     pub trigger_element_root: Option<GlobalElementId>,
     pub trigger_element_in_view_cache_keep_alive: Option<bool>,
@@ -2512,6 +2520,8 @@ impl<H: UiHost> UiTree<H> {
                 root_parent.and_then(|p| self.nodes.get(p).and_then(|n| n.element));
             let root_root = self.node_root(root);
             let root_layer = self.node_layer(root);
+            let root_layer_visible =
+                root_layer.and_then(|layer| self.layers.get(layer).map(|l| l.visible));
             let reachable_from_layer_roots =
                 pre_exists && self.debug_is_reachable_from_layer_roots(root);
             let root_children_len = self
@@ -2569,6 +2579,7 @@ impl<H: UiHost> UiTree<H> {
                 root_parent_element,
                 root_root,
                 root_layer,
+                root_layer_visible,
                 reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
@@ -2596,6 +2607,7 @@ impl<H: UiHost> UiTree<H> {
                 root_parent_element,
                 root_root,
                 root_layer,
+                root_layer_visible,
                 reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
@@ -2613,12 +2625,20 @@ impl<H: UiHost> UiTree<H> {
                     .unwrap_or([2u8; 16]);
                 let reachable_from_view_cache_roots =
                     frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
+                let unreachable_from_liveness_roots = !reachable_from_layer_roots
+                    && !matches!(reachable_from_view_cache_roots, Some(true));
                 let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
                 let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
                 let trigger_element_in_view_cache_keep_alive =
                     frame_context.and_then(|ctx| ctx.trigger_element_in_view_cache_keep_alive);
                 let trigger_element_listed_under_reuse_root =
                     frame_context.and_then(|ctx| ctx.trigger_element_listed_under_reuse_root);
+                let liveness_layer_roots_len =
+                    frame_context.map(|ctx| ctx.liveness_layer_roots_len);
+                let view_cache_reuse_roots_len =
+                    frame_context.map(|ctx| ctx.view_cache_reuse_roots_len);
+                let view_cache_reuse_root_nodes_len =
+                    frame_context.map(|ctx| ctx.view_cache_reuse_root_nodes_len);
                 let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                     frame_context
                         .map(|ctx| {
@@ -2646,8 +2666,13 @@ impl<H: UiHost> UiTree<H> {
                         root_parent_element,
                         root_root,
                         root_layer,
+                        root_layer_visible,
                         reachable_from_layer_roots,
                         reachable_from_view_cache_roots,
+                        unreachable_from_liveness_roots,
+                        liveness_layer_roots_len,
+                        view_cache_reuse_roots_len,
+                        view_cache_reuse_root_nodes_len,
                         trigger_element,
                         trigger_element_root,
                         trigger_element_in_view_cache_keep_alive,
@@ -2691,6 +2716,7 @@ impl<H: UiHost> UiTree<H> {
             root_parent_element,
             root_root,
             root_layer,
+            root_layer_visible,
             reachable_from_layer_roots,
             root_children_len,
             root_parent_children_len,
@@ -2708,12 +2734,19 @@ impl<H: UiHost> UiTree<H> {
                 .unwrap_or([2u8; 16]);
             let reachable_from_view_cache_roots =
                 frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
+            let unreachable_from_liveness_roots = !reachable_from_layer_roots
+                && !matches!(reachable_from_view_cache_roots, Some(true));
             let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
             let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
             let trigger_element_in_view_cache_keep_alive =
                 frame_context.and_then(|ctx| ctx.trigger_element_in_view_cache_keep_alive);
             let trigger_element_listed_under_reuse_root =
                 frame_context.and_then(|ctx| ctx.trigger_element_listed_under_reuse_root);
+            let liveness_layer_roots_len = frame_context.map(|ctx| ctx.liveness_layer_roots_len);
+            let view_cache_reuse_roots_len =
+                frame_context.map(|ctx| ctx.view_cache_reuse_roots_len);
+            let view_cache_reuse_root_nodes_len =
+                frame_context.map(|ctx| ctx.view_cache_reuse_root_nodes_len);
             let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                 frame_context
                     .map(|ctx| {
@@ -2761,8 +2794,13 @@ impl<H: UiHost> UiTree<H> {
                     root_parent_element,
                     root_root,
                     root_layer,
+                    root_layer_visible,
                     reachable_from_layer_roots,
                     reachable_from_view_cache_roots,
+                    unreachable_from_liveness_roots,
+                    liveness_layer_roots_len,
+                    view_cache_reuse_roots_len,
+                    view_cache_reuse_root_nodes_len,
                     trigger_element,
                     trigger_element_root,
                     trigger_element_in_view_cache_keep_alive,

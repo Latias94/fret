@@ -445,6 +445,17 @@ where
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
                     .as_ref()
                     .map(|reachable| reachable.contains(&node));
+                let view_cache_reuse_roots: Vec<GlobalElementId> =
+                    window_state.view_cache_reuse_roots().collect();
+                let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
+                let view_cache_reuse_roots_len =
+                    view_cache_reuse_roots.len().min(u32::MAX as usize) as u32;
+                let view_cache_reuse_root_nodes_len = view_cache_reuse_roots
+                    .iter()
+                    .filter(|root| window_state.node_entry(**root).is_some())
+                    .count()
+                    .min(u32::MAX as usize)
+                    as u32;
                 let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
                 let mut path_edge_len: u8 = 0;
                 let mut current = Some(node);
@@ -478,6 +489,9 @@ where
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_view_cache_roots,
+                    liveness_layer_roots_len,
+                    view_cache_reuse_roots_len,
+                    view_cache_reuse_root_nodes_len,
                     trigger_element: Some(record.element),
                     trigger_element_root: Some(record.element_root),
                     trigger_element_in_view_cache_keep_alive: Some(
@@ -810,6 +824,17 @@ where
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
                     .as_ref()
                     .map(|reachable| reachable.contains(&node));
+                let view_cache_reuse_roots: Vec<GlobalElementId> =
+                    window_state.view_cache_reuse_roots().collect();
+                let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
+                let view_cache_reuse_roots_len =
+                    view_cache_reuse_roots.len().min(u32::MAX as usize) as u32;
+                let view_cache_reuse_root_nodes_len = view_cache_reuse_roots
+                    .iter()
+                    .filter(|root| window_state.node_entry(**root).is_some())
+                    .count()
+                    .min(u32::MAX as usize)
+                    as u32;
                 let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
                 let mut path_edge_len: u8 = 0;
                 let mut current = Some(node);
@@ -843,6 +868,9 @@ where
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_view_cache_roots,
+                    liveness_layer_roots_len,
+                    view_cache_reuse_roots_len,
+                    view_cache_reuse_root_nodes_len,
                     trigger_element: Some(record.element),
                     trigger_element_root: Some(record.element_root),
                     trigger_element_in_view_cache_keep_alive: Some(
