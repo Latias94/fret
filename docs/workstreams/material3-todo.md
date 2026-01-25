@@ -440,6 +440,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Add a small, scripted interaction test harness for Material states (hover/press/ripple).
   - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_signature`),
     tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tabs_pressed_scene_structure_is_stable`, `icon_button_pressed_scene_structure_is_stable`, `switch_pressed_scene_structure_is_stable`, `radio_pressed_scene_structure_is_stable`).
+- [x] Extend the interaction harness with quad-level signatures to catch geometry jitter after animations settle.
+  - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_quad_signature`),
+    tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`*_pressed_scene_structure_is_stable`).
 - [ ] Add golden-style visual snapshots per component state (light/dark, density variants).
 
 ## Proposed ADRs (drafts)

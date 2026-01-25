@@ -16,7 +16,7 @@ use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 
 mod interaction_harness;
-use interaction_harness::{SceneSig, scene_signature};
+use interaction_harness::{QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_signature};
 
 #[derive(Default)]
 struct TestHost {
@@ -1143,8 +1143,9 @@ fn tabs_pressed_scene_structure_is_stable() {
         &pointer_down(PointerId(1), press_at),
     );
 
-    let mut baseline: Option<Vec<SceneSig>> = None;
-    for frame in 0..6 {
+    let mut baseline_structure: Option<Vec<SceneSig>> = None;
+    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+    for frame in 0..24 {
         app.advance_frame();
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
@@ -1153,18 +1154,28 @@ fn tabs_pressed_scene_structure_is_stable() {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        if frame < 2 {
-            continue;
+        if frame >= 2 && frame < 7 {
+            let sig = scene_signature(&scene);
+            if let Some(prev) = baseline_structure.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected Tabs to keep a stable scene structure while pressed"
+                );
+            } else {
+                baseline_structure = Some(sig);
+            }
         }
 
-        let sig = scene_signature(&scene);
-        if let Some(prev) = baseline.as_ref() {
-            assert_eq!(
-                sig, *prev,
-                "expected Tabs to keep a stable scene structure while pressed"
-            );
-        } else {
-            baseline = Some(sig);
+        if frame >= 16 {
+            let sig = scene_quad_geometry_signature(&scene);
+            if let Some(prev) = baseline_quads.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected Tabs to keep stable quad geometry after animations settle"
+                );
+            } else {
+                baseline_quads = Some(sig);
+            }
         }
     }
 
@@ -1236,8 +1247,9 @@ fn icon_button_pressed_scene_structure_is_stable() {
         &pointer_down(PointerId(1), press_at),
     );
 
-    let mut baseline: Option<Vec<SceneSig>> = None;
-    for frame in 0..6 {
+    let mut baseline_structure: Option<Vec<SceneSig>> = None;
+    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+    for frame in 0..24 {
         app.advance_frame();
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
@@ -1246,18 +1258,28 @@ fn icon_button_pressed_scene_structure_is_stable() {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        if frame < 2 {
-            continue;
+        if frame >= 2 && frame < 7 {
+            let sig = scene_signature(&scene);
+            if let Some(prev) = baseline_structure.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected IconButton to keep a stable scene structure while pressed"
+                );
+            } else {
+                baseline_structure = Some(sig);
+            }
         }
 
-        let sig = scene_signature(&scene);
-        if let Some(prev) = baseline.as_ref() {
-            assert_eq!(
-                sig, *prev,
-                "expected IconButton to keep a stable scene structure while pressed"
-            );
-        } else {
-            baseline = Some(sig);
+        if frame >= 16 {
+            let sig = scene_quad_geometry_signature(&scene);
+            if let Some(prev) = baseline_quads.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected IconButton to keep stable quad geometry after animations settle"
+                );
+            } else {
+                baseline_quads = Some(sig);
+            }
         }
     }
 
@@ -1329,8 +1351,9 @@ fn switch_pressed_scene_structure_is_stable() {
         &pointer_down(PointerId(1), press_at),
     );
 
-    let mut baseline: Option<Vec<SceneSig>> = None;
-    for frame in 0..6 {
+    let mut baseline_structure: Option<Vec<SceneSig>> = None;
+    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+    for frame in 0..24 {
         app.advance_frame();
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
@@ -1339,18 +1362,28 @@ fn switch_pressed_scene_structure_is_stable() {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        if frame < 2 {
-            continue;
+        if frame >= 2 && frame < 7 {
+            let sig = scene_signature(&scene);
+            if let Some(prev) = baseline_structure.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected Switch to keep a stable scene structure while pressed"
+                );
+            } else {
+                baseline_structure = Some(sig);
+            }
         }
 
-        let sig = scene_signature(&scene);
-        if let Some(prev) = baseline.as_ref() {
-            assert_eq!(
-                sig, *prev,
-                "expected Switch to keep a stable scene structure while pressed"
-            );
-        } else {
-            baseline = Some(sig);
+        if frame >= 16 {
+            let sig = scene_quad_geometry_signature(&scene);
+            if let Some(prev) = baseline_quads.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected Switch to keep stable quad geometry after animations settle"
+                );
+            } else {
+                baseline_quads = Some(sig);
+            }
         }
     }
 
@@ -1422,8 +1455,9 @@ fn radio_pressed_scene_structure_is_stable() {
         &pointer_down(PointerId(1), press_at),
     );
 
-    let mut baseline: Option<Vec<SceneSig>> = None;
-    for frame in 0..6 {
+    let mut baseline_structure: Option<Vec<SceneSig>> = None;
+    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+    for frame in 0..24 {
         app.advance_frame();
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
@@ -1432,18 +1466,28 @@ fn radio_pressed_scene_structure_is_stable() {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-        if frame < 2 {
-            continue;
+        if frame >= 2 && frame < 7 {
+            let sig = scene_signature(&scene);
+            if let Some(prev) = baseline_structure.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected Radio to keep a stable scene structure while pressed"
+                );
+            } else {
+                baseline_structure = Some(sig);
+            }
         }
 
-        let sig = scene_signature(&scene);
-        if let Some(prev) = baseline.as_ref() {
-            assert_eq!(
-                sig, *prev,
-                "expected Radio to keep a stable scene structure while pressed"
-            );
-        } else {
-            baseline = Some(sig);
+        if frame >= 16 {
+            let sig = scene_quad_geometry_signature(&scene);
+            if let Some(prev) = baseline_quads.as_ref() {
+                assert_eq!(
+                    sig, *prev,
+                    "expected Radio to keep stable quad geometry after animations settle"
+                );
+            } else {
+                baseline_quads = Some(sig);
+            }
         }
     }
 

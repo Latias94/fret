@@ -270,6 +270,13 @@ These are *candidates*, not guaranteed core work:
   measurement-driven visuals. We currently use a lightweight `foundation::layout_probe` that reads
   last-frame bounds (1-frame latency). If this proves insufficient (visible jitter), we should
   consider a core mechanism upgrade.
+- **Alignment lines / baseline alignment**: Compose uses alignment lines to let layouts align to a
+  component’s *visual bounds* while still reserving the minimum touch target size (e.g.
+  `MinimumInteractiveTopAlignmentLine` / `MinimumInteractiveLeftAlignmentLine` in
+  `InteractiveComponentSize.kt`). Today we approximate this with centered chrome inside a larger
+  pressable, but we cannot express “align to the visual top/left/baseline” in `taffy`-backed flex
+  layouts. If this becomes a real source of drift (e.g. checkbox/radio rows), we may need a core
+  alignment-line mechanism (or a constrained alternative).
 - **Pixel snapping / rounding policy**: some controls require consistent rounding rules across
   layout + paint to avoid “drift” at non-1.0 scale factors.
 - **Stable structure guarantees**: better guidance or helpers to keep indicator/ink layers present
@@ -321,7 +328,7 @@ Status notes:
   - light/dark,
   - (later) Expressive variants.
 - [x] Add scripted interaction tests where feasible.
-  - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_signature`),
+  - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_signature`, `scene_quad_signature`),
     `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`*_pressed_scene_structure_is_stable`).
 - [x] Add token coverage tooling to detect drift:
   - `cargo run -p fret-ui-material3 --bin material3_token_audit -- --material-web-dir <path>`
