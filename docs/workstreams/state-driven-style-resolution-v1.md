@@ -143,6 +143,8 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-material3/src/checkbox.rs`
 - `ecosystem/fret-ui-material3/src/switch.rs`
 - `ecosystem/fret-ui-material3/src/radio_group.rs`
+- `ecosystem/fret-ui-material3/src/select.rs`
+- `ecosystem/fret-ui-material3/src/text_field.rs`
 - SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
 - SDSR-410 evidence: `WidgetStates::from_pressable(...)` in `ecosystem/fret-ui-kit/src/style/state.rs`, applied in `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`.
 - SDSR-300/310/320: `docs/shadcn-style-token-conventions.md`
@@ -219,3 +221,30 @@ when missing.
   - `material3.radio.disabled.label`
   - `material3.radio.state_layer.hover`
   - `material3.radio.state_layer.pressed`
+
+- Select:
+  - `material3.select.trigger.container`
+  - `material3.select.trigger.disabled.container`
+  - `material3.select.trigger.label`
+  - `material3.select.trigger.disabled.label`
+  - `material3.select.trigger.outline`
+  - `material3.select.trigger.focus.outline`
+  - `material3.select.trigger.open.outline`
+  - `material3.select.trigger.disabled.outline`
+  - `material3.select.option.label`
+  - `material3.select.option.disabled.label`
+  - `material3.select.option.state_layer.hover`
+  - `material3.select.option.state_layer.pressed`
+  - `material3.select.option.state_layer.selected`
+
+- TextField:
+  - `material3.text_field.container`
+  - `material3.text_field.disabled.container`
+  - `material3.text_field.outline`
+  - `material3.text_field.disabled.outline`
+  - `material3.text_field.focus.outline`
+  - `material3.text_field.focus.ring`
+  - `material3.text_field.text`
+  - `material3.text_field.disabled.text`
+  - `material3.text_field.placeholder`
+  - `material3.text_field.disabled.placeholder`
