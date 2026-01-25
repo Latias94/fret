@@ -500,6 +500,9 @@ topics (if/when we implement them):
       - Anchors: `crates/fret-ui/src/widget.rs` (`PrepaintCx`, `Widget::prepaint`),
         `crates/fret-ui/src/tree/prepaint.rs` (prepaint traversal),
         `crates/fret-ui/src/tree/tests/prepaint.rs` (`prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache`).
+    - Paint-cache replay now keeps descendant bounds in sync when a cached subtree translates (required for correct hit-testing + semantics under caching).
+      - Anchors: `crates/fret-ui/src/tree/paint.rs` (paint-cache replay translates descendant bounds),
+        `crates/fret-ui/src/tree/tests/paint_cache.rs` (`paint_cache_replay_translates_descendant_bounds_for_descendants`).
 - [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
@@ -539,6 +542,7 @@ topics (if/when we implement them):
       - Evidence bundle (diag run timeout at step 7):
         `target/fret-diag-vlist-torture-smoke-rowcached3/1769223442870-script-step-0007-wait_until-timeout/bundle.json`
       - Takeaway: before we encourage nested cache roots inside VirtualList, we need a stronger contract for scroll-child transforms + semantics bounds under view-cache reuse (fits `GPUI-MVP5-core-000` + ADR 0190 work).
+      - Note: one underlying caching pitfall (paint-cache replay not translating descendant bounds on parent translation) is now fixed, but we have not re-validated the full row-cached experiment yet.
   - Next (v2 direction; ADR 0190):
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
