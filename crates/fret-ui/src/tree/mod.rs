@@ -810,6 +810,7 @@ pub struct UiTree<H: UiHost> {
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
     debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,
+    debug_view_cache_contained_relayout_roots: Vec<NodeId>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
@@ -890,6 +891,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             debug_view_cache_roots: Vec::new(),
+            debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
             debug_layout_engine_solves: Vec::new(),
             debug_measure_children: HashMap::new(),
@@ -1048,6 +1050,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.virtual_list_visible_range_refreshes = 0;
 
         self.debug_view_cache_roots.clear();
+        self.debug_view_cache_contained_relayout_roots.clear();
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
         self.debug_measure_children.clear();
@@ -1249,6 +1252,13 @@ impl<H: UiHost> UiTree<H> {
 
         out.sort_by_key(|s| std::cmp::Reverse(s.paint_replayed_ops));
         out
+    }
+
+    pub fn debug_view_cache_contained_relayout_roots(&self) -> &[NodeId] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        &self.debug_view_cache_contained_relayout_roots
     }
 
     #[cfg(feature = "diagnostics")]

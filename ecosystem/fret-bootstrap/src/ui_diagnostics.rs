@@ -2480,6 +2480,11 @@ impl UiTreeDebugSnapshotV1 {
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
     ) -> Self {
+        let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
+            .debug_view_cache_contained_relayout_roots()
+            .iter()
+            .copied()
+            .collect();
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
             invalidation_walks: ui
@@ -2526,6 +2531,7 @@ impl UiTreeDebugSnapshotV1 {
                         ui,
                         element_runtime_state,
                         semantics.as_ref(),
+                        &contained_relayout_roots,
                         stats,
                     )
                 })
@@ -2805,6 +2811,8 @@ pub struct UiCacheRootStatsV1 {
     pub element_path: Option<String>,
     pub reused: bool,
     pub contained_layout: bool,
+    #[serde(default)]
+    pub contained_relayout_in_frame: bool,
     pub paint_replayed_ops: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub direct_child_nodes: Option<u32>,
@@ -2832,6 +2840,7 @@ impl UiCacheRootStatsV1 {
         ui: &UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
         semantics: Option<&UiSemanticsSnapshotV1>,
+        contained_relayout_roots: &HashSet<fret_core::NodeId>,
         stats: &fret_ui::tree::UiDebugCacheRootStats,
     ) -> Self {
         let element_path = stats.element.and_then(|id| {
@@ -2862,6 +2871,7 @@ impl UiCacheRootStatsV1 {
             let id = stats.root.data().as_ffi();
             snap.nodes.iter().any(|n| n.id == id)
         });
+        let contained_relayout_in_frame = contained_relayout_roots.contains(&stats.root);
 
         let (
             children_last_set_location,
@@ -2885,6 +2895,7 @@ impl UiCacheRootStatsV1 {
             element_path,
             reused: stats.reused,
             contained_layout: stats.contained_layout,
+            contained_relayout_in_frame,
             paint_replayed_ops: stats.paint_replayed_ops,
             direct_child_nodes: Some(direct_child_nodes),
             subtree_nodes: Some(seen.len().min(u32::MAX as usize) as u32),

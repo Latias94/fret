@@ -679,6 +679,7 @@ impl<H: UiHost> UiTree<H> {
                     .debug_stats
                     .view_cache_contained_relayouts
                     .saturating_add(1);
+                self.debug_view_cache_contained_relayout_roots.push(root);
             }
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);

@@ -210,7 +210,7 @@ At a high level:
   - `debug.stats`: layout/paint timings and counters
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
-  - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, with optional `reuse_reason`)
+  - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
   - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary

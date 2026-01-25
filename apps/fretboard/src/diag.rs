@@ -955,6 +955,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                         let top_view_cache_contained_relayouts =
                             top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                        let top_cache_roots_contained_relayout =
+                            top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                         let top_set_children_barrier_writes =
                             top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
                         let top_barrier_relayouts_scheduled =
@@ -979,6 +981,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                                "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                                 "top_set_children_barrier_writes": top_set_children_barrier_writes,
                                 "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
                                 "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
@@ -1162,6 +1165,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                     let top_view_cache_contained_relayouts =
                         top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                    let top_cache_roots_contained_relayout =
+                        top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                     let top_set_children_barrier_writes =
                         top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
                     let top_barrier_relayouts_scheduled =
@@ -1188,6 +1193,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                        "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                         "top_set_children_barrier_writes": top_set_children_barrier_writes,
                         "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
                         "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
@@ -1215,6 +1221,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     if stats_json {
                         let mut top_view_cache_contained_relayouts: Vec<u64> =
                             Vec::with_capacity(repeat);
+                        let mut top_cache_roots_contained_relayout: Vec<u64> =
+                            Vec::with_capacity(repeat);
                         let mut top_set_children_barrier_writes: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_barrier_relayouts_scheduled: Vec<u64> =
@@ -1228,6 +1236,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         for run in &runs_json {
                             top_view_cache_contained_relayouts.push(
                                 run.get("top_view_cache_contained_relayouts")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_cache_roots_contained_relayout.push(
+                                run.get("top_cache_roots_contained_relayout")
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
@@ -1268,6 +1281,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 "prepaint_time_us": summarize_times_us(&runs_prepaint),
                                 "paint_time_us": summarize_times_us(&runs_paint),
                                 "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
+                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
                                 "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
                                 "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
                                 "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
@@ -2859,6 +2873,7 @@ struct BundleStatsSnapshotRow {
     top_hover_declarative_invalidations: Vec<BundleStatsHoverDeclarativeInvalidationHotspot>,
     cache_roots: u32,
     cache_roots_reused: u32,
+    cache_roots_contained_relayout: u32,
     cache_replayed_ops: u64,
     view_cache_contained_relayouts: u32,
     set_children_barrier_writes: u32,
@@ -2867,6 +2882,7 @@ struct BundleStatsSnapshotRow {
     virtual_list_visible_range_checks: u32,
     virtual_list_visible_range_refreshes: u32,
     top_cache_roots: Vec<BundleStatsCacheRoot>,
+    top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
     top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
     model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
@@ -2913,6 +2929,7 @@ struct BundleStatsCacheRoot {
     element: Option<u64>,
     reused: bool,
     contained_layout: bool,
+    contained_relayout_in_frame: bool,
     paint_replayed_ops: u32,
     reuse_reason: Option<String>,
     root_role: Option<String>,
@@ -3084,7 +3101,7 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} contained_relayouts={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
@@ -3101,6 +3118,7 @@ impl BundleStatsReport {
                 row.cache_roots_reused,
                 row.cache_replayed_ops,
                 row.view_cache_contained_relayouts,
+                row.cache_roots_contained_relayout,
                 row.set_children_barrier_writes,
                 row.barrier_relayouts_scheduled,
                 row.barrier_relayouts_performed,
@@ -3197,6 +3215,40 @@ impl BundleStatsReport {
                     })
                     .collect();
                 println!("    top_cache_roots: {}", items.join(" | "));
+            }
+            if !row.top_contained_relayout_cache_roots.is_empty() {
+                let items: Vec<String> = row
+                    .top_contained_relayout_cache_roots
+                    .iter()
+                    .take(3)
+                    .map(|c| {
+                        let mut s = format!(
+                            "ops={} reused={} root={} reason={}",
+                            c.paint_replayed_ops,
+                            c.reused,
+                            c.root_node,
+                            c.reuse_reason.as_deref().unwrap_or("?")
+                        );
+                        if let Some(test_id) = c.root_test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            s.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = c.root_role.as_deref()
+                            && !role.is_empty()
+                        {
+                            s.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(el) = c.element {
+                            s.push_str(&format!(" element={el}"));
+                        }
+                        s
+                    })
+                    .collect();
+                println!(
+                    "    top_contained_relayout_cache_roots: {}",
+                    items.join(" | ")
+                );
             }
             if row.hover_declarative_layout_invalidations > 0
                 && !row.top_hover_declarative_invalidations.is_empty()
@@ -3588,6 +3640,10 @@ impl BundleStatsReport {
                     Value::from(row.cache_roots_reused),
                 );
                 obj.insert(
+                    "cache_roots_contained_relayout".to_string(),
+                    Value::from(row.cache_roots_contained_relayout),
+                );
+                obj.insert(
                     "cache_replayed_ops".to_string(),
                     Value::from(row.cache_replayed_ops),
                 );
@@ -3805,6 +3861,10 @@ impl BundleStatsReport {
                             Value::from(c.contained_layout),
                         );
                         c_obj.insert(
+                            "contained_relayout_in_frame".to_string(),
+                            Value::from(c.contained_relayout_in_frame),
+                        );
+                        c_obj.insert(
                             "paint_replayed_ops".to_string(),
                             Value::from(c.paint_replayed_ops),
                         );
@@ -3830,6 +3890,55 @@ impl BundleStatsReport {
                     })
                     .collect::<Vec<_>>();
                 obj.insert("top_cache_roots".to_string(), Value::Array(top_cache_roots));
+
+                let top_contained_relayout_cache_roots = row
+                    .top_contained_relayout_cache_roots
+                    .iter()
+                    .map(|c| {
+                        let mut c_obj = Map::new();
+                        c_obj.insert("root_node".to_string(), Value::from(c.root_node));
+                        c_obj.insert(
+                            "element".to_string(),
+                            c.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        c_obj.insert("reused".to_string(), Value::from(c.reused));
+                        c_obj.insert(
+                            "contained_layout".to_string(),
+                            Value::from(c.contained_layout),
+                        );
+                        c_obj.insert(
+                            "contained_relayout_in_frame".to_string(),
+                            Value::from(c.contained_relayout_in_frame),
+                        );
+                        c_obj.insert(
+                            "paint_replayed_ops".to_string(),
+                            Value::from(c.paint_replayed_ops),
+                        );
+                        c_obj.insert(
+                            "reuse_reason".to_string(),
+                            c.reuse_reason
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_role".to_string(),
+                            c.root_role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_test_id".to_string(),
+                            c.root_test_id
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        Value::Object(c_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "top_contained_relayout_cache_roots".to_string(),
+                    Value::Array(top_contained_relayout_cache_roots),
+                );
 
                 let top_layout_engine_solves = row
                     .top_layout_engine_solves
@@ -4883,8 +4992,14 @@ fn bundle_stats_from_json_with_options(
                 as u32;
             let top_hover_declarative_invalidations =
                 snapshot_top_hover_declarative_invalidations(s, 3);
-            let (cache_roots, cache_roots_reused, cache_replayed_ops, top_cache_roots) =
-                snapshot_cache_root_stats(s, 3);
+            let (
+                cache_roots,
+                cache_roots_reused,
+                cache_roots_contained_relayout,
+                cache_replayed_ops,
+                top_cache_roots,
+                top_contained_relayout_cache_roots,
+            ) = snapshot_cache_root_stats(s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
@@ -4997,6 +5112,7 @@ fn bundle_stats_from_json_with_options(
                 top_hover_declarative_invalidations,
                 cache_roots,
                 cache_roots_reused,
+                cache_roots_contained_relayout,
                 cache_replayed_ops,
                 view_cache_contained_relayouts,
                 set_children_barrier_writes,
@@ -5005,6 +5121,7 @@ fn bundle_stats_from_json_with_options(
                 virtual_list_visible_range_checks,
                 virtual_list_visible_range_refreshes,
                 top_cache_roots,
+                top_contained_relayout_cache_roots,
                 top_layout_engine_solves,
                 model_change_hotspots,
                 model_change_unobserved,
@@ -5122,7 +5239,14 @@ fn snapshot_top_invalidation_walks(
 fn snapshot_cache_root_stats(
     snapshot: &serde_json::Value,
     max: usize,
-) -> (u32, u32, u64, Vec<BundleStatsCacheRoot>) {
+) -> (
+    u32,
+    u32,
+    u32,
+    u64,
+    Vec<BundleStatsCacheRoot>,
+    Vec<BundleStatsCacheRoot>,
+) {
     let roots = snapshot
         .get("debug")
         .and_then(|v| v.get("cache_roots"))
@@ -5131,10 +5255,11 @@ fn snapshot_cache_root_stats(
         .unwrap_or(&[]);
 
     if roots.is_empty() {
-        return (0, 0, 0, Vec::new());
+        return (0, 0, 0, 0, Vec::new(), Vec::new());
     }
 
     let mut reused: u32 = 0;
+    let mut contained_relayout: u32 = 0;
     let mut replayed_ops_sum: u64 = 0;
 
     let mut out: Vec<BundleStatsCacheRoot> = roots
@@ -5150,6 +5275,13 @@ fn snapshot_cache_root_stats(
             if reused_flag {
                 reused = reused.saturating_add(1);
             }
+            let contained_relayout_in_frame = r
+                .get("contained_relayout_in_frame")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if contained_relayout_in_frame {
+                contained_relayout = contained_relayout.saturating_add(1);
+            }
             replayed_ops_sum = replayed_ops_sum.saturating_add(paint_replayed_ops as u64);
 
             let (role, test_id) = snapshot_lookup_semantics(snapshot, root_node);
@@ -5161,6 +5293,7 @@ fn snapshot_cache_root_stats(
                     .get("contained_layout")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false),
+                contained_relayout_in_frame,
                 paint_replayed_ops,
                 reuse_reason: r
                     .get("reuse_reason")
@@ -5173,13 +5306,21 @@ fn snapshot_cache_root_stats(
         .collect();
 
     out.sort_by(|a, b| b.paint_replayed_ops.cmp(&a.paint_replayed_ops));
-    out.truncate(max);
+    let top_cache_roots: Vec<BundleStatsCacheRoot> = out.iter().take(max).cloned().collect();
+    let top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot> = out
+        .iter()
+        .filter(|r| r.contained_relayout_in_frame)
+        .take(max)
+        .cloned()
+        .collect();
 
     (
         roots.len().min(u32::MAX as usize) as u32,
         reused,
+        contained_relayout,
         replayed_ops_sum,
-        out,
+        top_cache_roots,
+        top_contained_relayout_cache_roots,
     )
 }
 
