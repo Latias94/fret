@@ -2664,4 +2664,273 @@ mod tests {
         assert_eq!(ui.focus(), Some(b_node));
         assert_ne!(ui.focus(), Some(underlay_node));
     }
+
+    #[test]
+    fn popover_close_transition_is_click_through_and_observer_inert() {
+        use fret_core::{Event, MouseButtons};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let frame_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            frame_bounds: Rect,
+            open: Model<bool>,
+            underlay_clicked: Model<bool>,
+            underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            frame: u64,
+        ) {
+            app.set_frame_id(FrameId(frame));
+
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                frame_bounds,
+                "popover-close-transition-invariants",
+                |cx| {
+                    let underlay_id_out = underlay_id_out.clone();
+                    let content_id_out = content_id_out.clone();
+                    let underlay_clicked = underlay_clicked.clone();
+                    let open = open.clone();
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let underlay =
+                                cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout.size.height = Length::Fill;
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        ..Default::default()
+                                    },
+                                    {
+                                        let underlay_id_out = underlay_id_out.clone();
+                                        let underlay_clicked = underlay_clicked.clone();
+                                        move |cx, _st, id| {
+                                            underlay_id_out.set(Some(id));
+                                            cx.pressable_toggle_bool(&underlay_clicked);
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        }
+                                    },
+                                );
+
+                            let trigger = cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout.inset.left = Some(Px(20.0));
+                                        layout.inset.top = Some(Px(20.0));
+                                        layout.position = fret_ui::element::PositionStyle::Absolute;
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                {
+                                    let open = open.clone();
+                                    move |cx, _st| {
+                                        cx.pressable_toggle_bool(&open);
+                                        Vec::new()
+                                    }
+                                },
+                            );
+
+                            let popover =
+                                Popover::new(open.clone()).auto_focus(false).into_element(
+                                    cx,
+                                    |_cx| trigger,
+                                    move |cx| {
+                                        let content = PopoverContent::new(vec![
+                                            ui::raw_text(cx, "content").into_element(cx),
+                                        ])
+                                        .into_element(cx);
+                                        content_id_out.set(Some(content.id));
+                                        content
+                                    },
+                                );
+
+                            vec![underlay, popover]
+                        },
+                    )]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, frame_bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, frame_bounds, 1.0);
+        }
+
+        // Frame 1: mount closed.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            frame_bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            1,
+        );
+
+        // Frame 2: open.
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            frame_bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            2,
+        );
+        let content_element = content_id.get().expect("content element id");
+        let content_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_element).expect("node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .map(|n| n.bounds)
+            .expect("content bounds");
+        let content_center = Point::new(
+            Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
+            Px(content_bounds.origin.y.0 + content_bounds.size.height.0 * 0.5),
+        );
+
+        // Frame 3: close transition begins (present=true, interactive=false).
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            frame_bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            3,
+        );
+
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected popover content to remain mounted during close transition"
+        );
+
+        let content_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_element).expect("node");
+        let content_layer = ui.node_layer(content_node).expect("content layer");
+        let layer = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == content_layer)
+            .expect("overlay layer");
+        assert!(layer.visible);
+        assert!(!layer.hit_testable);
+        assert_eq!(
+            layer.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
+        assert!(!layer.wants_pointer_move_events);
+        assert!(!layer.wants_timer_events);
+
+        // Even if pointer events hit where the popover is painted, they must go through while
+        // closing.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: content_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: content_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_clicked),
+            Some(true),
+            "expected close-transition clicks to reach the underlay"
+        );
+
+        // Pointer move should not install timers while closing (no hover policies running).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        assert!(
+            !effects.iter().any(|e| matches!(e, Effect::SetTimer { .. })),
+            "expected close transition to not arm timers; effects={effects:?}"
+        );
+    }
 }
