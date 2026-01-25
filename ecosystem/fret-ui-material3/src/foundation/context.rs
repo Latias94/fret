@@ -8,6 +8,7 @@
 #![allow(dead_code)]
 
 use fret_core::Color;
+use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::elements::ElementContext;
 
@@ -38,6 +39,12 @@ pub enum MaterialMotionScheme {
     Expressive,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaterialDesignVariant {
+    Standard,
+    Expressive,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MaterialMotionSchemeOverride {
     /// Mask any inherited scheme and fall back to component defaults.
@@ -46,11 +53,20 @@ pub enum MaterialMotionSchemeOverride {
     Custom(MaterialMotionScheme),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MaterialDesignVariantOverride {
+    /// Mask any inherited variant and fall back to component defaults.
+    UseDefault,
+    /// Override the design variant for the subtree.
+    Custom(MaterialDesignVariant),
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct MaterialContextState {
     content_color: Option<MaterialContentColor>,
     ripple: Option<MaterialRippleConfiguration>,
     motion_scheme: Option<MaterialMotionSchemeOverride>,
+    design_variant: Option<MaterialDesignVariantOverride>,
 }
 
 pub fn inherited_content_color_policy<H: UiHost>(
@@ -81,6 +97,13 @@ pub fn inherited_motion_scheme_override<H: UiHost>(
         .and_then(|st| st.motion_scheme)
 }
 
+pub fn inherited_design_variant_override<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<MaterialDesignVariantOverride> {
+    cx.inherited_state_where::<MaterialContextState>(|st| st.design_variant.is_some())
+        .and_then(|st| st.design_variant)
+}
+
 pub fn resolved_motion_scheme<H: UiHost>(
     cx: &ElementContext<'_, H>,
     fallback: MaterialMotionScheme,
@@ -88,6 +111,32 @@ pub fn resolved_motion_scheme<H: UiHost>(
     match inherited_motion_scheme_override(cx) {
         Some(MaterialMotionSchemeOverride::Custom(scheme)) => scheme,
         Some(MaterialMotionSchemeOverride::UseDefault) | None => fallback,
+    }
+}
+
+pub fn theme_default_design_variant(theme: &Theme) -> MaterialDesignVariant {
+    // Fret-owned token that tracks the top-level Material "expressive" selection. This lets
+    // Material3 components switch to expressive component tokens without requiring a context
+    // wrapper at every callsite.
+    let expressive = theme
+        .number_by_key("md.sys.fret.material.is-expressive")
+        .unwrap_or(0.0)
+        > 0.5;
+
+    if expressive {
+        MaterialDesignVariant::Expressive
+    } else {
+        MaterialDesignVariant::Standard
+    }
+}
+
+pub fn resolved_design_variant<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    fallback: MaterialDesignVariant,
+) -> MaterialDesignVariant {
+    match inherited_design_variant_override(cx) {
+        Some(MaterialDesignVariantOverride::Custom(variant)) => variant,
+        Some(MaterialDesignVariantOverride::UseDefault) | None => fallback,
     }
 }
 
@@ -175,6 +224,41 @@ pub fn with_material_motion_scheme_override<H: UiHost, R>(
     let out = f(cx);
     cx.with_state(MaterialContextState::default, |st| {
         st.motion_scheme = prev;
+    });
+    out
+}
+
+#[track_caller]
+pub fn with_material_design_variant<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    variant: MaterialDesignVariant,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_design_variant_override(cx, MaterialDesignVariantOverride::Custom(variant), f)
+}
+
+#[track_caller]
+pub fn with_default_material_design_variant<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_design_variant_override(cx, MaterialDesignVariantOverride::UseDefault, f)
+}
+
+#[track_caller]
+pub fn with_material_design_variant_override<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    override_policy: MaterialDesignVariantOverride,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MaterialContextState::default, |st| {
+        let prev = st.design_variant;
+        st.design_variant = Some(override_policy);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MaterialContextState::default, |st| {
+        st.design_variant = prev;
     });
     out
 }
@@ -328,6 +412,61 @@ mod tests {
                 });
 
                 assert_eq!(inherited_motion_scheme_override(cx), None);
+            },
+        );
+    }
+
+    #[test]
+    fn design_variant_inherits_masks_and_restores() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-context-design-variant",
+            |cx| {
+                assert_eq!(inherited_design_variant_override(cx), None);
+                assert_eq!(
+                    resolved_design_variant(cx, MaterialDesignVariant::Standard),
+                    MaterialDesignVariant::Standard
+                );
+
+                with_material_design_variant(cx, MaterialDesignVariant::Expressive, |cx| {
+                    assert_eq!(
+                        inherited_design_variant_override(cx),
+                        Some(MaterialDesignVariantOverride::Custom(
+                            MaterialDesignVariant::Expressive
+                        ))
+                    );
+                    assert_eq!(
+                        resolved_design_variant(cx, MaterialDesignVariant::Standard),
+                        MaterialDesignVariant::Expressive
+                    );
+
+                    with_default_material_design_variant(cx, |cx| {
+                        assert_eq!(
+                            inherited_design_variant_override(cx),
+                            Some(MaterialDesignVariantOverride::UseDefault)
+                        );
+                        assert_eq!(
+                            resolved_design_variant(cx, MaterialDesignVariant::Expressive),
+                            MaterialDesignVariant::Expressive
+                        );
+                    });
+
+                    assert_eq!(
+                        resolved_design_variant(cx, MaterialDesignVariant::Standard),
+                        MaterialDesignVariant::Expressive
+                    );
+                });
+
+                assert_eq!(inherited_design_variant_override(cx), None);
+                assert_eq!(
+                    resolved_design_variant(cx, MaterialDesignVariant::Standard),
+                    MaterialDesignVariant::Standard
+                );
             },
         );
     }

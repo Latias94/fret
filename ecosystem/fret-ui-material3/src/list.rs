@@ -21,6 +21,9 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
+use crate::foundation::context::{
+    MaterialDesignVariant, resolved_design_variant, theme_default_design_variant,
+};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
@@ -301,6 +304,9 @@ fn list_item<H: UiHost>(
             .map(|v| v.as_ref() == value.as_ref())
             .unwrap_or(false);
 
+        let design_variant = resolved_design_variant(cx, theme_default_design_variant(theme));
+        let expressive = design_variant == MaterialDesignVariant::Expressive;
+
         if enabled {
             let model_for_press = model.clone();
             let value_for_press = value.clone();
@@ -321,7 +327,8 @@ fn list_item<H: UiHost>(
 
         let height = list_tokens::one_line_container_height(theme);
 
-        let corner_radii = list_tokens::item_container_shape(theme);
+        let corner_radii =
+            list_tokens::item_container_shape_with_variant(theme, selected, expressive);
 
         let focus_ring = material_focus_ring_for_component(theme, "md.comp.list", corner_radii);
 
@@ -420,12 +427,19 @@ fn list_item<H: UiHost>(
                         ..Default::default()
                     },
                     move |cx| {
-                        let leading = leading_icon
-                            .as_ref()
-                            .map(|id| list_icon(cx, theme, id, icon_color, ListIconSlot::Leading));
-                        let trailing = trailing_icon
-                            .as_ref()
-                            .map(|id| list_icon(cx, theme, id, icon_color, ListIconSlot::Trailing));
+                        let leading = leading_icon.as_ref().map(|id| {
+                            list_icon(cx, theme, id, icon_color, expressive, ListIconSlot::Leading)
+                        });
+                        let trailing = trailing_icon.as_ref().map(|id| {
+                            list_icon(
+                                cx,
+                                theme,
+                                id,
+                                icon_color,
+                                expressive,
+                                ListIconSlot::Trailing,
+                            )
+                        });
                         let label_el = list_item_label(cx, theme, &label, label_color);
 
                         let content = cx.flex(row, move |_cx| {
@@ -479,11 +493,12 @@ fn list_icon<H: UiHost>(
     theme: &Theme,
     icon: &IconId,
     color: Color,
+    expressive: bool,
     slot: ListIconSlot,
 ) -> AnyElement {
     let size = match slot {
-        ListIconSlot::Leading => list_tokens::leading_icon_size(theme),
-        ListIconSlot::Trailing => list_tokens::trailing_icon_size(theme),
+        ListIconSlot::Leading => list_tokens::leading_icon_size_with_variant(theme, expressive),
+        ListIconSlot::Trailing => list_tokens::trailing_icon_size_with_variant(theme, expressive),
     };
     let svg = svg_source_for_icon(cx, icon);
 

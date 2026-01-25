@@ -142,6 +142,16 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
         .variant(options.variant.to_material())
         .build();
 
+    // Fret-owned marker token: allow Material3 components to switch to expressive component token
+    // variants when the dynamic scheme uses the expressive palette variant.
+    cfg.numbers.insert(
+        "md.sys.fret.material.is-expressive".to_string(),
+        match options.variant {
+            DynamicVariant::Expressive => 1.0,
+            _ => 0.0,
+        },
+    );
+
     let scheme = match options.mode {
         SchemeMode::Light => theme.schemes.light,
         SchemeMode::Dark => theme.schemes.dark,
@@ -1333,8 +1343,16 @@ fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
     cfg.metrics
         .insert("md.comp.list.list-item.leading-icon.size".to_string(), 24.0);
     cfg.metrics.insert(
+        "md.comp.list.list-item.leading-icon.expressive.size".to_string(),
+        20.0,
+    );
+    cfg.metrics.insert(
         "md.comp.list.list-item.trailing-icon.size".to_string(),
         24.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.list.list-item.trailing-icon.expressive.size".to_string(),
+        20.0,
     );
 
     cfg.corners.insert(
@@ -1342,8 +1360,16 @@ fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
         Corners::all(Px(0.0)),
     );
     cfg.corners.insert(
+        "md.comp.list.list-item.container.expressive.shape".to_string(),
+        Corners::all(Px(4.0)),
+    );
+    cfg.corners.insert(
         "md.comp.list.list-item.selected.container.shape".to_string(),
-        Corners::all(Px(0.0)),
+        Corners::all(Px(16.0)),
+    );
+    cfg.corners.insert(
+        "md.comp.list.list-item.selected.container.expressive.shape".to_string(),
+        Corners::all(Px(16.0)),
     );
 }
 
@@ -3002,6 +3028,54 @@ mod tests {
                 .copied(),
             Some(0.1)
         );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.list.list-item.leading-icon.size")
+                .copied(),
+            Some(24.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.list.list-item.leading-icon.expressive.size")
+                .copied(),
+            Some(20.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.list.list-item.trailing-icon.size")
+                .copied(),
+            Some(24.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.list.list-item.trailing-icon.expressive.size")
+                .copied(),
+            Some(20.0)
+        );
+        assert_eq!(
+            cfg.corners
+                .get("md.comp.list.list-item.container.shape")
+                .copied(),
+            Some(fret_core::Corners::all(fret_core::Px(0.0)))
+        );
+        assert_eq!(
+            cfg.corners
+                .get("md.comp.list.list-item.container.expressive.shape")
+                .copied(),
+            Some(fret_core::Corners::all(fret_core::Px(4.0)))
+        );
+        assert_eq!(
+            cfg.corners
+                .get("md.comp.list.list-item.selected.container.shape")
+                .copied(),
+            Some(fret_core::Corners::all(fret_core::Px(16.0)))
+        );
+        assert_eq!(
+            cfg.corners
+                .get("md.comp.list.list-item.selected.container.expressive.shape")
+                .copied(),
+            Some(fret_core::Corners::all(fret_core::Px(16.0)))
+        );
 
         // Inject into an existing config should merge/overwrite.
         let mut cfg2 = fret_ui::theme::ThemeConfig::default();
@@ -3020,6 +3094,13 @@ mod tests {
                 mode: SchemeMode::Dark,
                 ..Default::default()
             },
+        );
+
+        assert_eq!(
+            cfg.numbers
+                .get("md.sys.fret.material.is-expressive")
+                .copied(),
+            Some(0.0)
         );
 
         let primary = cfg
@@ -3072,6 +3153,13 @@ mod tests {
                 ..Default::default()
             },
         );
+        assert_eq!(
+            cfg_tonal
+                .numbers
+                .get("md.sys.fret.material.is-expressive")
+                .copied(),
+            Some(0.0)
+        );
 
         let mut cfg_expressive = fret_ui::theme::ThemeConfig::default();
         inject_sys_colors(
@@ -3081,6 +3169,13 @@ mod tests {
                 variant: DynamicVariant::Expressive,
                 ..Default::default()
             },
+        );
+        assert_eq!(
+            cfg_expressive
+                .numbers
+                .get("md.sys.fret.material.is-expressive")
+                .copied(),
+            Some(1.0)
         );
 
         let tonal_primary = cfg_tonal

@@ -18,6 +18,8 @@ fn allowlisted_non_material_web_tokens() -> BTreeSet<&'static str> {
     BTreeSet::from([
         // Fret-specific: enforced minimum touch target policy.
         "md.sys.layout.minimum-touch-target.size",
+        // Fret-specific: opt into using expressive component token variants when configured.
+        "md.sys.fret.material.is-expressive",
         // Fret-specific escape hatch: allow overriding shadow color without forking the elevation logic.
         // Defaults to `md.sys.color.shadow`.
         "md.comp.dialog.container.shadow-color",

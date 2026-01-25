@@ -22,10 +22,33 @@ pub(crate) fn one_line_container_height(theme: &Theme) -> Px {
         .unwrap_or(Px(56.0))
 }
 
-pub(crate) fn item_container_shape(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key("md.comp.list.list-item.container.shape")
-        .unwrap_or(Corners::all(Px(0.0)))
+pub(crate) fn item_container_shape_with_variant(
+    theme: &Theme,
+    selected: bool,
+    expressive: bool,
+) -> Corners {
+    let (expressive_key, standard_key, fallback) = if selected {
+        (
+            "md.comp.list.list-item.selected.container.expressive.shape",
+            "md.comp.list.list-item.selected.container.shape",
+            Corners::all(Px(16.0)),
+        )
+    } else {
+        (
+            "md.comp.list.list-item.container.expressive.shape",
+            "md.comp.list.list-item.container.shape",
+            Corners::all(Px(0.0)),
+        )
+    };
+
+    if expressive {
+        theme
+            .corners_by_key(expressive_key)
+            .or_else(|| theme.corners_by_key(standard_key))
+            .unwrap_or(fallback)
+    } else {
+        theme.corners_by_key(standard_key).unwrap_or(fallback)
+    }
 }
 
 pub(crate) fn item_between_space(theme: &Theme) -> Px {
@@ -58,16 +81,30 @@ pub(crate) fn item_bottom_space(theme: &Theme) -> Px {
         .unwrap_or(Px(10.0))
 }
 
-pub(crate) fn leading_icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.leading-icon.size")
-        .unwrap_or(Px(24.0))
+pub(crate) fn leading_icon_size_with_variant(theme: &Theme, expressive: bool) -> Px {
+    if expressive {
+        theme
+            .metric_by_key("md.comp.list.list-item.leading-icon.expressive.size")
+            .or_else(|| theme.metric_by_key("md.comp.list.list-item.leading-icon.size"))
+            .unwrap_or(Px(24.0))
+    } else {
+        theme
+            .metric_by_key("md.comp.list.list-item.leading-icon.size")
+            .unwrap_or(Px(24.0))
+    }
 }
 
-pub(crate) fn trailing_icon_size(theme: &Theme) -> Px {
-    theme
-        .metric_by_key("md.comp.list.list-item.trailing-icon.size")
-        .unwrap_or(Px(24.0))
+pub(crate) fn trailing_icon_size_with_variant(theme: &Theme, expressive: bool) -> Px {
+    if expressive {
+        theme
+            .metric_by_key("md.comp.list.list-item.trailing-icon.expressive.size")
+            .or_else(|| theme.metric_by_key("md.comp.list.list-item.trailing-icon.size"))
+            .unwrap_or(Px(24.0))
+    } else {
+        theme
+            .metric_by_key("md.comp.list.list-item.trailing-icon.size")
+            .unwrap_or(Px(24.0))
+    }
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
