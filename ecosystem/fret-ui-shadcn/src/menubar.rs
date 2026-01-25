@@ -3309,6 +3309,73 @@ mod tests {
         ui.layout_all(app, services, bounds, 1.0);
     }
 
+    fn render_frame_with_underlay_and_submenu(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        underlay_clicked: Model<bool>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-underlay-submenu",
+            move |cx| {
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_toggle_bool(&underlay_clicked);
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    underlay,
+                    menubar(cx, |_cx| {
+                        vec![
+                            MenubarMenu::new("File").entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Submenu(MenubarItem::new("More").submenu(vec![
+                                    MenubarEntry::Item(MenubarItem::new("Sub Alpha")),
+                                    MenubarEntry::Item(MenubarItem::new("Sub Beta")),
+                                ])),
+                                MenubarEntry::Item(MenubarItem::new("Exit")),
+                            ]),
+                            MenubarMenu::new("Edit")
+                                .entries(vec![MenubarEntry::Item(MenubarItem::new("Undo"))]),
+                        ]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
     #[test]
     fn menubar_hover_switches_open_menu() {
         let window = AppWindowId::default();
@@ -4260,6 +4327,158 @@ mod tests {
                 .iter()
                 .any(|e| matches!(e, Effect::SetTimer { after, .. } if *after == close_delay)),
             "expected safe corridor pointer move to not arm a new close-delay timer; effects={effects:?} safe_point={safe_point:?} close_delay={close_delay:?}"
+        );
+    }
+
+    #[test]
+    fn menubar_close_transition_disables_safe_hover_observers_and_timers() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(700.0), Px(320.0)),
+        );
+
+        let underlay_clicked = app.models_mut().insert(false);
+
+        // Frame 1: render and open the "File" menu (so the "More" submenu trigger is visible).
+        render_frame_with_underlay_and_submenu(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file_pos = center(menu_trigger_bounds(&snap0, "File"));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_underlay_and_submenu(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+        );
+
+        let overlay_id = OverlayController::stack_snapshot_for_window(&ui, &mut app, window)
+            .topmost_popover
+            .expect("expected an open menubar menu overlay");
+        let overlay_root_name = menu::menubar_root_name(overlay_id);
+        let overlay_root = fret_ui::elements::global_root(window, &overlay_root_name);
+        let overlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, overlay_root).expect("overlay");
+        let layer = ui.node_layer(overlay_node).expect("overlay layer");
+
+        let open_info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == layer)
+            .expect("overlay layer info");
+        assert!(open_info.visible);
+        assert!(open_info.hit_testable);
+        assert!(open_info.wants_pointer_move_events);
+        assert!(open_info.wants_timer_events);
+
+        // Close via outside click to enter the close transition (`present=true`, `interactive=false`).
+        let underlay_pos = Point::new(Px(10.0), Px(300.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_underlay_and_submenu(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+        );
+
+        let close_info = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == layer)
+            .expect("overlay layer info");
+        assert!(close_info.visible);
+        assert!(!close_info.hit_testable);
+        assert!(!close_info.wants_pointer_move_events);
+        assert!(!close_info.wants_timer_events);
+
+        // Pointer moves during the close transition must not arm submenu timers.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        let cfg = menu::sub::MenuSubmenuConfig::default();
+        assert!(
+            !effects.iter().any(|e| matches!(
+                e,
+                Effect::SetTimer { after, .. } if *after == cfg.open_delay || *after == cfg.close_delay
+            )),
+            "expected close transition pointer move to not arm submenu timers; effects={effects:?}"
         );
     }
 }
