@@ -28,8 +28,8 @@ use crate::foundation::elevation::{
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion;
+use crate::tokens::dialog as dialog_tokens;
 
 #[derive(Clone)]
 pub struct DialogAction {
@@ -141,66 +141,24 @@ impl DialogAction {
                     let is_hovered = enabled && st.hovered;
                     let is_focused = enabled && st.focused && focus_visible;
 
-                    let tokens = MaterialTokenResolver::new(theme);
-
-                    let label_color = if is_pressed {
-                        tokens.color_comp_or_sys(
-                            "md.comp.dialog.action.pressed.label-text.color",
-                            "md.sys.color.primary",
-                        )
+                    let interaction = if is_pressed {
+                        dialog_tokens::DialogActionInteraction::Pressed
                     } else if is_hovered {
-                        tokens.color_comp_or_sys(
-                            "md.comp.dialog.action.hover.label-text.color",
-                            "md.sys.color.primary",
-                        )
+                        dialog_tokens::DialogActionInteraction::Hovered
                     } else if is_focused {
-                        tokens.color_comp_or_sys(
-                            "md.comp.dialog.action.focus.label-text.color",
-                            "md.sys.color.primary",
-                        )
+                        dialog_tokens::DialogActionInteraction::Focused
                     } else {
-                        tokens.color_comp_or_sys(
-                            "md.comp.dialog.action.label-text.color",
-                            "md.sys.color.primary",
-                        )
+                        dialog_tokens::DialogActionInteraction::Default
                     };
 
-                    let state_layer_color = if is_pressed {
-                        tokens.color_comp_or_sys(
-                            "md.comp.dialog.action.pressed.state-layer.color",
-                            "md.sys.color.primary",
-                        )
-                    } else if is_hovered {
-                        tokens.color_comp_or_sys(
-                            "md.comp.dialog.action.hover.state-layer.color",
-                            "md.sys.color.primary",
-                        )
-                    } else {
-                        tokens.color_comp_or_sys(
-                            "md.comp.dialog.action.focus.state-layer.color",
-                            "md.sys.color.primary",
-                        )
-                    };
+                    let label_color = dialog_tokens::action_label_color(theme, interaction);
+                    let state_layer_color =
+                        dialog_tokens::action_state_layer_color(theme, interaction);
+                    let state_layer_target =
+                        dialog_tokens::action_state_layer_target_opacity(theme, interaction);
 
-                    let state_layer_target = if is_pressed {
-                        theme
-                            .number_by_key("md.comp.dialog.action.pressed.state-layer.opacity")
-                            .unwrap_or(0.1)
-                    } else if is_hovered {
-                        theme
-                            .number_by_key("md.comp.dialog.action.hover.state-layer.opacity")
-                            .unwrap_or(0.08)
-                    } else if is_focused {
-                        theme
-                            .number_by_key("md.comp.dialog.action.focus.state-layer.opacity")
-                            .unwrap_or(0.1)
-                    } else {
-                        0.0
-                    };
-
-                    let ripple_base_opacity = theme
-                        .number_by_key("md.comp.dialog.action.pressed.state-layer.opacity")
-                        .unwrap_or(0.1);
+                    let ripple_base_opacity =
+                        dialog_tokens::action_pressed_state_layer_opacity(theme);
                     let indication_config = material_pressable_indication_config(theme, None);
                     let ink = material_ink_layer_for_pressable(
                         cx,
@@ -371,27 +329,17 @@ impl Dialog {
 
             let open_ms = self
                 .open_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
+                .unwrap_or_else(|| dialog_tokens::default_open_duration_ms(&theme));
             let close_ms = self
                 .close_duration_ms
-                .or_else(|| theme.duration_ms_by_key("md.sys.motion.duration.medium2"))
-                .unwrap_or(300);
+                .unwrap_or_else(|| dialog_tokens::default_close_duration_ms(&theme));
             let open_ticks = motion::ms_to_frames(open_ms);
             let close_ticks = motion::ms_to_frames(close_ms);
             let easing_key = self
                 .easing_key
                 .clone()
                 .unwrap_or_else(|| Arc::<str>::from("md.sys.motion.easing.emphasized"));
-            let bezier =
-                theme
-                    .easing_by_key(easing_key.as_ref())
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
+            let bezier = dialog_tokens::easing(&theme, Some(easing_key.as_ref()));
 
             let transition = OverlayController::transition_with_durations_and_cubic_bezier(
                 cx,
@@ -408,8 +356,6 @@ impl Dialog {
             let underlay_el = underlay(cx);
 
             if presence.present {
-                let tokens = MaterialTokenResolver::new(&theme);
-
                 let dismiss_handler: OnDismissRequest =
                     self.on_dismiss_request.clone().unwrap_or_else(|| {
                         let open = self.open.clone();
@@ -420,26 +366,16 @@ impl Dialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_color = tokens.color_sys("md.sys.color.scrim");
+                let scrim_color = dialog_tokens::scrim_color(&theme);
                 let scrim_alpha =
                     (scrim_color.a * self.scrim_opacity * transition.progress).clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_color, scrim_alpha);
 
-                let container_bg = tokens.color_comp_or_sys(
-                    "md.comp.dialog.container.color",
-                    "md.sys.color.surface-container-high",
-                );
-                let container_shape = theme
-                    .corners_by_key("md.comp.dialog.container.shape")
-                    .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-large"))
-                    .unwrap_or_else(|| Corners::all(Px(28.0)));
-                let elevation = theme
-                    .metric_by_key("md.comp.dialog.container.elevation")
-                    .unwrap_or(Px(0.0));
+                let container_bg = dialog_tokens::container_background(&theme);
+                let container_shape = dialog_tokens::container_shape(&theme);
+                let elevation = dialog_tokens::container_elevation(&theme);
                 let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
-                let shadow_color = theme
-                    .color_by_key("md.comp.dialog.container.shadow-color")
-                    .unwrap_or_else(|| tokens.color_sys("md.sys.color.shadow"));
+                let shadow_color = dialog_tokens::container_shadow_color(&theme);
                 let shadow = shadow_for_elevation_with_color(
                     &theme,
                     elevation,
@@ -447,12 +383,8 @@ impl Dialog {
                     container_shape,
                 );
 
-                let headline_color = tokens
-                    .color_comp_or_sys("md.comp.dialog.headline.color", "md.sys.color.on-surface");
-                let supporting_color = tokens.color_comp_or_sys(
-                    "md.comp.dialog.supporting-text.color",
-                    "md.sys.color.on-surface-variant",
-                );
+                let headline_color = dialog_tokens::headline_color(&theme);
+                let supporting_color = dialog_tokens::supporting_text_color(&theme);
 
                 let overlay_root = cx.named("material3_dialog_root", |cx| {
                     let mut layout = LayoutStyle::default();
@@ -550,7 +482,7 @@ impl Dialog {
                                 center.direction = Axis::Vertical;
                                 center.justify = MainAlign::Center;
                                 center.align = CrossAlign::Center;
-                                center.padding = Edges::all(Px(24.0));
+                                center.padding = dialog_tokens::panel_padding(&theme);
 
                                 let content = cx.flex(center, move |cx| {
                                                 let mut panel_layout = LayoutStyle::default();
@@ -610,14 +542,9 @@ impl Dialog {
                                                     row.layout.size.width = Length::Fill;
 
                                                     let action_cfg = DialogActionConfig {
-                                                        height: Px(40.0),
-                                                        padding: Edges {
-                                                            left: Px(12.0),
-                                                            right: Px(12.0),
-                                                            top: Px(0.0),
-                                                            bottom: Px(0.0),
-                                                        },
-                                                        corner_radii: Corners::all(Px(9999.0)),
+                                                        height: dialog_tokens::action_height(&theme),
+                                                        padding: dialog_tokens::action_padding(&theme),
+                                                        corner_radii: dialog_tokens::action_corner_radii(&theme),
                                                     };
 
                                                     let actions = self
@@ -639,7 +566,7 @@ impl Dialog {
                                                             background: Some(container_bg),
                                                             shadow,
                                                             corner_radii: container_shape,
-                                                            padding: Edges::all(Px(24.0)),
+                                                            padding: dialog_tokens::panel_padding(&theme),
                                                             ..Default::default()
                                                         },
                                                         move |_cx| body,
