@@ -25,7 +25,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] List: expressive icon size + per-interaction container shape.
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_list_scalars`),
     `ecosystem/fret-ui-material3/src/tokens/list.rs` (`item_container_shape_for_interaction`),
-    `ecosystem/fret-ui-material3/src/list.rs` (design variant aware shape selection).
+    `ecosystem/fret-ui-material3/src/list.rs` (design variant aware shape selection),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_list`).
 
 ## Non-goals (initially)
 
