@@ -430,7 +430,7 @@ impl LayoutRefinement {
     }
 
     pub fn min_w_0(self) -> Self {
-        self.min_w(MetricRef::Px(Px(0.0)))
+        self.min_w(Px(0.0))
     }
 
     pub fn w(mut self, width: LengthRefinement) -> Self {
@@ -494,8 +494,12 @@ impl LayoutRefinement {
         self
     }
 
+    pub fn basis_px(self, basis: impl Into<MetricRef>) -> Self {
+        self.basis(LengthRefinement::Px(basis.into()))
+    }
+
     pub fn basis_0(self) -> Self {
-        self.basis(LengthRefinement::Px(MetricRef::Px(Px(0.0))))
+        self.basis_px(Px(0.0))
     }
 
     pub fn flex_grow(mut self, grow: f32) -> Self {
@@ -518,7 +522,7 @@ impl LayoutRefinement {
             let f = self.ensure_flex_item_mut();
             f.grow = Some(1.0);
             f.shrink = Some(1.0);
-            f.basis = Some(LengthRefinement::Px(MetricRef::Px(Px(0.0))));
+            f.basis = Some(LengthRefinement::Px(Px(0.0).into()));
         }
         self
     }

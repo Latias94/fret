@@ -552,6 +552,10 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.basis(basis))
     }
 
+    pub fn basis_px(self, basis: impl Into<MetricRef>) -> Self {
+        self.layout_with(|l| l.basis_px(basis))
+    }
+
     pub fn flex_grow(self, grow: f32) -> Self {
         self.layout_with(|l| l.flex_grow(grow))
     }
@@ -1070,25 +1074,26 @@ mod tests {
             .ml(Space::N2)
             .ml_neg(Space::N2)
             .ml_auto()
-            .min_w(MetricRef::Px(Px(10.0)))
+            .min_w(Px(10.0))
             .min_w_space(Space::N1)
-            .min_h(MetricRef::Px(Px(10.0)))
+            .min_h(Px(10.0))
             .min_h_space(Space::N1)
             .min_w_0()
             .w(LengthRefinement::Fill)
             .h(LengthRefinement::Auto)
-            .w_px(MetricRef::Px(Px(10.0)))
+            .w_px(Px(10.0))
             .w_space(Space::N10)
-            .h_px(MetricRef::Px(Px(11.0)))
+            .h_px(Px(11.0))
             .h_space(Space::N11)
             .w_full()
             .h_full()
             .size_full()
-            .max_w(MetricRef::Px(Px(10.0)))
+            .max_w(Px(10.0))
             .max_w_space(Space::N1)
-            .max_h(MetricRef::Px(Px(10.0)))
+            .max_h(Px(10.0))
             .max_h_space(Space::N1)
             .basis(LengthRefinement::Auto)
+            .basis_px(Px(10.0))
             .basis_0()
             .flex_grow(1.0)
             .flex_shrink(1.0)
@@ -1192,7 +1197,7 @@ mod tests {
             .wrap()
             .build();
 
-        assert_eq!(flex.gap, Space::N2);
+        assert!(matches!(flex.gap, MetricRef::Token { key, .. } if key == Space::N2.token_key()));
         assert_eq!(flex.justify, Justify::Between);
         assert_eq!(flex.items, Items::Center);
         assert!(flex.wrap);
