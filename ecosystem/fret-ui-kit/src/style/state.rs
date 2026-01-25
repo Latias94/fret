@@ -1,5 +1,8 @@
 use std::ops::{BitOr, BitOrAssign};
 
+use fret_ui::element::PressableState;
+use fret_ui::{ElementContext, UiHost};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub enum WidgetState {
@@ -50,6 +53,25 @@ impl WidgetStates {
         } else {
             self.remove(state);
         }
+    }
+
+    pub fn from_pressable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        st: PressableState,
+        enabled: bool,
+    ) -> Self {
+        let mut states = Self::empty();
+        states.set(WidgetState::Disabled, !enabled);
+        states.set(WidgetState::Hovered, enabled && st.hovered);
+        states.set(WidgetState::Active, enabled && st.pressed);
+        states.set(WidgetState::Focused, enabled && st.focused);
+        states.set(
+            WidgetState::FocusVisible,
+            enabled
+                && st.focused
+                && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
+        );
+        states
     }
 }
 
