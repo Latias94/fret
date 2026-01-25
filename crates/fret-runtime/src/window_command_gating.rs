@@ -320,54 +320,6 @@ mod tests {
     }
 
     #[test]
-    fn updating_base_snapshot_does_not_override_active_overlay_snapshot() {
-        let window = AppWindowId::default();
-        let mut svc = WindowCommandGatingService::default();
-
-        let mut base_ctx = InputContext::default();
-        base_ctx.focus_is_text_input = true;
-        svc.set_snapshot(
-            window,
-            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
-        );
-
-        let mut overlay_ctx = InputContext::default();
-        overlay_ctx.ui_has_modal = true;
-        let token = svc.push_snapshot(
-            window,
-            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
-        );
-        assert!(
-            svc.snapshot(window)
-                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
-            "expected stack top snapshot to win"
-        );
-
-        let mut new_base_ctx = InputContext::default();
-        new_base_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
-        svc.set_snapshot(
-            window,
-            WindowCommandGatingSnapshot::new(new_base_ctx, HashMap::new()),
-        );
-        assert!(
-            svc.snapshot(window)
-                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
-            "expected base updates to not override the active overlay snapshot"
-        );
-
-        svc.remove_pushed_snapshot(window, token)
-            .expect("remove pushed snapshot");
-        assert_eq!(
-            svc.snapshot(window)
-                .expect("snapshot")
-                .input_ctx()
-                .dispatch_phase,
-            crate::InputDispatchPhase::Capture,
-            "expected base snapshot to be visible again after popping overlay snapshots"
-        );
-    }
-
-    #[test]
     fn pushed_snapshots_can_be_removed_out_of_order() {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
@@ -407,6 +359,126 @@ mod tests {
 
         svc.remove_pushed_snapshot(window, inner)
             .expect("remove inner");
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected all snapshots removed"
+        );
+    }
+
+    #[test]
+    fn clearing_base_snapshot_does_not_remove_active_overlay_snapshot() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        let token = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+
+        svc.clear_snapshot(window);
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected overlay snapshot to remain effective after clearing base"
+        );
+
+        svc.remove_pushed_snapshot(window, token)
+            .expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected window to be cleared after removing the last overlay snapshot"
+        );
+    }
+
+    #[test]
+    fn updating_pushed_snapshot_only_affects_that_entry() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.ui_has_modal = true;
+        let outer = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut inner_ctx = InputContext::default();
+        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
+        );
+
+        let mut updated_outer_ctx = InputContext::default();
+        updated_outer_ctx.dispatch_phase = crate::InputDispatchPhase::Preview;
+        assert!(
+            svc.update_pushed_snapshot(
+                window,
+                outer,
+                WindowCommandGatingSnapshot::new(updated_outer_ctx, HashMap::new())
+            ),
+            "expected update to succeed"
+        );
+
+        assert_eq!(
+            svc.snapshot(window)
+                .expect("snapshot")
+                .input_ctx()
+                .dispatch_phase,
+            crate::InputDispatchPhase::Capture,
+            "expected inner snapshot to remain effective"
+        );
+
+        svc.remove_pushed_snapshot(window, inner)
+            .expect("remove inner");
+        assert_eq!(
+            svc.snapshot(window)
+                .expect("snapshot")
+                .input_ctx()
+                .dispatch_phase,
+            crate::InputDispatchPhase::Preview,
+            "expected updated outer snapshot to become effective after popping inner"
+        );
+    }
+
+    #[test]
+    fn removing_inner_snapshot_restores_outer_snapshot() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.ui_has_modal = true;
+        let outer = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut inner_ctx = InputContext::default();
+        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
+        );
+
+        svc.remove_pushed_snapshot(window, inner)
+            .expect("remove inner");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal),
+            "expected outer snapshot to become effective after popping inner"
+        );
+
+        svc.remove_pushed_snapshot(window, outer)
+            .expect("remove outer");
         assert!(
             svc.snapshot(window).is_none(),
             "expected all snapshots removed"
