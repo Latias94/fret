@@ -514,6 +514,13 @@ pub struct UiDebugRemoveSubtreeFrameContext {
     pub parent_frame_children_contains_root: Option<bool>,
     pub root_frame_instance_present: bool,
     pub root_frame_children_len: Option<u32>,
+    pub path_edge_len: u8,
+    /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
+    /// contains the child node:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing frame edge capture)
+    pub path_edge_frame_contains_child: [u8; 16],
 }
 
 #[cfg(feature = "diagnostics")]
@@ -546,6 +553,19 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub root_path_len: u8,
     pub root_path: [u64; 16],
     pub root_path_truncated: bool,
+    pub root_path_edge_len: u8,
+    /// For each `root_path` edge (`child -> parent`), whether `UiTree` currently has the
+    /// corresponding `parent.children` edge:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing node entry)
+    pub root_path_edge_ui_contains_child: [u8; 16],
+    /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
+    /// contains the child node:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing frame edge capture)
+    pub root_path_edge_frame_contains_child: [u8; 16],
     pub removed_nodes: u32,
     pub removed_head_len: u8,
     pub removed_head: [u64; 16],
@@ -2358,6 +2378,7 @@ impl<H: UiHost> UiTree<H> {
                 root_parent.and_then(|p| self.nodes.get(p).map(|n| n.children.contains(&root)));
             let frame_context = self.debug_remove_subtree_frame_context.remove(&root);
             let mut root_path: [u64; 16] = [0u64; 16];
+            let mut root_path_nodes: [Option<NodeId>; 16] = [None; 16];
             let mut root_path_len: u8 = 0;
             let mut root_path_truncated = false;
             let mut current = Some(root);
@@ -2366,9 +2387,27 @@ impl<H: UiHost> UiTree<H> {
                     root_path_truncated = true;
                     break;
                 }
+                root_path_nodes[root_path_len as usize] = Some(id);
                 root_path[root_path_len as usize] = id.data().as_ffi();
                 root_path_len = root_path_len.saturating_add(1);
                 current = self.nodes.get(id).and_then(|n| n.parent);
+            }
+            let root_path_edge_len = root_path_len.saturating_sub(1);
+            let mut root_path_edge_ui_contains_child: [u8; 16] = [2u8; 16];
+            for idx in 0..(root_path_edge_len as usize).min(root_path_edge_ui_contains_child.len())
+            {
+                let Some(child) = root_path_nodes[idx] else {
+                    continue;
+                };
+                let Some(parent) = root_path_nodes[idx + 1] else {
+                    continue;
+                };
+                let contains = self.nodes.get(parent).map(|n| n.children.contains(&child));
+                root_path_edge_ui_contains_child[idx] = match contains {
+                    Some(true) => 1,
+                    Some(false) => 0,
+                    None => 2,
+                };
             }
             Some((
                 location.file(),
@@ -2388,6 +2427,8 @@ impl<H: UiHost> UiTree<H> {
                 root_path_len,
                 root_path,
                 root_path_truncated,
+                root_path_edge_len,
+                root_path_edge_ui_contains_child,
             ))
         } else {
             None
@@ -2413,8 +2454,13 @@ impl<H: UiHost> UiTree<H> {
                 root_path_len,
                 root_path,
                 root_path_truncated,
+                root_path_edge_len,
+                root_path_edge_ui_contains_child,
             )) = remove_record
             {
+                let root_path_edge_frame_contains_child = frame_context
+                    .map(|ctx| ctx.path_edge_frame_contains_child)
+                    .unwrap_or([2u8; 16]);
                 let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                     frame_context
                         .map(|ctx| {
@@ -2453,6 +2499,9 @@ impl<H: UiHost> UiTree<H> {
                         root_path_len,
                         root_path,
                         root_path_truncated,
+                        root_path_edge_len,
+                        root_path_edge_ui_contains_child,
+                        root_path_edge_frame_contains_child,
                         removed_nodes: 0,
                         removed_head_len: 0,
                         removed_head: [0u64; 16],
@@ -2487,8 +2536,13 @@ impl<H: UiHost> UiTree<H> {
             root_path_len,
             root_path,
             root_path_truncated,
+            root_path_edge_len,
+            root_path_edge_ui_contains_child,
         )) = remove_record
         {
+            let root_path_edge_frame_contains_child = frame_context
+                .map(|ctx| ctx.path_edge_frame_contains_child)
+                .unwrap_or([2u8; 16]);
             let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                 frame_context
                     .map(|ctx| {
@@ -2547,6 +2601,9 @@ impl<H: UiHost> UiTree<H> {
                     root_path_len,
                     root_path,
                     root_path_truncated,
+                    root_path_edge_len,
+                    root_path_edge_ui_contains_child,
+                    root_path_edge_frame_contains_child,
                     removed_nodes: removed.len().min(u32::MAX as usize) as u32,
                     removed_head_len,
                     removed_head,

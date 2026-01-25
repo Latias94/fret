@@ -2897,6 +2897,20 @@ pub struct UiRemovedSubtreeV1 {
     pub root_path: Vec<u64>,
     #[serde(default)]
     pub root_path_truncated: bool,
+    /// For each `root_path` edge (`child -> parent`), whether `UiTree` currently has the
+    /// corresponding `parent.children` edge:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing node entry)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_path_edge_ui_contains_child: Vec<u8>,
+    /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
+    /// contains the child node:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing frame edge capture)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_path_edge_frame_contains_child: Vec<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub root_parent_children_last_set_location: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2938,6 +2952,13 @@ impl UiRemovedSubtreeV1 {
         });
 
         let root_path = r.root_path[..(r.root_path_len as usize).min(r.root_path.len())].to_vec();
+        let root_path_edge_len = (r.root_path_edge_len as usize)
+            .min(r.root_path_edge_ui_contains_child.len())
+            .min(r.root_path_edge_frame_contains_child.len());
+        let root_path_edge_ui_contains_child =
+            r.root_path_edge_ui_contains_child[..root_path_edge_len].to_vec();
+        let root_path_edge_frame_contains_child =
+            r.root_path_edge_frame_contains_child[..root_path_edge_len].to_vec();
 
         let (
             root_parent_children_last_set_location,
@@ -2975,6 +2996,8 @@ impl UiRemovedSubtreeV1 {
             root_frame_children_len: r.root_frame_children_len,
             root_path,
             root_path_truncated: r.root_path_truncated,
+            root_path_edge_ui_contains_child,
+            root_path_edge_frame_contains_child,
             root_parent_children_last_set_location,
             root_parent_children_last_set_old_len,
             root_parent_children_last_set_new_len,

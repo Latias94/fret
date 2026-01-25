@@ -396,6 +396,28 @@ where
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
+                let mut path_edge_len: u8 = 0;
+                let mut current = Some(node);
+                while let Some(child) = current {
+                    let Some(parent) = ui.node_parent(child) else {
+                        break;
+                    };
+                    if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
+                        break;
+                    }
+                    let contains = window_frame
+                        .children
+                        .get(&parent)
+                        .map(|children| children.contains(&child));
+                    path_edge_frame_contains_child[path_edge_len as usize] = match contains {
+                        Some(true) => 1,
+                        Some(false) => 0,
+                        None => 2,
+                    };
+                    path_edge_len = path_edge_len.saturating_add(1);
+                    current = Some(parent);
+                }
                 Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
                     parent_frame_children_len: parent_frame_children
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
@@ -406,6 +428,8 @@ where
                         .children
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    path_edge_len,
+                    path_edge_frame_contains_child,
                 })
             }) {
                 ui.debug_set_remove_subtree_frame_context(node, ctx);
@@ -671,6 +695,28 @@ where
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
+                let mut path_edge_len: u8 = 0;
+                let mut current = Some(node);
+                while let Some(child) = current {
+                    let Some(parent) = ui.node_parent(child) else {
+                        break;
+                    };
+                    if (path_edge_len as usize) >= path_edge_frame_contains_child.len() {
+                        break;
+                    }
+                    let contains = window_frame
+                        .children
+                        .get(&parent)
+                        .map(|children| children.contains(&child));
+                    path_edge_frame_contains_child[path_edge_len as usize] = match contains {
+                        Some(true) => 1,
+                        Some(false) => 0,
+                        None => 2,
+                    };
+                    path_edge_len = path_edge_len.saturating_add(1);
+                    current = Some(parent);
+                }
                 Some(crate::tree::UiDebugRemoveSubtreeFrameContext {
                     parent_frame_children_len: parent_frame_children
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
@@ -681,6 +727,8 @@ where
                         .children
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    path_edge_len,
+                    path_edge_frame_contains_child,
                 })
             }) {
                 ui.debug_set_remove_subtree_frame_context(node, ctx);
@@ -1286,6 +1334,56 @@ fn collect_reachable_nodes_for_gc<H: UiHost>(
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gc_reachability_unions_ui_and_window_frame_children() {
+        use crate::UiHost;
+        use crate::declarative::frame::WindowFrame;
+        use crate::tree::UiTree;
+        use crate::widget::{LayoutCx, PaintCx, Widget};
+        use fret_runtime::FrameId;
+
+        #[derive(Default)]
+        struct TestWidget;
+
+        impl<H: UiHost> Widget<H> for TestWidget {
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                for &child in cx.children {
+                    let _ = cx.layout_in(child, cx.bounds);
+                }
+                cx.available
+            }
+
+            fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+        }
+
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(AppWindowId::default());
+        ui.set_debug_enabled(true);
+        ui.begin_debug_frame_if_needed(FrameId(1));
+
+        let root = ui.create_node(TestWidget::default());
+        let ui_child = ui.create_node(TestWidget::default());
+        let frame_child = ui.create_node(TestWidget::default());
+
+        ui.set_root(root);
+        ui.set_children(root, vec![ui_child]);
+
+        let mut window_frame = WindowFrame::default();
+        window_frame
+            .children
+            .insert(root, vec![ui_child, frame_child]);
+
+        let reachable = collect_reachable_nodes_for_gc(&ui, Some(&window_frame), [root]);
+        assert!(reachable.contains(&root));
+        assert!(reachable.contains(&ui_child));
+        assert!(reachable.contains(&frame_child));
+    }
+}
 fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
     ui: &UiTree<H>,
     window_frame: &WindowFrame,
@@ -1327,14 +1425,25 @@ fn push_existing_subtree_children<H: UiHost>(
     node: NodeId,
     stack: &mut Vec<NodeId>,
 ) {
-    let children = ui.children(node);
-    if children.is_empty() {
-        if let Some(children) = window_frame.children.get(&node) {
-            stack.extend(children.iter().copied());
-        }
-        return;
+    // GC reachability should be conservative: a retained subtree can temporarily have incomplete
+    // `UiTree` child edges (eg. during view-cache reuse) while the `WindowFrame` still retains the
+    // authoritative element-tree edges. Prefer the union of both sources so we don't misclassify
+    // a still-live subtree as detached.
+    let ui_children = ui.children(node);
+    if !ui_children.is_empty() {
+        stack.extend(ui_children.iter().copied());
     }
-    stack.extend(children);
+    if let Some(frame_children) = window_frame.children.get(&node) {
+        if ui_children.is_empty() {
+            stack.extend(frame_children.iter().copied());
+        } else {
+            for &child in frame_children {
+                if !ui_children.contains(&child) {
+                    stack.push(child);
+                }
+            }
+        }
+    }
 }
 
 fn inherit_observations_for_existing_subtree<H: UiHost>(
