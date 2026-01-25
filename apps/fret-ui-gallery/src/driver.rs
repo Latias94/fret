@@ -127,6 +127,21 @@ struct UiGalleryWindowState {
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
+    material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
+    material3_list_value: Model<Arc<str>>,
+    material3_expressive: Model<bool>,
+    material3_navigation_bar_value: Model<Arc<str>>,
+    material3_navigation_rail_value: Model<Arc<str>>,
+    material3_navigation_drawer_value: Model<Arc<str>>,
+    material3_modal_navigation_drawer_open: Model<bool>,
+    material3_dialog_open: Model<bool>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+    material3_text_field_error: Model<bool>,
+    material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -394,6 +409,21 @@ impl UiGalleryDriver {
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
         let switch = app.models_mut().insert(true);
+        let material3_checkbox = app.models_mut().insert(false);
+        let material3_switch = app.models_mut().insert(false);
+        let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
+        let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
+        let material3_list_value = app.models_mut().insert(Arc::<str>::from("alpha"));
+        let material3_expressive = app.models_mut().insert(false);
+        let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_modal_navigation_drawer_open = app.models_mut().insert(false);
+        let material3_dialog_open = app.models_mut().insert(false);
+        let material3_text_field_value = app.models_mut().insert(String::new());
+        let material3_text_field_disabled = app.models_mut().insert(false);
+        let material3_text_field_error = app.models_mut().insert(false);
+        let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
@@ -497,6 +527,21 @@ impl UiGalleryDriver {
             progress,
             checkbox,
             switch,
+            material3_checkbox,
+            material3_switch,
+            material3_radio_value,
+            material3_tabs_value,
+            material3_list_value,
+            material3_expressive,
+            material3_navigation_bar_value,
+            material3_navigation_rail_value,
+            material3_navigation_drawer_value,
+            material3_modal_navigation_drawer_open,
+            material3_dialog_open,
+            material3_text_field_value,
+            material3_text_field_disabled,
+            material3_text_field_error,
+            material3_menu_open,
             text_input,
             text_area,
             dropdown_open,
@@ -912,6 +957,22 @@ impl UiGalleryDriver {
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
+        let material3_checkbox = state.material3_checkbox.clone();
+        let material3_switch = state.material3_switch.clone();
+        let material3_radio_value = state.material3_radio_value.clone();
+        let material3_tabs_value = state.material3_tabs_value.clone();
+        let material3_list_value = state.material3_list_value.clone();
+        let material3_expressive = state.material3_expressive.clone();
+        let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
+        let material3_navigation_rail_value = state.material3_navigation_rail_value.clone();
+        let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
+        let material3_modal_navigation_drawer_open =
+            state.material3_modal_navigation_drawer_open.clone();
+        let material3_dialog_open = state.material3_dialog_open.clone();
+        let material3_text_field_value = state.material3_text_field_value.clone();
+        let material3_text_field_disabled = state.material3_text_field_disabled.clone();
+        let material3_text_field_error = state.material3_text_field_error.clone();
+        let material3_menu_open = state.material3_menu_open.clone();
         let text_input = state.text_input.clone();
         let text_area = state.text_area.clone();
         let dropdown_open = state.dropdown_open.clone();
@@ -1273,6 +1334,21 @@ impl UiGalleryDriver {
                                             progress.clone(),
                                             checkbox.clone(),
                                             switch.clone(),
+                                            material3_checkbox.clone(),
+                                            material3_switch.clone(),
+                                            material3_radio_value.clone(),
+                                            material3_tabs_value.clone(),
+                                            material3_list_value.clone(),
+                                            material3_expressive.clone(),
+                                            material3_navigation_bar_value.clone(),
+                                            material3_navigation_rail_value.clone(),
+                                            material3_navigation_drawer_value.clone(),
+                                            material3_modal_navigation_drawer_open.clone(),
+                                            material3_dialog_open.clone(),
+                                            material3_text_field_value.clone(),
+                                            material3_text_field_disabled.clone(),
+                                            material3_text_field_error.clone(),
+                                            material3_menu_open.clone(),
                                             text_input.clone(),
                                             text_area.clone(),
                                             dropdown_open.clone(),
@@ -1345,6 +1421,21 @@ impl UiGalleryDriver {
                                         progress.clone(),
                                         checkbox.clone(),
                                         switch.clone(),
+                                        material3_checkbox.clone(),
+                                        material3_switch.clone(),
+                                        material3_radio_value.clone(),
+                                        material3_tabs_value.clone(),
+                                        material3_list_value.clone(),
+                                        material3_expressive.clone(),
+                                        material3_navigation_bar_value.clone(),
+                                        material3_navigation_rail_value.clone(),
+                                        material3_navigation_drawer_value.clone(),
+                                        material3_modal_navigation_drawer_open.clone(),
+                                        material3_dialog_open.clone(),
+                                        material3_text_field_value.clone(),
+                                        material3_text_field_disabled.clone(),
+                                        material3_text_field_error.clone(),
+                                        material3_menu_open.clone(),
                                         text_input.clone(),
                                         text_area.clone(),
                                         dropdown_open.clone(),
