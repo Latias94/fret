@@ -165,7 +165,10 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false` in `removed_subtrees`.
     - `root_path_edge_ui_contains_child` / `root_path_edge_frame_contains_child` remain `1` along the recorded parent chain, suggesting subtree-local edges are still self-consistent.
 
-    This points to a higher-level attachment / root-selection / bookkeeping issue (missing liveness roots or overwritten root ownership), not only a broken parent-pointer chain.
+    New evidence suggests the failure is primarily a **liveness-root membership / attachment bookkeeping** issue (an island becomes structurally detached), not only a broken parent-pointer chain:
+
+    - `trigger_element_in_view_cache_keep_alive=false` and `trigger_element_listed_under_reuse_root=null` for the sweep trigger element in the failing bundle. This suggests the element is not being retained via the view-cache keep-alive set nor listed under any reuse-root subtree element list at removal time.
+    - `root_root_parent_sever_*` attributes a prior detach event for the island root to `crates/fret-ui/src/declarative/mount.rs:1162:16` (a `set_children` write) at `root_root_parent_sever_frame_id=32`, before the sweep frame. After this detach, the island becomes unreachable, so GC can legally collect it when the global stopgap is disabled.
   - Progress (v1):
     - Repair parent pointers for nodes reachable from layer roots before running the declarative GC sweep (`UiTree::repair_parent_pointers_from_layer_roots`).
     - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness) as the foundation for removing the global stopgap gate.
@@ -175,13 +178,15 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       Remove this once parent-pointer repair + reachability + explicit view-cache subtree liveness is proven sufficient under reuse.
       - Anchor: `crates/fret-ui/src/declarative/mount.rs` (`view_cache_has_reuse_roots` guard in the GC retain pass).
     - Explain why a subtree that should still be live becomes unreachable from *both* liveness sources on the failing frame:
-      - verify the expected layer root is still registered/considered in `ui.all_layer_roots()` for that frame (and whether visibility/policy changes effectively drop it as a liveness root),
-      - verify the expected cache root is present in `window_state.view_cache_reuse_roots()` and has a recorded subtree-element list.
+      - identify the `root_root_parent_sever_parent` node (map to element id + debug path + whether it is a cache root / reuse root),
+      - verify whether the `set_children` call at `mount.rs:1162` is being fed an incomplete child list in a cache-hit/transition scenario (forbidden by ADR 0191),
+      - verify the expected cache root is present in `window_state.view_cache_reuse_roots()` and has a complete recorded subtree-element list (and whether it is being invalidated/cleared prematurely).
     - Verify we are not accidentally overwriting element-root ownership during “touch existing subtree” paths:
       - add debug-only diagnostics when updating `NodeEntry.root` for an element that already has a different `root`,
       - decide whether to preserve the original root (avoid cross-root pollution) or split bookkeeping per-root if overwrites are expected/legitimate.
   - Next (ordered):
     - Export/confirm the liveness roots on the failing frame: which layer roots are active (and whether “invisible” layers still count as liveness roots), plus the current `view_cache_reuse_roots` list.
+    - Export the sever-parent mapping (parent node -> element id/path + cache-root flags) so the detach callsite can be tied back to the authoring UI structure.
     - Add debug-only diagnostics for `NodeEntry.root` overwrites (element + old_root + new_root + debug paths) to validate or falsify the “cross-root ownership overwrite” hypothesis.
     - Re-run the overlay torture with the stopgap disabled and use the new fields to decide whether the fix is:
       - missing liveness roots (root selection / visibility semantics), or
@@ -197,6 +202,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `removed_subtrees` include `reachable_from_view_cache_roots` to classify whether a swept subtree was still reachable from any view-cache reuse root node (child-edge reachability),
       vs. becoming a fully-detached island.
     - `removed_subtrees` include `trigger_element` / `trigger_element_root` and `trigger_element_root_path` to identify which element-runtime root produced the sweep.
+    - `removed_subtrees` include `trigger_element_in_view_cache_keep_alive` / `trigger_element_listed_under_reuse_root` to explain whether view-cache subtree membership contributed to liveness decisions.
+    - `removed_subtrees` include `root_root_parent_sever_*` to attribute detached-island roots to the structural operation that severed them.
+    - `removed_subtrees` include `root_root_parent_sever_parent_element` / `root_root_parent_sever_parent_path` to map the sever parent node back to the authoring UI structure.
     - `debug.all_layer_roots` (derived from `layers_in_paint_order`) makes the GC liveness roots explicit per snapshot.
     - `element_runtime.view_cache_reuse_root_element_samples` includes a per-reuse-root `(root_element -> node)` mapping plus a bounded head/tail sample of the recorded subtree element list.
     - `element_runtime.node_entry_root_overwrites` records `NodeEntry.root` ownership overwrites (element + old/new root + debug paths + callsite).
