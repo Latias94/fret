@@ -20,7 +20,7 @@ impl<H: UiHost> Widget<H> for TextInput {
     }
 
     fn is_focusable(&self) -> bool {
-        true
+        self.enabled && self.focusable
     }
 
     fn is_text_input(&self) -> bool {
@@ -29,9 +29,12 @@ impl<H: UiHost> Widget<H> for TextInput {
 
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
         cx.set_role(self.a11y_role);
-        cx.set_focusable(true);
-        cx.set_value_editable(true);
-        cx.set_text_selection_supported(true);
+        cx.set_focusable(self.enabled && self.focusable);
+        if !self.enabled {
+            cx.set_disabled(true);
+        }
+        cx.set_value_editable(self.enabled);
+        cx.set_text_selection_supported(self.enabled);
 
         let (value, text_selection, text_composition) = if self.is_ime_composing()
             && let Some(value) =
@@ -69,6 +72,9 @@ impl<H: UiHost> Widget<H> for TextInput {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if !self.enabled {
+            return;
+        }
         let focused = self.is_focused(cx);
 
         match event {

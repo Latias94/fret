@@ -12,6 +12,8 @@ pub use bound::BoundTextInput;
 #[derive(Debug)]
 pub struct TextInput {
     a11y_role: SemanticsRole,
+    enabled: bool,
+    focusable: bool,
     text: String,
     caret: usize,
     selection_anchor: usize,

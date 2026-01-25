@@ -100,7 +100,8 @@ impl ElementHostWidget {
             ElementInstance::TextInput(_) | ElementInstance::TextArea(_)
         );
         self.is_focusable = match &instance {
-            ElementInstance::TextInput(_) | ElementInstance::TextArea(_) => true,
+            ElementInstance::TextInput(p) => p.enabled && p.focusable,
+            ElementInstance::TextArea(p) => p.enabled && p.focusable,
             ElementInstance::Pressable(p) => p.enabled && p.focusable,
             _ => false,
         };

@@ -308,6 +308,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                 }
                 let input = self.text_input.as_mut().expect("text input");
+                input.set_enabled(props.enabled);
+                input.set_focusable(props.focusable);
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
@@ -329,6 +331,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                 }
                 let area = self.text_area.as_mut().expect("text area");
+                area.set_enabled(props.enabled);
+                area.set_focusable(props.focusable);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);

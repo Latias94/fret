@@ -904,6 +904,8 @@ impl Default for SelectableTextState {
 #[derive(Clone)]
 pub struct TextInputProps {
     pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
@@ -921,6 +923,8 @@ impl TextInputProps {
     pub fn new(model: Model<String>) -> Self {
         Self {
             layout: LayoutStyle::default(),
+            enabled: true,
+            focusable: true,
             model,
             a11y_label: None,
             a11y_role: None,
@@ -940,6 +944,8 @@ impl std::fmt::Debug for TextInputProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextInputProps")
             .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("a11y_role", &self.a11y_role)
@@ -960,6 +966,8 @@ impl std::fmt::Debug for TextInputProps {
 #[derive(Clone)]
 pub struct TextAreaProps {
     pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
@@ -972,6 +980,8 @@ impl TextAreaProps {
     pub fn new(model: Model<String>) -> Self {
         Self {
             layout: LayoutStyle::default(),
+            enabled: true,
+            focusable: true,
             model,
             a11y_label: None,
             test_id: None,
@@ -986,6 +996,8 @@ impl std::fmt::Debug for TextAreaProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextAreaProps")
             .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
