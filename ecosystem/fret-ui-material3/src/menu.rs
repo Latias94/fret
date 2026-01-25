@@ -21,12 +21,12 @@ use fret_ui::elements::ElementContext;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{Theme, UiHost};
 
-use crate::foundation::content::MaterialContentDefaults;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::tokens::menu as menu_tokens;
 
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
@@ -131,9 +131,7 @@ impl Menu {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
-            let height = theme
-                .metric_by_key("md.comp.menu.list-item.container.height")
-                .unwrap_or(Px(48.0));
+            let height = menu_tokens::list_item_height(&theme);
 
             let sem = SemanticsProps {
                 role: SemanticsRole::Menu,
@@ -172,21 +170,10 @@ impl Menu {
                 disabled: disabled.clone(),
             };
 
-            let container_bg = theme
-                .color_by_key("md.comp.menu.container.color")
-                .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
-                .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"));
-            let elevation = theme
-                .metric_by_key("md.comp.menu.container.elevation")
-                .unwrap_or(Px(0.0));
-            let shadow_color = theme
-                .color_by_key("md.comp.menu.container.shadow-color")
-                .or_else(|| theme.color_by_key("md.sys.color.shadow"))
-                .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"));
-            let r = theme
-                .metric_by_key("md.comp.menu.container.shape")
-                .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
-                .unwrap_or(Px(4.0));
+            let container_bg = menu_tokens::container_background(&theme);
+            let elevation = menu_tokens::container_elevation(&theme);
+            let shadow_color = menu_tokens::container_shadow_color(&theme);
+            let r = menu_tokens::container_shape_radius(&theme);
             let corner = Corners::all(r);
             let shadow =
                 shadow_for_elevation_with_color(&theme, elevation, Some(shadow_color), corner);
@@ -312,13 +299,8 @@ impl Menu {
 }
 
 fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Theme) -> AnyElement {
-    let h = theme
-        .metric_by_key("md.comp.menu.divider.height")
-        .unwrap_or(Px(1.0));
-    let c = theme
-        .color_by_key("md.comp.menu.divider.color")
-        .or_else(|| theme.color_by_key("md.sys.color.surface-variant"))
-        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-variant"));
+    let h = menu_tokens::divider_height(theme);
+    let c = menu_tokens::divider_color(theme);
 
     let mut props = ContainerProps::default();
     props.background = Some(c);
@@ -391,12 +373,20 @@ fn material_menu_item<H: UiHost>(
                 let is_hovered = enabled && st.hovered;
                 let is_focused = enabled && st.focused && focus_visible;
 
-                let (label_color, state_layer_color, state_layer_target) =
-                    menu_item_outcomes(theme, enabled, is_pressed, is_hovered, is_focused);
+                let interaction = if is_pressed {
+                    menu_tokens::MenuItemInteraction::Pressed
+                } else if is_focused {
+                    menu_tokens::MenuItemInteraction::Focused
+                } else if is_hovered {
+                    menu_tokens::MenuItemInteraction::Hovered
+                } else {
+                    menu_tokens::MenuItemInteraction::Default
+                };
 
-                let ripple_base_opacity = theme
-                    .number_by_key("md.comp.menu.list-item.pressed.state-layer.opacity")
-                    .unwrap_or(0.1);
+                let (label_color, state_layer_color, state_layer_target) =
+                    menu_tokens::item_outcomes(theme, enabled, interaction);
+
+                let ripple_base_opacity = menu_tokens::pressed_state_layer_opacity(theme);
                 let config = material_pressable_indication_config(theme, None);
                 let overlay = material_ink_layer_for_pressable(
                     cx,
@@ -452,59 +442,6 @@ fn menu_item_label<H: UiHost>(
     props.wrap = TextWrap::None;
     props.overflow = TextOverflow::Clip;
     cx.text_props(props)
-}
-
-fn menu_item_outcomes(
-    theme: &Theme,
-    enabled: bool,
-    pressed: bool,
-    hovered: bool,
-    focused: bool,
-) -> (Color, Color, f32) {
-    let (label_key, state_layer_key, opacity_key) = if pressed {
-        (
-            "md.comp.menu.list-item.pressed.label-text.color",
-            "md.comp.menu.list-item.pressed.state-layer.color",
-            "md.comp.menu.list-item.pressed.state-layer.opacity",
-        )
-    } else if focused {
-        (
-            "md.comp.menu.list-item.focus.label-text.color",
-            "md.comp.menu.list-item.focus.state-layer.color",
-            "md.comp.menu.list-item.focus.state-layer.opacity",
-        )
-    } else if hovered {
-        (
-            "md.comp.menu.list-item.hover.label-text.color",
-            "md.comp.menu.list-item.hover.state-layer.color",
-            "md.comp.menu.list-item.hover.state-layer.opacity",
-        )
-    } else {
-        (
-            "md.comp.menu.list-item.label-text.color",
-            "md.comp.menu.list-item.hover.state-layer.color",
-            "md.comp.menu.list-item.hover.state-layer.opacity",
-        )
-    };
-
-    let defaults = MaterialContentDefaults::on_surface(theme);
-    let mut label = theme
-        .color_by_key(label_key)
-        .unwrap_or(defaults.content_color);
-    let state_layer = theme
-        .color_by_key(state_layer_key)
-        .unwrap_or(defaults.content_color);
-    let mut opacity = theme.number_by_key(opacity_key).unwrap_or(0.0);
-
-    if !enabled {
-        let label_opacity = theme
-            .number_by_key("md.comp.menu.list-item.disabled.label-text.opacity")
-            .unwrap_or(defaults.disabled_opacity);
-        label.a = (label.a * label_opacity).clamp(0.0, 1.0);
-        opacity = 0.0;
-    }
-
-    (label, state_layer, opacity)
 }
 
 fn roving_typeahead_prefix_arc_str_always_wrap<H: UiHost>(
