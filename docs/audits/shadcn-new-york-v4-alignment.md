@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `244/448` keys referenced (`54.5%`)
+- shadcn-web `v4/new-york-v4`: `245/448` keys referenced (`54.7%`)
 
 ## Executive summary (current status + next targets)
 
@@ -48,7 +48,7 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 ### Recommended next alignment targets (P0 order)
 
 1. **Calendar dropdown caption + popover composition**
-   - Blocks: `calendar-23..30`, `calendar-32` (`captionLayout="dropdown"`) and `calendar-hijri`.
+   - Blocks: `calendar-24..30`, `calendar-32` (`captionLayout="dropdown"`) and `calendar-hijri`.
 2. **Forms / Field validation chrome**
    - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
 3. **Carousel**
@@ -199,7 +199,7 @@ Recent fixes:
   - Month-bounds gating (`startMonth`/`endMonth`) and `disableNavigation` parity (`calendar-11`).
   - Locale-aware month titles + day labels for Spanish (`calendar-12`).
 - Multiple selection (`mode="multiple"`) parity is now gated for `calendar-03` (including `required` + `max` selection policy).
-- Popover date picker composition open-state overlay placement is now gated for `calendar-22.open` (`align="start"`, `sideOffset=4`).
+- Popover date picker composition open-state overlay placement is now gated for `calendar-22.open` and `calendar-23.open` (`align="start"`, `sideOffset=4`).
 - Day buttons support `--cell-size` variants (per-golden) via `Calendar::{cell_size, show_week_number}` and
   nav button sizing.
 - `showOutsideDays=false` now keeps invisible outside-day placeholders (a11y-hidden) so x/y geometry matches.

@@ -3019,6 +3019,60 @@ fn web_vs_fret_calendar_22_open_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_calendar_23_open_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "calendar-23",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_headless::calendar::CalendarMonth;
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+            use time::Month;
+
+            let trigger = Button::new("Select date")
+                .variant(ButtonVariant::Outline)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(224.0)))
+                        .h_px(MetricRef::Px(Px(36.0))),
+                );
+
+            let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
+            let popover = fret_ui_shadcn::Popover::new(open.clone())
+                .align(PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    |cx| trigger.into_element(cx),
+                    |cx| {
+                        let month: Model<CalendarMonth> = cx
+                            .app
+                            .models_mut()
+                            .insert(CalendarMonth::new(2025, Month::June));
+                        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+                        let calendar =
+                            fret_ui_shadcn::Calendar::new(month, selected).into_element(cx);
+
+                        fret_ui_shadcn::PopoverContent::new([calendar])
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))),
+                            )
+                            .into_element(cx)
+                    },
+                );
+
+            stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N3),
+                move |_cx| vec![label, popover],
+            )
+        },
+        SemanticsRole::Button,
+        Some("Select date"),
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_dialog_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "dropdown-menu-dialog",

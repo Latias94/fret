@@ -28,10 +28,10 @@ Practical rule:
 
 This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
-- Golden files: `478`
+- Golden files: `479`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `244` (`54.5%`)
-- Keys not referenced by tests: `204`
+- Keys referenced by tests: `245` (`54.7%`)
+- Keys not referenced by tests: `203`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -43,7 +43,7 @@ At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
 - `form` (19; field composition + validation chrome)
-- `calendar` (10; primitives-heavy; tends to expose text metrics + grid layout edge cases)
+- `calendar` (9; primitives-heavy; tends to expose text metrics + grid layout edge cases)
 - `typography` (13; baseline text metrics and prose defaults)
 - `input` (10; control chrome + stacking patterns)
 
