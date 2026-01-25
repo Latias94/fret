@@ -6,6 +6,7 @@ use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -102,10 +103,13 @@ impl ItemGroup {
     }
 }
 
-pub fn item_group<H: UiHost>(
+pub fn item_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     ItemGroup::new(f(cx)).into_element(cx)
 }
 
@@ -122,12 +126,8 @@ impl ItemSeparator {
         let border = theme
             .color_by_key("border")
             .unwrap_or_else(|| theme.color_required("border"));
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(1.0))),
-        );
+        let layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_px(Px(1.0)));
         cx.container(
             ContainerProps {
                 layout,
@@ -477,8 +477,11 @@ impl Item {
         let focus_ring = decl_style::focus_ring(&theme, radius);
 
         let children = std::rc::Rc::new(self.children);
-        let enabled = self.enabled;
+        let mut enabled = self.enabled;
         let on_click = self.on_click;
+        if let Some(cmd) = on_click.as_ref() {
+            enabled = enabled && cx.command_is_enabled(cmd);
+        }
         let user_chrome = self.chrome;
         let user_bg_override = user_chrome.background.is_some();
         let user_border_override = user_chrome.border_color.is_some();
@@ -496,7 +499,7 @@ impl Item {
                     ..Default::default()
                 },
                 move |cx, st| {
-                    cx.pressable_dispatch_command_opt(on_click);
+                    cx.pressable_dispatch_command_if_enabled_opt(on_click);
 
                     let hovered = st.hovered && enabled;
                     let pressed = st.pressed && enabled;

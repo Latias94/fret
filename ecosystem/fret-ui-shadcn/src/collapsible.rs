@@ -345,7 +345,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size, SvgId, SvgService};
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
     use fret_ui::tree::UiTree;
 

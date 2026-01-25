@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges, Overflow,
     PositionStyle, SemanticsProps, SizeStyle,
@@ -81,6 +81,8 @@ pub struct Sheet {
     overlay_closable: bool,
     overlay_color: Option<Color>,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
     vertical_edge_gap_px: Option<Px>,
     vertical_auto_max_height_fraction: Option<f32>,
 }
@@ -94,6 +96,8 @@ impl std::fmt::Debug for Sheet {
             .field("overlay_closable", &self.overlay_closable)
             .field("overlay_color", &self.overlay_color)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("vertical_edge_gap_px", &self.vertical_edge_gap_px)
             .field(
                 "vertical_auto_max_height_fraction",
@@ -112,6 +116,8 @@ impl Sheet {
             overlay_closable: true,
             overlay_color: None,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             vertical_edge_gap_px: None,
             vertical_auto_max_height_fraction: None,
         }
@@ -177,10 +183,21 @@ impl Sheet {
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
     /// When set, Escape dismissals (overlay root) and overlay-click dismissals (barrier press) are
-    /// routed through this handler. To "prevent default", do not close the `open` model inside the
-    /// handler.
+    /// routed through this handler. To prevent default dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -225,7 +242,9 @@ impl Sheet {
                 let sheet_side = self.side;
                 let dialog_options = radix_dialog::DialogOptions::default()
                     .dismiss_on_overlay_press(overlay_closable)
-                    .initial_focus(None);
+                    .initial_focus(None)
+                    .on_open_auto_focus(self.on_open_auto_focus.clone())
+                    .on_close_auto_focus(self.on_close_auto_focus.clone());
 
                 let size_override = self.size_override;
                 let vertical_edge_gap_px = self.vertical_edge_gap_px.unwrap_or(Px(0.0));
@@ -406,7 +425,7 @@ impl Sheet {
                     radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
                         cx,
                         open_for_children.clone(),
-                        dialog_options,
+                        dialog_options.clone(),
                         on_dismiss_request_for_barrier.clone(),
                         vec![barrier_fill],
                         content,
@@ -668,9 +687,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{
-        Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::PressableProps;
@@ -890,6 +907,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -934,6 +952,7 @@ mod tests {
                 position: Point::new(Px(780.0), Px(50.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -961,6 +980,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1020,6 +1040,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1084,8 +1105,9 @@ mod tests {
         let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
             Arc::new(std::sync::Mutex::new(None));
         let reason_cell_for_handler = reason_cell.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+            req.prevent_default();
         });
 
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
@@ -1141,8 +1163,9 @@ mod tests {
         let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
             Arc::new(std::sync::Mutex::new(None));
         let reason_cell_for_handler = reason_cell.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+            req.prevent_default();
         });
 
         let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
@@ -1190,16 +1213,25 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
-        assert_eq!(
-            *reason_cell.lock().expect("reason lock"),
-            Some(DismissReason::OutsidePress)
-        );
+        let reason = *reason_cell.lock().expect("reason lock");
+        let Some(DismissReason::OutsidePress { pointer }) = reason else {
+            panic!("expected outside-press dismissal, got {reason:?}");
+        };
+        let Some(cx) = pointer else {
+            panic!("expected pointer payload for outside-press dismissal");
+        };
+        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+        assert_eq!(cx.button, fret_core::MouseButton::Left);
+        assert_eq!(cx.modifiers, fret_core::Modifiers::default());
+        assert_eq!(cx.click_count, 1);
     }
 
     #[test]
@@ -1258,6 +1290,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

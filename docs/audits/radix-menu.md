@@ -29,7 +29,7 @@ composing:
 
 - Overlay placement: `ecosystem/fret-ui-kit/src/primitives/popper.rs`
 - Outside-press observation and pointer blocking (ADR 0069):
-  - `OverlayRequest::dismissible_menu(...)` (consume outside presses + block underlay input),
+  - `OverlayRequest::dismissible_menu(...)` (consume outside presses + disable underlay mouse input),
   - `OverlayRequest::dismissible_popover(...)` (click-through outside presses).
 - Dismissal routing and "preventDefault" outcome:
   - `OnDismissRequest(host, ActionCx, DismissReason)` installed via overlay requests.
@@ -79,9 +79,12 @@ composing:
   menu content uses motion.
 - Focus trap and outside scroll lock are modeled indirectly for `modal=true` menus via the overlay
   substrate: `OverlayRequest::dismissible_menu(...)` enables `disableOutsidePointerEvents`, which
-  installs a modal barrier scope while the menu is open. This prevents focus traversal and wheel
-  events from reaching underlay widgets (matching the observable outcome of Radix
-  `FocusScope(trapped)` + scroll lock).
+  applies `PointerOcclusion::BlockMouseExceptScroll` while the menu is open.
+  - Mouse interactions do not reach the underlay.
+  - Wheel events may still route to underlay scrollables by default.
+  - Focus trapping is *not* implied by `disableOutsidePointerEvents` in Fret; fully modal focus
+    behavior is expressed via barrier-backed layers (`blocks_underlay_input=true`) and focus-scope
+    policy.
 - ARIA hiding (`hideOthers`) is not currently modeled for menus; this is tracked alongside broader
   semantics-bridge work.
 

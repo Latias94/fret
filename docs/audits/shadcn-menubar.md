@@ -84,6 +84,21 @@ _None tracked at this time._
 - shadcn-web shadow gate (`shadow-md`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_demo_shadow_matches_web`, `web_vs_fret_menubar_demo_shadow_matches_web_dark`;
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web shadow gate (`shadow-md`, View menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_view_shadow_matches_web`, `web_vs_fret_menubar_demo_view_shadow_matches_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.view.open.json`).
+- shadcn-web shadow gate (`shadow-md`, Profiles menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_profiles_shadow_matches_web`, `web_vs_fret_menubar_demo_profiles_shadow_matches_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
+- shadcn-web surface colors gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_surface_colors_match_web`, `web_vs_fret_menubar_demo_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
+- shadcn-web surface colors gate (View menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_view_surface_colors_match_web`, `web_vs_fret_menubar_demo_view_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.view.open.json`).
+- shadcn-web surface colors gate (Profiles menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_profiles_surface_colors_match_web`, `web_vs_fret_menubar_demo_profiles_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
 - shadcn-web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
 - shadcn-web placement gate (View menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`

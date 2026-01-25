@@ -623,6 +623,7 @@ fn right_click_center(
             position: center,
             button: MouseButton::Right,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -655,6 +656,7 @@ fn left_click_center(
             position: center,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -4786,6 +4788,191 @@ fn web_vs_fret_menubar_demo_shadow_matches_web_dark() {
     );
 }
 
+fn build_shadcn_menubar_demo(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    use fret_ui_shadcn::{
+        Menubar, MenubarCheckboxItem, MenubarEntry, MenubarItem, MenubarMenu, MenubarRadioGroup,
+        MenubarRadioItemSpec, MenubarShortcut,
+    };
+
+    #[derive(Default)]
+    struct Models {
+        view_bookmarks_bar: Option<Model<bool>>,
+        view_full_urls: Option<Model<bool>>,
+        profile_value: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let existing = cx.with_state(Models::default, |st| {
+        match (
+            st.view_bookmarks_bar.as_ref(),
+            st.view_full_urls.as_ref(),
+            st.profile_value.as_ref(),
+        ) {
+            (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+            _ => None,
+        }
+    });
+
+    let (view_bookmarks_bar, view_full_urls, profile_value) = if let Some(existing) = existing {
+        existing
+    } else {
+        let view_bookmarks_bar = cx.app.models_mut().insert(false);
+        let view_full_urls = cx.app.models_mut().insert(true);
+        let profile_value = cx.app.models_mut().insert(Some(Arc::from("benoit")));
+
+        cx.with_state(Models::default, |st| {
+            st.view_bookmarks_bar = Some(view_bookmarks_bar.clone());
+            st.view_full_urls = Some(view_full_urls.clone());
+            st.profile_value = Some(profile_value.clone());
+        });
+
+        (view_bookmarks_bar, view_full_urls, profile_value)
+    };
+
+    Menubar::new(vec![
+        MenubarMenu::new("File").entries(vec![
+            MenubarEntry::Item(
+                MenubarItem::new("New Tab")
+                    .test_id("menubar.file.new_tab")
+                    .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("New Window")
+                    .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
+            ),
+            MenubarEntry::Item(MenubarItem::new("New Incognito Window").disabled(true)),
+            MenubarEntry::Separator,
+            MenubarEntry::Submenu(
+                MenubarItem::new("Share")
+                    .test_id("menubar.file.share")
+                    .submenu(vec![
+                        MenubarEntry::Item(MenubarItem::new("Email link")),
+                        MenubarEntry::Item(MenubarItem::new("Messages")),
+                        MenubarEntry::Item(MenubarItem::new("Notes")),
+                    ]),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Print...").trailing(MenubarShortcut::new("⌘P").into_element(cx)),
+            ),
+        ]),
+        MenubarMenu::new("Edit").entries(vec![
+            MenubarEntry::Item(
+                MenubarItem::new("Undo").trailing(MenubarShortcut::new("⌘Z").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("Redo").trailing(MenubarShortcut::new("⇧⌘Z").into_element(cx)),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Submenu(MenubarItem::new("Find").submenu(vec![
+                MenubarEntry::Item(MenubarItem::new("Search the web")),
+                MenubarEntry::Separator,
+                MenubarEntry::Item(MenubarItem::new("Find...")),
+                MenubarEntry::Item(MenubarItem::new("Find Next")),
+                MenubarEntry::Item(MenubarItem::new("Find Previous")),
+            ])),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Cut")),
+            MenubarEntry::Item(MenubarItem::new("Copy")),
+            MenubarEntry::Item(MenubarItem::new("Paste")),
+        ]),
+        MenubarMenu::new("View").entries(vec![
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                view_bookmarks_bar,
+                "Always Show Bookmarks Bar",
+            )),
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                view_full_urls,
+                "Always Show Full URLs",
+            )),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Reload")
+                    .inset(true)
+                    .trailing(MenubarShortcut::new("⌘R").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("Force Reload")
+                    .disabled(true)
+                    .inset(true)
+                    .trailing(MenubarShortcut::new("⇧⌘R").into_element(cx)),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Toggle Fullscreen").inset(true)),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Hide Sidebar").inset(true)),
+        ]),
+        MenubarMenu::new("Profiles").entries(vec![
+            MenubarEntry::RadioGroup(
+                MenubarRadioGroup::new(profile_value)
+                    .item(MenubarRadioItemSpec::new("andy", "Andy"))
+                    .item(MenubarRadioItemSpec::new("benoit", "Benoit"))
+                    .item(MenubarRadioItemSpec::new("Luis", "Luis")),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Edit...").inset(true)),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Add Profile...").inset(true)),
+        ]),
+    ])
+    .into_element(cx)
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_view_shadow_matches_web() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.view",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "View",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_view_shadow_matches_web_dark() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.view",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "View",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_shadow_matches_web() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.profiles",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "Profiles",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_shadow_matches_web_dark() {
+    assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
+        "menubar-demo.profiles",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "Profiles",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
 #[test]
 fn web_vs_fret_menubar_root_shadow_matches_web() {
     use fret_ui_shadcn::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
@@ -4949,6 +5136,62 @@ fn web_vs_fret_menubar_demo_surface_colors_match_web_dark() {
             ])])
             .into_element(cx)
         },
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_view_surface_colors_match_web() {
+    assert_click_overlay_surface_colors_match_by_portal_slot_theme(
+        "menubar-demo.view",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "View",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_view_surface_colors_match_web_dark() {
+    assert_click_overlay_surface_colors_match_by_portal_slot_theme(
+        "menubar-demo.view",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "View",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_surface_colors_match_web() {
+    assert_click_overlay_surface_colors_match_by_portal_slot_theme(
+        "menubar-demo.profiles",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "Profiles",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_profiles_surface_colors_match_web_dark() {
+    assert_click_overlay_surface_colors_match_by_portal_slot_theme(
+        "menubar-demo.profiles",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "Profiles",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
     );
 }
 

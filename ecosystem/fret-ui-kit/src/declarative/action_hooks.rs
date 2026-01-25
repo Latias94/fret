@@ -3,6 +3,7 @@ use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt;
 
+use crate::command::ElementCommandGatingExt as _;
 use crate::primitives::roving_focus_group;
 
 use std::cell::RefCell;
@@ -13,10 +14,13 @@ use std::sync::Arc;
 ///
 /// These helpers keep common interaction policies out of `crates/fret-ui` while remaining easy to
 /// use in declarative authoring code.
+///
+/// Note: command-dispatch helpers are intentionally gated (`*_if_enabled`) so "disabled" UI stays
+/// consistent across surfaces (menus, command palette, shortcuts, OS menus).
 pub trait ActionHooksExt {
-    fn pressable_dispatch_command(&mut self, command: CommandId);
+    fn pressable_dispatch_command_if_enabled(&mut self, command: CommandId);
 
-    fn pressable_dispatch_command_opt(&mut self, command: Option<CommandId>);
+    fn pressable_dispatch_command_if_enabled_opt(&mut self, command: Option<CommandId>);
 
     fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)
     where
@@ -92,17 +96,20 @@ pub trait ActionHooksExt {
 }
 
 impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
-    fn pressable_dispatch_command(&mut self, command: CommandId) {
+    fn pressable_dispatch_command_if_enabled(&mut self, command: CommandId) {
+        if !self.command_is_enabled(&command) {
+            return;
+        }
         self.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
             host.dispatch_command(Some(acx.window), command.clone());
         }));
     }
 
-    fn pressable_dispatch_command_opt(&mut self, command: Option<CommandId>) {
+    fn pressable_dispatch_command_if_enabled_opt(&mut self, command: Option<CommandId>) {
         let Some(command) = command else {
             return;
         };
-        self.pressable_dispatch_command(command);
+        self.pressable_dispatch_command_if_enabled(command);
     }
 
     fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)
@@ -211,14 +218,14 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
 
     fn dismissible_close_bool(&mut self, open: &Model<bool>) {
         let open = open.clone();
-        self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _reason| {
+        self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _req| {
             let _ = host.models_mut().update(&open, |v| *v = false);
         }));
     }
 
     fn dismissible_close_bool_weak(&mut self, open: &WeakModel<bool>) {
         let open = open.clone();
-        self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _reason| {
+        self.dismissible_add_on_dismiss_request(Arc::new(move |host, _cx, _req| {
             let _ = host.update_weak_model(&open, |v| *v = false);
         }));
     }

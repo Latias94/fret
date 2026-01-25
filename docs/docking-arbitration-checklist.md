@@ -27,6 +27,19 @@ viewport tooling, to avoid late rewrites and accidental behavior drift.
   - Single-window / no OS multi-window mode (validates ADR 0084 degradation): `FRET_SINGLE_WINDOW=1 cargo run -p fret-demo --bin docking_arbitration_demo`
 - Components overlays demo: `cargo run -p fret-demo --bin components_gallery`
 
+### Docking arbitration demo: synth pointer mode
+
+The docking arbitration demo includes a **synthetic pointer stream** so multi-pointer arbitration
+and input edges can be validated even on hardware without touch/pen.
+
+Controls (when synth mode is enabled, these keys are consumed):
+
+- Toggle synth mode: `F1`
+- Move synth pointer: `I/J/K/L`
+- Synth touch press/release: `Space` (emits `PointerId != 0` with `PointerType::Touch`)
+- Mouse right press/release at synth position: `B` (emits `PointerId(0)` with `MouseButton::Right`)
+- Mouse wheel up/down at synth position: `U` / `O` (emits `PointerId(0)` wheel)
+
 ---
 
 ## Driver integration checklist (P0)
@@ -132,13 +145,14 @@ References:
 **Expected**
 
 - The active session remains the owner; no competing capture session starts.
+- Secondary right-click presses do not trigger context menus while viewport capture is active.
 
 References:
 
 - ADR 0072: `docs/adr/0072-docking-interaction-arbitration-matrix.md`
 - Viewport input boundary: `docs/adr/0025-viewport-input-forwarding.md`
 
-### 5) Escape cancels dock drag and restores pre-drag overlay/focus state safely
+### 5) Escape cancels dock drag and restores focus safely
 
 **Goal**
 
@@ -153,7 +167,8 @@ References:
 **Expected**
 
 - Drag session ends (no dock op committed).
-- Window focus/overlays are restored safely (no forced focus changes mid-cancel).
+- Focus is restored safely if it was lost during the drag.
+- Non-modal overlays that were closed for drag hygiene remain closed unless explicitly re-opened (e.g. user re-triggers the popover/menu).
 
 ---
 

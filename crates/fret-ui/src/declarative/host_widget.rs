@@ -244,6 +244,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if cx.focus != Some(cx.node) {
                     return false;
                 }
+                if matches!(command.as_str(), "text.copy" | "edit.copy")
+                    && !cx.input_ctx.caps.clipboard.text
+                {
+                    return false;
+                }
                 let (outcome, range) = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
@@ -291,6 +296,46 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 cx.stop_propagation();
                 true
             }
+            ElementInstance::TextInput(props) => {
+                let model = props.model.clone();
+                let model_id = model.id();
+                match self.text_input.as_mut() {
+                    None => {
+                        self.text_input = Some(crate::text_input::BoundTextInput::new(model));
+                    }
+                    Some(input) => {
+                        if input.model_id() != model_id {
+                            input.set_model(model);
+                        }
+                    }
+                }
+                let input = self.text_input.as_mut().expect("text input");
+                input.set_chrome_style(props.chrome);
+                input.set_text_style(props.text_style);
+                input.set_placeholder(props.placeholder);
+                input.set_submit_command(props.submit_command);
+                input.set_cancel_command(props.cancel_command);
+                <crate::text_input::BoundTextInput as Widget<H>>::command(input, cx, command)
+            }
+            ElementInstance::TextArea(props) => {
+                let model = props.model.clone();
+                let model_id = model.id();
+                match self.text_area.as_mut() {
+                    None => {
+                        self.text_area = Some(crate::text_area::BoundTextArea::new(model));
+                    }
+                    Some(area) => {
+                        if area.model_id() != model_id {
+                            area.set_model(model);
+                        }
+                    }
+                }
+                let area = self.text_area.as_mut().expect("text area");
+                area.set_style(props.chrome);
+                area.set_text_style(props.text_style);
+                area.set_min_height(props.min_height);
+                <crate::text_area::BoundTextArea as Widget<H>>::command(area, cx, command)
+            }
             ElementInstance::FocusScope(props) if props.trap_focus => {
                 let forward = match command.as_str() {
                     "focus.next" => Some(true),
@@ -322,7 +367,99 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return CommandAvailability::NotHandled;
         };
 
+        let hook = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            crate::action::CommandAvailabilityActionHooks::default,
+            |hooks| hooks.on_command_availability.clone(),
+        );
+        if let Some(hook) = hook {
+            struct AvailabilityHookHost<'a, H: UiHost> {
+                app: &'a mut H,
+            }
+
+            impl<H: UiHost> crate::action::UiCommandAvailabilityActionHost for AvailabilityHookHost<'_, H> {
+                fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                    self.app.models_mut()
+                }
+            }
+
+            let focus_in_subtree = cx
+                .focus
+                .map(|focus| cx.tree.is_descendant(cx.node, focus))
+                .unwrap_or(false);
+            let mut host = AvailabilityHookHost { app: &mut *cx.app };
+            let availability = hook(
+                &mut host,
+                crate::action::CommandAvailabilityActionCx {
+                    window,
+                    target: self.element,
+                    node: cx.node,
+                    focus: cx.focus,
+                    focus_in_subtree,
+                    input_ctx: cx.input_ctx.clone(),
+                },
+                command.clone(),
+            );
+            if availability != CommandAvailability::NotHandled {
+                return availability;
+            }
+        }
+
         match instance {
+            ElementInstance::SelectableText(props) => {
+                if cx.focus != Some(cx.node) {
+                    return CommandAvailability::NotHandled;
+                }
+                match command.as_str() {
+                    "text.select_all" | "edit.select_all" => {
+                        // A focused selectable text surface should always be able to select its full
+                        // content (if non-empty), even though it is not an editable text input.
+                        let has_any_text = !props.rich.text.is_empty();
+                        if has_any_text {
+                            return CommandAvailability::Available;
+                        }
+                        return CommandAvailability::Blocked;
+                    }
+                    "text.copy" | "edit.copy" => {
+                        if !cx.input_ctx.caps.clipboard.text {
+                            return CommandAvailability::Blocked;
+                        }
+                    }
+                    _ => return CommandAvailability::NotHandled,
+                }
+                let has_selection = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| state.selection_anchor != state.caret,
+                );
+                if has_selection {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+            ElementInstance::TextInput(_props) => self
+                .text_input
+                .as_ref()
+                .map(|input| {
+                    <crate::text_input::BoundTextInput as Widget<H>>::command_availability(
+                        input, cx, command,
+                    )
+                })
+                .unwrap_or(CommandAvailability::NotHandled),
+            ElementInstance::TextArea(_props) => self
+                .text_area
+                .as_ref()
+                .map(|area| {
+                    <crate::text_area::BoundTextArea as Widget<H>>::command_availability(
+                        area, cx, command,
+                    )
+                })
+                .unwrap_or(CommandAvailability::NotHandled),
             ElementInstance::FocusScope(props) if props.trap_focus => match command.as_str() {
                 "focus.next" | "focus.previous" => CommandAvailability::Available,
                 _ => CommandAvailability::NotHandled,
@@ -452,6 +589,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.event_impl(cx, event);
+    }
+
+    fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+        self.event_observer_impl(cx, event);
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {

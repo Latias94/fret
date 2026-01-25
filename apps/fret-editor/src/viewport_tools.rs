@@ -226,6 +226,12 @@ impl ViewportToolManager {
             ViewportInputKind::PointerUp {
                 button, modifiers, ..
             } => self.handle_pointer_up(event, button, modifiers),
+            ViewportInputKind::PointerCancel { .. } => {
+                self.interaction = None;
+                self.hover_translate = None;
+                self.hover_rotate = None;
+                false
+            }
             ViewportInputKind::Wheel { .. } => false,
         }
     }

@@ -1,6 +1,10 @@
 use super::*;
 use std::any::TypeId;
 
+use fret_runtime::{
+    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
+};
+
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
     pub fn paint_all(
@@ -64,6 +68,37 @@ impl<H: UiHost> UiTree<H> {
                         svc.set_snapshot(window, input_ctx);
                     },
                 );
+            }
+
+            let snapshot = self.input_arbitration_snapshot();
+            let arbitration = WindowInputArbitrationSnapshot {
+                modal_barrier_root: snapshot.modal_barrier_root,
+                pointer_occlusion: match snapshot.pointer_occlusion {
+                    PointerOcclusion::None => WindowPointerOcclusion::None,
+                    PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
+                    PointerOcclusion::BlockMouseExceptScroll => {
+                        WindowPointerOcclusion::BlockMouseExceptScroll
+                    }
+                },
+                pointer_occlusion_root: snapshot
+                    .pointer_occlusion_layer
+                    .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                pointer_capture_active: snapshot.pointer_capture_active,
+                pointer_capture_root: snapshot
+                    .pointer_capture_layer
+                    .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
+                    || (snapshot.pointer_capture_active
+                        && snapshot.pointer_capture_layer.is_none()),
+            };
+            let needs_update = app
+                .global::<WindowInputArbitrationService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &arbitration);
+            if needs_update {
+                app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
+                    svc.set_snapshot(window, arbitration);
+                });
             }
         }
 

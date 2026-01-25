@@ -143,7 +143,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                             ..Default::default()
                         },
                         |cx, _st| {
-                            cx.pressable_dispatch_command(clear_command.clone());
+                            cx.pressable_dispatch_command_if_enabled(clear_command.clone());
                             vec![cx.flex(
                                 FlexProps {
                                     layout: decl_style::layout_style(

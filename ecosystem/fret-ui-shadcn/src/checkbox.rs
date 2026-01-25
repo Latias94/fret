@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -17,7 +18,10 @@ use fret_ui_kit::primitives::checkbox::{
     toggle_optional_bool,
 };
 use fret_ui_kit::primitives::controllable_state;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, WidgetState,
+    WidgetStateProperty, WidgetStates,
+};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -55,6 +59,43 @@ fn checkbox_ring_color(theme: &Theme) -> Color {
     theme.color_required("ring")
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct CheckboxStyle {
+    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+}
+
+impl CheckboxStyle {
+    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.foreground = Some(foreground);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        if other.foreground.is_some() {
+            self.foreground = other.foreground;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Checkbox {
     checked: CheckboxCheckedModel,
@@ -64,6 +105,7 @@ pub struct Checkbox {
     on_click: Option<CommandId>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: CheckboxStyle,
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +125,7 @@ impl Checkbox {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: CheckboxStyle::default(),
         }
     }
 
@@ -95,6 +138,7 @@ impl Checkbox {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: CheckboxStyle::default(),
         }
     }
 
@@ -110,6 +154,7 @@ impl Checkbox {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: CheckboxStyle::default(),
         }
     }
 
@@ -180,6 +225,11 @@ impl Checkbox {
         self
     }
 
+    pub fn style(mut self, style: CheckboxStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -197,8 +247,17 @@ impl Checkbox {
             let bg_on = checkbox_bg_checked(&theme);
             let fg_on = checkbox_fg_checked(&theme);
 
+            let ring_border = checkbox_ring_color(&theme);
             let mut ring = decl_style::focus_ring(&theme, radius);
-            ring.color = alpha_mul(checkbox_ring_color(&theme), 0.5);
+            ring.color = alpha_mul(ring_border, 0.5);
+
+            let default_background = WidgetStateProperty::new(None)
+                .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)));
+            let default_border_color = WidgetStateProperty::new(ColorRef::Color(border))
+                .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
+                .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
+            let default_foreground = WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
+                .when(WidgetStates::SELECTED, ColorRef::Color(fg_on));
 
             let layout = LayoutRefinement::default()
                 .w_px(MetricRef::Px(size))
@@ -208,16 +267,21 @@ impl Checkbox {
 
             let a11y_label = self.a11y_label.clone();
             let test_id = self.test_id.clone();
-            let disabled = self.disabled;
+            let disabled_explicit = self.disabled;
             let on_click = self.on_click.clone();
+            let disabled = disabled_explicit
+                || on_click
+                    .as_ref()
+                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let chrome = self.chrome.clone();
+            let style_override = self.style.clone();
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
                 cx.key_add_on_key_down_for(
                     id,
                     fret_ui_kit::primitives::keyboard::consume_enter_key_handler(),
                 );
-                cx.pressable_dispatch_command_opt(on_click);
+                cx.pressable_dispatch_command_if_enabled_opt(on_click);
                 match &checked {
                     CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
                     CheckboxCheckedModel::OptionalBool(model) => {
@@ -246,15 +310,29 @@ impl Checkbox {
                 let is_checked = state.is_checked();
                 let is_indeterminate = state.is_indeterminate();
 
-                let bg = if is_on { bg_on } else { Color::TRANSPARENT };
-                let border_color = if st.focused {
-                    checkbox_ring_color(&theme)
-                } else if is_on {
-                    bg_on
-                } else {
-                    border
-                };
-                let fg = if is_on { fg_on } else { Color::TRANSPARENT };
+                let mut states = WidgetStates::from_pressable(cx, st, !disabled);
+                states.set(WidgetState::Selected, is_on);
+
+                let bg = style_override
+                    .background
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .or_else(|| default_background.resolve(states).clone())
+                    .map(|bg| bg.resolve(&theme))
+                    .unwrap_or(Color::TRANSPARENT);
+
+                let border_color = style_override
+                    .border_color
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| default_border_color.resolve(states).clone())
+                    .resolve(&theme);
+                let fg = style_override
+                    .foreground
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| default_foreground.resolve(states).clone())
+                    .resolve(&theme);
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,
@@ -353,9 +431,14 @@ mod tests {
     use fret_core::{
         AppWindowId, Modifiers, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
         PathService, PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService,
-        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextBlobId, TextConstraints, TextMetrics, TextService,
+    };
+    use fret_runtime::{
+        CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
+        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
     use fret_ui::tree::UiTree;
+    use std::collections::HashMap;
 
     struct FakeServices;
 
@@ -465,6 +548,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -533,6 +617,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -606,6 +691,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -738,5 +824,193 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&model), Some(true));
+    }
+
+    #[test]
+    fn command_gating_checkbox_is_disabled_by_window_command_enabled_service() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let checked = app.models_mut().insert(false);
+        let cmd = CommandId::from("test.disabled-command");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Disabled Command").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-checkbox-enabled-service",
+            |cx| {
+                vec![
+                    Checkbox::new(checked.clone())
+                        .a11y_label("Checkbox")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
+            .expect("expected a semantics node for the checkbox test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_checkbox_is_disabled_when_widget_action_is_unavailable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let checked = app.models_mut().insert(false);
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-checkbox-action-availability",
+            |cx| {
+                vec![
+                    Checkbox::new(checked.clone())
+                        .a11y_label("Checkbox")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
+            .expect("expected a semantics node for the checkbox test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_checkbox_prefers_window_command_gating_snapshot_when_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let checked = app.models_mut().insert(false);
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        app.set_global(WindowCommandGatingService::default());
+        app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
+            let input_ctx = crate::command_gating::default_input_context(app);
+            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut availability: HashMap<CommandId, bool> = HashMap::new();
+            availability.insert(cmd.clone(), false);
+            let _token = svc.push_snapshot(
+                window,
+                WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                    .with_action_availability(Some(Arc::new(availability))),
+            );
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-checkbox-gating-snapshot",
+            |cx| {
+                vec![
+                    Checkbox::new(checked.clone())
+                        .a11y_label("Checkbox")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-checkbox")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
+            .expect("expected a semantics node for the checkbox test_id");
+        assert!(node.flags.disabled);
     }
 }

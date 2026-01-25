@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
@@ -253,8 +254,11 @@ impl TableRow {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let cols = self.cols;
         let selected = self.selected;
-        let enabled = self.enabled;
+        let mut enabled = self.enabled;
         let on_click = self.on_click.clone();
+        if let Some(cmd) = on_click.as_ref() {
+            enabled = enabled && cx.command_is_enabled(cmd);
+        }
         let on_activate = self.on_activate.clone();
         let border_bottom = self.border_bottom;
         let children = self.children;
@@ -273,7 +277,7 @@ impl TableRow {
             if let Some(on_activate) = on_activate.clone() {
                 cx.pressable_add_on_activate(on_activate);
             }
-            cx.pressable_dispatch_command_opt(on_click);
+            cx.pressable_dispatch_command_if_enabled_opt(on_click);
             let theme = Theme::global(&*cx.app).clone();
 
             let mut hover_bg = muted_bg(&theme);

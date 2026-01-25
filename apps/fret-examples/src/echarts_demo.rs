@@ -103,7 +103,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> EchartsDemoState {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut EchartsDemoState) -> Vec<AnyElement> {
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut EchartsDemoState,
+) -> fret_bootstrap::ui_app_driver::ViewElements {
     for chart in &st.charts {
         cx.observe_model(&chart.engine, Invalidation::Paint);
     }
@@ -115,5 +118,5 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut EchartsDemoState) -> Vec<AnyE
         props.engine = Some(chart.engine.clone());
         out.push(chart_canvas_panel(cx, props));
     }
-    out
+    out.into()
 }

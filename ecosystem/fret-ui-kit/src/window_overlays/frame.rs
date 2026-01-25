@@ -79,9 +79,6 @@ pub fn request_hover_overlay_for_window<H: UiHost>(
 ) {
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let w = overlays.windows.entry(window).or_default();
-        overlays
-            .cached_hover_overlay_requests
-            .insert((window, request.id), request.clone());
         w.hover_overlays.push(request);
     });
 }
@@ -98,9 +95,6 @@ pub fn request_tooltip_for_window<H: UiHost>(
 ) {
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let w = overlays.windows.entry(window).or_default();
-        overlays
-            .cached_tooltip_requests
-            .insert((window, request.id), request.clone());
         w.tooltips.push(request);
     });
 }

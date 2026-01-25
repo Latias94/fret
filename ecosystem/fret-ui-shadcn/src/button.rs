@@ -5,12 +5,51 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize,
+    Space, WidgetStateProperty, WidgetStates, ui,
 };
+
+#[derive(Debug, Clone, Default)]
+pub struct ButtonStyle {
+    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+}
+
+impl ButtonStyle {
+    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.foreground = Some(foreground);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.foreground.is_some() {
+            self.foreground = other.foreground;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        self
+    }
+}
 
 fn contains_svg_icon_like(el: &AnyElement) -> bool {
     match &el.kind {
@@ -58,83 +97,200 @@ impl ButtonSize {
     }
 }
 
-fn alpha_mul(mut c: Color, mul: f32) -> Color {
-    c.a = (c.a * mul).clamp(0.0, 1.0);
-    c
+#[derive(Debug, Clone)]
+pub(crate) struct ButtonVariantStyle {
+    pub background: WidgetStateProperty<ColorRef>,
+    pub border_color: WidgetStateProperty<ColorRef>,
+    pub foreground: WidgetStateProperty<ColorRef>,
+}
+
+fn token(key: &'static str, fallback: ColorFallback) -> ColorRef {
+    ColorRef::Token { key, fallback }
+}
+
+pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
+    let transparent = ColorRef::Color(Color::TRANSPARENT);
+
+    match variant {
+        ButtonVariant::Default => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token("primary", ColorFallback::ThemeAccent))
+                .when(
+                    WidgetStates::HOVERED,
+                    token(
+                        "primary.hover.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "primary",
+                            mul: 0.9,
+                        },
+                    ),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    token(
+                        "primary.active.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "primary",
+                            mul: 0.8,
+                        },
+                    ),
+                ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: WidgetStateProperty::new(token(
+                "primary-foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
+        },
+        ButtonVariant::Destructive => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token("destructive", ColorFallback::ThemeAccent))
+                .when(
+                    WidgetStates::HOVERED,
+                    token(
+                        "destructive.hover.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "destructive",
+                            mul: 0.9,
+                        },
+                    ),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    token(
+                        "destructive.active.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "destructive",
+                            mul: 0.8,
+                        },
+                    ),
+                ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: WidgetStateProperty::new(ColorRef::Color(Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            })),
+        },
+        ButtonVariant::Secondary => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token(
+                "secondary",
+                ColorFallback::ThemePanelBackground,
+            ))
+            .when(
+                WidgetStates::HOVERED,
+                token(
+                    "secondary.hover.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "secondary",
+                        mul: 0.8,
+                    },
+                ),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                token(
+                    "secondary.active.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "secondary",
+                        mul: 0.7,
+                    },
+                ),
+            ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: WidgetStateProperty::new(token(
+                "secondary-foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
+        },
+        ButtonVariant::Outline => ButtonVariantStyle {
+            background: WidgetStateProperty::new(token(
+                "background",
+                ColorFallback::ThemeSurfaceBackground,
+            ))
+            .when(
+                WidgetStates::HOVERED,
+                token("accent", ColorFallback::ThemeHoverBackground),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                token(
+                    "accent.active.background",
+                    ColorFallback::ThemeTokenAlphaMul {
+                        key: "accent",
+                        mul: 0.8,
+                    },
+                ),
+            ),
+            border_color: WidgetStateProperty::new(token(
+                "border",
+                ColorFallback::ThemePanelBorder,
+            ))
+            .when(
+                WidgetStates::FOCUS_VISIBLE,
+                token("ring", ColorFallback::ThemeFocusRing),
+            ),
+            foreground: WidgetStateProperty::new(token(
+                "foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
+        },
+        ButtonVariant::Ghost => ButtonVariantStyle {
+            background: WidgetStateProperty::new(transparent.clone())
+                .when(
+                    WidgetStates::HOVERED,
+                    token("accent", ColorFallback::ThemeHoverBackground),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    token(
+                        "accent.active.background",
+                        ColorFallback::ThemeTokenAlphaMul {
+                            key: "accent",
+                            mul: 0.8,
+                        },
+                    ),
+                ),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: WidgetStateProperty::new(token(
+                "foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
+        },
+        ButtonVariant::Link => ButtonVariantStyle {
+            background: WidgetStateProperty::new(transparent.clone()),
+            border_color: WidgetStateProperty::new(transparent.clone()),
+            foreground: WidgetStateProperty::new(token("primary", ColorFallback::ThemeAccent)),
+        },
+    }
 }
 
 pub(crate) fn variant_colors(
     theme: &Theme,
     variant: ButtonVariant,
 ) -> (Color, Color, Color, Color, Color) {
-    let transparent = Color::TRANSPARENT;
+    let style = variant_style(variant);
 
-    let bg_primary = theme.color_required("primary");
-    let fg_primary = theme.color_required("primary-foreground");
+    let bg = style
+        .background
+        .resolve(WidgetStates::empty())
+        .resolve(theme);
+    let bg_hover = style
+        .background
+        .resolve(WidgetStates::HOVERED)
+        .resolve(theme);
+    let bg_active = style
+        .background
+        .resolve(WidgetStates::ACTIVE)
+        .resolve(theme);
+    let border = style
+        .border_color
+        .resolve(WidgetStates::empty())
+        .resolve(theme);
+    let fg = style
+        .foreground
+        .resolve(WidgetStates::empty())
+        .resolve(theme);
 
-    let bg_secondary = theme.color_required("secondary");
-    let fg_secondary = theme.color_required("secondary-foreground");
-
-    let bg_destructive = theme.color_required("destructive");
-    let fg_white = Color {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
-        a: 1.0,
-    };
-
-    let fg_default = theme.color_required("foreground");
-
-    let bg_accent = theme.color_required("accent");
-
-    let bg_background = theme.color_required("background");
-
-    let border = theme.color_required("border");
-
-    match variant {
-        ButtonVariant::Default => (
-            bg_primary,
-            alpha_mul(bg_primary, 0.9),
-            alpha_mul(bg_primary, 0.8),
-            transparent,
-            fg_primary,
-        ),
-        ButtonVariant::Destructive => (
-            bg_destructive,
-            alpha_mul(bg_destructive, 0.9),
-            alpha_mul(bg_destructive, 0.8),
-            transparent,
-            fg_white,
-        ),
-        ButtonVariant::Secondary => (
-            bg_secondary,
-            alpha_mul(bg_secondary, 0.8),
-            alpha_mul(bg_secondary, 0.7),
-            transparent,
-            fg_secondary,
-        ),
-        ButtonVariant::Outline => (
-            bg_background,
-            bg_accent,
-            alpha_mul(bg_accent, 0.8),
-            border,
-            fg_default,
-        ),
-        ButtonVariant::Ghost => (
-            transparent,
-            bg_accent,
-            alpha_mul(bg_accent, 0.8),
-            transparent,
-            fg_default,
-        ),
-        ButtonVariant::Link => (
-            transparent,
-            transparent,
-            transparent,
-            transparent,
-            bg_primary,
-        ),
-    }
+    (bg, bg_hover, bg_active, border, fg)
 }
 
 pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
@@ -164,6 +320,7 @@ pub struct Button {
     size: ButtonSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: ButtonStyle,
     border_override: Option<Edges>,
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
@@ -191,6 +348,7 @@ impl std::fmt::Debug for Button {
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("style", &self.style)
             .field("border_override", &self.border_override)
             .field("border_width_override", &self.border_width_override)
             .field("corner_radii_override", &self.corner_radii_override)
@@ -213,6 +371,7 @@ impl Button {
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
             layout: fret_ui_kit::LayoutRefinement::default(),
+            style: ButtonStyle::default(),
             border_override: None,
             border_width_override: BorderWidthOverride::default(),
             corner_radii_override: None,
@@ -261,6 +420,11 @@ impl Button {
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn style(mut self, style: ButtonStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -315,7 +479,7 @@ impl Button {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
-            let (bg, bg_hover, bg_active, border_color, fg) = variant_colors(&theme, self.variant);
+            let variant_style = variant_style(self.variant);
             let shadow_radius = self.size.component_size().control_radius(&theme);
             let shadow = (self.variant == ButtonVariant::Outline)
                 .then(|| decl_style::shadow_xs(&theme, shadow_radius));
@@ -359,11 +523,15 @@ impl Button {
             let on_activate = self.on_activate;
             let toggle_model = self.toggle_model;
             let a11y_label = self.label.clone();
-            let disabled = self.disabled;
+            let disabled_explicit = self.disabled;
+            let disabled = disabled_explicit
+                || command
+                    .as_ref()
+                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
-            let variant = self.variant;
+            let style_override = self.style;
             let border_override = self.border_override;
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
@@ -379,7 +547,7 @@ impl Button {
             let children = self.children;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-                cx.pressable_dispatch_command_opt(command);
+                cx.pressable_dispatch_command_if_enabled_opt(command);
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate(on_activate);
                 }
@@ -387,23 +555,23 @@ impl Button {
                     cx.pressable_toggle_bool(&model);
                 }
 
-                let hovered = st.hovered && !disabled;
-                let pressed = st.pressed && !disabled;
-                let focused = st.focused && !disabled;
+                let states = WidgetStates::from_pressable(cx, st, !disabled);
 
-                let (bg, mut border_color, fg) = if pressed {
-                    (bg_active, border_color, fg)
-                } else if hovered {
-                    (bg_hover, border_color, fg)
-                } else {
-                    (bg, border_color, fg)
-                };
-
-                if focused && variant == ButtonVariant::Outline && !user_border_override {
-                    border_color = theme
-                        .color_by_key("ring")
-                        .unwrap_or_else(|| theme.color_required("ring"));
-                }
+                let bg = style_override
+                    .background
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| variant_style.background.resolve(states).clone());
+                let fg = style_override
+                    .foreground
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| variant_style.foreground.resolve(states).clone());
+                let border_color = style_override
+                    .border_color
+                    .as_ref()
+                    .and_then(|p| p.resolve(states).clone())
+                    .unwrap_or_else(|| variant_style.border_color.resolve(states).clone());
 
                 let padding = if is_icon {
                     ChromeRefinement::default()
@@ -433,10 +601,10 @@ impl Button {
                 });
 
                 if !user_bg_override {
-                    chrome.background = Some(ColorRef::Color(bg));
+                    chrome.background = Some(bg);
                 }
                 if !user_border_override {
-                    chrome.border_color = Some(ColorRef::Color(border_color));
+                    chrome.border_color = Some(border_color);
                 }
                 chrome = chrome.merge(user_chrome.clone());
 
@@ -493,7 +661,7 @@ impl Button {
                                 .line_height_px(text_line_height)
                                 .font_weight(text_weight)
                                 .nowrap()
-                                .text_color(ColorRef::Color(fg))
+                                .text_color(fg.clone())
                                 .into_element(cx),
                         ]
                     } else {
@@ -530,13 +698,18 @@ mod tests {
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextConstraints, TextMetrics, TextService,
+    };
+    use fret_runtime::{
+        CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
+        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
     use fret_ui::SvgSource;
     use fret_ui::Theme;
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
+    use std::collections::HashMap;
 
     struct FakeServices;
 
@@ -776,6 +949,15 @@ mod tests {
         let node =
             elements::node_for_element(&mut app, window, id).expect("button node id resolved");
         ui.set_focus(Some(node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
 
         // Second frame: re-render with focus applied and capture the element tree.
         app.set_frame_id(FrameId(2));
@@ -814,5 +996,187 @@ mod tests {
             panic!("expected chrome container element");
         };
         assert_eq!(props.border_color, Some(ring));
+    }
+
+    #[test]
+    fn command_gating_button_is_disabled_by_window_command_enabled_service() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.disabled-command");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Disabled Command").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-button-enabled-service",
+            |cx| {
+                vec![
+                    Button::new("Hello")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-button")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-button"))
+            .expect("expected a semantics node for the button test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_button_is_disabled_when_widget_action_is_unavailable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-button-action-availability",
+            |cx| {
+                vec![
+                    Button::new("Hello")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-button")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-button"))
+            .expect("expected a semantics node for the button test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn command_gating_button_prefers_window_command_gating_snapshot_when_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        app.set_global(WindowCommandGatingService::default());
+        app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
+            let input_ctx = crate::command_gating::default_input_context(app);
+            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut availability: HashMap<CommandId, bool> = HashMap::new();
+            availability.insert(cmd.clone(), false);
+            let _token = svc.push_snapshot(
+                window,
+                WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                    .with_action_availability(Some(Arc::new(availability))),
+            );
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "command-gating-button-gating-snapshot",
+            |cx| {
+                vec![
+                    Button::new("Hello")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-button")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-button"))
+            .expect("expected a semantics node for the button test_id");
+        assert!(node.flags.disabled);
     }
 }

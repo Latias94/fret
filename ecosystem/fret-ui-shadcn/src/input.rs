@@ -4,9 +4,10 @@ use fret_core::{Corners, FontId, NodeId, Px, SemanticsRole, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size};
 
 #[derive(Debug, Clone, Copy, Default)]
 struct BorderWidthOverride {
@@ -14,6 +15,52 @@ struct BorderWidthOverride {
     right: Option<Px>,
     bottom: Option<Px>,
     left: Option<Px>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct InputStyle {
+    pub background: Option<ColorRef>,
+    pub border_color: Option<ColorRef>,
+    pub border_color_focused: Option<ColorRef>,
+    pub focus_ring_color: Option<ColorRef>,
+}
+
+impl InputStyle {
+    pub fn background(mut self, background: ColorRef) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: ColorRef) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn border_color_focused(mut self, border_color_focused: ColorRef) -> Self {
+        self.border_color_focused = Some(border_color_focused);
+        self
+    }
+
+    pub fn focus_ring_color(mut self, focus_ring_color: ColorRef) -> Self {
+        self.focus_ring_color = Some(focus_ring_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        if other.border_color_focused.is_some() {
+            self.border_color_focused = other.border_color_focused;
+        }
+        if other.focus_ring_color.is_some() {
+            self.focus_ring_color = other.focus_ring_color;
+        }
+        self
+    }
 }
 
 #[derive(Clone)]
@@ -28,6 +75,7 @@ pub struct Input {
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
     size: Size,
+    style: InputStyle,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     border_width_override: BorderWidthOverride,
@@ -47,6 +95,7 @@ impl Input {
             submit_command: None,
             cancel_command: None,
             size: Size::default(),
+            style: InputStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             border_width_override: BorderWidthOverride::default(),
@@ -97,6 +146,11 @@ impl Input {
 
     pub fn size(mut self, size: Size) -> Self {
         self.size = size;
+        self
+    }
+
+    pub fn style(mut self, style: InputStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -155,6 +209,7 @@ impl Input {
             self.submit_command,
             self.cancel_command,
             self.size,
+            self.style,
             self.chrome,
             self.layout,
             self.border_width_override,
@@ -186,6 +241,7 @@ pub fn input<H: UiHost>(
         submit_command,
         cancel_command,
         Size::default(),
+        InputStyle::default(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
         BorderWidthOverride::default(),
@@ -205,12 +261,15 @@ fn input_with_style<H: UiHost>(
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
     size: Size,
+    style_override: InputStyle,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let submit_command = submit_command.filter(|cmd| cx.command_is_enabled(cmd));
+    let cancel_command = cancel_command.filter(|cmd| cx.command_is_enabled(cmd));
 
     let resolved = resolve_input_chrome(
         &theme,
@@ -240,6 +299,22 @@ fn input_with_style<H: UiHost>(
         .unwrap_or(chrome.placeholder_color);
     chrome.caret_color = resolved.text_color;
     chrome.selection_color = resolved.selection_color;
+
+    if let Some(bg) = style_override.background {
+        chrome.background = bg.resolve(&theme);
+    }
+    if let Some(border) = style_override.border_color {
+        chrome.border_color = border.resolve(&theme);
+    }
+    if let Some(border) = style_override.border_color_focused {
+        chrome.border_color_focused = border.resolve(&theme);
+    }
+    if let Some(ring_color) = style_override.focus_ring_color
+        && let Some(mut ring) = chrome.focus_ring.take()
+    {
+        ring.color = ring_color.resolve(&theme);
+        chrome.focus_ring = Some(ring);
+    }
 
     if aria_invalid {
         let border_color = theme.color_required("destructive");

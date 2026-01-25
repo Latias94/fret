@@ -722,9 +722,7 @@ impl HoverCardContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let base_layout = LayoutRefinement::default()
-            .w_px(MetricRef::Px(Px(256.0)))
-            .flex_shrink_0();
+        let base_layout = LayoutRefinement::default().w_px(Px(256.0)).flex_shrink_0();
 
         let chrome = hover_card_content_chrome(&theme).merge(self.chrome);
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
@@ -745,7 +743,7 @@ mod tests {
     use fret_core::{
         AppWindowId, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
         PathStyle, Point, Px, Rect, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
-        TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
@@ -1389,9 +1387,7 @@ mod tests {
                             .open_delay_frames(0)
                             .close_delay_frames(0)
                             .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(120.0)))
-                                    .h_px(MetricRef::Px(Px(40.0))),
+                                LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
                             )
                             .window_margin(Px(0.0))
                             .into_element(cx),
@@ -1517,6 +1513,7 @@ mod tests {
                 position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 click_count: 1,
                 pointer_type: fret_core::PointerType::Mouse,
             }),
@@ -1648,9 +1645,7 @@ mod tests {
                             .open_delay_frames(0)
                             .close_delay_frames(0)
                             .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(120.0)))
-                                    .h_px(MetricRef::Px(Px(40.0))),
+                                LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
                             )
                             .window_margin(Px(0.0))
                             .into_element(cx),

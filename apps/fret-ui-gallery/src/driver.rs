@@ -1236,7 +1236,7 @@ impl UiGalleryDriver {
                                                 .bg(ColorRef::Color(theme.color_required("muted")))
                                                 .p(Space::N4),
                                             LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(280.0)))
+                                                .w_px(Px(280.0))
                                                 .h_full(),
                                         ),
                                         |cx| vec![cx.text("Sidebar (disabled)")],
@@ -1271,7 +1271,7 @@ impl UiGalleryDriver {
                                             .bg(ColorRef::Color(theme.color_required("muted")))
                                             .p(Space::N4),
                                         LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(280.0)))
+                                            .w_px(Px(280.0))
                                             .h_full(),
                                     ),
                                     |cx| vec![cx.text("Sidebar (disabled)")],
@@ -1854,7 +1854,7 @@ impl UiGalleryDriver {
                                                     overflow: TextOverflow::Clip,
                                                 })
                                             })
-                                            .collect()
+                                            .collect::<Vec<_>>()
                                     },
                                 );
 
@@ -2025,10 +2025,10 @@ pub fn build_app() -> App {
     cmds.save = Some(CommandId::new(CMD_APP_SAVE));
     cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
     cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
-    cmds.cut = Some(CommandId::new(fret_app::core_commands::TEXT_CUT));
-    cmds.copy = Some(CommandId::new(fret_app::core_commands::TEXT_COPY));
-    cmds.paste = Some(CommandId::new(fret_app::core_commands::TEXT_PASTE));
-    cmds.select_all = Some(CommandId::new(fret_app::core_commands::TEXT_SELECT_ALL));
+    cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
+    cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
+    cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
+    cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
     cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
 
     if Platform::current() == Platform::Macos {

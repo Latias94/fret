@@ -56,6 +56,18 @@ pub trait DragHost {
     fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession>;
     fn cancel_drag(&mut self, pointer_id: PointerId);
 
+    fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool;
+
+    fn find_drag_pointer_id(
+        &self,
+        predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<PointerId>;
+
+    fn cancel_drag_sessions(
+        &mut self,
+        predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Vec<PointerId>;
+
     fn begin_drag_with_kind<T: Any>(
         &mut self,
         pointer_id: PointerId,

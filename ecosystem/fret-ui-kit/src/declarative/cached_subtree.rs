@@ -8,16 +8,21 @@ use fret_ui::{ElementContext, UiHost};
 /// mechanism-only `ElementContext::view_cache(...)` API in `fret-ui`.
 pub trait CachedSubtreeExt {
     /// Build an explicit cached subtree boundary using default cache-root behavior.
-    fn cached_subtree(&mut self, f: impl FnOnce(&mut Self) -> Vec<AnyElement>) -> AnyElement {
+    fn cached_subtree<I>(&mut self, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         self.cached_subtree_with(CachedSubtreeProps::default(), f)
     }
 
     /// Build an explicit cached subtree boundary with additional cache-root hints.
-    fn cached_subtree_with(
+    fn cached_subtree_with<I>(
         &mut self,
         props: CachedSubtreeProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement;
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>;
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -59,11 +64,14 @@ impl CachedSubtreeProps {
 }
 
 impl<'a, H: UiHost> CachedSubtreeExt for ElementContext<'a, H> {
-    fn cached_subtree_with(
+    fn cached_subtree_with<I>(
         &mut self,
         props: CachedSubtreeProps,
-        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let mut view_cache = ViewCacheProps::default();
         view_cache.contained_layout = props.contained_layout;
         view_cache.cache_key = props.cache_key;

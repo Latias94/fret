@@ -1,11 +1,25 @@
 use super::*;
 use crate::widget::{CommandAvailability, CommandAvailabilityCx};
-use fret_runtime::CommandScope;
+use fret_runtime::{CommandScope, WindowMenuBarFocusService};
 
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
     pub fn is_command_available(&mut self, app: &mut H, command: &CommandId) -> bool {
         self.command_availability(app, command) == CommandAvailability::Available
+    }
+
+    /// GPUI naming parity: "is this action available along the dispatch path?"
+    ///
+    /// Note: Fret models "actions" as `CommandId` today (especially for widget-scoped commands).
+    #[stacksafe::stacksafe]
+    pub fn is_action_available(&mut self, app: &mut H, command: &CommandId) -> bool {
+        self.is_command_available(app, command)
+    }
+
+    /// GPUI naming parity for availability queries.
+    #[stacksafe::stacksafe]
+    pub fn action_availability(&mut self, app: &mut H, command: &CommandId) -> CommandAvailability {
+        self.command_availability(app, command)
     }
 
     #[stacksafe::stacksafe]
@@ -52,7 +66,60 @@ impl<H: UiHost> UiTree<H> {
             return CommandAvailability::NotHandled;
         };
 
-        self.command_availability_from_node(app, &input_ctx, start, command)
+        let availability = self.command_availability_from_node(app, &input_ctx, start, command);
+
+        if availability == CommandAvailability::NotHandled && command.as_str() == "focus.menu_bar" {
+            let Some(window) = self.window else {
+                return CommandAvailability::NotHandled;
+            };
+            let present = app
+                .global::<WindowMenuBarFocusService>()
+                .is_some_and(|svc| svc.present(window));
+            return if present {
+                CommandAvailability::Available
+            } else {
+                CommandAvailability::Blocked
+            };
+        }
+
+        if availability == CommandAvailability::NotHandled
+            && matches!(command.as_str(), "focus.next" | "focus.previous")
+        {
+            return self.focus_traversal_command_availability(&active_layers, barrier_root);
+        }
+
+        availability
+    }
+
+    fn focus_traversal_command_availability(
+        &mut self,
+        active_layers: &[NodeId],
+        barrier_root: Option<NodeId>,
+    ) -> CommandAvailability {
+        let Some(base_root) = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root))
+        else {
+            return CommandAvailability::NotHandled;
+        };
+
+        let scope_root = barrier_root.unwrap_or(base_root);
+        let scope_bounds = self
+            .nodes
+            .get(scope_root)
+            .map(|n| n.bounds)
+            .unwrap_or_default();
+
+        let mut focusables: Vec<NodeId> = Vec::new();
+        for &root in active_layers {
+            self.collect_focusables(root, active_layers, scope_bounds, &mut focusables);
+        }
+
+        if focusables.is_empty() {
+            CommandAvailability::NotHandled
+        } else {
+            CommandAvailability::Available
+        }
     }
 
     fn command_availability_start_node(
@@ -113,7 +180,13 @@ impl<H: UiHost> UiTree<H> {
         CommandAvailability::NotHandled
     }
 
-    pub(crate) fn publish_window_command_action_availability_snapshot(
+    /// Publish a per-window action availability snapshot for widget-scoped commands.
+    ///
+    /// This is a data-only integration seam for runner/platform and UI-kit layers (menus, command
+    /// palette, shortcut help). Most apps should prefer publishing a filtered snapshot (e.g. only
+    /// menu/palette command sets) at the app-driver layer. This retained-runtime helper exists for
+    /// callers that want the "all widget commands" baseline behavior.
+    pub fn publish_window_command_action_availability_snapshot(
         &mut self,
         app: &mut H,
         input_ctx: &InputContext,
@@ -143,7 +216,21 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         for id in widget_commands {
-            let availability = self.command_availability_from_node(app, input_ctx, start, &id);
+            if id.as_str() == "focus.menu_bar" {
+                let present = app
+                    .global::<WindowMenuBarFocusService>()
+                    .is_some_and(|svc| svc.present(window));
+                snapshot.insert(id, present);
+                continue;
+            }
+
+            let mut availability = self.command_availability_from_node(app, input_ctx, start, &id);
+            if availability == CommandAvailability::NotHandled
+                && matches!(id.as_str(), "focus.next" | "focus.previous")
+            {
+                availability =
+                    self.focus_traversal_command_availability(&active_layers, barrier_root);
+            }
             match availability {
                 CommandAvailability::Available => {
                     snapshot.insert(id, true);
@@ -151,7 +238,11 @@ impl<H: UiHost> UiTree<H> {
                 CommandAvailability::Blocked => {
                     snapshot.insert(id, false);
                 }
-                CommandAvailability::NotHandled => {}
+                CommandAvailability::NotHandled => {
+                    if matches!(id.as_str(), "focus.next" | "focus.previous") {
+                        snapshot.insert(id, false);
+                    }
+                }
             }
         }
 
@@ -204,6 +295,40 @@ impl<H: UiHost> UiTree<H> {
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
+                },
+            );
+            app.with_global_mut(
+                fret_runtime::WindowInputArbitrationService::default,
+                |svc, _app| {
+                    let snapshot = self.input_arbitration_snapshot();
+                    svc.set_snapshot(
+                        window,
+                        fret_runtime::WindowInputArbitrationSnapshot {
+                            modal_barrier_root: snapshot.modal_barrier_root,
+                            pointer_occlusion: match snapshot.pointer_occlusion {
+                                PointerOcclusion::None => {
+                                    fret_runtime::WindowPointerOcclusion::None
+                                }
+                                PointerOcclusion::BlockMouse => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouse
+                                }
+                                PointerOcclusion::BlockMouseExceptScroll => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouseExceptScroll
+                                }
+                            },
+                            pointer_occlusion_root: snapshot
+                                .pointer_occlusion_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_active: snapshot.pointer_capture_active,
+                            pointer_capture_root: snapshot
+                                .pointer_capture_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_multiple_roots: snapshot
+                                .pointer_capture_multiple_layers
+                                || (snapshot.pointer_capture_active
+                                    && snapshot.pointer_capture_layer.is_none()),
+                        },
+                    );
                 },
             );
         }
@@ -338,7 +463,42 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+            app.with_global_mut(
+                fret_runtime::WindowInputArbitrationService::default,
+                |svc, _app| {
+                    let snapshot = self.input_arbitration_snapshot();
+                    svc.set_snapshot(
+                        window,
+                        fret_runtime::WindowInputArbitrationSnapshot {
+                            modal_barrier_root: snapshot.modal_barrier_root,
+                            pointer_occlusion: match snapshot.pointer_occlusion {
+                                PointerOcclusion::None => {
+                                    fret_runtime::WindowPointerOcclusion::None
+                                }
+                                PointerOcclusion::BlockMouse => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouse
+                                }
+                                PointerOcclusion::BlockMouseExceptScroll => {
+                                    fret_runtime::WindowPointerOcclusion::BlockMouseExceptScroll
+                                }
+                            },
+                            pointer_occlusion_root: snapshot
+                                .pointer_occlusion_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_active: snapshot.pointer_capture_active,
+                            pointer_capture_root: snapshot
+                                .pointer_capture_layer
+                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
+                            pointer_capture_multiple_roots: snapshot
+                                .pointer_capture_multiple_layers
+                                || (snapshot.pointer_capture_active
+                                    && snapshot.pointer_capture_layer.is_none()),
+                        },
+                    );
+                },
+            );
 
+            // Keep "is action available?" snapshots up to date for menu/command-palette gating.
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
 

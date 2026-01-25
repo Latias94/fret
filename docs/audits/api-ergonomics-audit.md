@@ -54,10 +54,58 @@ This document is meant to stay “live” while we iterate. Update this section 
     `crates/fret-launch/src/runner/desktop/windows_menu.rs`,
     `crates/fret-launch/src/runner/desktop/macos_menu.rs`,
     `ecosystem/fret-bootstrap/src/ui_app_driver.rs`.
-- [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
+- [x] Declarative components can participate in dispatch-path availability queries (without new kernel widget types).
+  - Evidence: `crates/fret-ui/src/action.rs` (`OnCommandAvailability`, `CommandAvailabilityActionCx`),
+    `crates/fret-ui/src/declarative/host_widget.rs` (invokes availability hook during queries)
+  - Example surfaces: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs` (`*_virtualized_copyable`)
+- [x] Cross-surface clipboard commands exist beyond text widgets (`edit.copy`) with availability + effects wired.
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`
+  - Tests: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs` (`*_reports_availability_and_emits_clipboard_text`),
+    `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`
+- [x] Scroll-into-view is stable when already scrolled (prevents focus traversal “drift”).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget.rs` (`ElementHostWidget::scroll_descendant_into_view`)
+  - Tests: `crates/fret-ui/src/tree/tests/scroll_into_view.rs` (`scroll_into_view_does_not_drift_*`)
+- [x] Representative demos adopt `ModelWatchExt` to reduce observe+read boilerplate.
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_mvu_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_interop_kit_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_mvu_interop_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_interop_demo.rs`
+- [x] `fretboard new` templates demonstrate iterator-friendly children composition (no forced `vec![...]` in child closures).
+  - Evidence: `apps/fretboard/src/scaffold/templates.rs`
+- [x] Globals can be observed/read ergonomically (`GlobalWatchExt`).
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/global_watch.rs`
+  - Example: `apps/fret-examples/src/todo_interop_demo.rs`
+  - Example: `apps/fret-examples/src/assets_demo.rs`
+  - Example: `apps/fret-examples/src/markdown_demo.rs`
+- [x] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
+  - Templates: `apps/fretboard/src/scaffold/templates.rs` (todo/todo-mvu/hello use `ui::*` + `.ui()`).
+  - Demos: `apps/fret-examples/src/todo_demo.rs`, `apps/fret-examples/src/todo_mvu_demo.rs`, `apps/fret-examples/src/todo_interop_demo.rs`.
+- [x] Migrate remaining demos to the default authoring dialect (`UiExt::ui()` / `ui::*`).
+  - Migrated: `apps/fret-examples/src/assets_demo.rs`, `apps/fret-examples/src/cjk_conformance_demo.rs`, `apps/fret-examples/src/emoji_conformance_demo.rs`.
+  - Migrated: `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`, `apps/fret-examples/src/todo_interop_kit_demo.rs`, `apps/fret-examples/src/todo_mvu_interop_demo.rs`.
+  - Migrated: `apps/fret-examples/src/components_gallery.rs`, `apps/fret-examples/src/markdown_demo.rs`.
+  - Remaining: none.
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
-  - Evidence: `ecosystem/fret-ui-shadcn/src/{collapsible,command,input_group,table,tabs,toggle_group}.rs`
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`ViewElements` return type for `UiAppDriver` view fns)
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs` (`*Request::new(..., children: impl IntoIterator<Item = AnyElement>)`)
+  - Evidence: `ecosystem/fret-ui-kit/src/{ui,ui_builder}.rs`, `ecosystem/fret-ui-kit/src/declarative/{cached_subtree,chrome,dismissible,glass,pixelate,scroll,stack,visually_hidden}.rs`, `ecosystem/fret-ui-kit/src/primitives/{accordion,dismissable_layer,menu/*,popover,popper_content,roving_focus_group,tabs,toggle,toolbar}.rs`, `ecosystem/fret-ui-primitives/src/focus_scope.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{breadcrumb,card,command,field,input_group,item,scroll_area,select,toggle,tooltip}.rs`,
+    `ecosystem/fret-ui-shadcn/src/ui_builder_ext/breadcrumb.rs`
+- [x] Fill P0 authoring gaps discovered during demo migration: px/metric-aware `gap` and one-value padding shorthands.
+  - Evidence: `ecosystem/fret-ui-kit/src/ui.rs` (`FlexBox` uses `MetricRef` for `gap`)
+  - Evidence: `ecosystem/fret-ui-kit/src/style/refs.rs` (`MetricRef: From<Px/Space/Radius>`)
+  - Evidence: `ecosystem/fret-ui-kit/src/style/layout.rs` (`w_px`/`min_w`/`max_w`/`basis_px` accept `Into<MetricRef>`)
+  - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs` (`gap` accepts `Into<MetricRef>`, `padding_px`)
+  - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayRequest::*` accepts `IntoIterator<Item=AnyElement>`)
+  - Example: `apps/fret-ui-gallery/src/ui.rs` (uses `.w_px(Px(..))`/`.h_px(Px(..))` without `MetricRef::Px(...)`)
+  - Example: `ecosystem/fret-ui-shadcn/src/spinner.rs` (uses `.w_px(Px(..))`/`.h_px(Px(..))` without `MetricRef::Px(...)`)
+  - Example: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs` (uses `.h_px(Px(..))` without `MetricRef::Px(...)`)
+- [x] Provide a fluent scroll-area wrapper in the default authoring dialect (`ui::*`).
+  - Evidence: `ecosystem/fret-ui-kit/src/ui.rs` (`ui::scroll_area`)
+  - Example: `apps/fret-examples/src/markdown_demo.rs`
 - [x] Consolidate third-party “component integration contract” guidance (P2) with a short checklist.
   - Evidence: `docs/component-authoring-contracts.md`
   - Evidence: `docs/component-author-guide.md`
@@ -153,6 +201,7 @@ This is high-risk and likely to bloat kernel contracts. The recommended approach
   - `ModelWatchExt` (observe+read sugar),
   - `stack::{hstack,vstack}` (avoid direct runtime props unless needed).
 - Ensure `fret-kit` templates and `fretboard new` outputs follow this style.
+  - Template shortcuts: `fretboard new todo` and `fretboard new todo-mvu`.
 
 Acceptance: new users can build a non-trivial UI without touching `LayoutStyle` directly.
 
@@ -234,7 +283,7 @@ This keeps kernel contracts stable and prevents accidental scope creep.
 ## Follow-up Work Items
 
 - Promote ADR 0175 from Proposed → Accepted once example migration proves the UX.
-- Implement P1 changes (`IntoIterator`) and run `cargo fmt` + tests.
+- Continue expanding P1 (`IntoIterator`) beyond the initial shadcn batch (and make kernel authoring helpers consistent).
 
 ## Comparative References (Iced, GPUI)
 
@@ -316,3 +365,5 @@ Recent ergonomic improvement:
   (publish target id as models + global viewport input filtering + surface panel helper).
 - `interop::embedded_viewport::{EmbeddedViewportUiAppDriverExt, EmbeddedViewportMvuUiAppDriverExt}`
   further reduce wiring boilerplate (install input + frame recording in one call).
+- `fret-ui` exposes a policy hook for command availability (`command_on_command_availability_for`) so ecosystem
+  components can participate in OS menu / command palette gating without introducing new kernel widget types.

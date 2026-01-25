@@ -260,6 +260,8 @@ mod tests {
         ViewportInputEvent {
             window: AppWindowId::default(),
             target: RenderTargetId::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
             geometry: ViewportInputGeometry {
                 content_rect_px: Rect::new(
                     Point::new(Px(0.0), Px(0.0)),
@@ -344,6 +346,7 @@ mod tests {
             &dummy_event(ViewportInputKind::PointerUp {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 click_count: 1,
             }),
             MouseButton::Left,

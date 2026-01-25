@@ -5,6 +5,21 @@ pub struct DockingInteractionSettings {
     pub drag_inversion: DockDragInversionSettings,
     /// Drag activation threshold for docking tab drags (window-local logical pixels).
     pub tab_drag_threshold: Px,
+    /// Drag distance threshold for suppressing viewport right-click context menus (screen px).
+    ///
+    /// Docking forwards viewport pointer input via `Effect::ViewportInput` and uses pointer capture
+    /// to keep delivering events when the cursor leaves the viewport bounds.
+    ///
+    /// For editor-like viewports, it is common to support both:
+    /// - right-click context menus (when the pointer does not move), and
+    /// - right-drag navigation (orbit/pan) without a context menu on release.
+    ///
+    /// When this value is exceeded during a right-button viewport capture, docking will suppress
+    /// bubbling on the matching `PointerUp` so context-menu primitives upstream do not trigger.
+    pub viewport_context_menu_drag_threshold: Px,
+    /// When true, suppress bubbling of secondary right-click events while a viewport capture
+    /// session is active (e.g. during a left-drag marquee).
+    pub suppress_context_menu_during_viewport_capture: bool,
 }
 
 impl Default for DockingInteractionSettings {
@@ -12,6 +27,8 @@ impl Default for DockingInteractionSettings {
         Self {
             drag_inversion: DockDragInversionSettings::default(),
             tab_drag_threshold: Px(6.0),
+            viewport_context_menu_drag_threshold: Px(6.0),
+            suppress_context_menu_during_viewport_capture: true,
         }
     }
 }

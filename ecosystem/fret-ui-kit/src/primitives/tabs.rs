@@ -155,15 +155,18 @@ pub fn tab_panel_semantics_props(
 /// - When `force_mount=false`, inactive panels are not mounted.
 /// - When `force_mount=true`, inactive panels remain mounted but are not present/interactive.
 #[track_caller]
-pub fn tab_panel_with_gate<H: UiHost>(
+pub fn tab_panel_with_gate<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     active: bool,
     force_mount: bool,
     layout: LayoutStyle,
     label: Option<Arc<str>>,
     labelled_by_element: Option<u64>,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> Option<AnyElement> {
+    children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> Option<AnyElement>
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     if !active && !force_mount {
         return None;
     }
@@ -289,12 +292,15 @@ impl TabsList {
     /// - This installs APG navigation and, in automatic mode, updates `TabsRoot.model` when the
     ///   active tab changes.
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         mut props: RovingFlexProps,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let model = self.root.model.clone();
         let activation_mode = self.root.activation_mode;
         let disabled_for_roving = self.disabled.clone();
@@ -380,13 +386,16 @@ impl TabsTrigger {
     /// - Selects the tab on left mouse down (no ctrl key), matching Radix's `onMouseDown`.
     /// - Activates selection on pressable "activate" as well (Enter/Space and click-like pointer up).
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &TabsRoot,
         mut props: PressableProps,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let model = root.model.clone();
         let value = self.value.clone();
         let label = self.label.clone();
@@ -479,12 +488,15 @@ impl TabsContent {
 
     /// Renders a `TabsContent` (tab panel) subtree if it is active or force-mounted.
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &TabsRoot,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> Option<AnyElement> {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Option<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let selected_value: Option<Arc<str>> =
             cx.watch_model(&root.model).layout().cloned().flatten();
         let active = selected_value.as_deref() == Some(self.value.as_ref());

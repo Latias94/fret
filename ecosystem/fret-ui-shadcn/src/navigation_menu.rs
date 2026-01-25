@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use fret_core::Transform2D;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{
+    CommandId, InputContext, Model, Platform, PlatformCapabilities, WindowCommandGatingService,
+    WindowCommandGatingSnapshot,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
     PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
@@ -21,6 +24,24 @@ use fret_ui_kit::{
 };
 
 use crate::overlay_motion;
+
+fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
+    let caps = app
+        .global::<PlatformCapabilities>()
+        .cloned()
+        .unwrap_or_default();
+    InputContext::fallback(Platform::current(), caps)
+}
+
+fn command_is_disabled_by_gating<H: UiHost>(
+    app: &H,
+    gating: &WindowCommandGatingSnapshot,
+    command: Option<&CommandId>,
+) -> bool {
+    command
+        .and_then(|id| app.commands().get(id.clone()).map(|meta| (id, meta)))
+        .is_some_and(|(id, meta)| !gating.is_enabled_for_command(id, meta))
+}
 
 fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
@@ -192,6 +213,7 @@ pub struct NavigationMenuLink {
     model: Model<Option<Arc<str>>>,
     children: Vec<AnyElement>,
     label: Option<Arc<str>>,
+    test_id: Option<Arc<str>>,
     command: Option<CommandId>,
     disabled: bool,
     dismiss_on_ctrl_or_meta: bool,
@@ -207,6 +229,7 @@ impl NavigationMenuLink {
             model,
             children,
             label: None,
+            test_id: None,
             command: None,
             disabled: false,
             dismiss_on_ctrl_or_meta: false,
@@ -219,6 +242,11 @@ impl NavigationMenuLink {
 
     pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
         self
     }
 
@@ -246,11 +274,28 @@ impl NavigationMenuLink {
         }
 
         let model = self.model.clone();
-        let disabled = self.disabled;
+        let disabled_explicit = self.disabled;
         let command = self.command;
         let label = self.label.clone();
+        let test_id = self.test_id.clone();
         let children = std::rc::Rc::new(self.children);
         let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
+
+        let fallback_input_ctx = navigation_menu_input_context(&*cx.app);
+        let gating = cx
+            .app
+            .global::<WindowCommandGatingService>()
+            .and_then(|svc| svc.snapshot(cx.window))
+            .cloned()
+            .unwrap_or_else(|| {
+                fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                    &*cx.app,
+                    cx.window,
+                    fallback_input_ctx,
+                )
+            });
+        let disabled =
+            disabled_explicit || command_is_disabled_by_gating(&*cx.app, &gating, command.as_ref());
 
         cx.pressable_with_id_props(move |cx, _st, link_id| {
             let modifier_state: Arc<std::sync::Mutex<ModifierState>> = cx.with_state_for(
@@ -301,6 +346,7 @@ impl NavigationMenuLink {
             pressable.a11y = PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: label.clone(),
+                test_id: test_id.clone(),
                 ..Default::default()
             };
 
@@ -1235,11 +1281,15 @@ mod tests {
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{SvgId, SvgService};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_runtime::{FrameId, TickId};
+    use fret_runtime::{
+        CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
+        WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
+    };
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
+    use std::collections::HashMap;
 
     #[derive(Default)]
     struct FakeServices;
@@ -1584,6 +1634,7 @@ mod tests {
                 position: pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 click_count: 1,
                 pointer_type: PointerType::Mouse,
             }),
@@ -1701,6 +1752,7 @@ mod tests {
                     ctrl: true,
                     ..Default::default()
                 },
+                is_click: true,
                 click_count: 1,
                 pointer_type: PointerType::Mouse,
             }),
@@ -1729,6 +1781,7 @@ mod tests {
                 position: pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 click_count: 1,
                 pointer_type: PointerType::Mouse,
             }),
@@ -1809,6 +1862,7 @@ mod tests {
                 position: pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 click_count: 1,
                 pointer_type: PointerType::Mouse,
             }),
@@ -1909,5 +1963,196 @@ mod tests {
 
         let (rtl_anchor, rtl_panel) = run(LayoutDirection::Rtl);
         assert_align_start(LayoutDirection::Rtl, rtl_anchor, rtl_panel);
+    }
+
+    #[test]
+    fn navigation_menu_link_is_disabled_by_window_command_enabled_service() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let cmd = CommandId::from("test.disabled-command");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Disabled Command").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandEnabledService::default());
+        app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+            svc.set_enabled(window, cmd.clone(), false);
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-link",
+            |cx| {
+                vec![
+                    NavigationMenuLink::new(model.clone(), vec![cx.text("Link")])
+                        .label("Link")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-link")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-link"))
+            .expect("expected a semantics node for the link test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn navigation_menu_link_is_disabled_when_widget_action_is_unavailable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), false);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-link-widget-action",
+            |cx| {
+                vec![
+                    NavigationMenuLink::new(model.clone(), vec![cx.text("Link")])
+                        .label("Link")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-link")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-link"))
+            .expect("expected a semantics node for the link test_id");
+        assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn navigation_menu_link_prefers_window_command_gating_snapshot_when_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let cmd = CommandId::from("test.widget-action");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
+        );
+
+        app.set_global(WindowCommandActionAvailabilityService::default());
+        app.with_global_mut(
+            WindowCommandActionAvailabilityService::default,
+            |svc, _app| {
+                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
+                snapshot.insert(cmd.clone(), true);
+                svc.set_snapshot(window, snapshot);
+            },
+        );
+
+        app.set_global(WindowCommandGatingService::default());
+        app.with_global_mut(WindowCommandGatingService::default, |svc, app| {
+            let input_ctx = super::navigation_menu_input_context(app);
+            let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
+            let mut availability: HashMap<CommandId, bool> = HashMap::new();
+            availability.insert(cmd.clone(), false);
+            let _token = svc.push_snapshot(
+                window,
+                WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
+                    .with_action_availability(Some(Arc::new(availability))),
+            );
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-link-gating",
+            |cx| {
+                vec![
+                    NavigationMenuLink::new(model.clone(), vec![cx.text("Link")])
+                        .label("Link")
+                        .on_click(cmd.clone())
+                        .test_id("disabled-link")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("disabled-link"))
+            .expect("expected a semantics node for the link test_id");
+        assert!(node.flags.disabled);
     }
 }

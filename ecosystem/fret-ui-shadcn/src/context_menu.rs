@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model, ModelId};
+use fret_runtime::{CommandId, Model, ModelId, WindowCommandGatingSnapshot};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -34,11 +34,6 @@ use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::shortcut_display::command_shortcut_label;
-
-#[derive(Default)]
-struct ContextMenuAnchorStore {
-    by_open_model: Option<Model<HashMap<ModelId, Point>>>,
-}
 
 #[derive(Debug, Clone)]
 pub enum ContextMenuEntry {
@@ -550,6 +545,7 @@ fn menu_structural_group<H: UiHost>(
 #[derive(Clone)]
 struct ContextMenuRenderEnv {
     open: Model<bool>,
+    gating: WindowCommandGatingSnapshot,
     reserve_leading_slot: bool,
     item_count: usize,
     ring: RingStyle,
@@ -700,9 +696,14 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let variant = item.variant;
@@ -735,7 +736,7 @@ impl ContextMenuRenderEnv {
                 menu::sub_content::wire_item(cx, item_id, disabled, &submenu_for_item);
 
                 if !disabled {
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if close_on_select {
                         cx.pressable_set_bool(&open_for_item, false);
                     }
@@ -821,9 +822,14 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let checked = item.checked.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
 
@@ -851,7 +857,7 @@ impl ContextMenuRenderEnv {
                 if !disabled {
                     menu::checkbox_item::wire_toggle_on_activate(cx, checked.clone());
                 }
-                cx.pressable_dispatch_command_opt(command.clone());
+                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                 if !disabled && close_on_select {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
@@ -924,9 +930,14 @@ impl ContextMenuRenderEnv {
         let value = item.value.clone();
         let group_value = item.group_value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
 
@@ -960,7 +971,7 @@ impl ContextMenuRenderEnv {
                         value.clone(),
                     );
                 }
-                cx.pressable_dispatch_command_opt(command.clone());
+                cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                 if !disabled && close_on_select {
                     cx.pressable_set_bool(&open_for_item, false);
                 }
@@ -1024,6 +1035,7 @@ impl ContextMenuRenderEnv {
 #[derive(Clone)]
 struct ContextMenuContentRenderEnv {
     open: Model<bool>,
+    gating: WindowCommandGatingSnapshot,
     reserve_leading_slot: bool,
     item_count: usize,
     ring: RingStyle,
@@ -1178,9 +1190,14 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
         let test_id = item.test_id.clone();
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let has_submenu = item.submenu.is_some();
@@ -1247,7 +1264,7 @@ impl ContextMenuContentRenderEnv {
                 .unwrap_or(false);
 
                 if !has_submenu && !disabled {
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
@@ -1346,9 +1363,14 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let checked = item.checked.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let open = self.open.clone();
@@ -1390,7 +1412,7 @@ impl ContextMenuContentRenderEnv {
                     if !disabled {
                         menu::checkbox_item::wire_toggle_on_activate(cx, checked.clone());
                     }
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if !disabled && close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
@@ -1447,9 +1469,14 @@ impl ContextMenuContentRenderEnv {
         let value = item.value.clone();
         let group_value = item.group_value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let disabled = item.disabled;
         let close_on_select = item.close_on_select;
         let command = item.command;
+        let disabled = item.disabled
+            || crate::command_gating::command_is_disabled_by_gating(
+                &*cx.app,
+                &self.gating,
+                command.as_ref(),
+            );
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let open = self.open.clone();
@@ -1497,7 +1524,7 @@ impl ContextMenuContentRenderEnv {
                             value.clone(),
                         );
                     }
-                    cx.pressable_dispatch_command_opt(command.clone());
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if !disabled && close_on_select {
                         cx.pressable_set_bool(&open, false);
                     }
@@ -1762,6 +1789,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     submenu_models: menu::sub::MenuSubmenuModels,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
 
     let entries_tree = entries;
     let mut flat: Vec<ContextMenuEntry> = Vec::new();
@@ -1794,9 +1822,33 @@ fn context_menu_submenu_panel<H: UiHost>(
     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries_flat
         .iter()
         .filter_map(|e| match e {
-            ContextMenuEntry::Item(item) => Some((item.label.clone(), item.disabled)),
-            ContextMenuEntry::CheckboxItem(item) => Some((item.label.clone(), item.disabled)),
-            ContextMenuEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
+            ContextMenuEntry::Item(item) => Some((
+                item.label.clone(),
+                item.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        &gating,
+                        item.command.as_ref(),
+                    ),
+            )),
+            ContextMenuEntry::CheckboxItem(item) => Some((
+                item.label.clone(),
+                item.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        &gating,
+                        item.command.as_ref(),
+                    ),
+            )),
+            ContextMenuEntry::RadioItem(item) => Some((
+                item.label.clone(),
+                item.disabled
+                    || crate::command_gating::command_is_disabled_by_gating(
+                        &*cx.app,
+                        &gating,
+                        item.command.as_ref(),
+                    ),
+            )),
             ContextMenuEntry::Label(_)
             | ContextMenuEntry::Separator
             | ContextMenuEntry::Group(_)
@@ -1856,6 +1908,7 @@ fn context_menu_submenu_panel<H: UiHost>(
         move |cx| {
             let render_env = ContextMenuRenderEnv {
                 open: open.clone(),
+                gating: gating.clone(),
                 reserve_leading_slot,
                 item_count,
                 ring,
@@ -2039,8 +2092,8 @@ impl ContextMenu {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
@@ -2108,17 +2161,8 @@ impl ContextMenu {
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
             let open_model_id = open.id();
-            let anchor_store_model: Model<HashMap<ModelId, Point>> = cx.app.with_global_mut_untracked(
-                ContextMenuAnchorStore::default,
-                |st, app| {
-                    if let Some(model) = st.by_open_model.clone() {
-                        return model;
-                    }
-                    let model = app.models_mut().insert(HashMap::<ModelId, Point>::new());
-                    st.by_open_model = Some(model.clone());
-                    model
-                },
-            );
+            let anchor_store_model: Model<HashMap<ModelId, Point>> =
+                menu::context_menu_anchor_store_model(cx.app);
 
             let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
             let pointer_policy = Arc::new({
@@ -2168,6 +2212,9 @@ impl ContextMenu {
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
+                let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id_for_children = first_item_focus_id.clone();
+                let first_item_focus_id_for_request = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -2180,6 +2227,7 @@ impl ContextMenu {
                     };
 
                     let entries_tree = entries(cx);
+                    let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
                     let mut flat: Vec<ContextMenuEntry> = Vec::new();
                     flatten_entries(&mut flat, entries_tree.clone());
                     let entries_flat = flat;
@@ -2208,11 +2256,35 @@ impl ContextMenu {
                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries_flat
                         .iter()
                         .filter_map(|e| match e {
-                            ContextMenuEntry::Item(item) => Some((item.label.clone(), item.disabled)),
+                            ContextMenuEntry::Item(item) => Some((
+                                item.label.clone(),
+                                item.disabled
+                                    || crate::command_gating::command_is_disabled_by_gating(
+                                        &*cx.app,
+                                        &gating,
+                                        item.command.as_ref(),
+                                    ),
+                            )),
                             ContextMenuEntry::CheckboxItem(item) => {
-                                Some((item.label.clone(), item.disabled))
+                                Some((
+                                    item.label.clone(),
+                                    item.disabled
+                                        || crate::command_gating::command_is_disabled_by_gating(
+                                            &*cx.app,
+                                            &gating,
+                                            item.command.as_ref(),
+                                        ),
+                                ))
                             }
-                            ContextMenuEntry::RadioItem(item) => Some((item.label.clone(), item.disabled)),
+                            ContextMenuEntry::RadioItem(item) => Some((
+                                item.label.clone(),
+                                item.disabled
+                                    || crate::command_gating::command_is_disabled_by_gating(
+                                        &*cx.app,
+                                        &gating,
+                                        item.command.as_ref(),
+                                    ),
+                            )),
                             ContextMenuEntry::Label(_)
                             | ContextMenuEntry::Separator
                             | ContextMenuEntry::Group(_)
@@ -2405,6 +2477,7 @@ impl ContextMenu {
                                                 move |cx| {
                                                     let render_env = ContextMenuContentRenderEnv {
                                                         open: open_for_overlay.clone(),
+                                                        gating: gating.clone(),
                                                         reserve_leading_slot,
                                                         item_count,
                                                         ring,
@@ -2530,9 +2603,14 @@ impl ContextMenu {
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let test_id = item.test_id.clone();
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let has_submenu = item.submenu.is_some();
@@ -2551,6 +2629,8 @@ impl ContextMenu {
                                                         let submenu_for_item = submenu_for_content.clone();
                                                         let overlay_root_name_for_controls =
                                                             overlay_root_name_for_controls.clone();
+                                                        let first_item_focus_id_for_items =
+                                                            first_item_focus_id_for_children.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(
@@ -2602,8 +2682,15 @@ impl ContextMenu {
                                                                     )
                                                                     .unwrap_or(false);
 
+                                                                    if !disabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
+                                                                    }
+
                                                                     if !has_submenu && !disabled {
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open, false,
@@ -2717,56 +2804,46 @@ impl ContextMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
+                                                        let first_item_focus_id_for_items =
+                                                            first_item_focus_id_for_children.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
-                                                            let checked_now = cx
-                                                                .watch_model(&checked)
-                                                                .copied()
-                                                                .unwrap_or(false);
-                                                            cx.pressable(
-                                                                PressableProps {
-                                                                    layout: {
-                                                                        let mut layout =
-                                                                            LayoutStyle::default();
-                                                                        layout.size.width =
-                                                                            Length::Fill;
-                                                                        layout.size.min_height =
-                                                                            Some(Px(28.0));
-                                                                        layout
-                                                                    },
-                                                                    enabled: !disabled,
-                                                                    focusable: !disabled,
-                                                                    focus_ring: Some(ring),
-                                                                    a11y: menu::item::menu_item_checkbox_a11y(
-                                                                        a11y_label.clone(),
-                                                                        checked_now,
-                                                                    )
-                                                                    .with_collection_position(
-                                                                        collection_index,
-                                                                        item_count,
-                                                                    ),
-                                                                    ..Default::default()
-                                                                },
-                                                                move |cx, st| {
+                                                            cx.pressable_with_id_props(
+                                                                move |cx, st, item_id| {
                                                                     let checked_now = cx
                                                                         .watch_model(&checked)
                                                                         .copied()
                                                                         .unwrap_or(false);
 
                                                                     if !disabled {
+                                                                        if first_item_focus_id_for_items
+                                                                            .get()
+                                                                            .is_none()
+                                                                        {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
                                                                         menu::checkbox_item::wire_toggle_on_activate(
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_opt(command.clone());
+
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(
+                                                                        command.clone(),
+                                                                    );
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2781,15 +2858,12 @@ impl ContextMenu {
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
                                                                     let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
+                                                                    if st.hovered || st.pressed || st.focused {
                                                                         row_bg = accent;
                                                                         row_fg = accent_fg;
                                                                     }
 
-                                                                    menu_row_children(
+                                                                    let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
@@ -2799,16 +2873,42 @@ impl ContextMenu {
                                                                         Some(checked_now),
                                                                         disabled,
                                                                         row_bg,
-                                                                    row_fg,
-                                                                    text_style.clone(),
-                                                                    font_size,
-                                                                    font_line_height,
-                                                                    pad_x,
-                                                                    pad_x,
-                                                                    pad_y,
-                                                                    radius_sm,
-                                                                    text_disabled,
-                                                                    )
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        font_size,
+                                                                        font_line_height,
+                                                                        pad_x,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                    );
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.min_height =
+                                                                                Some(Px(28.0));
+                                                                            layout
+                                                                        },
+                                                                        enabled: !disabled,
+                                                                        focusable: !disabled,
+                                                                        focus_ring: Some(ring),
+                                                                        a11y: menu::item::menu_item_checkbox_a11y(
+                                                                            a11y_label.clone(),
+                                                                            checked_now,
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    (props, children)
                                                                 },
                                                             )
                                                         }));
@@ -2824,13 +2924,20 @@ impl ContextMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
+                                                        let first_item_focus_id_for_items =
+                                                            first_item_focus_id_for_children.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             let selected = cx
@@ -2841,48 +2948,26 @@ impl ContextMenu {
                                                                 selected.as_ref(),
                                                                 &value,
                                                             );
-                                                            cx.pressable(
-                                                                PressableProps {
-                                                                    layout: {
-                                                                        let mut layout =
-                                                                            LayoutStyle::default();
-                                                                        layout.size.width =
-                                                                            Length::Fill;
-                                                                        layout.size.min_height =
-                                                                            Some(Px(28.0));
-                                                                        layout
-                                                                    },
-                                                                    enabled: !disabled,
-                                                                    focusable: !disabled,
-                                                                    focus_ring: Some(ring),
-                                                                    a11y: menu::item::menu_item_radio_a11y(
-                                                                        a11y_label.clone(),
-                                                                        is_selected,
-                                                                    )
-                                                                    .with_collection_position(
-                                                                        collection_index,
-                                                                        item_count,
-                                                                    ),
-                                                                    ..Default::default()
-                                                                },
-                                                                move |cx, st| {
-                                                                    let selected = cx
-                                                                        .watch_model(&group_value)
-                                                                        .cloned()
-                                                                        .flatten();
-                                                                    let is_selected = menu::radio_group::is_selected(
-                                                                        selected.as_ref(),
-                                                                        &value,
-                                                                    );
-
+                                                            cx.pressable_with_id_props(
+                                                                move |cx, st, item_id| {
                                                                     if !disabled {
+                                                                        if first_item_focus_id_for_items
+                                                                            .get()
+                                                                            .is_none()
+                                                                        {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
                                                                         menu::radio_group::wire_select_on_activate(
                                                                             cx,
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
                                                                     }
-                                                                    cx.pressable_dispatch_command_opt(command.clone());
+
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(
+                                                                        command.clone(),
+                                                                    );
                                                                     if !disabled && close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2897,15 +2982,12 @@ impl ContextMenu {
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
                                                                     let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
+                                                                    if st.hovered || st.pressed || st.focused {
                                                                         row_bg = accent;
                                                                         row_fg = accent_fg;
                                                                     }
 
-                                                                    menu_row_children(
+                                                                    let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
@@ -2924,7 +3006,33 @@ impl ContextMenu {
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
-                                                                    )
+                                                                    );
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.min_height =
+                                                                                Some(Px(28.0));
+                                                                            layout
+                                                                        },
+                                                                        enabled: !disabled,
+                                                                        focusable: !disabled,
+                                                                        focus_ring: Some(ring),
+                                                                        a11y: menu::item::menu_item_radio_a11y(
+                                                                            a11y_label.clone(),
+                                                                            is_selected,
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    (props, children)
                                                                 },
                                                             )
                                                         }));
@@ -3110,7 +3218,9 @@ impl ContextMenu {
                     overlay_presence,
                     overlay_children,
                     overlay_root_name,
-                    content_focus_id.get(),
+                    menu::root::MenuInitialFocusTargets::new()
+                        .pointer_content_focus(content_focus_id.get())
+                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
@@ -3128,12 +3238,12 @@ mod tests {
     use super::*;
 
     use fret_app::App;
+    use fret_core::UiServices;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_core::{TextStyle, UiServices};
     use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
 
@@ -3428,12 +3538,12 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        assert!(
-            snap.nodes.iter().any(|n| {
-                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")
-            }),
-            "menu items should render after Shift+F10 opens the context menu"
-        );
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+        assert_eq!(ui.focus(), Some(alpha.id));
     }
 
     #[test]
@@ -3493,6 +3603,7 @@ mod tests {
                 position,
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

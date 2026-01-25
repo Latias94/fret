@@ -9,13 +9,12 @@ use fret_markdown as markdown;
 use fret_runtime::Model;
 use fret_ui::declarative;
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, ImageProps, LayoutStyle, Length, MainAlign,
-    PressableProps, SvgIconProps, TextProps,
+    AnyElement, ImageProps, LayoutStyle, Length, PressableProps, SvgIconProps, TextProps,
 };
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
-use fret_ui_kit::declarative::scroll as decl_scroll;
-use fret_ui_kit::{LayoutRefinement, MetricRef};
+use fret_ui_kit::declarative::GlobalWatchExt as _;
+use fret_ui_kit::{ColorRef, MetricRef, Space, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -393,9 +392,17 @@ $$
         components.image = Some(Arc::new(move |cx, info| {
             let theme = Theme::global(&*cx.app).clone();
 
+            let size_px = Px(96.0);
             let mut size = LayoutStyle::default();
-            size.size.width = Length::Px(Px(96.0));
-            size.size.height = Length::Px(Px(96.0));
+            size.size.width = Length::Px(size_px);
+            size.size.height = Length::Px(size_px);
+
+            let spinner_box = |cx: &mut fret_ui::ElementContext<'_, App>| {
+                ui::container(cx, |cx| [cx.spinner()])
+                    .w_px(MetricRef::Px(size_px))
+                    .h_px(MetricRef::Px(size_px))
+                    .into_element(cx)
+            };
 
             if info.src.starts_with("http://") || info.src.starts_with("https://") {
                 let state = cx
@@ -406,24 +413,12 @@ $$
                     });
 
                 let Some(state) = state else {
-                    return cx.container(
-                        ContainerProps {
-                            layout: size,
-                            ..Default::default()
-                        },
-                        |cx| vec![cx.spinner()],
-                    );
+                    return spinner_box(cx);
                 };
 
                 match state {
                     RemoteImageState::Loading => {
-                        return cx.container(
-                            ContainerProps {
-                                layout: size,
-                                ..Default::default()
-                            },
-                            |cx| vec![cx.spinner()],
-                        );
+                        return spinner_box(cx);
                     }
                     RemoteImageState::Error(msg) => {
                         return render_image_placeholder(
@@ -444,13 +439,7 @@ $$
                         return cx.svg_icon_props(props);
                     }
                     RemoteImageState::ReadySvg { svg: None, .. } => {
-                        return cx.container(
-                            ContainerProps {
-                                layout: size,
-                                ..Default::default()
-                            },
-                            |cx| vec![cx.spinner()],
-                        );
+                        return spinner_box(cx);
                     }
                     RemoteImageState::ReadyRaster {
                         width,
@@ -473,13 +462,7 @@ $$
                             props.layout = size;
                             return cx.image_props(props);
                         }
-                        return cx.container(
-                            ContainerProps {
-                                layout: size,
-                                ..Default::default()
-                            },
-                            |cx| vec![cx.spinner()],
-                        );
+                        return spinner_box(cx);
                     }
                 }
             }
@@ -502,13 +485,7 @@ $$
                         props.layout = size;
                         cx.image_props(props)
                     } else {
-                        cx.container(
-                            ContainerProps {
-                                layout: size,
-                                ..Default::default()
-                            },
-                            |cx| vec![cx.spinner()],
-                        )
+                        spinner_box(cx)
                     }
                 }
                 "fret-demo://demo.svg" => {
@@ -534,127 +511,75 @@ $$
             }
         }));
 
-        let root =
-            declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
-                "markdown-demo",
-                |cx| {
-                    cx.observe_global::<Theme>(Invalidation::Layout);
+        let root = declarative::RenderRootContext::new(ui, app, services, window, bounds)
+            .render_root("markdown-demo", |cx| {
+                cx.watch_global::<Theme>().layout().observe();
 
-                    let theme = Theme::global(&*cx.app).clone();
+                let theme = Theme::global(&*cx.app).clone();
+                let padding_md = theme.metric_required("metric.padding.md");
 
-                    let mut root_layout = LayoutStyle::default();
-                    root_layout.size.width = Length::Fill;
-                    root_layout.size.height = Length::Fill;
+                let content = ui::v_flex(cx, |cx| {
+                    cx.observe_model(&wrap_code, Invalidation::Layout);
+                    let enabled = cx.app.models().get_copied(&wrap_code).unwrap_or(false);
 
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: root_layout,
-                            background: Some(theme.color_required("background")),
-                            ..Default::default()
-                        },
-                        |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: root_layout,
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: Px(12.0),
-                                    padding: fret_core::Edges::all(
-                                        theme.metric_required("metric.padding.md"),
-                                    ),
-                                    justify: MainAlign::Start,
-                                    align: fret_ui::element::CrossAlign::Stretch,
-                                    wrap: false,
-                                },
-                                |cx| {
-                                    vec![
-                                        cx.text("markdown_demo"),
-                                        cx.text(
-                                            "Scrollable markdown preview (links open via platform shell).",
-                                        ),
-                                        cx.flex(
-                                            FlexProps {
-                                                layout: LayoutStyle::default(),
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: Px(12.0),
-                                                padding: fret_core::Edges::all(Px(0.0)),
-                                                justify: MainAlign::Start,
-                                                align: fret_ui::element::CrossAlign::Center,
-                                                wrap: true,
-                                            },
-                                            |cx| {
-                                                cx.observe_model(&wrap_code, Invalidation::Layout);
-                                                let enabled = cx
-                                                    .app
-                                                    .models()
-                                                    .get_copied(&wrap_code)
-                                                    .unwrap_or(false);
+                    cx.observe_model(&cap_code_height, Invalidation::Layout);
+                    let cap_enabled = cx.app.models().get_copied(&cap_code_height).unwrap_or(true);
 
-                                                cx.observe_model(
-                                                    &cap_code_height,
-                                                    Invalidation::Layout,
-                                                );
-                                                let cap_enabled = cx
-                                                    .app
-                                                    .models()
-                                                    .get_copied(&cap_code_height)
-                                                    .unwrap_or(true);
+                    let toggles = ui::h_flex(cx, |cx| {
+                        [
+                            cx.text(format!("wrap code: {}", if enabled { "on" } else { "off" })),
+                            shadcn::Switch::new(wrap_code.clone())
+                                .a11y_label("Wrap code blocks")
+                                .into_element(cx),
+                            cx.text(format!(
+                                "cap code height: {}",
+                                if cap_enabled { "on" } else { "off" }
+                            )),
+                            shadcn::Switch::new(cap_code_height.clone())
+                                .a11y_label("Cap code block height")
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N3)
+                    .wrap()
+                    .items_center()
+                    .into_element(cx);
 
-                                                vec![
-                                                    cx.text(format!(
-                                                        "wrap code: {}",
-                                                        if enabled { "on" } else { "off" }
-                                                    )),
-                                                    shadcn::Switch::new(wrap_code.clone())
-                                                        .a11y_label("Wrap code blocks")
-                                                        .into_element(cx),
-                                                    cx.text(format!(
-                                                        "cap code height: {}",
-                                                        if cap_enabled { "on" } else { "off" }
-                                                    )),
-                                                    shadcn::Switch::new(cap_code_height.clone())
-                                                        .a11y_label("Cap code block height")
-                                                        .into_element(cx),
-                                                ]
-                                            },
-                                        ),
-                                        decl_scroll::overflow_scroll_content(
-                                            cx,
-                                            LayoutRefinement::default()
-                                                .w_full()
-                                                .flex_1()
-                                                .min_h(MetricRef::Px(Px(0.0))),
-                                            true,
-                                            |cx| {
-                                                cx.container(
-                                                    ContainerProps {
-                                                        layout: {
-                                                            let mut layout = LayoutStyle::default();
-                                                            layout.size.width = Length::Fill;
-                                                            layout
-                                                        },
-                                                        padding: fret_core::Edges::all(
-                                                            theme.metric_required(
-                                                                "metric.padding.md",
-                                                            ),
-                                                        ),
-                                                        ..Default::default()
-                                                    },
-                                                    |cx| {
-                                                        vec![markdown::Markdown::new(
-                                                            markdown_source.clone(),
-                                                        )
-                                                        .into_element_with(cx, &components)]
-                                                    },
-                                                )
-                                            },
-                                        ),
-                                    ]
-                                },
-                            )]
-                        },
-                    )]
-                },
-            );
+                    let scroll = ui::scroll_area(cx, |cx| {
+                        [ui::container(cx, |cx| {
+                            [markdown::Markdown::new(markdown_source.clone())
+                                .into_element_with(cx, &components)]
+                        })
+                        .w_full()
+                        .padding_px(padding_md)
+                        .into_element(cx)]
+                    })
+                    .w_full()
+                    .flex_1()
+                    .min_h_0()
+                    .into_element(cx);
+
+                    [
+                        cx.text("markdown_demo"),
+                        cx.text("Scrollable markdown preview (links open via platform shell)."),
+                        toggles,
+                        scroll,
+                    ]
+                })
+                .w_full()
+                .h_full()
+                .gap(Space::N3)
+                .padding_px(padding_md)
+                .into_element(cx);
+
+                vec![
+                    ui::container(cx, |_cx| [content])
+                        .bg(ColorRef::Color(theme.color_required("background")))
+                        .w_full()
+                        .h_full()
+                        .into_element(cx),
+                ]
+            });
         ui.set_root(root);
         if cache_changed {
             ui.invalidate(root, Invalidation::Layout);

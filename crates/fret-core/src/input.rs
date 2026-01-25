@@ -130,6 +130,12 @@ pub enum PointerEvent {
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
+        /// Whether this pointer-up completes a "true click" (press + release without exceeding
+        /// the runner's click slop threshold).
+        ///
+        /// This signal is computed by the platform runner and is intentionally separate from
+        /// `click_count`: `click_count` can remain stable even when a press turns into a drag.
+        is_click: bool,
         /// Consecutive click count for this button (1 = single click, 2 = double click, ...).
         ///
         /// See `PointerEvent::Down.click_count` for the normalization rules.
@@ -365,6 +371,8 @@ pub struct ViewportInputGeometry {
 pub struct ViewportInputEvent {
     pub window: AppWindowId,
     pub target: RenderTargetId,
+    pub pointer_id: PointerId,
+    pub pointer_type: PointerType,
     pub geometry: ViewportInputGeometry,
     /// Cursor position in window-local logical pixels (ADR 0017).
     pub cursor_px: Point,
@@ -445,6 +453,8 @@ impl ViewportInputEvent {
         target: RenderTargetId,
         mapping: &ViewportMapping,
         pixels_per_point: f32,
+        pointer_id: PointerId,
+        pointer_type: PointerType,
         position: Point,
         kind: ViewportInputKind,
     ) -> Option<Self> {
@@ -454,6 +464,8 @@ impl ViewportInputEvent {
         Some(Self {
             window,
             target,
+            pointer_id,
+            pointer_type,
             geometry: ViewportInputGeometry {
                 content_rect_px: mapping.content_rect,
                 draw_rect_px: mapped.draw_rect,
@@ -473,6 +485,8 @@ impl ViewportInputEvent {
         target: RenderTargetId,
         mapping: &ViewportMapping,
         pixels_per_point: f32,
+        pointer_id: PointerId,
+        pointer_type: PointerType,
         position: Point,
         kind: ViewportInputKind,
     ) -> Self {
@@ -482,6 +496,8 @@ impl ViewportInputEvent {
         Self {
             window,
             target,
+            pointer_id,
+            pointer_type,
             geometry: ViewportInputGeometry {
                 content_rect_px: mapping.content_rect,
                 draw_rect_px: mapped.draw_rect,
@@ -506,6 +522,8 @@ mod viewport_input_event_tests {
         ViewportInputEvent {
             window: AppWindowId::default(),
             target: RenderTargetId::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
             geometry: ViewportInputGeometry {
                 content_rect_px: Rect::new(
                     Point::new(Px(0.0), Px(0.0)),
@@ -573,8 +591,17 @@ pub enum ViewportInputKind {
     PointerUp {
         button: MouseButton,
         modifiers: Modifiers,
+        /// Whether this pointer-up completes a "true click".
+        ///
+        /// See `PointerEvent::Up.is_click` for normalization rules.
+        is_click: bool,
         /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
         click_count: u8,
+    },
+    PointerCancel {
+        buttons: MouseButtons,
+        modifiers: Modifiers,
+        reason: PointerCancelReason,
     },
     Wheel {
         delta: Point,

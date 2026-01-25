@@ -305,6 +305,7 @@ fn click_center(ui: &mut UiTree<App>, app: &mut App, services: &mut dyn UiServic
             position: center,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -337,6 +338,7 @@ fn right_click_center(
             position: center,
             button: MouseButton::Right,
             modifiers: Modifiers::default(),
+            is_click: true,
             pointer_type: PointerType::Mouse,
             click_count: 1,
         }),
@@ -1625,7 +1627,10 @@ fn radix_web_hover_card_hover_matches_fret() {
         &mut ui,
         &mut app,
         &mut services,
-        Point::new(Px(0.0), Px(0.0)),
+        Point::new(
+            Px(bounds.size.width.0 - 1.0),
+            Px(bounds.size.height.0 - 1.0),
+        ),
     );
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);

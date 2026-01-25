@@ -29,7 +29,11 @@
 //!
 //! # #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 //! # fn demo() -> Result<(), fret_launch::RunnerError> {
-//! let builder = fret_bootstrap::ui_app("todo", |_app, _window| (), |_cx, _state| vec![])
+//! let builder = fret_bootstrap::ui_app(
+//!     "todo",
+//!     |_app, _window| (),
+//!     |_cx, _state| fret_bootstrap::ui_app_driver::ViewElements::default(),
+//! )
 //!     .with_default_config_files()?
 //!     .register_icon_pack(|_icons| {});
 //! builder.run()?;
@@ -688,10 +692,7 @@ pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
 pub fn ui_app_with_hooks<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ui_app_driver::ViewElements,
     configure: fn(ui_app_driver::UiAppDriver<S>) -> ui_app_driver::UiAppDriver<S>,
 ) -> UiAppBootstrapBuilder<S> {
     ui_app_with_app_and_hooks(App::new(), root_name, init_window, view, configure)
@@ -704,10 +705,7 @@ pub fn ui_app_with_hooks<S: 'static>(
 pub fn ui_app<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ui_app_driver::ViewElements,
 ) -> UiAppBootstrapBuilder<S> {
     ui_app_with_app(App::new(), root_name, init_window, view)
 }
@@ -718,10 +716,7 @@ pub fn ui_app_with_app<S: 'static>(
     app: App,
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ui_app_driver::ViewElements,
 ) -> UiAppBootstrapBuilder<S> {
     ui_app_with_app_and_hooks(app, root_name, init_window, view, |d| d)
 }
@@ -733,10 +728,7 @@ pub fn ui_app_with_app_and_hooks<S: 'static>(
     app: App,
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ui_app_driver::ViewElements,
     configure: fn(ui_app_driver::UiAppDriver<S>) -> ui_app_driver::UiAppDriver<S>,
 ) -> UiAppBootstrapBuilder<S> {
     let driver = configure(ui_app_driver::UiAppDriver::new(

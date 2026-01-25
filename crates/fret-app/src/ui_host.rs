@@ -89,6 +89,34 @@ impl DragHost for App {
         App::drag(self, pointer_id)
     }
 
+    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        App::drags(self).any(|d| predicate(d))
+    }
+
+    fn find_drag_pointer_id(
+        &self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<PointerId> {
+        App::drags(self)
+            .find(|d| predicate(d))
+            .map(|d| d.pointer_id)
+    }
+
+    fn cancel_drag_sessions(
+        &mut self,
+        mut predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Vec<PointerId> {
+        let to_cancel: Vec<PointerId> = self
+            .drags()
+            .filter(|d| predicate(d))
+            .map(|d| d.pointer_id)
+            .collect();
+        for pointer_id in &to_cancel {
+            self.cancel_drag(*pointer_id);
+        }
+        to_cancel
+    }
+
     fn drag_mut(&mut self, pointer_id: PointerId) -> Option<&mut DragSession> {
         App::drag_mut(self, pointer_id)
     }

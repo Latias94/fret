@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
     RenderTransformProps, SemanticsProps, SizeStyle,
@@ -38,6 +39,8 @@ pub struct AlertDialog {
     open: Model<bool>,
     overlay_color: Option<Color>,
     window_padding: Space,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for AlertDialog {
@@ -46,6 +49,8 @@ impl std::fmt::Debug for AlertDialog {
             .field("open", &"<model>")
             .field("overlay_color", &self.overlay_color)
             .field("window_padding", &self.window_padding)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -56,6 +61,8 @@ impl AlertDialog {
             open,
             overlay_color: None,
             window_padding: Space::N6,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -83,6 +90,18 @@ impl AlertDialog {
 
     pub fn window_padding(mut self, padding: Space) -> Self {
         self.window_padding = padding;
+        self
+    }
+
+    /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -252,7 +271,9 @@ impl AlertDialog {
                 let options = radix_alert_dialog::dialog_options_for_alert_dialog(
                     cx,
                     open_id,
-                    radix_alert_dialog::AlertDialogOptions::default(),
+                    radix_alert_dialog::AlertDialogOptions::default()
+                        .on_open_auto_focus(self.on_open_auto_focus.clone())
+                        .on_close_auto_focus(self.on_close_auto_focus.clone()),
                 );
                 let initial_focus = is_open.then_some(options.initial_focus).flatten();
                 let options = options.initial_focus(initial_focus);
@@ -339,7 +360,7 @@ impl AlertDialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(512.0)))
+            .max_w(Px(512.0))
             .merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
@@ -820,6 +841,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -865,6 +887,7 @@ mod tests {
                 position: Point::new(Px(4.0), Px(4.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1010,6 +1033,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1133,6 +1157,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

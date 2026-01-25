@@ -10,6 +10,7 @@ use fret_ui::element::{
     PressableProps, TextAreaProps, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
@@ -109,23 +110,35 @@ impl InputGroup {
         self.control(InputGroupControlKind::Textarea)
     }
 
-    pub fn leading(mut self, children: Vec<AnyElement>) -> Self {
-        self.leading = children;
+    pub fn leading<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.leading = children.into_iter().collect();
         self
     }
 
-    pub fn trailing(mut self, children: Vec<AnyElement>) -> Self {
-        self.trailing = children;
+    pub fn trailing<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.trailing = children.into_iter().collect();
         self
     }
 
-    pub fn block_start(mut self, children: Vec<AnyElement>) -> Self {
-        self.block_start = children;
+    pub fn block_start<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.block_start = children.into_iter().collect();
         self
     }
 
-    pub fn block_end(mut self, children: Vec<AnyElement>) -> Self {
-        self.block_end = children;
+    pub fn block_end<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.block_end = children.into_iter().collect();
         self
     }
 
@@ -746,8 +759,11 @@ impl InputGroupButton {
         }
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.children = children.into_iter().collect();
         self
     }
 
@@ -819,7 +835,10 @@ impl InputGroupButton {
             };
 
             let command = self.command;
-            let disabled = self.disabled;
+            let disabled = self.disabled
+                || command
+                    .as_ref()
+                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let _chrome = self.chrome;
             let label = self.label;
             let a11y_label = self.a11y_label;
@@ -843,7 +862,7 @@ impl InputGroupButton {
             let pressable_layout = decl_style::layout_style(&theme, layout);
 
             control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-                cx.pressable_dispatch_command_opt(command);
+                cx.pressable_dispatch_command_if_enabled_opt(command);
 
                 let hovered = st.hovered && !disabled;
                 let pressed = st.pressed && !disabled;

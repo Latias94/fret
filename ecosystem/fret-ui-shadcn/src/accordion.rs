@@ -193,8 +193,8 @@ pub mod composable {
                                 let chevron_layout = decl_style::layout_style(
                                     &theme,
                                     LayoutRefinement::default()
-                                        .w_px(MetricRef::Px(Px(16.0)))
-                                        .h_px(MetricRef::Px(Px(16.0)))
+                                        .w_px(Px(16.0))
+                                        .h_px(Px(16.0))
                                         .flex_shrink_0()
                                         .mt(Space::N0p5),
                                 );
@@ -892,8 +892,8 @@ impl AccordionTrigger {
                             let chevron_layout = decl_style::layout_style(
                                 &theme,
                                 LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(16.0)))
-                                    .h_px(MetricRef::Px(Px(16.0)))
+                                    .w_px(Px(16.0))
+                                    .h_px(Px(16.0))
                                     .flex_shrink_0()
                                     .mt(Space::N0p5),
                             );
@@ -1499,13 +1499,10 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{
-        Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
     use fret_ui::UiTree;
     use fret_ui_kit::LayoutRefinement;
-    use fret_ui_kit::MetricRef;
 
     use super::{
         Accordion, AccordionContent, AccordionItem, AccordionTrigger,
@@ -1570,13 +1567,13 @@ mod tests {
                 let item_1 = AccordionItem::new(
                     Arc::from("item-1"),
                     AccordionTrigger::new(vec![cx.text("Item 1")])
-                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
                     AccordionContent::new(vec![cx.text("Content 1")]),
                 );
                 let item_2 = AccordionItem::new(
                     Arc::from("item-2"),
                     AccordionTrigger::new(vec![cx.text("Item 2")])
-                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
                     AccordionContent::new(vec![cx.text("Content 2")]),
                 );
 
@@ -1605,9 +1602,7 @@ mod tests {
                 let item_1 = composable_accordion::AccordionItem::new(Arc::from("item-1"))
                     .trigger(
                         composable_accordion::AccordionTrigger::new(vec![cx.text("Item 1")])
-                            .refine_layout(
-                                LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0))),
-                            ),
+                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
                     )
                     .content(composable_accordion::AccordionContent::new(vec![
                         cx.text("Content 1"),
@@ -1616,9 +1611,7 @@ mod tests {
                 let item_2 = composable_accordion::AccordionItem::new(Arc::from("item-2"))
                     .trigger(
                         composable_accordion::AccordionTrigger::new(vec![cx.text("Item 2")])
-                            .refine_layout(
-                                LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0))),
-                            ),
+                            .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
                     )
                     .content(composable_accordion::AccordionContent::new(vec![
                         cx.text("Content 2"),
@@ -1666,13 +1659,13 @@ mod tests {
                 let item_1 = AccordionItem::new(
                     Arc::from("item-1"),
                     AccordionTrigger::new(vec![cx.text("Item 1")])
-                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
                     AccordionContent::new(vec![cx.text("Content 1")]),
                 );
                 let item_2 = AccordionItem::new(
                     Arc::from("item-2"),
                     AccordionTrigger::new(vec![cx.text("Item 2")])
-                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
                     AccordionContent::new(vec![cx.text("Content 2")]),
                 );
 
@@ -1775,6 +1768,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1805,6 +1799,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1832,6 +1827,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(60.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1888,6 +1884,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1918,6 +1915,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1945,6 +1943,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(60.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -2001,6 +2000,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -2031,6 +2031,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -2219,6 +2220,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(60.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

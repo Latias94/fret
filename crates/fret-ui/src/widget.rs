@@ -28,6 +28,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub services: &'a mut dyn UiServices,
     pub node: NodeId,
+    pub layer_root: Option<NodeId>,
     pub window: Option<AppWindowId>,
     pub pointer_id: Option<fret_core::PointerId>,
     pub input_ctx: InputContext,
@@ -128,6 +129,62 @@ impl<'a, H: UiHost> EventCx<'a, H> {
             return;
         }
         self.requested_cursor = Some(icon);
+    }
+}
+
+/// Observer-only event context for the `InputDispatchPhase::Preview` pass.
+///
+/// This pass exists to support "click-through outside-press" policies (ADR 0069) without allowing
+/// widgets to mutate input routing state (focus / capture / propagation / default actions).
+pub struct ObserverCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub services: &'a mut dyn UiServices,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub pointer_id: Option<fret_core::PointerId>,
+    pub input_ctx: InputContext,
+    pub children: &'a [NodeId],
+    pub focus: Option<NodeId>,
+    pub captured: Option<NodeId>,
+    pub bounds: Rect,
+    pub invalidations: Vec<(NodeId, Invalidation)>,
+    pub notify_requested: bool,
+}
+
+impl<'a, H: UiHost> ObserverCx<'a, H> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
+
+    pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
+        self.invalidations.push((node, kind));
+    }
+
+    pub fn invalidate_self(&mut self, kind: Invalidation) {
+        self.invalidate(self.node, kind);
+    }
+
+    pub fn dispatch_command(&mut self, command: CommandId) {
+        self.app.push_effect(Effect::Command {
+            window: self.window,
+            command,
+        });
+    }
+
+    /// Request a window redraw (one-shot).
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
+
+    /// Mark the current view as dirty and schedule a redraw.
+    ///
+    /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
+    /// and prevents paint replay of stale recorded ranges.
+    pub fn notify(&mut self) {
+        self.notify_requested = true;
     }
 }
 
@@ -711,6 +768,13 @@ pub trait Widget<H: UiHost> {
     ///
     /// Default is no-op so existing widgets keep their current bubble-only behavior.
     fn event_capture(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
+
+    /// Observer-phase event dispatch (`InputDispatchPhase::Preview`).
+    ///
+    /// This pass must not mutate input routing state (focus / capture / propagation / default
+    /// actions). It exists to support outside-press dismissal and click-through overlay policies
+    /// (ADR 0069).
+    fn event_observer(&mut self, _cx: &mut ObserverCx<'_, H>, _event: &Event) {}
 
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {

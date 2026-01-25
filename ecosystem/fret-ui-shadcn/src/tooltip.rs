@@ -185,11 +185,14 @@ impl TooltipProvider {
         self
     }
 
-    pub fn with<H: UiHost>(
+    pub fn with<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> Vec<AnyElement> {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         tooltip_provider::with_tooltip_provider(
             cx,
             tooltip_provider::TooltipProviderConfig::new(
@@ -197,7 +200,7 @@ impl TooltipProvider {
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            f,
+            |cx| f(cx).into_iter().collect::<Vec<_>>(),
         )
     }
 }
@@ -886,7 +889,7 @@ mod tests {
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
@@ -1541,6 +1544,7 @@ mod tests {
                 position: trigger_center,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -2320,6 +2324,7 @@ mod tests {
                 position: Point::new(Px(700.0), Px(500.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),

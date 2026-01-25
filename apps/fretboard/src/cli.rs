@@ -49,6 +49,7 @@ Usage:
   fretboard new [template] [--path <path>] [--name <name>] [--ui-assets] [--icons <lucide|radix|none>] [--command-palette]
   fretboard new             # interactive wizard
   fretboard new todo        # non-interactive (template shortcut)
+  fretboard new todo-mvu    # non-interactive (MVU template shortcut)
   fretboard new hello       # non-interactive (template shortcut)
   fretboard new empty       # minimal Cargo-like project
   fretboard init <template> [...]    # alias for `new` (compat)
@@ -59,8 +60,10 @@ Usage:
   fretboard diag path [--trigger-path <path>] [--dir <dir>]
   fretboard diag poke [--trigger-path <path>] [--dir <dir>]
   fretboard diag latest [--dir <dir>]
+  fretboard diag pack [<bundle_dir|bundle.json>] [--dir <dir>] [--pack-out <path>] [--include-all] [--include-root-artifacts] [--include-triage] [--include-screenshots]
+  fretboard diag triage <bundle_dir|bundle.json> [--top <n>] [--sort <invalidation|time>] [--warmup-frames <n>] [--json] [--out <path>]
   fretboard diag script <script.json> [--dir <dir>] [--script-path <path>] [--script-trigger-path <path>]
-  fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
+  fretboard diag run <script.json> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--pack] [--pack-out <path>] [--include-all] [--include-root-artifacts] [--include-triage] [--include-screenshots] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard diag suite <ui-gallery|script.json...> [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--script-path <path>] [--script-trigger-path <path>] [--script-result-path <path>] [--script-result-trigger-path <path>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard diag stats <bundle_dir|bundle.json> [--top <n>] [--sort <invalidation|time>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>]
   fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
@@ -73,6 +76,7 @@ Usage:
 
 Examples:
   fretboard new todo --name my-todo
+  fretboard new todo-mvu --name my-todo-mvu
   fretboard new hello --name hello-world
   fretboard new hello --name hello-world --command-palette
   fretboard new todo --name my-todo --icons none
@@ -89,9 +93,12 @@ Examples:
   fretboard hotpatch watch                  # polls workspace sources and auto-pokes on change
   fretboard diag poke                      # touches `target/fret-diag/trigger.touch` (dumps diagnostics when enabled)
   fretboard diag latest                    # prints the most recent diagnostics bundle path
+  fretboard diag pack                      # zips a bundle directory for sharing (default: latest)
+  fretboard diag triage                    # prints a machine-readable triage JSON (built from bundle stats)
   fretboard diag script ./script.json      # writes `target/fret-diag/script.json` and touches `target/fret-diag/script.touch`
   fretboard diag run ./script.json         # pushes script and waits for `script.result.json` (exit 0 on pass, 1 on fail/timeout)
   fretboard diag run tools/diag-scripts/todo-baseline.json --dir target/fret-diag-todo-auto --launch -- cargo run -p fret-demo --bin todo_demo
+  fretboard diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag suite ui-gallery          # runs `tools/diag-scripts/ui-gallery-*.json` sequentially (app must be running)
   fretboard diag stats ./target/fret-diag/1234  # summarizes invalidation + other frame stats from a `bundle.json`
   fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release

@@ -225,6 +225,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             position: outside,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: false,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -232,6 +233,115 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
     );
 
     assert_eq!(app.models().get_copied(&counter), Some(111));
+}
+
+#[test]
+fn declarative_pointer_region_can_handle_pointer_cancel() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-pointer-cancel",
+        |cx| {
+            let counter_down = counter.clone();
+            let counter_cancel = counter.clone();
+
+            let on_down = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      down: crate::action::PointerDownCx| {
+                    if down.button != MouseButton::Left {
+                        return false;
+                    }
+                    host.capture_pointer();
+                    let _ = host
+                        .models_mut()
+                        .update(&counter_down, |v: &mut u32| *v = v.saturating_add(1));
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
+            let on_cancel = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      cancel: crate::action::PointerCancelCx| {
+                    host.release_pointer_capture();
+                    let _ = host.models_mut().update(&counter_cancel, |v: &mut u32| {
+                        *v = v.saturating_add(match cancel.reason {
+                            fret_core::PointerCancelReason::LeftWindow => 100,
+                        })
+                    });
+                    host.request_redraw(cx.window);
+                    true
+                },
+            );
+
+            let mut props = crate::element::PointerRegionProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+
+            vec![cx.pointer_region(props, |cx| {
+                cx.pointer_region_on_pointer_down(on_down);
+                cx.pointer_region_on_pointer_cancel(on_cancel);
+                Vec::new()
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region = ui.children(root)[0];
+    let region_bounds = ui.debug_node_bounds(region).expect("pointer region bounds");
+    let inside = Point::new(
+        Px(region_bounds.origin.x.0 + 5.0),
+        Px(region_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(fret_core::PointerId(0)), Some(region));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id: fret_core::PointerId(0),
+            position: None,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(fret_core::PointerId(0)), None);
+    assert_eq!(app.models().get_copied(&counter), Some(101));
 }
 
 #[test]
@@ -740,6 +850,7 @@ fn selectable_text_double_and_triple_click_select() {
             position: pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             click_count: 2,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -839,6 +950,477 @@ fn selectable_text_sets_active_text_selection() {
     assert_eq!(
         active, None,
         "expected active text selection to clear when selection is collapsed"
+    );
+}
+
+#[test]
+fn selectable_text_copy_availability_requires_selection() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root_name = "selectable-text-copy-availability";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    ui.set_focus(Some(selectable_node));
+
+    let copy = CommandId::from("text.copy");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be available for focused selectable text"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be unavailable without a selection"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected text.select_all to be handled by selectable text"
+    );
+
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be available when a selection exists"
+    );
+}
+
+#[test]
+fn selectable_text_copy_availability_respects_clipboard_capabilities() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities {
+        clipboard: fret_runtime::capabilities::ClipboardCapabilities {
+            text: false,
+            files: false,
+        },
+        ..fret_runtime::PlatformCapabilities::default()
+    });
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root_name = "selectable-text-copy-availability-clipboard-caps";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    ui.set_focus(Some(selectable_node));
+
+    let copy = CommandId::from("text.copy");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected text.select_all to be handled by selectable text"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be unavailable when clipboard text is unsupported"
+    );
+    assert!(
+        !ui.dispatch_command(&mut app, &mut services, &copy),
+        "expected text.copy to not be handled when clipboard text is unsupported"
+    );
+}
+
+#[test]
+fn declarative_command_availability_hooks_participate_in_dispatch_path_queries() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "command-availability-hooks",
+        |cx| {
+            vec![
+                cx.container(crate::element::ContainerProps::default(), |cx| {
+                    let id = cx.root_id();
+                    cx.command_on_command_availability_for(
+                        id,
+                        Arc::new(|_host, acx, command| {
+                            if command.as_str() != "edit.copy" {
+                                return crate::widget::CommandAvailability::NotHandled;
+                            }
+                            if !acx.focus_in_subtree {
+                                return crate::widget::CommandAvailability::NotHandled;
+                            }
+                            crate::widget::CommandAvailability::Available
+                        }),
+                    );
+                    vec![cx.text("child")]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let container_node = ui.children(root)[0];
+    let child_node = ui.children(container_node)[0];
+    ui.set_focus(Some(child_node));
+
+    let copy = CommandId::from("edit.copy");
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be available via declarative availability hook"
+    );
+
+    ui.set_focus(None);
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be unavailable when no dispatch path exists"
+    );
+}
+
+#[test]
+fn text_input_cut_updates_model_and_availability() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-cut-updates-model",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let copy = CommandId::from("text.copy");
+    let cut = CommandId::from("text.cut");
+    let select_all = CommandId::from("text.select_all");
+
+    assert!(
+        ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be available for focused text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &cut),
+        "expected text.cut to be unavailable without a selection"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected text.select_all to be handled by text input"
+    );
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected text.copy to be available after select_all"
+    );
+    assert!(
+        ui.is_command_available(&mut app, &cut),
+        "expected text.cut to be available after select_all"
+    );
+
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &cut),
+        "expected text.cut to be handled by text input"
+    );
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some(""),
+        "expected cut to update the bound model"
+    );
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardSetText { .. })),
+        "expected text.cut to emit ClipboardSetText"
+    );
+}
+
+#[test]
+fn text_input_paste_requests_clipboard_text_when_editable() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-paste-clipboard-get",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let paste = CommandId::from("text.paste");
+    assert!(
+        ui.is_command_available(&mut app, &paste),
+        "expected text.paste to be available for focused editable text input"
+    );
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &paste),
+        "expected text.paste to be handled by text input"
+    );
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| matches!(e, fret_runtime::Effect::ClipboardGetText { .. })),
+        "expected text.paste to request ClipboardGetText"
+    );
+}
+
+#[test]
+fn text_input_select_all_is_blocked_when_empty() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-select-all-empty",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let select_all = CommandId::from("text.select_all");
+    let edit_select_all = CommandId::from("edit.select_all");
+    let clear = CommandId::from("text.clear");
+    let edit_copy = CommandId::from("edit.copy");
+    let edit_cut = CommandId::from("edit.cut");
+    let unknown = CommandId::from("text.unknown");
+
+    assert!(
+        !ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_select_all),
+        "expected edit.select_all to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected text.clear to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_copy),
+        "expected edit.copy to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_cut),
+        "expected edit.cut to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &unknown),
+        "expected unknown text.* commands to be NotHandled for availability"
+    );
+}
+
+#[test]
+fn text_area_select_all_is_blocked_when_empty() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-select-all-empty",
+        |cx| vec![cx.text_area(crate::element::TextAreaProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let area_node = ui.children(root)[0];
+    ui.set_focus(Some(area_node));
+
+    let select_all = CommandId::from("text.select_all");
+    let edit_select_all = CommandId::from("edit.select_all");
+    let clear = CommandId::from("text.clear");
+    let edit_copy = CommandId::from("edit.copy");
+    let edit_cut = CommandId::from("edit.cut");
+    let unknown = CommandId::from("text.unknown");
+
+    assert!(
+        !ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_select_all),
+        "expected edit.select_all to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected text.clear to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_copy),
+        "expected edit.copy to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_cut),
+        "expected edit.cut to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &unknown),
+        "expected unknown text.* commands to be NotHandled for availability"
+    );
+}
+
+#[test]
+fn text_input_supports_edit_select_all_and_copy() {
+    let mut app = TestHost::new();
+    let mut caps = fret_runtime::PlatformCapabilities::default();
+    caps.clipboard.text = true;
+    app.set_global(caps);
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-edit-select-all-copy",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let select_all = CommandId::from("edit.select_all");
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected edit.select_all to be handled by text input"
+    );
+
+    let copy = CommandId::from("edit.copy");
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be available after select_all"
+    );
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &copy),
+        "expected edit.copy to be handled by text input"
+    );
+    assert!(
+        app.take_effects().iter().any(
+            |e| matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "hello")
+        ),
+        "expected edit.copy to emit ClipboardSetText for the selected text"
     );
 }
 
@@ -1114,6 +1696,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             position: Point::new(Px(128.0), Px(20.0)),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: false,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -1290,6 +1873,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            is_click: true,
             click_count: 1,
             pointer_id: fret_core::PointerId(0),
             pointer_type: fret_core::PointerType::Mouse,
@@ -1376,7 +1960,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
 }
 
 #[test]
-fn pressable_on_hover_change_hook_ignores_touch_pointer_move() {
+fn pressable_hover_state_ignores_touch_pointer_moves() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -1393,7 +1977,7 @@ fn pressable_on_hover_change_hook_ignores_touch_pointer_move() {
         &mut services,
         window,
         bounds,
-        "pressable-on-hover-change-hook-touch",
+        "pressable-hover-ignores-touch",
         |cx| {
             vec![
                 cx.pressable(crate::element::PressableProps::default(), |cx, _state| {
@@ -1410,8 +1994,6 @@ fn pressable_on_hover_change_hook_ignores_touch_pointer_move() {
     );
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    assert_eq!(app.models().get_copied(&hovered), Some(false));
 
     let pressable_node = ui.children(root)[0];
     let pressable_bounds = ui
@@ -1430,11 +2012,23 @@ fn pressable_on_hover_change_hook_ignores_touch_pointer_move() {
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
             pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&hovered), Some(true));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(pressable_bounds.origin.x.0 + 200.0), Px(2.0)),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(1),
             pointer_type: fret_core::PointerType::Touch,
         }),
     );
-
-    assert_eq!(app.models().get_copied(&hovered), Some(false));
+    assert_eq!(app.models().get_copied(&hovered), Some(true));
 
     ui.dispatch_event(
         &mut app,
@@ -1444,10 +2038,9 @@ fn pressable_on_hover_change_hook_ignores_touch_pointer_move() {
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
             pointer_id: fret_core::PointerId(0),
-            pointer_type: fret_core::PointerType::Touch,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
-
     assert_eq!(app.models().get_copied(&hovered), Some(false));
 }
 
@@ -1538,8 +2131,8 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
         "dismissible-hook-escape",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
-                assert_eq!(reason, DismissReason::Escape);
+            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, req| {
+                assert_eq!(req.reason, DismissReason::Escape);
                 let _ = host
                     .models_mut()
                     .update(&dismissed, |v: &mut bool| *v = true);
@@ -1600,8 +2193,17 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
         "dismissible-hook-outside-press",
         |cx| {
             let dismissed = dismissed.clone();
-            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, reason| {
-                assert_eq!(reason, DismissReason::OutsidePress);
+            cx.dismissible_on_dismiss_request(Arc::new(move |host, _cx, req| {
+                match req.reason {
+                    DismissReason::OutsidePress { pointer: Some(cx) } => {
+                        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+                        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+                        assert_eq!(cx.button, MouseButton::Left);
+                        assert_eq!(cx.modifiers, Modifiers::default());
+                        assert_eq!(cx.click_count, 1);
+                    }
+                    other => panic!("expected outside-press dismissal, got {other:?}"),
+                }
                 let _ = host
                     .models_mut()
                     .update(&dismissed, |v: &mut bool| *v = true);

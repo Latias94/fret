@@ -2,10 +2,8 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_icons::ids;
-#[cfg(test)]
-use fret_runtime::Effect;
 use fret_runtime::{Model, ModelId};
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
@@ -51,6 +49,8 @@ pub struct Dialog {
     overlay_color: Option<Color>,
     window_padding: Space,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -61,6 +61,8 @@ impl std::fmt::Debug for Dialog {
             .field("overlay_color", &self.overlay_color)
             .field("window_padding", &self.window_padding)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -73,6 +75,8 @@ impl Dialog {
             overlay_color: None,
             window_padding: Space::N4,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -109,10 +113,22 @@ impl Dialog {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -161,6 +177,8 @@ impl Dialog {
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
                 let on_dismiss_request_for_request = self.on_dismiss_request.clone();
+                let on_open_auto_focus = self.on_open_auto_focus.clone();
+                let on_close_auto_focus = self.on_close_auto_focus.clone();
 
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
@@ -274,7 +292,9 @@ impl Dialog {
                     let open_for_children = self.open.clone();
                     let dialog_options = radix_dialog::DialogOptions::default()
                         .dismiss_on_overlay_press(overlay_closable)
-                        .initial_focus(None);
+                        .initial_focus(None)
+                        .on_open_auto_focus(on_open_auto_focus.clone())
+                        .on_close_auto_focus(on_close_auto_focus.clone());
                     radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
                         cx,
                         open_for_children.clone(),
@@ -293,7 +313,9 @@ impl Dialog {
 
                 let dialog_options = radix_dialog::DialogOptions::default()
                     .dismiss_on_overlay_press(overlay_closable)
-                    .initial_focus(None);
+                    .initial_focus(None)
+                    .on_open_auto_focus(on_open_auto_focus)
+                    .on_close_auto_focus(on_close_auto_focus);
                 let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
                     id,
                     id,
@@ -347,7 +369,7 @@ impl DialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(512.0)))
+            .max_w(Px(512.0))
             .merge(self.layout);
 
         if let Some(max_w) = layout
@@ -883,6 +905,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -935,6 +958,7 @@ mod tests {
                 position: inside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -973,6 +997,7 @@ mod tests {
                 position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1035,6 +1060,7 @@ mod tests {
                 position: Point::new(Px(4.0), Px(4.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1098,8 +1124,9 @@ mod tests {
         let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
             Rc::new(Cell::new(None));
         let dismiss_reason_cell = dismiss_reason.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            dismiss_reason_cell.set(Some(reason));
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            dismiss_reason_cell.set(Some(req.reason));
+            req.prevent_default();
         });
 
         let mut services = FakeServices;
@@ -1185,8 +1212,9 @@ mod tests {
         let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
             Rc::new(Cell::new(None));
         let dismiss_reason_cell = dismiss_reason.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            dismiss_reason_cell.set(Some(reason));
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            dismiss_reason_cell.set(Some(req.reason));
+            req.prevent_default();
         });
 
         let mut services = FakeServices;
@@ -1288,6 +1316,7 @@ mod tests {
                 position: point,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1299,10 +1328,18 @@ mod tests {
             Some(false),
             "underlay should not activate while modal dialog is open"
         );
-        assert_eq!(
-            dismiss_reason.get(),
-            Some(fret_ui::action::DismissReason::OutsidePress)
-        );
+        let reason = dismiss_reason.get();
+        let Some(fret_ui::action::DismissReason::OutsidePress { pointer }) = reason else {
+            panic!("expected outside-press dismissal, got {reason:?}");
+        };
+        let Some(cx) = pointer else {
+            panic!("expected pointer payload for outside-press dismissal");
+        };
+        assert_eq!(cx.pointer_id, fret_core::PointerId(0));
+        assert_eq!(cx.pointer_type, fret_core::PointerType::Mouse);
+        assert_eq!(cx.button, fret_core::MouseButton::Left);
+        assert_eq!(cx.modifiers, fret_core::Modifiers::default());
+        assert_eq!(cx.click_count, 1);
     }
 
     #[test]
@@ -1360,6 +1397,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1480,6 +1518,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1531,6 +1570,7 @@ mod tests {
                 position: click,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1687,6 +1727,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -1929,6 +1970,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
