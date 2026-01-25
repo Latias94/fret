@@ -3385,7 +3385,7 @@ mod tests {
                         CommandPalette::new(model, items)
                             .refine_scroll_layout(
                                 LayoutRefinement::default()
-                                    .h_px(MetricRef::Px(Px(40.0)))
+                                    .h_px(Px(40.0))
                                     .max_h(MetricRef::Px(Px(40.0))),
                             )
                             .into_element(cx),

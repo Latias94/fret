@@ -742,7 +742,7 @@ impl FieldSeparator {
                         .left(Space::N0)
                         .right(Space::N0)
                         .top(Space::N2p5)
-                        .h_px(MetricRef::Px(Px(1.0))),
+                        .h_px(Px(1.0)),
                 );
 
                 let label = self.label.clone();

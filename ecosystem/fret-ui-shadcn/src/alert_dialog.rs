@@ -360,7 +360,7 @@ impl AlertDialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(512.0)))
+            .max_w(Px(512.0))
             .merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);

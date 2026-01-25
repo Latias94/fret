@@ -65,7 +65,7 @@ fn kbd_with_patch<H: UiHost>(
         .merge(chrome_override);
 
     let layout_override = LayoutRefinement::default()
-        .h_px(MetricRef::Px(Px(20.0)))
+        .h_px(Px(20.0))
         .min_h(MetricRef::Px(Px(20.0)))
         .min_w(MetricRef::Px(Px(20.0)))
         .merge(layout_override);

@@ -19,9 +19,7 @@ use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
-use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, ui,
-};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence, Space, ui};
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
@@ -644,7 +642,7 @@ impl PopoverContent {
         Self {
             children,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default().w_px(MetricRef::Px(Px(288.0))),
+            layout: LayoutRefinement::default().w_px(Px(288.0)),
             a11y_label: None,
         }
     }
