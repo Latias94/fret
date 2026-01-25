@@ -50,6 +50,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
+    let mut perf_repeat: u64 = 1;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_wheel_scroll_test_id: Option<String> = None;
@@ -237,6 +238,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 warmup_frames = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --warmup-frames".to_string())?;
+                i += 1;
+            }
+            "--repeat" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --repeat".to_string());
+                };
+                perf_repeat = v
+                    .parse::<u64>()
+                    .map_err(|_| "invalid value for --repeat".to_string())?
+                    .max(1);
                 i += 1;
             }
             "--check-stale-paint" => {
@@ -810,6 +822,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             };
 
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
+            let repeat = perf_repeat.max(1) as usize;
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
                 maybe_launch_demo(
@@ -831,85 +844,271 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let stats_opts = BundleStatsOptions { warmup_frames };
 
             for src in scripts {
-                if !reuse_process {
-                    child = maybe_launch_demo(
-                        &launch,
-                        &launch_env,
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &resolved_ready_path,
-                        &resolved_exit_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-                }
+                if repeat == 1 {
+                    if !reuse_process {
+                        child = maybe_launch_demo(
+                            &launch,
+                            &launch_env,
+                            &workspace_root,
+                            &resolved_out_dir,
+                            &resolved_ready_path,
+                            &resolved_exit_path,
+                            timeout_ms,
+                            poll_ms,
+                        )?;
+                    }
 
-                let mut result = run_script_and_wait(
-                    &src,
-                    &resolved_script_path,
-                    &resolved_script_trigger_path,
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
-                    timeout_ms,
-                    poll_ms,
-                );
-                if let Ok(summary) = &result
-                    && summary.stage.as_deref() == Some("failed")
-                {
-                    if let Some(dir) = wait_for_failure_dump_bundle(
-                        &resolved_out_dir,
-                        summary,
+                    let mut result = run_script_and_wait(
+                        &src,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
                         timeout_ms,
                         poll_ms,
-                    ) {
-                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                            if let Ok(summary) = result.as_mut() {
-                                summary.last_bundle_dir = Some(name.to_string());
+                    );
+                    if let Ok(summary) = &result
+                        && summary.stage.as_deref() == Some("failed")
+                    {
+                        if let Some(dir) = wait_for_failure_dump_bundle(
+                            &resolved_out_dir,
+                            summary,
+                            timeout_ms,
+                            poll_ms,
+                        ) {
+                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                if let Ok(summary) = result.as_mut() {
+                                    summary.last_bundle_dir = Some(name.to_string());
+                                }
                             }
                         }
                     }
+                    let result = match result {
+                        Ok(v) => v,
+                        Err(e) => {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            return Err(e);
+                        }
+                    };
+
+                    match result.stage.as_deref() {
+                        Some("passed") => {}
+                        Some("failed") => {
+                            eprintln!(
+                                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                src.display(),
+                                result.run_id,
+                                result.step_index.unwrap_or(0),
+                                result.reason.as_deref().unwrap_or("unknown"),
+                                result.last_bundle_dir.as_deref().unwrap_or("")
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                        _ => {
+                            eprintln!(
+                                "unexpected script stage for {}: {:?}",
+                                src.display(),
+                                result
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                    }
+
+                    let bundle_dir = result
+                        .last_bundle_dir
+                        .as_deref()
+                        .filter(|s| !s.trim().is_empty())
+                        .map(PathBuf::from);
+
+                    if let Some(bundle_dir) = bundle_dir {
+                        let bundle_path =
+                            resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
+                        let mut report = bundle_stats_from_path(
+                            &bundle_path,
+                            stats_top.max(1),
+                            sort,
+                            stats_opts,
+                        )?;
+                        if warmup_frames > 0 && report.top.is_empty() {
+                            report = bundle_stats_from_path(
+                                &bundle_path,
+                                stats_top.max(1),
+                                sort,
+                                BundleStatsOptions::default(),
+                            )?;
+                        }
+                        let top = report.top.first();
+                        let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
+                        let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                        let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
+                        let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
+                        let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
+                        let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+
+                        if stats_json {
+                            perf_json_rows.push(serde_json::json!({
+                                "script": src.display().to_string(),
+                                "sort": sort.as_str(),
+                                "top_total_time_us": top_total,
+                                "top_layout_time_us": top_layout,
+                                "top_prepaint_time_us": top_prepaint,
+                                "top_paint_time_us": top_paint,
+                                "top_tick_id": top_tick,
+                                "top_frame_id": top_frame,
+                                "bundle": bundle_path.display().to_string(),
+                            }));
+                        } else {
+                            println!(
+                                "PERF {} sort={} top.us(total/layout/prepaint/paint)={}/{}/{}/{} top.tick={} top.frame={} bundle={}",
+                                src.display(),
+                                sort.as_str(),
+                                top_total,
+                                top_layout,
+                                top_prepaint,
+                                top_paint,
+                                top_tick,
+                                top_frame,
+                                bundle_path.display(),
+                            );
+                        }
+
+                        match &overall_worst {
+                            Some((prev_us, _, _)) if *prev_us >= top_total => {}
+                            _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
+                        }
+                    } else {
+                        if stats_json {
+                            perf_json_rows.push(serde_json::json!({
+                                "script": src.display().to_string(),
+                                "sort": sort.as_str(),
+                                "error": "no_last_bundle_dir",
+                            }));
+                        } else {
+                            println!(
+                                "PERF {} sort={} (no last_bundle_dir recorded)",
+                                src.display(),
+                                sort.as_str()
+                            );
+                        }
+                    }
+
+                    if !reuse_process {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    }
+                    continue;
                 }
-                let result = match result {
-                    Ok(v) => v,
-                    Err(e) => {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        return Err(e);
-                    }
-                };
 
-                match result.stage.as_deref() {
-                    Some("passed") => {}
-                    Some("failed") => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
-                    }
-                }
+                let mut runs_total: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_layout: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_prepaint: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
+                let mut script_worst: Option<(u64, PathBuf)> = None;
 
-                let bundle_dir = result
-                    .last_bundle_dir
-                    .as_deref()
-                    .filter(|s| !s.trim().is_empty())
-                    .map(PathBuf::from);
+                for run_index in 0..repeat {
+                    if !reuse_process {
+                        child = maybe_launch_demo(
+                            &launch,
+                            &launch_env,
+                            &workspace_root,
+                            &resolved_out_dir,
+                            &resolved_ready_path,
+                            &resolved_exit_path,
+                            timeout_ms,
+                            poll_ms,
+                        )?;
+                    }
 
-                if let Some(bundle_dir) = bundle_dir {
-                    let bundle_path = resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
+                    let mut result = run_script_and_wait(
+                        &src,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        timeout_ms,
+                        poll_ms,
+                    );
+                    if let Ok(summary) = &result
+                        && summary.stage.as_deref() == Some("failed")
+                    {
+                        if let Some(dir) = wait_for_failure_dump_bundle(
+                            &resolved_out_dir,
+                            summary,
+                            timeout_ms,
+                            poll_ms,
+                        ) {
+                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                if let Ok(summary) = result.as_mut() {
+                                    summary.last_bundle_dir = Some(name.to_string());
+                                }
+                            }
+                        }
+                    }
+                    let result = match result {
+                        Ok(v) => v,
+                        Err(e) => {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            return Err(e);
+                        }
+                    };
+
+                    match result.stage.as_deref() {
+                        Some("passed") => {}
+                        Some("failed") => {
+                            eprintln!(
+                                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                src.display(),
+                                result.run_id,
+                                result.step_index.unwrap_or(0),
+                                result.reason.as_deref().unwrap_or("unknown"),
+                                result.last_bundle_dir.as_deref().unwrap_or("")
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                        _ => {
+                            eprintln!(
+                                "unexpected script stage for {}: {:?}",
+                                src.display(),
+                                result
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                    }
+
+                    let bundle_dir = result
+                        .last_bundle_dir
+                        .as_deref()
+                        .filter(|s| !s.trim().is_empty())
+                        .map(PathBuf::from);
+
+                    let Some(bundle_dir) = bundle_dir else {
+                        if stats_json {
+                            perf_json_rows.push(serde_json::json!({
+                                "script": src.display().to_string(),
+                                "sort": sort.as_str(),
+                                "repeat": repeat,
+                                "error": "no_last_bundle_dir",
+                            }));
+                        } else {
+                            println!(
+                                "PERF {} sort={} repeat={} (no last_bundle_dir recorded)",
+                                src.display(),
+                                sort.as_str(),
+                                repeat
+                            );
+                        }
+                        if !reuse_process {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        }
+                        break;
+                    };
+
+                    let bundle_path =
+                        resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir.clone()));
                     let mut report =
                         bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
                     if warmup_frames > 0 && report.top.is_empty() {
@@ -928,55 +1127,78 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
 
-                    if stats_json {
-                        perf_json_rows.push(serde_json::json!({
-                            "script": src.display().to_string(),
-                            "sort": sort.as_str(),
-                            "top_total_time_us": top_total,
-                            "top_layout_time_us": top_layout,
-                            "top_prepaint_time_us": top_prepaint,
-                            "top_paint_time_us": top_paint,
-                            "top_tick_id": top_tick,
-                            "top_frame_id": top_frame,
-                            "bundle": bundle_path.display().to_string(),
-                        }));
-                    } else {
-                        println!(
-                            "PERF {} sort={} top.us(total/layout/prepaint/paint)={}/{}/{}/{} top.tick={} top.frame={} bundle={}",
-                            src.display(),
-                            sort.as_str(),
-                            top_total,
-                            top_layout,
-                            top_prepaint,
-                            top_paint,
-                            top_tick,
-                            top_frame,
-                            bundle_path.display(),
-                        );
+                    runs_total.push(top_total);
+                    runs_layout.push(top_layout);
+                    runs_prepaint.push(top_prepaint);
+                    runs_paint.push(top_paint);
+                    runs_json.push(serde_json::json!({
+                        "run_index": run_index,
+                        "top_total_time_us": top_total,
+                        "top_layout_time_us": top_layout,
+                        "top_prepaint_time_us": top_prepaint,
+                        "top_paint_time_us": top_paint,
+                        "top_tick_id": top_tick,
+                        "top_frame_id": top_frame,
+                        "bundle": bundle_path.display().to_string(),
+                    }));
+
+                    match &script_worst {
+                        Some((prev_us, _)) if *prev_us >= top_total => {}
+                        _ => script_worst = Some((top_total, bundle_path.clone())),
                     }
 
                     match &overall_worst {
                         Some((prev_us, _, _)) if *prev_us >= top_total => {}
-                        _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
+                        _ => overall_worst = Some((top_total, src.clone(), bundle_path.clone())),
                     }
-                } else {
+
+                    if !reuse_process {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    }
+                }
+
+                if runs_total.len() == repeat {
                     if stats_json {
                         perf_json_rows.push(serde_json::json!({
                             "script": src.display().to_string(),
                             "sort": sort.as_str(),
-                            "error": "no_last_bundle_dir",
+                            "repeat": repeat,
+                            "runs": runs_json,
+                            "stats": {
+                                "total_time_us": summarize_times_us(&runs_total),
+                                "layout_time_us": summarize_times_us(&runs_layout),
+                                "prepaint_time_us": summarize_times_us(&runs_prepaint),
+                                "paint_time_us": summarize_times_us(&runs_paint),
+                            },
+                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+                                "top_total_time_us": us,
+                                "bundle": bundle.display().to_string(),
+                            })),
                         }));
                     } else {
+                        let total = summarize_times_us(&runs_total);
+                        let layout = summarize_times_us(&runs_layout);
+                        let prepaint = summarize_times_us(&runs_prepaint);
+                        let paint = summarize_times_us(&runs_paint);
                         println!(
-                            "PERF {} sort={} (no last_bundle_dir recorded)",
+                            "PERF {} sort={} repeat={} p50.us(total/layout/prepaint/paint)={}/{}/{}/{} p95.us(total/layout/prepaint/paint)={}/{}/{}/{} max.us(total/layout/prepaint/paint)={}/{}/{}/{}",
                             src.display(),
-                            sort.as_str()
+                            sort.as_str(),
+                            repeat,
+                            total.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            layout.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            prepaint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            paint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            total.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            layout.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            prepaint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            paint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            total.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            layout.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            prepaint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            paint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                         );
                     }
-                }
-
-                if !reuse_process {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                 }
             }
 
@@ -993,6 +1215,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let payload = serde_json::json!({
                     "schema_version": 1,
                     "sort": sort.as_str(),
+                    "repeat": repeat,
                     "rows": perf_json_rows,
                     "worst_overall": worst,
                 });
@@ -5627,6 +5850,42 @@ fn unescape_json_pointer_token(raw: &str) -> String {
     out
 }
 
+fn summarize_times_us(values: &[u64]) -> serde_json::Value {
+    if values.is_empty() {
+        return serde_json::json!({
+            "min": 0,
+            "p50": 0,
+            "p95": 0,
+            "max": 0,
+        });
+    }
+
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    let min = *sorted.first().unwrap_or(&0);
+    let max = *sorted.last().unwrap_or(&0);
+    let p50 = percentile_nearest_rank_sorted(&sorted, 0.50);
+    let p95 = percentile_nearest_rank_sorted(&sorted, 0.95);
+
+    serde_json::json!({
+        "min": min,
+        "p50": p50,
+        "p95": p95,
+        "max": max,
+    })
+}
+
+fn percentile_nearest_rank_sorted(sorted: &[u64], percentile: f64) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    let percentile = percentile.clamp(0.0, 1.0);
+    let n = sorted.len();
+    let rank_1_based = (percentile * n as f64).ceil().max(1.0) as usize;
+    let idx = rank_1_based.saturating_sub(1).min(n - 1);
+    sorted[idx]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -5749,6 +6008,19 @@ mod tests {
         assert_eq!(
             report.top[0].top_invalidation_walks[0].root_element,
             Some(9)
+        );
+    }
+
+    #[test]
+    fn perf_percentile_nearest_rank_is_stable() {
+        let values = vec![10u64, 20, 30, 40, 50, 60, 70];
+        let mut sorted = values.clone();
+        sorted.sort_unstable();
+        assert_eq!(percentile_nearest_rank_sorted(&sorted, 0.50), 40);
+        assert_eq!(percentile_nearest_rank_sorted(&sorted, 0.95), 70);
+        assert_eq!(
+            summarize_times_us(&values),
+            json!({"min":10,"p50":40,"p95":70,"max":70})
         );
     }
 

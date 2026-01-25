@@ -65,7 +65,7 @@ Usage:
   fretboard diag stats <bundle_dir|bundle.json> [--top <n>] [--sort <invalidation|time>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>]
   fretboard diag matrix ui-gallery [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--warmup-frames <n>] [--compare-eps-px <px>] [--compare-ignore-bounds] [--compare-ignore-scene-fingerprint] [--check-view-cache-reuse-min <n>] [--check-overlay-synthesis-min <n>] [--env <KEY=VALUE>...] [--launch -- <cmd...>] [--json]
   fretboard diag compare <bundle_a|dir> <bundle_b|dir> [--warmup-frames <n>] [--compare-eps-px <px>] [--compare-ignore-bounds] [--compare-ignore-scene-fingerprint] [--json]
-  fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
+  fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--repeat <n>] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
   fretboard list native-demos
   fretboard list web-demos
   fretboard dev native [--bin <name> | --choose] [--hotpatch] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
@@ -98,6 +98,7 @@ Examples:
   fretboard diag stats ./target/fret-diag/1234  # summarizes invalidation + other frame stats from a `bundle.json`
   fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf ui-gallery --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release
+  fretboard diag perf ui-gallery --repeat 7 --warmup-frames 5 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --check-overlay-synthesis-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release
