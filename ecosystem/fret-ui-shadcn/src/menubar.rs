@@ -939,7 +939,7 @@ impl Menubar {
                                             m.align_leading_icons(align_leading_icons)
                                                 .into_element(cx)
                                         })
-                                        .collect()
+                                        .collect::<Vec<_>>()
                                 },
                             )]
                         },

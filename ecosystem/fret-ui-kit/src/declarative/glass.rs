@@ -39,11 +39,14 @@ impl Default for GlassPanelProps {
     }
 }
 
-pub fn glass_panel<H: UiHost>(
+pub fn glass_panel<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: GlassPanelProps,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let theme = Theme::global(&*cx.app);
     let chrome = resolve_glass_chrome(theme, &props.chrome, props.chrome_keys);
     let effect = resolve_glass_effect(theme, &props.effect, props.effect_keys);

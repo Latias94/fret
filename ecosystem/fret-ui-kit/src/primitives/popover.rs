@@ -258,11 +258,14 @@ pub fn popover_use_open_model<H: UiHost>(
 }
 
 /// A minimal semantics wrapper matching Radix `PopoverContent` (`role="dialog"`).
-pub fn popover_dialog_wrapper<H: UiHost>(
+pub fn popover_dialog_wrapper<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     label: Option<Arc<str>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.semantics_with_id(
         SemanticsProps {
             role: fret_core::SemanticsRole::Dialog,
@@ -282,7 +285,7 @@ pub fn popover_dialog_wrapper_id<H: UiHost>(
     overlay_root_name: &str,
 ) -> GlobalElementId {
     cx.with_root_name(overlay_root_name, |cx| {
-        let element = popover_dialog_wrapper::<H>(cx, None, |_cx| Vec::new());
+        let element = popover_dialog_wrapper(cx, None, |_cx| Vec::new());
         element.id
     })
 }
@@ -653,7 +656,7 @@ mod tests {
             let root_name = "popover-dialog-wrapper-id-test";
             let computed = popover_dialog_wrapper_id::<App>(cx, root_name);
             let rendered = cx.with_root_name(root_name, |cx| {
-                popover_dialog_wrapper::<App>(cx, None, |_cx| Vec::new())
+                popover_dialog_wrapper(cx, None, |_cx| Vec::new())
             });
             assert_eq!(computed, rendered.id);
         });

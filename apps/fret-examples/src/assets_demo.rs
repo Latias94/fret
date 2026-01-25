@@ -216,7 +216,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {
                         overflow: fret_core::TextOverflow::Clip,
                     })
                 })
-                .collect()
+                .collect::<Vec<_>>()
         },
     );
 

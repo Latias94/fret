@@ -464,12 +464,15 @@ impl AccordionList {
     /// - This does not apply any visual skin. Pass `flex` / `layout` via `RovingFlexProps`.
     /// - Accordion selection is activation-driven: focus movement does not toggle open state.
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         mut props: RovingFlexProps,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         props.flex.direction = match self.root.orientation {
             AccordionOrientation::Vertical => fret_core::Axis::Vertical,
             AccordionOrientation::Horizontal => fret_core::Axis::Horizontal,
@@ -571,13 +574,16 @@ impl AccordionTrigger {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &AccordionRoot,
         mut props: PressableProps,
-        f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let value = self.value.clone();
         let label = self.label.clone().unwrap_or_else(|| value.clone());
         let disabled = self.disabled || root.disabled;
@@ -648,12 +654,15 @@ impl AccordionContent {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         root: &AccordionRoot,
-        f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> Vec<AnyElement>,
-    ) -> Option<AnyElement> {
+        f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> I,
+    ) -> Option<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let open = root.is_item_open(cx, self.value.as_ref());
         if !open && !self.force_mount {
             return None;
