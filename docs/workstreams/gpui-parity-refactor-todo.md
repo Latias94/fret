@@ -175,7 +175,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Keep reachability-based sweeping (layer roots + explicit view-cache subtree liveness) as the foundation for removing the global stopgap gate.
     - GC reachability classification unions `UiTree` + `WindowFrame` retained child edges (unit test: `gc_reachability_unions_ui_and_window_frame_children` in `crates/fret-ui/src/declarative/mount.rs`).
     - Record ViewCache root subtree element lists on cache-miss frames and touch them on cache-hit frames so liveness does not depend on "visited this frame".
-    - Diagnostics: `removed_subtrees[*]` exports `root_layer_visible`, `unreachable_from_liveness_roots`, and root-set counts (`liveness_layer_roots_len`, `view_cache_reuse_roots_len`, `view_cache_reuse_root_nodes_len`) so “island vs. broken parent chain” is distinguishable from one bundle.
+    - Diagnostics: `removed_subtrees[*]` exports `root_layer_visible`, `unreachable_from_liveness_roots`, and root-set counts (`liveness_layer_roots_len`, `view_cache_reuse_roots_len`, `view_cache_reuse_root_nodes_len`) so “island vs. broken parent chain” is distinguishable from one bundle. Gate: `fretboard diag stats <bundle> --check-gc-sweep-liveness`.
     - Regression test: cache-hit liveness remains correct even if child-edge reachability drifts for a reused cache root (membership list still prevents premature sweep).
       - Anchor: `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_subtree_membership_keeps_detached_children_alive_under_cache_hit`).
   - Historical notes (pre-fix):

@@ -55,6 +55,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_gc_sweep_liveness: bool = false;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
 
@@ -282,6 +283,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u32>()
                         .map_err(|_| "invalid value for --check-hover-layout-max".to_string())?,
                 );
+                i += 1;
+            }
+            "--check-gc-sweep-liveness" => {
+                check_gc_sweep_liveness = true;
                 i += 1;
             }
             "--json" => {
@@ -1022,6 +1027,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             if let Some(max_allowed) = check_hover_layout_max {
                 check_report_for_hover_layout_invalidations(&report, max_allowed)?;
+            }
+            if check_gc_sweep_liveness {
+                check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
             }
             Ok(())
         }
@@ -3216,6 +3224,116 @@ fn check_bundle_for_wheel_scroll_json(
         msg.push('\n');
     }
     Err(msg)
+}
+
+fn check_bundle_for_gc_sweep_liveness(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_gc_sweep_liveness_json(&bundle, bundle_path, warmup_frames)
+}
+
+fn check_bundle_for_gc_sweep_liveness_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut failures: Vec<String> = Vec::new();
+    let mut any_mount_sweep = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let removed = s
+                .get("debug")
+                .and_then(|v| v.get("removed_subtrees"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            for r in removed {
+                let location = r.get("location").and_then(|v| v.as_str()).unwrap_or("");
+                if !location.contains("crates/fret-ui/src/declarative/mount.rs") {
+                    continue;
+                }
+                any_mount_sweep = true;
+
+                let unreachable_from_liveness_roots = r
+                    .get("unreachable_from_liveness_roots")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                if unreachable_from_liveness_roots {
+                    continue;
+                }
+
+                let root = r.get("root").and_then(|v| v.as_u64()).unwrap_or(0);
+                let root_element_path = r.get("root_element_path").and_then(|v| v.as_str());
+                let root_parent_element_path =
+                    r.get("root_parent_element_path").and_then(|v| v.as_str());
+                let reachable_from_layer_roots = r
+                    .get("reachable_from_layer_roots")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let reachable_from_view_cache_roots = r
+                    .get("reachable_from_view_cache_roots")
+                    .and_then(|v| v.as_bool());
+                let liveness_layer_roots_len = r
+                    .get("liveness_layer_roots_len")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let view_cache_reuse_roots_len = r
+                    .get("view_cache_reuse_roots_len")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+
+                failures.push(format!(
+                    "window={window_id} tick={tick_id} frame={frame_id} root={root} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} liveness_layer_roots_len={liveness_layer_roots_len} view_cache_reuse_roots_len={view_cache_reuse_roots_len} root_element_path={root_element_path:?} root_parent_element_path={root_parent_element_path:?} location={location}"
+                ));
+                if failures.len() >= 8 {
+                    break;
+                }
+            }
+            if failures.len() >= 8 {
+                break;
+            }
+        }
+        if failures.len() >= 8 {
+            break;
+        }
+    }
+
+    if !any_mount_sweep {
+        return Ok(());
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "GC sweep liveness check failed: detected mount.rs sweeps that were still reachable from liveness roots (bundle: {})\n{}",
+        bundle_path.display(),
+        failures.join("\n")
+    ))
 }
 
 fn bundle_stats_from_json_with_options(
