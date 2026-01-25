@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `323/448` keys referenced (`72.1%`)
+- shadcn-web `v4/new-york-v4`: `338/448` keys referenced (`75.4%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -39,21 +39,23 @@ These areas have multiple geometry + overlay placement/chrome gates and tend to 
 
 These gates do **not** imply full parity; they are simply the most effective early tripwires we have so far.
 
+Recent breadth wins:
+
+- **Auth blocks**: `login-*`, `signup-*`, `otp-*` now have shell container gates; `otp-01/02/03/05` also gate the
+  InputOtp row geometry (slot sizes + gaps).
+
 ### Largest remaining gaps (by golden family)
 
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
-- `login` / `otp` / `signup` (5 each): common form flows that exercise input + layout primitives.
 - `textarea` / `empty` / `resizable` / `native` (4 each): recurring layout patterns.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Small auth families**
-   - Gate `login-*`, `signup-*` for breadth wins and common form flows.
-2. **Textarea / empty / resizable / native**
+1. **Textarea / empty / resizable / native**
    - Gate these recurring layout patterns (they tend to expose flex/grid/overflow edge cases).
-3. **Chart push**
+2. **Chart push**
    - Treat `chart-*` as a dedicated sprint (surface area is large; likely needs new audit notes + more selective gates).
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a

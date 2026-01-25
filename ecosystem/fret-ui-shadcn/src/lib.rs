@@ -174,7 +174,7 @@ pub use input_group::{
     InputGroup, InputGroupButton, InputGroupButtonSize, InputGroupText, InputGroupTextSize,
     input_group,
 };
-pub use input_otp::{InputOtp, input_otp};
+pub use input_otp::{InputOtp, InputOtpSlotCornerMode, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,

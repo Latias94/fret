@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `323` (`72.1%`)
-- Keys not referenced by tests: `125`
+- Keys referenced by tests: `338` (`75.4%`)
+- Keys not referenced by tests: `110`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -42,7 +42,6 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
-- `login` / `otp` / `signup` (5 each; common form + input patterns)
 - `textarea` / `empty` / `resizable` / `native` (4 each; recurring layout patterns)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
@@ -88,7 +87,6 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 ## What to do next (recommended order)
 
 1. **Finish the remaining small missing families** (fast breadth gains):
-   - Small auth + form families (`login-*`, `otp-*`, `signup-*`)
    - Recurring layout patterns (`textarea-*`, `empty-*`, `resizable-*`, `native-*`)
 2. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
 3. **Add constrained viewport variants** early for overlay-like components:

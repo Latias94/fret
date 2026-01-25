@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `323/448` (`72.1%`)
-- Next P0 gaps: small auth + textarea/empty/resizable/native; then chart.
+- Keys referenced by tests: `338/448` (`75.4%`)
+- Next P0 gaps: `textarea/empty/resizable/native`; then `chart`.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,7 +38,6 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
-- Gate small auth + form families: `login-*`, `otp-*`, `signup-*`.
 - Gate recurring layout patterns: `textarea-*`, `empty-*`, `resizable-*`, `native-*`.
 
 P1:

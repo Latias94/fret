@@ -46,6 +46,13 @@ fn sanitize_otp(input: &str, length: usize, numeric_only: bool) -> String {
     out
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InputOtpSlotCornerMode {
+    #[default]
+    Merge,
+    All,
+}
+
 #[derive(Clone)]
 pub struct InputOtp {
     model: Model<String>,
@@ -55,6 +62,12 @@ pub struct InputOtp {
     size: ComponentSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    container_gap_override: Option<Px>,
+    slot_gap_override: Option<Px>,
+    slot_size_override: Option<(Px, Px)>,
+    slot_text_px_override: Option<Px>,
+    slot_line_height_px_override: Option<Px>,
+    slot_corner_mode: InputOtpSlotCornerMode,
 }
 
 impl std::fmt::Debug for InputOtp {
@@ -67,6 +80,15 @@ impl std::fmt::Debug for InputOtp {
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("container_gap_override", &self.container_gap_override)
+            .field("slot_gap_override", &self.slot_gap_override)
+            .field("slot_size_override", &self.slot_size_override)
+            .field("slot_text_px_override", &self.slot_text_px_override)
+            .field(
+                "slot_line_height_px_override",
+                &self.slot_line_height_px_override,
+            )
+            .field("slot_corner_mode", &self.slot_corner_mode)
             .finish()
     }
 }
@@ -81,6 +103,12 @@ impl InputOtp {
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            container_gap_override: None,
+            slot_gap_override: None,
+            slot_size_override: None,
+            slot_text_px_override: None,
+            slot_line_height_px_override: None,
+            slot_corner_mode: InputOtpSlotCornerMode::default(),
         }
     }
 
@@ -114,6 +142,36 @@ impl InputOtp {
         self
     }
 
+    pub fn container_gap_px(mut self, gap: Px) -> Self {
+        self.container_gap_override = Some(gap);
+        self
+    }
+
+    pub fn slot_gap_px(mut self, gap: Px) -> Self {
+        self.slot_gap_override = Some(gap);
+        self
+    }
+
+    pub fn slot_size_px(mut self, w: Px, h: Px) -> Self {
+        self.slot_size_override = Some((w, h));
+        self
+    }
+
+    pub fn slot_text_px(mut self, px: Px) -> Self {
+        self.slot_text_px_override = Some(px);
+        self
+    }
+
+    pub fn slot_line_height_px(mut self, px: Px) -> Self {
+        self.slot_line_height_px_override = Some(px);
+        self
+    }
+
+    pub fn slot_corner_mode(mut self, mode: InputOtpSlotCornerMode) -> Self {
+        self.slot_corner_mode = mode;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -130,17 +188,29 @@ impl InputOtp {
         let resolved =
             resolve_input_chrome(&theme, self.size, &self.chrome, InputTokenKeys::none());
 
-        let slot_w = Px(resolved.min_height.0.max(0.0));
-        let slot_h = Px(resolved.min_height.0.max(0.0));
-        let group_gap = otp_gap(&theme);
+        let default_slot_w = Px(resolved.min_height.0.max(0.0));
+        let default_slot_h = Px(resolved.min_height.0.max(0.0));
+        let (slot_w, slot_h) = self
+            .slot_size_override
+            .unwrap_or((default_slot_w, default_slot_h));
+
+        let container_gap = self
+            .container_gap_override
+            .unwrap_or_else(|| otp_gap(&theme));
+        let slot_gap = self.slot_gap_override.unwrap_or(Px(0.0));
+        let slot_gap_is_nonzero = slot_gap.0.abs() >= 0.5;
 
         let font_line_height = theme.metric_required("font.line_height");
+        let slot_line_height = self
+            .slot_line_height_px_override
+            .unwrap_or(font_line_height);
+        let slot_text_px = self.slot_text_px_override.unwrap_or(resolved.text_px);
         let slot_text_style = TextStyle {
             font: FontId::default(),
-            size: resolved.text_px,
+            size: slot_text_px,
             weight: FontWeight::MEDIUM,
             slant: Default::default(),
-            line_height: Some(font_line_height),
+            line_height: Some(slot_line_height),
             letter_spacing_em: None,
         };
 
@@ -182,18 +252,28 @@ impl InputOtp {
                         let radius = resolved.radius;
                         let fg = resolved.text_color;
 
-                        let corner_radii = Corners {
-                            top_left: if is_first { radius } else { Px(0.0) },
-                            bottom_left: if is_first { radius } else { Px(0.0) },
-                            top_right: if is_last { radius } else { Px(0.0) },
-                            bottom_right: if is_last { radius } else { Px(0.0) },
+                        let all_corners = slot_gap_is_nonzero
+                            || matches!(self.slot_corner_mode, InputOtpSlotCornerMode::All);
+                        let corner_radii = if all_corners {
+                            Corners::all(radius)
+                        } else {
+                            Corners {
+                                top_left: if is_first { radius } else { Px(0.0) },
+                                bottom_left: if is_first { radius } else { Px(0.0) },
+                                top_right: if is_last { radius } else { Px(0.0) },
+                                bottom_right: if is_last { radius } else { Px(0.0) },
+                            }
                         };
 
-                        let slot_border = Edges {
-                            top: border,
-                            right: border,
-                            bottom: border,
-                            left: if is_first { border } else { Px(0.0) },
+                        let slot_border = if slot_gap_is_nonzero {
+                            Edges::all(border)
+                        } else {
+                            Edges {
+                                top: border,
+                                right: border,
+                                bottom: border,
+                                left: if is_first { border } else { Px(0.0) },
+                            }
                         };
 
                         let slot_text_style_for_slot = slot_text_style.clone();
@@ -257,7 +337,7 @@ impl InputOtp {
                         FlexProps {
                             layout: LayoutStyle::default(),
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
+                            gap: slot_gap,
                             padding: Edges::all(Px(0.0)),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
@@ -300,7 +380,7 @@ impl InputOtp {
                     FlexProps {
                         layout: LayoutStyle::default(),
                         direction: Axis::Horizontal,
-                        gap: group_gap,
+                        gap: container_gap,
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,

@@ -1274,6 +1274,579 @@ fn web_vs_fret_layout_dialog_close_button_trigger_height_matches_web() {
     );
 }
 
+fn assert_panel_x_w_match(web_name: &str, label: &str, fret: &Rect, web: WebRect, tol: f32) {
+    assert_close_px(&format!("{web_name} {label} x"), fret.origin.x, web.x, tol);
+    assert_close_px(
+        &format!("{web_name} {label} w"),
+        fret.size.width,
+        web.w,
+        tol,
+    );
+}
+
+fn assert_shell_container_centered_x_w_matches(web_name: &str, tokens: &[&str]) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_container = web_find_by_class_tokens(&theme.root, tokens).expect("web shell container");
+    let max_w = web_container.rect.w;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label: Arc<str> = Arc::from(format!("Golden:{web_name}:container"));
+    let label_str: &str = &label;
+    let snap = run_fret_root(bounds, |cx| {
+        vec![cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().size_full().min_w_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(40.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            {
+                let label = label.clone();
+                move |cx| {
+                    vec![cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(label.clone()),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![
+                                cx.container(
+                                    ContainerProps {
+                                        layout: decl_style::layout_style(
+                                            &Theme::global(&*cx.app),
+                                            LayoutRefinement::default()
+                                                .w_px(MetricRef::Px(Px(max_w)))
+                                                .min_w_0(),
+                                        ),
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                ),
+                            ]
+                        },
+                    )]
+                }
+            },
+        )]
+    });
+
+    let fret_container =
+        find_semantics(&snap, SemanticsRole::Panel, Some(label_str)).expect("fret container");
+    assert_panel_x_w_match(
+        web_name,
+        "container",
+        &fret_container.bounds,
+        web_container.rect,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_login_01_shell_container_matches() {
+    let web = read_web_golden("login-01");
+    let theme = web_theme(&web);
+    let web_container = web_find_by_class_tokens(&theme.root, &["w-full", "max-w-sm"])
+        .expect("web max-w-sm container");
+    let max_w = web_container.rect.w;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = "Golden:login-01:container";
+    let snap = run_fret_root(bounds, |cx| {
+        vec![cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().size_full().min_w_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(40.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |cx| {
+                vec![cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        label: Some(Arc::from(label)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout: decl_style::layout_style(
+                                        &Theme::global(&*cx.app),
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(max_w)))
+                                            .min_w_0(),
+                                    ),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            ),
+                        ]
+                    },
+                )]
+            },
+        )]
+    });
+
+    let fret_container =
+        find_semantics(&snap, SemanticsRole::Panel, Some(label)).expect("fret container");
+    assert_panel_x_w_match(
+        "login-01",
+        "container",
+        &fret_container.bounds,
+        web_container.rect,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_login_02_shell_container_matches() {
+    let web = read_web_golden("login-02");
+    let theme = web_theme(&web);
+    let web_container =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-xs"]).expect("web container");
+    let max_w = web_container.rect.w;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = "Golden:login-02:container";
+    let col_w = theme.viewport.w / 2.0;
+    let snap = run_fret_root(bounds, |cx| {
+        let center = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().flex_1().min_w_0().min_h_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |cx| {
+                vec![cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        label: Some(Arc::from(label)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout: decl_style::layout_style(
+                                        &Theme::global(&*cx.app),
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(max_w)))
+                                            .min_w_0(),
+                                    ),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            ),
+                        ]
+                    },
+                )]
+            },
+        );
+
+        let left = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(col_w)))
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                ),
+                direction: fret_core::Axis::Vertical,
+                gap: Px(16.0),
+                padding: Edges::all(Px(40.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
+            move |_cx| vec![center],
+        );
+
+        let right = cx.container(
+            ContainerProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(col_w)))
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                ),
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        vec![cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().size_full().min_w_0().min_h_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
+            move |_cx| vec![left, right],
+        )]
+    });
+
+    let fret_container =
+        find_semantics(&snap, SemanticsRole::Panel, Some(label)).expect("fret container");
+    assert_panel_x_w_match(
+        "login-02",
+        "container",
+        &fret_container.bounds,
+        web_container.rect,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_login_03_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches(
+        "login-03",
+        &["flex", "w-full", "max-w-sm", "flex-col", "gap-6"],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_login_04_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches(
+        "login-04",
+        &["w-full", "max-w-sm", "md:max-w-4xl"],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_login_05_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches("login-05", &["w-full", "max-w-sm"]);
+}
+
+#[test]
+fn web_vs_fret_layout_signup_01_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches("signup-01", &["w-full", "max-w-sm"]);
+}
+
+#[test]
+fn web_vs_fret_layout_signup_02_shell_container_matches() {
+    let web = read_web_golden("signup-02");
+    let theme = web_theme(&web);
+    let web_container =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-xs"]).expect("web container");
+    let max_w = web_container.rect.w;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = "Golden:signup-02:container";
+    let col_w = theme.viewport.w / 2.0;
+    let snap = run_fret_root(bounds, |cx| {
+        let center = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().flex_1().min_w_0().min_h_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |cx| {
+                vec![cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        label: Some(Arc::from(label)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout: decl_style::layout_style(
+                                        &Theme::global(&*cx.app),
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(max_w)))
+                                            .min_w_0(),
+                                    ),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            ),
+                        ]
+                    },
+                )]
+            },
+        );
+
+        let left = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(col_w)))
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                ),
+                direction: fret_core::Axis::Vertical,
+                gap: Px(16.0),
+                padding: Edges::all(Px(40.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
+            move |_cx| vec![center],
+        );
+
+        let right = cx.container(
+            ContainerProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(col_w)))
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                ),
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        vec![cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().size_full().min_w_0().min_h_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
+            move |_cx| vec![left, right],
+        )]
+    });
+
+    let fret_container =
+        find_semantics(&snap, SemanticsRole::Panel, Some(label)).expect("fret container");
+    assert_panel_x_w_match(
+        "signup-02",
+        "container",
+        &fret_container.bounds,
+        web_container.rect,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_signup_03_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches(
+        "signup-03",
+        &["flex", "w-full", "max-w-sm", "flex-col", "gap-6"],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_signup_04_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches(
+        "signup-04",
+        &["w-full", "max-w-sm", "md:max-w-4xl"],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_signup_05_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches("signup-05", &["w-full", "max-w-sm"]);
+}
+
+#[test]
+fn web_vs_fret_layout_otp_01_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches("otp-01", &["w-full", "max-w-xs"]);
+}
+
+#[test]
+fn web_vs_fret_layout_otp_02_shell_container_matches() {
+    let web = read_web_golden("otp-02");
+    let theme = web_theme(&web);
+    let web_container =
+        web_find_by_class_tokens(&theme.root, &["w-full", "max-w-xs"]).expect("web container");
+    let max_w = web_container.rect.w;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = "Golden:otp-02:container";
+    let col_w = theme.viewport.w / 2.0;
+    let snap = run_fret_root(bounds, |cx| {
+        let center = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().flex_1().min_w_0().min_h_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Center,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |cx| {
+                vec![cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        label: Some(Arc::from(label)),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            cx.container(
+                                ContainerProps {
+                                    layout: decl_style::layout_style(
+                                        &Theme::global(&*cx.app),
+                                        LayoutRefinement::default()
+                                            .w_px(MetricRef::Px(Px(max_w)))
+                                            .min_w_0(),
+                                    ),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            ),
+                        ]
+                    },
+                )]
+            },
+        );
+
+        let left = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(col_w)))
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                ),
+                direction: fret_core::Axis::Vertical,
+                gap: Px(16.0),
+                padding: Edges::all(Px(40.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
+            move |_cx| vec![center],
+        );
+
+        let right = cx.container(
+            ContainerProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(col_w)))
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                ),
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        vec![cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app),
+                    LayoutRefinement::default().size_full().min_w_0().min_h_0(),
+                ),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Stretch,
+                wrap: false,
+            },
+            move |_cx| vec![left, right],
+        )]
+    });
+
+    let fret_container =
+        find_semantics(&snap, SemanticsRole::Panel, Some(label)).expect("fret container");
+    assert_panel_x_w_match(
+        "otp-02",
+        "container",
+        &fret_container.bounds,
+        web_container.rect,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_otp_03_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches(
+        "otp-03",
+        &["flex", "w-full", "max-w-xs", "flex-col", "gap-6"],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_otp_04_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches("otp-04", &["w-full", "max-w-sm", "md:max-w-3xl"]);
+}
+
+#[test]
+fn web_vs_fret_layout_otp_05_shell_container_matches() {
+    assert_shell_container_centered_x_w_matches("otp-05", &["w-full", "max-w-sm"]);
+}
+
 fn web_find_button_by_aria_label<'a>(root: &'a WebNode, aria_label: &str) -> Option<&'a WebNode> {
     find_first(root, &|n| {
         n.tag == "button" && n.attrs.get("aria-label").is_some_and(|v| v == aria_label)
@@ -8602,6 +9175,45 @@ fn web_collect_input_otp_separators<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
     seps
 }
 
+fn web_find_leftmost_by_class_tokens<'a>(root: &'a WebNode, tokens: &[&str]) -> &'a WebNode {
+    let mut nodes = find_all(root, &|n| class_has_all_tokens(n, tokens));
+    nodes.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    nodes[0]
+}
+
+fn web_collect_input_otp_slots_by_border_input<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut slots = find_all(root, &|n| {
+        n.tag == "div"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.split_whitespace().any(|t| t == "border-input"))
+    });
+    slots.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    slots
+}
+
 fn fret_collect_rects_by_size(
     snap: &fret_core::SemanticsSnapshot,
     w: Px,
@@ -8695,6 +9307,171 @@ fn assert_input_otp_separators_match_web(
             tol,
         );
     }
+}
+
+fn assert_input_otp_slots_relative_to_container_match_web(
+    name: &str,
+    web_container: &WebNode,
+    web_slots: &[&WebNode],
+    fret_container: &Rect,
+    fret_slots: &[Rect],
+    tol: f32,
+) {
+    assert_eq!(
+        fret_slots.len(),
+        web_slots.len(),
+        "{name}: expected {} slots, got {}",
+        web_slots.len(),
+        fret_slots.len()
+    );
+    for (idx, (w, f)) in web_slots.iter().zip(fret_slots.iter()).enumerate() {
+        let web_dx = w.rect.x - web_container.rect.x;
+        let web_dy = w.rect.y - web_container.rect.y;
+
+        let fret_dx = f.origin.x - fret_container.origin.x;
+        let fret_dy = f.origin.y - fret_container.origin.y;
+
+        assert_close_px(&format!("{name} slot[{idx}] dx"), fret_dx, web_dx, tol);
+        assert_close_px(&format!("{name} slot[{idx}] dy"), fret_dy, web_dy, tol);
+        assert_close_px(
+            &format!("{name} slot[{idx}] w"),
+            f.size.width,
+            w.rect.w,
+            tol,
+        );
+        assert_close_px(
+            &format!("{name} slot[{idx}] h"),
+            f.size.height,
+            w.rect.h,
+            tol,
+        );
+    }
+}
+
+fn assert_input_otp_block_relative_geometry_matches_web(web_name: &str, row_tokens: &[&str]) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let web_row = web_find_leftmost_by_class_tokens(&theme.root, row_tokens);
+    let web_slots = web_collect_input_otp_slots_by_border_input(web_row);
+    assert!(
+        !web_slots.is_empty(),
+        "{web_name}: expected input otp slots in web row"
+    );
+
+    let slot_w = web_slots[0].rect.w;
+    let slot_h = web_slots[0].rect.h;
+    let slot_gap = if web_slots.len() > 1 {
+        (web_slots[1].rect.x - web_slots[0].rect.x - slot_w).max(0.0)
+    } else {
+        0.0
+    };
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label: Arc<str> = Arc::from(format!("Golden:{web_name}:otp-row"));
+    let label_str: &str = &label;
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<String> = cx.app.models_mut().insert(String::new());
+        let otp = fret_ui_shadcn::InputOtp::new(model)
+            .length(web_slots.len())
+            .slot_gap_px(Px(slot_gap))
+            .slot_size_px(Px(slot_w), Px(slot_h));
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(label.clone()),
+                ..Default::default()
+            },
+            move |cx| vec![otp.into_element(cx)],
+        )]
+    });
+
+    let fret_row =
+        find_semantics(&snap, SemanticsRole::Panel, Some(label_str)).expect("fret otp row");
+    assert_close_px(
+        &format!("{web_name} otp-row w"),
+        fret_row.bounds.size.width,
+        web_row.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        &format!("{web_name} otp-row h"),
+        fret_row.bounds.size.height,
+        web_row.rect.h,
+        1.0,
+    );
+
+    let fret_slots = fret_collect_rects_by_size(&snap, Px(slot_w), Px(slot_h), 1.0);
+    assert_input_otp_slots_relative_to_container_match_web(
+        web_name,
+        web_row,
+        &web_slots,
+        &fret_row.bounds,
+        &fret_slots,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_otp_01_input_otp_row_geometry_matches_web() {
+    assert_input_otp_block_relative_geometry_matches_web(
+        "otp-01",
+        &[
+            "flex",
+            "items-center",
+            "gap-2.5",
+            "*:data-[slot=input-otp-slot]:rounded-md",
+            "*:data-[slot=input-otp-slot]:border",
+        ],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_otp_02_input_otp_row_geometry_matches_web() {
+    assert_input_otp_block_relative_geometry_matches_web(
+        "otp-02",
+        &[
+            "flex",
+            "items-center",
+            "gap-2",
+            "*:data-[slot=input-otp-slot]:rounded-md",
+            "*:data-[slot=input-otp-slot]:border",
+        ],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_otp_03_input_otp_row_geometry_matches_web() {
+    assert_input_otp_block_relative_geometry_matches_web(
+        "otp-03",
+        &[
+            "flex",
+            "items-center",
+            "gap-2.5",
+            "*:data-[slot=input-otp-slot]:rounded-md",
+            "*:data-[slot=input-otp-slot]:border",
+        ],
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_otp_05_input_otp_row_geometry_matches_web() {
+    assert_input_otp_block_relative_geometry_matches_web(
+        "otp-05",
+        &[
+            "flex",
+            "items-center",
+            "gap-2.5",
+            "*:data-[slot=input-otp-slot]:h-16",
+            "*:data-[slot=input-otp-slot]:w-12",
+            "*:data-[slot=input-otp-slot]:rounded-md",
+            "*:data-[slot=input-otp-slot]:border",
+            "*:data-[slot=input-otp-slot]:text-xl",
+        ],
+    );
 }
 
 #[test]
