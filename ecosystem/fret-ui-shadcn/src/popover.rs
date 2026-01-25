@@ -2666,6 +2666,199 @@ mod tests {
     }
 
     #[test]
+    fn modal_popover_close_transition_keeps_modal_barrier_blocking_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+
+                OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "modal-popover-close-transition-barrier",
+                    |cx| {
+                        let underlay_activated = underlay_activated.clone();
+                        let underlay = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st| {
+                                cx.pressable_set_bool(&underlay_activated, true);
+                                Vec::new()
+                            },
+                        );
+
+                        let trigger = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout.inset.left = Some(Px(20.0));
+                                    layout.inset.top = Some(Px(20.0));
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st| {
+                                cx.pressable_toggle_bool(&open);
+                                Vec::new()
+                            },
+                        );
+
+                        let popover = Popover::new(open.clone())
+                            .modal(true)
+                            .auto_focus(false)
+                            .into_element(
+                                cx,
+                                |_cx| trigger,
+                                |cx| {
+                                    PopoverContent::new(vec![
+                                        cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                    ])
+                                    .into_element(cx)
+                                },
+                            );
+
+                        vec![underlay, popover]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        // Frame 1: closed.
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open -> barrier root should exist.
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected modal popover to install a modal barrier root"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false) -> barrier must remain active.
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected barrier root to remain while the modal popover is closing"
+        );
+
+        // Click the underlay. The modal barrier should block the click-through while closing.
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while the modal popover is closing"
+        );
+
+        // After the exit transition settles, the barrier must drop and the underlay becomes
+        // interactive again.
+        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        for i in 0..settle_frames {
+            render_frame(&mut ui, &mut app, &mut services, 4 + i);
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_none(),
+            "expected barrier root to clear once the exit transition completes"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(true),
+            "underlay should activate once the barrier is removed"
+        );
+    }
+
+    #[test]
     fn popover_close_transition_is_click_through_and_observer_inert() {
         use fret_core::{Event, MouseButtons};
 

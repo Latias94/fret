@@ -63,6 +63,10 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/drawer.rs` (`drawer_close_transition_keeps_modal_barrier_blocking_underlay`)
 
+- [x] OIA2-test-017 Modal popover close transition keeps the barrier blocking underlay input.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/popover.rs` (`modal_popover_close_transition_keeps_modal_barrier_blocking_underlay`)
+
 ## P0 — Diagnostics & Debuggability
 
 - [x] OIA2-diag-010 Hit-test scope roots are exposed in diagnostics (baseline).
