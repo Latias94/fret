@@ -82,10 +82,11 @@ This document is meant to stay “live” while we iterate. Update this section 
 - [x] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
   - Templates: `apps/fretboard/src/scaffold/templates.rs` (todo/todo-mvu/hello use `ui::*` + `.ui()`).
   - Demos: `apps/fret-examples/src/todo_demo.rs`, `apps/fret-examples/src/todo_mvu_demo.rs`, `apps/fret-examples/src/todo_interop_demo.rs`.
-- [ ] Migrate remaining demos to the default authoring dialect (`UiExt::ui()` / `ui::*`).
+- [x] Migrate remaining demos to the default authoring dialect (`UiExt::ui()` / `ui::*`).
   - Migrated: `apps/fret-examples/src/assets_demo.rs`, `apps/fret-examples/src/cjk_conformance_demo.rs`, `apps/fret-examples/src/emoji_conformance_demo.rs`.
   - Migrated: `apps/fret-examples/src/todo_foreign_iced_style_demo.rs`, `apps/fret-examples/src/todo_interop_kit_demo.rs`, `apps/fret-examples/src/todo_mvu_interop_demo.rs`.
-  - Remaining (layout-style heavy): `apps/fret-examples/src/components_gallery.rs`, `apps/fret-examples/src/markdown_demo.rs`.
+  - Migrated: `apps/fret-examples/src/components_gallery.rs`, `apps/fret-examples/src/markdown_demo.rs`.
+  - Remaining: none.
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
   - Evidence: `ecosystem/fret-ui-kit/src/{ui,ui_builder}.rs`, `ecosystem/fret-ui-kit/src/declarative/{cached_subtree,chrome,dismissible,glass,pixelate,scroll,stack,visually_hidden}.rs`, `ecosystem/fret-ui-kit/src/primitives/{accordion,dismissable_layer,menu/*,popover,popper_content,roving_focus_group,tabs,toggle,toolbar}.rs`, `ecosystem/fret-ui-primitives/src/focus_scope.rs`
