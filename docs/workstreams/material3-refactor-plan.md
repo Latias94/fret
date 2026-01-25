@@ -324,6 +324,7 @@ Status notes:
   - This reports:
     - keys referenced by `fret-ui-material3` sources but missing from `tokens::v30` injection,
     - keys that do not exist in Material Web v30 sassvars (typos / wrong namespaces),
+    - expanded variant/state keys derived from format-string templates (to catch missing tokens early),
     - (optional) Material Web keys missing in our injection by component prefix.
 - [x] Add a token import generator to keep sys/comp tokens in sync with Material Web:
   - `cargo run -p fret-ui-material3 --bin material3_token_import -- --material-web-dir <path>`

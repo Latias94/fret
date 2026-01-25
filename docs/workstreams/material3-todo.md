@@ -80,7 +80,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [x] Add scene-level regression tests for radio alignment (dot + ripple origin).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
 - [x] Add a token audit tool (coverage report vs code + material-web sassvars).
-  - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (filters allowlisted Fret-only keys).
+  - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (filters allowlisted Fret-only keys,
+    expands format-string templates via `expand_key_templates`).
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.
@@ -104,6 +105,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
     resolver `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`.
 - [x] Provide a baseline, hand-authored v30 token preset injection (state/motion/shape/typescale subset).
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_tokens`, `theme_config`).
+- [x] Expand token audit coverage to validate format-string templates (variant/state keys) against v30 injection.
+  - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (`expand_key_templates`),
+    `ecosystem/fret-ui-material3/src/tokens/v30.rs` (icon-button hovered/focused/pressed icon tokens).
 - [x] Align Switch handle tokens with Material Web v30 (`*.handle.width/height`, not `*.handle.size`).
   - Evidence: `ecosystem/fret-ui-material3/src/switch.rs` (`switch_size_tokens`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_switch_scalars`),
