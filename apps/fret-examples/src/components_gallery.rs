@@ -17,7 +17,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
-use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, UiExt};
+use fret_ui_kit::{ColorRef, Edges4, LayoutRefinement, MetricRef, OverlayController, Space, UiExt, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -242,10 +242,6 @@ impl ComponentsGalleryDriver {
                     Arc::from("Emoji: 😀 😺 🧑‍💻 ❤️ 👨‍👩‍👧‍👦 🇯🇵 🏳️‍🌈"),
                 ];
 
-                let mut root_layout = LayoutStyle::default();
-                root_layout.size.width = Length::Fill;
-                root_layout.size.height = Length::Fill;
-
                 let mut tree_slot_layout = LayoutStyle::default();
                 tree_slot_layout.size.width = Length::Fill;
                 tree_slot_layout.size.height = Length::Fill;
@@ -255,29 +251,12 @@ impl ComponentsGalleryDriver {
                 let padding = theme.metric_required("metric.padding.md");
                 let bg = theme.color_required("background");
 
-                vec![cx.container(
-                    ContainerProps {
-                        layout: root_layout,
-                        background: Some(bg),
-                        ..Default::default()
-                    },
-                    |cx| {
-                        vec![cx.flex(
-                            FlexProps {
-                                layout: root_layout,
-                                direction: fret_core::Axis::Vertical,
-                                gap: Px(12.0),
-                                padding: Edges::all(padding),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Stretch,
-                                wrap: false,
-                            },
-                            |cx| {
-                                let mut renderer = |cx: &mut fret_ui::ElementContext<'_, App>,
-                                                    entry: &fret_ui_kit::TreeEntry,
-                                                    _state: fret_ui_kit::TreeRowState| {
-                                    vec![cx.text(entry.label.as_ref())]
-                                };
+                vec![ui::v_flex(cx, |cx| {
+                    let mut renderer = |cx: &mut fret_ui::ElementContext<'_, App>,
+                                        entry: &fret_ui_kit::TreeEntry,
+                                        _state: fret_ui_kit::TreeRowState| {
+                        vec![cx.text(entry.label.as_ref())]
+                    };
                                 vec![
                                     cx.text(title),
                                     cx.text(subtitle),
@@ -1187,10 +1166,12 @@ impl ComponentsGalleryDriver {
                                         },
                                     ),
                                 ]
-                            },
-                        )]
-                    },
-                )]
+                    })
+                    .size_full()
+                    .gap(Space::N3)
+                    .paddings(Edges4::all(MetricRef::Px(padding)))
+                    .bg(ColorRef::Color(bg))
+                    .into_element(cx)]
             });
 
         state.ui.set_root(root);
