@@ -2463,6 +2463,12 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
+    /// Best-effort command gating decisions for a small set of "interesting" commands.
+    ///
+    /// This is intended for debugging cross-surface inconsistencies (menus vs palette vs buttons)
+    /// without relying on ad-hoc logs.
+    #[serde(default)]
+    pub command_gating_trace: Vec<UiCommandGatingTraceEntryV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
@@ -2542,6 +2548,7 @@ impl UiTreeDebugSnapshotV1 {
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
             ),
+            command_gating_trace: command_gating_trace_for_window(app, window),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
@@ -2552,6 +2559,109 @@ impl UiTreeDebugSnapshotV1 {
             semantics,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCommandGatingTraceEntryV1 {
+    pub command: String,
+    pub enabled: bool,
+    pub reason: String,
+    #[serde(default)]
+    pub scope: String,
+}
+
+fn command_gating_trace_for_window(
+    app: &App,
+    window: AppWindowId,
+) -> Vec<UiCommandGatingTraceEntryV1> {
+    let gating = fret_runtime::best_effort_snapshot_for_window(app, window);
+
+    let mut commands: HashSet<fret_runtime::CommandId> = HashSet::new();
+
+    // Include any commands that were explicitly overridden.
+    for (cmd, _) in gating.enabled_overrides() {
+        commands.insert(cmd.clone());
+    }
+
+    // Include any widget-scope action availability entries that were published.
+    if let Some(map) = gating.action_availability() {
+        for (cmd, _) in map {
+            commands.insert(cmd.clone());
+        }
+    }
+
+    // Include core, cross-surface editor commands (common across menus/palettes/buttons).
+    for &cmd in &[
+        "edit.undo",
+        "edit.redo",
+        "edit.copy",
+        "edit.cut",
+        "edit.paste",
+        "edit.select_all",
+        "focus.menu_bar",
+    ] {
+        commands.insert(fret_runtime::CommandId::from(cmd));
+    }
+
+    let mut commands: Vec<fret_runtime::CommandId> = commands.into_iter().collect();
+    commands.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+
+    const MAX_TRACE_ENTRIES: usize = 64;
+    commands
+        .into_iter()
+        .take(MAX_TRACE_ENTRIES)
+        .map(|command| {
+            let (enabled, reason, scope) = command_gating_decision(app, &gating, &command);
+            UiCommandGatingTraceEntryV1 {
+                command: command.as_str().to_string(),
+                enabled,
+                reason,
+                scope,
+            }
+        })
+        .collect()
+}
+
+fn command_gating_decision(
+    app: &App,
+    gating: &fret_runtime::WindowCommandGatingSnapshot,
+    command: &fret_runtime::CommandId,
+) -> (bool, String, String) {
+    let meta = app.commands().get(command.clone());
+    let scope = meta
+        .map(|m| format!("{:?}", m.scope))
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    // Mirror `WindowCommandGatingSnapshot::is_enabled_for_meta` precedence.
+    if let Some(meta) = meta
+        && meta.scope == fret_runtime::CommandScope::Widget
+        && let Some(map) = gating.action_availability()
+        && let Some(is_available) = map.get(command).copied()
+        && !is_available
+    {
+        let _ = meta;
+        return (false, "action_unavailable".to_string(), scope);
+    }
+
+    if let Some(meta) = meta
+        && meta
+            .when
+            .as_ref()
+            .is_some_and(|w| !w.eval(gating.input_ctx()))
+    {
+        let _ = meta;
+        return (false, "when_false".to_string(), scope);
+    }
+
+    if gating.enabled_overrides().get(command).copied() == Some(false) {
+        return (false, "disabled_override".to_string(), scope);
+    }
+
+    if meta.is_none() {
+        return (true, "unknown_command".to_string(), scope);
+    }
+
+    (true, "enabled".to_string(), scope)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
