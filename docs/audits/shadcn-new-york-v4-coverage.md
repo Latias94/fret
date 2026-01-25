@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `477`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `236` (`52.7%`)
-- Keys not referenced by tests: `212`
+- Keys referenced by tests: `242` (`54%`)
+- Keys not referenced by tests: `206`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -43,21 +43,22 @@ At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
 - `form` (19; field composition + validation chrome)
-- `calendar` (18; primitives-heavy; tends to expose text metrics + grid layout edge cases)
+- `calendar` (12; primitives-heavy; tends to expose text metrics + grid layout edge cases)
 - `typography` (13; baseline text metrics and prose defaults)
 - `input` (10; control chrome + stacking patterns)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were:
 
 - `button` (25)
+- `calendar` (22)
 - `navigation` (17)
 - `input` (17)
-- `calendar` (16)
-- `sidebar` (15)
+- `sidebar` (16)
 - `toggle` (13)
 - `dropdown` (10)
 - `scroll` (10)
 - `sheet` (10)
+- `field` (9)
 - `breadcrumb` (9)
 - `menubar` (9)
 
@@ -80,8 +81,8 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 ## What to do next (recommended order)
 
 1. **Gate missing primitives-heavy widgets** first (high churn risk):
-   - Calendar multi-month (`numberOfMonths=2`): `calendar-02/05/07/09/11/12`
    - Calendar multiple selection: `calendar-03`
+   - Remaining calendar variants (12 missing): prioritize by selection model + modifiers.
 2. **Gate missing form composition + validation chrome** (high leverage):
    - `form-*` and any remaining `field-*` / `input-*` invalid variants
 3. **Gate missing medium-surface components** next:

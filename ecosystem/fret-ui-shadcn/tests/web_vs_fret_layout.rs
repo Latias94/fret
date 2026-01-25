@@ -14415,38 +14415,49 @@ fn web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web(
 }
 
 fn parse_calendar_title_label(label: &str) -> Option<(time::Month, i32)> {
-    let (month, year) = label.split_once(' ')?;
+    let label = label.trim();
+    let (month, year) = label.rsplit_once(' ')?;
     if year.len() != 4 || !year.chars().all(|c| c.is_ascii_digit()) {
         return None;
     }
     let year: i32 = year.parse().ok()?;
-    let month = match month {
-        "January" => time::Month::January,
-        "February" => time::Month::February,
-        "March" => time::Month::March,
-        "April" => time::Month::April,
-        "May" => time::Month::May,
-        "June" => time::Month::June,
-        "July" => time::Month::July,
-        "August" => time::Month::August,
-        "September" => time::Month::September,
-        "October" => time::Month::October,
-        "November" => time::Month::November,
-        "December" => time::Month::December,
+
+    let month_lower = month.to_lowercase();
+    let month = match (month, month_lower.as_str()) {
+        ("January", _) | (_, "january") | (_, "enero") => time::Month::January,
+        ("February", _) | (_, "february") | (_, "febrero") => time::Month::February,
+        ("March", _) | (_, "march") | (_, "marzo") => time::Month::March,
+        ("April", _) | (_, "april") | (_, "abril") => time::Month::April,
+        ("May", _) | (_, "may") | (_, "mayo") => time::Month::May,
+        ("June", _) | (_, "june") | (_, "junio") => time::Month::June,
+        ("July", _) | (_, "july") | (_, "julio") => time::Month::July,
+        ("August", _) | (_, "august") | (_, "agosto") => time::Month::August,
+        ("September", _) | (_, "september") | (_, "septiembre") | (_, "setiembre") => {
+            time::Month::September
+        }
+        ("October", _) | (_, "october") | (_, "octubre") => time::Month::October,
+        ("November", _) | (_, "november") | (_, "noviembre") => time::Month::November,
+        ("December", _) | (_, "december") | (_, "diciembre") => time::Month::December,
         _ => return None,
     };
     Some((month, year))
 }
 
 fn parse_calendar_weekday_label(label: &str) -> Option<time::Weekday> {
-    match label {
-        "Monday" => Some(time::Weekday::Monday),
-        "Tuesday" => Some(time::Weekday::Tuesday),
-        "Wednesday" => Some(time::Weekday::Wednesday),
-        "Thursday" => Some(time::Weekday::Thursday),
-        "Friday" => Some(time::Weekday::Friday),
-        "Saturday" => Some(time::Weekday::Saturday),
-        "Sunday" => Some(time::Weekday::Sunday),
+    let label = label.trim();
+    let lower = label.to_lowercase();
+    match (label, lower.as_str()) {
+        ("Monday", _) | (_, "monday") | (_, "lunes") => Some(time::Weekday::Monday),
+        ("Tuesday", _) | (_, "tuesday") | (_, "martes") => Some(time::Weekday::Tuesday),
+        ("Wednesday", _) | (_, "wednesday") | (_, "miércoles") | (_, "miercoles") => {
+            Some(time::Weekday::Wednesday)
+        }
+        ("Thursday", _) | (_, "thursday") | (_, "jueves") => Some(time::Weekday::Thursday),
+        ("Friday", _) | (_, "friday") | (_, "viernes") => Some(time::Weekday::Friday),
+        ("Saturday", _) | (_, "saturday") | (_, "sábado") | (_, "sabado") => {
+            Some(time::Weekday::Saturday)
+        }
+        ("Sunday", _) | (_, "sunday") | (_, "domingo") => Some(time::Weekday::Sunday),
         _ => None,
     }
 }
@@ -14455,26 +14466,39 @@ fn parse_calendar_day_aria_label(label: &str) -> Option<(time::Date, bool)> {
     let selected = label.ends_with(", selected");
     let label = label.strip_suffix(", selected").unwrap_or(label);
     let label = label.strip_prefix("Today, ").unwrap_or(label);
+    let label = label.strip_prefix("Hoy, ").unwrap_or(label);
 
-    let (prefix, year) = label.rsplit_once(", ")?;
-    if year.len() != 4 || !year.chars().all(|c| c.is_ascii_digit()) {
+    if let Some((prefix, year)) = label.rsplit_once(", ") {
+        if year.len() == 4 && year.chars().all(|c| c.is_ascii_digit()) {
+            let year: i32 = year.parse().ok()?;
+
+            let (_weekday, month_and_day) = prefix.split_once(", ")?;
+            let (month, day_with_suffix) = month_and_day.split_once(' ')?;
+            let (month, _label_year) = parse_calendar_title_label(&format!("{month} {year}"))?;
+
+            let day_digits: String = day_with_suffix
+                .chars()
+                .take_while(|c| c.is_ascii_digit())
+                .collect();
+            if day_digits.is_empty() {
+                return None;
+            }
+            let day: u8 = day_digits.parse().ok()?;
+
+            let date = time::Date::from_calendar_date(year, month, day).ok()?;
+            return Some((date, selected));
+        }
+    }
+
+    // e.g. "lunes, 1 de septiembre de 2025"
+    let (weekday, rest) = label.split_once(", ")?;
+    let _weekday = parse_calendar_weekday_label(weekday)?;
+    let parts: Vec<&str> = rest.split_whitespace().collect();
+    if parts.len() != 5 || parts[1] != "de" || parts[3] != "de" {
         return None;
     }
-    let year: i32 = year.parse().ok()?;
-
-    let (_weekday, month_and_day) = prefix.split_once(", ")?;
-    let (month, day_with_suffix) = month_and_day.split_once(' ')?;
-    let (month, _label_year) = parse_calendar_title_label(&format!("{month} {year}"))?;
-
-    let day_digits: String = day_with_suffix
-        .chars()
-        .take_while(|c| c.is_ascii_digit())
-        .collect();
-    if day_digits.is_empty() {
-        return None;
-    }
-    let day: u8 = day_digits.parse().ok()?;
-
+    let day: u8 = parts[0].parse().ok()?;
+    let (month, year) = parse_calendar_title_label(&format!("{} {}", parts[2], parts[4]))?;
     let date = time::Date::from_calendar_date(year, month, day).ok()?;
     Some((date, selected))
 }
@@ -14843,6 +14867,435 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
     }
 }
 
+fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    fn parse_css_px(s: &str) -> Option<f32> {
+        s.strip_suffix("px")?.parse::<f32>().ok()
+    }
+
+    let web_rdp_root = web_find_by_class_token(&theme.root, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+
+    let web_padding_left = web_rdp_root
+        .computed_style
+        .get("paddingLeft")
+        .and_then(|v| parse_css_px(v))
+        .unwrap_or(0.0);
+    let web_border_left = web_rdp_root
+        .computed_style
+        .get("borderLeftWidth")
+        .and_then(|v| parse_css_px(v))
+        .unwrap_or(0.0);
+
+    let web_show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+
+    let mut web_month_grids = find_all(&theme.root, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    });
+    web_month_grids.sort_by(|a, b| {
+        let by_y = a.rect.y.total_cmp(&b.rect.y);
+        if !matches!(by_y, std::cmp::Ordering::Equal) {
+            return by_y;
+        }
+        a.rect.x.total_cmp(&b.rect.x)
+    });
+    assert_eq!(
+        web_month_grids.len(),
+        2,
+        "expected two month grids for {web_name}"
+    );
+
+    let month_labels: Vec<(time::Month, i32)> = web_month_grids
+        .iter()
+        .map(|grid| {
+            let label = grid
+                .attrs
+                .get("aria-label")
+                .expect("web month grid aria-label");
+            let (m, y) = parse_calendar_title_label(label).expect("web month label (Month YYYY)");
+            (m, y)
+        })
+        .collect();
+    let (month_a, year_a) = month_labels[0];
+    let (month_b, year_b) = month_labels[1];
+
+    let locale = web_month_grids
+        .first()
+        .and_then(|grid| grid.attrs.get("aria-label"))
+        .and_then(|label| label.chars().next())
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                fret_ui_shadcn::calendar::CalendarLocale::En
+            } else {
+                fret_ui_shadcn::calendar::CalendarLocale::Es
+            }
+        })
+        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+
+    let in_view = |d: time::Date| {
+        (d.month() == month_a && d.year() == year_a) || (d.month() == month_b && d.year() == year_b)
+    };
+
+    let web_prev = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Previous Month")
+    })
+    .expect("web prev-month button");
+    let web_next = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Next Month")
+    })
+    .expect("web next-month button");
+
+    let web_disable_navigation = web_prev
+        .attrs
+        .get("aria-disabled")
+        .is_some_and(|v| v == "true")
+        && web_next
+            .attrs
+            .get("aria-disabled")
+            .is_some_and(|v| v == "true");
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(
+        !web_day_buttons.is_empty(),
+        "expected calendar day buttons for {web_name}"
+    );
+
+    let web_weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = web_weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let web_today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let web_selected_dates: Vec<time::Date> = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .filter_map(|label| parse_calendar_day_aria_label(label).filter(|(_, sel)| *sel))
+        .map(|(d, _)| d)
+        .collect();
+
+    let web_selected = web_day_buttons
+        .iter()
+        .find(|n| {
+            n.attrs
+                .get("aria-label")
+                .is_some_and(|label| label.as_str().ends_with(", selected"))
+        })
+        .copied();
+    let selected_date = match web_selected_dates.as_slice() {
+        [] => None,
+        [d] => Some(*d),
+        _ => None,
+    };
+
+    let web_show_outside_days =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-outside")).is_some();
+    let web_has_out_of_view_days = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .filter_map(|label| parse_calendar_day_aria_label(label).map(|(d, _)| d))
+        .any(|d| !in_view(d));
+
+    let web_month_bounds =
+        if web_disable_navigation && web_show_outside_days && !web_has_out_of_view_days {
+            Some(((month_a, year_a), (month_b, year_b)))
+        } else {
+            None
+        };
+
+    let web_disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if in_view(date) {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let web_sample = web_selected.unwrap_or(web_day_buttons[0]);
+    let web_sample_label = web_sample
+        .attrs
+        .get("aria-label")
+        .expect("web sample day aria-label")
+        .clone();
+
+    let cell_size = parse_calendar_cell_size_px(&theme);
+
+    let chrome_override = {
+        let mut chrome = ChromeRefinement::default();
+        if (web_padding_left - 0.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N0);
+        } else if (web_padding_left - 12.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N3);
+        } else if (web_padding_left - 8.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N2);
+        }
+        if web_border_left >= 0.5 {
+            chrome = chrome.border_1();
+        }
+        chrome
+    };
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        use fret_ui_headless::calendar::CalendarMonth;
+        use fret_ui_headless::calendar::DateRangeSelection;
+
+        let month_model: Model<CalendarMonth> = cx
+            .app
+            .models_mut()
+            .insert(CalendarMonth::new(year_a, month_a));
+
+        match web_selected_dates.as_slice() {
+            [] | [_] => {
+                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(selected_date);
+                let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                    .number_of_months(2)
+                    .locale(locale)
+                    .disable_navigation(web_disable_navigation)
+                    .week_start(week_start)
+                    .show_outside_days(web_show_outside_days)
+                    .disable_outside_days(web_disable_outside_days)
+                    .show_week_number(web_show_week_number)
+                    .refine_style(chrome_override);
+                if let Some(((start_month, start_year), (end_month, end_year))) = web_month_bounds {
+                    calendar = calendar.month_bounds(
+                        CalendarMonth::new(start_year, start_month),
+                        CalendarMonth::new(end_year, end_month),
+                    );
+                }
+                if let Some(cell_size) = cell_size {
+                    calendar = calendar.cell_size(cell_size);
+                }
+                if let Some(today) = web_today {
+                    calendar = calendar.today(today);
+                }
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        padding: fret_core::Edges {
+                            left: Px(web_origin_x),
+                            top: Px(web_origin_y),
+                            right: Px(0.0),
+                            bottom: Px(0.0),
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| vec![calendar.into_element(cx)],
+                )]
+            }
+            _ => {
+                let (min, max) = web_selected_dates.iter().fold(
+                    (web_selected_dates[0], web_selected_dates[0]),
+                    |(min, max), d| (min.min(*d), max.max(*d)),
+                );
+                let selected: Model<DateRangeSelection> =
+                    cx.app.models_mut().insert(DateRangeSelection {
+                        from: Some(min),
+                        to: Some(max),
+                    });
+                let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                    .number_of_months(2)
+                    .locale(locale)
+                    .disable_navigation(web_disable_navigation)
+                    .week_start(week_start)
+                    .show_outside_days(web_show_outside_days)
+                    .disable_outside_days(web_disable_outside_days)
+                    .show_week_number(web_show_week_number)
+                    .refine_style(chrome_override);
+                if let Some(((start_month, start_year), (end_month, end_year))) = web_month_bounds {
+                    calendar = calendar.month_bounds(
+                        CalendarMonth::new(start_year, start_month),
+                        CalendarMonth::new(end_year, end_month),
+                    );
+                }
+                if let Some(cell_size) = cell_size {
+                    calendar = calendar.cell_size(cell_size);
+                }
+                if let Some(today) = web_today {
+                    calendar = calendar.today(today);
+                }
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        padding: fret_core::Edges {
+                            left: Px(web_origin_x),
+                            top: Px(web_origin_y),
+                            right: Px(0.0),
+                            bottom: Px(0.0),
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| vec![calendar.into_element(cx)],
+                )]
+            }
+        }
+    });
+
+    let fret_day_buttons = snap
+        .nodes
+        .iter()
+        .filter(|n| {
+            n.role == SemanticsRole::Button
+                && n.label
+                    .as_deref()
+                    .is_some_and(|label| parse_calendar_day_aria_label(label).is_some())
+        })
+        .count();
+    assert_eq!(
+        fret_day_buttons,
+        web_day_buttons.len(),
+        "expected the same number of calendar day buttons for {web_name}"
+    );
+
+    let prev = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Go to the Previous Month"),
+    )
+    .expect("fret prev-month semantics node");
+    let next = find_semantics(&snap, SemanticsRole::Button, Some("Go to the Next Month"))
+        .expect("fret next-month semantics node");
+
+    assert_close_px(
+        &format!("{web_name} prev button width"),
+        prev.bounds.size.width,
+        web_prev.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        &format!("{web_name} prev button height"),
+        prev.bounds.size.height,
+        web_prev.rect.h,
+        1.0,
+    );
+    assert_close_px(
+        &format!("{web_name} next button width"),
+        next.bounds.size.width,
+        web_next.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        &format!("{web_name} next button height"),
+        next.bounds.size.height,
+        web_next.rect.h,
+        1.0,
+    );
+
+    let prev_bounds = ui
+        .debug_node_bounds(prev.id)
+        .expect("fret prev button node bounds");
+    assert_close_px(
+        &format!("{web_name} prev x"),
+        prev_bounds.origin.x,
+        web_prev.rect.x,
+        3.0,
+    );
+    assert_close_px(
+        &format!("{web_name} prev y"),
+        prev_bounds.origin.y,
+        web_prev.rect.y,
+        3.0,
+    );
+
+    let next_bounds = ui
+        .debug_node_bounds(next.id)
+        .expect("fret next button node bounds");
+    assert_close_px(
+        &format!("{web_name} next x"),
+        next_bounds.origin.x,
+        web_next.rect.x,
+        3.0,
+    );
+    assert_close_px(
+        &format!("{web_name} next y"),
+        next_bounds.origin.y,
+        web_next.rect.y,
+        3.0,
+    );
+
+    let day = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some(web_sample_label.as_ref()),
+    )
+    .expect("fret day semantics node");
+    assert_close_px(
+        &format!("{web_name} day button width"),
+        day.bounds.size.width,
+        web_sample.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        &format!("{web_name} day button height"),
+        day.bounds.size.height,
+        web_sample.rect.h,
+        1.0,
+    );
+
+    let node_bounds = ui.debug_node_bounds(day.id).expect("fret day node bounds");
+    assert_close_px(
+        &format!("{web_name} day x"),
+        node_bounds.origin.x,
+        web_sample.rect.x,
+        3.0,
+    );
+    assert_close_px(
+        &format!("{web_name} day y"),
+        node_bounds.origin.y,
+        web_sample.rect.y,
+        3.0,
+    );
+}
+
 #[test]
 fn web_vs_fret_layout_calendar_01_geometry_matches() {
     assert_calendar_single_month_variant_geometry_matches_web("calendar-01");
@@ -14916,6 +15369,36 @@ fn web_vs_fret_layout_calendar_21_geometry_matches() {
 #[test]
 fn web_vs_fret_layout_calendar_31_geometry_matches() {
     assert_calendar_single_month_variant_geometry_matches_web("calendar-31");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_02_geometry_matches() {
+    assert_calendar_multi_month_variant_geometry_matches_web("calendar-02");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_05_geometry_matches() {
+    assert_calendar_multi_month_variant_geometry_matches_web("calendar-05");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_07_geometry_matches() {
+    assert_calendar_multi_month_variant_geometry_matches_web("calendar-07");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_09_geometry_matches() {
+    assert_calendar_multi_month_variant_geometry_matches_web("calendar-09");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_11_geometry_matches() {
+    assert_calendar_multi_month_variant_geometry_matches_web("calendar-11");
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_12_geometry_matches() {
+    assert_calendar_multi_month_variant_geometry_matches_web("calendar-12");
 }
 
 #[test]

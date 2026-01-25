@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `236/448` keys referenced (`52.7%`)
+- shadcn-web `v4/new-york-v4`: `242/448` keys referenced (`54%`)
 
 ## Executive summary (current status + next targets)
 
@@ -41,23 +41,19 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
 - `form` (19 variants): field composition + validation chrome + error state tokens.
-- `calendar` (18 variants): mostly multi-month and special modes (see below).
+- `calendar` (12 variants): special modes and edge-case modifiers (see below).
 - `typography` (13 variants): prose defaults + text metric edge cases.
 - `carousel` (6 variants): layout + snapping + spacing.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Calendar multi-month (`numberOfMonths=2`) parity**
-   - Blocks: `calendar-02`, `calendar-05`, `calendar-07`, `calendar-09`, `calendar-11`, `calendar-12`.
-   - Expected work: render multiple month grids, keep shared `nav` positioning aligned (absolute nav over the
-     months container), and preserve `--cell-size`-driven sizing.
-2. **Calendar multiple selection parity**
+1. **Calendar multiple selection parity**
    - Block: `calendar-03` (`mode="multiple"`, `max`, `required`) — requires a distinct selection model.
-3. **Forms / Field validation chrome**
+2. **Forms / Field validation chrome**
    - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
-4. **Carousel**
+3. **Carousel**
    - Add a default gate first, then a constrained viewport gate if the layout policy changes.
-5. **Typography breadth**
+4. **Typography breadth**
    - Gate remaining typography pages that are sensitive to font metrics and baseline rounding.
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
@@ -198,6 +194,10 @@ Conformance gates:
 Recent fixes:
 
 - Calendar month grid now matches `react-day-picker`'s compact row behavior via `month_grid_compact`.
+- Multi-month (`numberOfMonths=2`) parity is now gated for `calendar-02/05/07/09/11/12`:
+  - Shared absolute `nav` over the months container.
+  - Month-bounds gating (`startMonth`/`endMonth`) and `disableNavigation` parity (`calendar-11`).
+  - Locale-aware month titles + day labels for Spanish (`calendar-12`).
 - Day buttons support `--cell-size` variants (per-golden) via `Calendar::{cell_size, show_week_number}` and
   nav button sizing.
 - `showOutsideDays=false` now keeps invisible outside-day placeholders (a11y-hidden) so x/y geometry matches.
@@ -208,6 +208,7 @@ Conformance gates:
 
 - Layout + a11y labels: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web`).
 - Variant geometry (single-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_*_geometry_matches`).
+- Variant geometry (multi-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_{02,05,07,09,11,12}_geometry_matches`).
 
 ### `DropdownMenu`
 

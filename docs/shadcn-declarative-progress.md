@@ -19,9 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `236/448` (`52.7%`)
-- Next P0 gaps: calendar multi-month (`calendar-02/05/07/09/11/12`), calendar multiple selection (`calendar-03`),
-  then forms/field validation chrome and carousel.
+- Keys referenced by tests: `242/448` (`54%`)
+- Next P0 gaps: calendar multiple selection (`calendar-03`), then forms/field validation chrome and carousel.
 
 ## Scope
 
@@ -207,8 +206,8 @@ Legend:
 | `combobox` | `Combobox` | Chrome+Layout |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `radio_group` | `RadioGroup` | Chrome+Layout |  |
-| `calendar` | `Calendar` | Chrome+Layout |  |
-| `calendar_range` | `CalendarRange` | Chrome+Layout |  |
+| `calendar` | `Calendar` | Chrome+Layout | Multi-month + locale + bounded month windows are gated (`calendar-02/05/07/09/11/12`). |
+| `calendar_range` | `CalendarRange` | Chrome+Layout | Multi-month + bounded month windows are gated (`calendar-11`). |
 | `date_picker` | `DatePicker` | Chrome+Layout |  |
 | `date_range_picker` | `DateRangePicker` | Chrome+Layout |  |
 | `input` | `Input` | Chrome+Layout |  |
