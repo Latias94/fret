@@ -218,6 +218,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - `target/fret-diag-overlay-torture-cache005-stopgap-disabled-path-edges/1769304660925-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag-overlay-torture-cache005-stopgap-disabled-vc-reachability/1769307484613-script-step-0010-click-no-semantics-match/bundle.json`
       - `target/fret-diag-overlay-torture-cache005-stopgap-disabled-trigger-element-path/1769308808141-script-step-0010-click-no-semantics-match/bundle.json`
+      - `target/fret-diag-overlay-torture-cache005-stopgap-disabled-vc-elements/1769315204903-script-step-0010-click-no-semantics-match/bundle.json` (includes `element_runtime.view_cache_reuse_root_element_samples`)
   - Next:
     - In the failing bundle above, `ui-gallery-dialog-trigger` exists up to `frame_id=33`, then disappears on `frame_id=34` when `debug.removed_subtrees.len()` spikes (31).
       Use `frame_id=34` `debug.removed_subtrees[*].root/root_element/root_path` as the entry point for root-cause analysis.
