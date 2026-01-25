@@ -797,6 +797,9 @@ impl Tabs {
                                                         R::Continue
                                                     }
                                                     radix_tabs::TabsTriggerPointerDownAction::PreventFocus => {
+                                                        host.prevent_default(
+                                                            fret_runtime::DefaultAction::FocusOnPointerDown,
+                                                        );
                                                         R::SkipDefault
                                                     }
                                                     radix_tabs::TabsTriggerPointerDownAction::Ignore => R::Continue,
@@ -1342,20 +1345,21 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let beta_tab = snap
+        let alpha_tab = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
-            .expect("beta tab");
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha tab");
 
         let click = Point::new(
-            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
-            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+            Px(alpha_tab.bounds.origin.x.0 + alpha_tab.bounds.size.width.0 / 2.0),
+            Px(alpha_tab.bounds.origin.y.0 + alpha_tab.bounds.size.height.0 / 2.0),
         );
 
         let mut modifiers = Modifiers::default();
         modifiers.ctrl = true;
 
+        assert_eq!(ui.focus(), None);
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -1371,6 +1375,7 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("alpha"));
+        assert_eq!(ui.focus(), None);
     }
 
     #[test]
