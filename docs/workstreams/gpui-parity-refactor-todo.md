@@ -197,6 +197,8 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `removed_subtrees` include `reachable_from_view_cache_roots` to classify whether a swept subtree was still reachable from any view-cache reuse root node (child-edge reachability),
       vs. becoming a fully-detached island.
     - `removed_subtrees` include `trigger_element` / `trigger_element_root` and `trigger_element_root_path` to identify which element-runtime root produced the sweep.
+    - `debug.all_layer_roots` (derived from `layers_in_paint_order`) makes the GC liveness roots explicit per snapshot.
+    - `element_runtime.node_entry_root_overwrites` records `NodeEntry.root` ownership overwrites (element + old/new root + debug paths + callsite).
     - If these fields are missing in a failing bundle, it usually means: the debug identity entry was pruned (not touched for `gc_lag_frames`), or the parent never issued a `set_children(..)` write in the current capture.
   - Evidence (pass under reuse + shell):
     - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-torture.json --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
