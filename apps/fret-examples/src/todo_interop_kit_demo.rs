@@ -138,31 +138,22 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> Vec<A
         .copied()
         .unwrap_or_default();
 
-    let mut root_layout = fret_ui::element::LayoutStyle::default();
-    root_layout.size.width = fret_ui::element::Length::Fill;
-    root_layout.size.height = fret_ui::element::Length::Fill;
+    let root = ui::container(cx, |cx| {
+        let left = todo_panel(cx, &theme, st, &todos);
+        let right = external_panel(cx, &st.embedded, target, clicks, last_input);
 
-    let root = cx.container(
-        fret_ui::element::ContainerProps {
-            layout: root_layout,
-            background: Some(theme.color_required("background")),
-            ..Default::default()
-        },
-        |cx| {
-            let flex = fret_ui::element::FlexProps {
-                layout: root_layout,
-                direction: fret_core::Axis::Horizontal,
-                gap: Px(16.0),
-                padding: fret_core::Edges::all(Px(16.0)),
-                ..Default::default()
-            };
-
-            let left = todo_panel(cx, &theme, st, &todos);
-            let right = external_panel(cx, &st.embedded, target, clicks, last_input);
-
-            [cx.flex(flex, move |_cx| [left, right])]
-        },
-    );
+        [ui::h_flex(cx, move |_cx| [left, right])
+            .gap(Space::N4)
+            .p(Space::N4)
+            .w_full()
+            .h_full()
+            .items_stretch()
+            .into_element(cx)]
+    })
+    .bg(ColorRef::Color(theme.color_required("background")))
+    .w_full()
+    .h_full()
+    .into_element(cx);
 
     vec![root]
 }
@@ -223,24 +214,19 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
         .on_click(CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", item.id)))
         .into_element(cx);
 
-    let row = stack::hstack_iter(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .items_center()
-            .layout(LayoutRefinement::default().w_full()),
-        move |_cx| [checkbox, text, remove],
-    );
+    let row = ui::h_flex(cx, move |_cx| [checkbox, text, remove])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
+        .into_element(cx);
 
-    let props = shadcn::decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .border_1()
-            .rounded(Radius::Md)
-            .p(Space::N2),
-        LayoutRefinement::default().w_full(),
-    );
-    cx.container(props, move |_cx| [row])
+    ui::container(cx, move |_cx| [row])
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_required("border")))
+        .rounded(Radius::Md)
+        .p(Space::N2)
+        .w_full()
+        .into_element(cx)
 }
 
 fn external_panel(

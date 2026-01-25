@@ -133,51 +133,43 @@ impl CjkConformanceDriver {
                 }));
             }
 
-            let header = shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("CJK Conformance (bootstrap fonts)").into_element(cx),
-            ])
+            let header = shadcn::CardHeader::new([shadcn::CardTitle::new(
+                "CJK Conformance (bootstrap fonts)",
+            )
+            .into_element(cx)])
             .into_element(cx);
 
-            let scroll = shadcn::ScrollArea::new(vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N2)
-                    .items_start(),
-                |_cx| rows,
-            )])
-            .refine_layout(LayoutRefinement::default().w_full().h_full())
+            let scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| rows)
+                .w_full()
+                .gap(Space::N2)
+                .items_start()
+                .into_element(cx)])
+            .ui()
+            .w_full()
+            .h_full()
             .into_element(cx);
 
-            let content = shadcn::CardContent::new(vec![scroll]).into_element(cx);
-            let card = shadcn::Card::new(vec![header, content])
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_full()
-                        .max_w(MetricRef::Px(Px(960.0))),
-                )
+            let content = shadcn::CardContent::new([scroll]).into_element(cx);
+            let card = shadcn::Card::new([header, content])
+                .ui()
+                .w_full()
+                .h_full()
+                .max_w(MetricRef::Px(Px(960.0)))
                 .into_element(cx);
 
-            let page = {
-                let props = decl_style::container_props(
-                    &theme,
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(theme.color_required("muted")))
-                        .p(Space::N6),
-                    LayoutRefinement::default().w_full().h_full(),
-                );
-                cx.container(props, |cx| {
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .justify_center()
-                            .items_center(),
-                        |_cx| vec![card],
-                    )]
-                })
-            };
+            let page = ui::container(cx, |cx| {
+                [ui::v_flex(cx, |_cx| [card])
+                    .w_full()
+                    .h_full()
+                    .justify_center()
+                    .items_center()
+                    .into_element(cx)]
+            })
+            .bg(ColorRef::Color(theme.color_required("muted")))
+            .p(Space::N6)
+            .w_full()
+            .h_full()
+            .into_element(cx);
 
             vec![page]
         });

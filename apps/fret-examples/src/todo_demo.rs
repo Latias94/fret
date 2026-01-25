@@ -395,14 +395,14 @@ fn todo_row(
             test_id: Some(todo_item_test_id(it.id, "done")),
             ..Default::default()
         },
-        move |_cx| vec![checkbox],
+        move |_cx| [checkbox],
     );
 
     let remove_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::IconSm)
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(remove_cmd(it.id))
-        .children(vec![icon::icon_with(
+        .children([icon::icon_with(
             cx,
             IconId::new("lucide.trash-2"),
             Some(Px(16.0)),
@@ -415,7 +415,7 @@ fn todo_row(
             test_id: Some(todo_item_test_id(it.id, "remove")),
             ..Default::default()
         },
-        move |_cx| vec![remove_btn],
+        move |_cx| [remove_btn],
     );
 
     let mut hover = HoverRegionProps::default();
@@ -428,41 +428,29 @@ fn todo_row(
             chrome = chrome.bg(ColorRef::Color(bg));
         }
 
-        let props =
-            decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full());
+        let label = todo_label_simple(cx, theme, &it.text, done, hovered);
 
-        vec![cx.container(props, |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_between()
-                    .items_center(),
-                |cx| {
-                    let left = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().flex_1().min_w_0())
-                            .gap(Space::N3)
-                            .items_center(),
-                        |cx| {
-                            vec![
-                                checkbox.clone(),
-                                todo_label_simple(cx, theme, &it.text, done, hovered),
-                            ]
-                        },
-                    );
+        let left = ui::h_flex(cx, |_cx| [checkbox.clone(), label])
+            .flex_1()
+            .min_w_0()
+            .gap(Space::N3)
+            .items_center()
+            .into_element(cx);
 
-                    let right = cx.interactivity_gate(true, hovered, |cx| {
-                        vec![cx.opacity(if hovered { 1.0 } else { 0.0 }, |_cx| {
-                            vec![remove_btn.clone()]
-                        })]
-                    });
+        let right = cx.interactivity_gate(true, hovered, |cx| {
+            [cx.opacity(if hovered { 1.0 } else { 0.0 }, |_cx| [remove_btn.clone()])]
+        });
 
-                    vec![left, right]
-                },
-            )]
-        })]
+        let row = ui::h_flex(cx, |_cx| [left, right])
+            .w_full()
+            .justify_between()
+            .items_center()
+            .into_element(cx);
+
+        [ui::container(cx, |_cx| [row])
+            .style(chrome)
+            .w_full()
+            .into_element(cx)]
     })
 }
 
