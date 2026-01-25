@@ -217,20 +217,37 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`set_children_barrier`, `take_pending_barrier_relayouts`), `crates/fret-ui/src/tree/layout.rs` (`layout_pending_barrier_relayouts_if_needed`), `crates/fret-ui/src/declarative/mount.rs` (`VirtualList` uses barrier set-children when axis size is layout-definite).
   - Perf snapshot (release, `--warmup-frames 5`, `--sort time`, `--repeat 7`; nearest-rank p50/p95; updated after per-row view-cache roots):
     - Torture (`tools/diag-scripts/ui-gallery-virtual-list-torture.json`):
-      - Baseline: `p50.total_time_us=28763` `p95.total_time_us=33694` (p50 layout `27337`, prepaint `30`, paint `1389`) (run dir: `target/fret-diag-perf-vlist-torture-baseline-r7`).
-      - ViewCache+Shell: `p50.total_time_us=29363` `p95.total_time_us=34300` (p50 layout `27837`, prepaint `27`, paint `1471`) (run dir: `target/fret-diag-perf-vlist-torture-cache-shell-r7`).
+      - Baseline: `p50.total_time_us=29597` `p95.total_time_us=35369` (p50 layout `28201`, prepaint `29`, paint `1372`) (run dir: `target/fret-diag-perf-vlist-torture-baseline-r7-v2b`).
+      - ViewCache+Shell: `p50.total_time_us=29330` `p95.total_time_us=30262` (p50 layout `27765`, prepaint `24`, paint `1483`) (run dir: `target/fret-diag-perf-vlist-torture-cache-shell-r7-v4`).
       - Note: wall-clock timings are noisy; use repeat percentiles for comparisons, and expect occasional spikes.
     - Smooth wheel (`tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
-      - Baseline: `p50.total_time_us=22567` `p95.total_time_us=22963` (p50 layout `22271`, prepaint `25`, paint `270`) (run dir: `target/fret-diag-perf-vlist-smooth-baseline-r7`).
-      - ViewCache+Shell: `p50.total_time_us=26052` `p95.total_time_us=28978` (p50 layout `25271`, prepaint `23`, paint `764`) (run dir: `target/fret-diag-perf-vlist-smooth-cache-shell-r7`).
+      - Baseline: `p50.total_time_us=22988` `p95.total_time_us=23318` (p50 layout `22684`, prepaint `28`, paint `281`) (run dir: `target/fret-diag-perf-vlist-smooth-baseline-r7-v2b`).
+      - ViewCache+Shell: `p50.total_time_us=26592` `p95.total_time_us=27581` (p50 layout `25790`, prepaint `27`, paint `774`) (run dir: `target/fret-diag-perf-vlist-smooth-cache-shell-r7-v4`).
   - Commands:
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-torture-baseline-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 12 --repeat 7 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-torture-cache-shell-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 12 --repeat 7 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-smooth-baseline-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 15 --repeat 7 --json perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --launch -- cargo run -p fret-ui-gallery --release`
     - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-smooth-cache-shell-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 15 --repeat 7 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --launch -- cargo run -p fret-ui-gallery --release`
-  - Sketch:
-    - Move “visible range / scroll_to_item” work toward `prepaint` (GPUI-style), so steady-state scroll can reuse paint + interaction ranges without rebuilding large declarative subtrees.
+  - Notes:
+    - The current per-row cache roots help reduce subtree rebuild cost, but the measured scroll paths are still layout-dominated.
+    - The smooth wheel scenario is currently *worse* under view-cache + shell reuse, so the next steps must reduce list shell / range bookkeeping overhead (not just cache more).
+  - Checklist:
+    - [x] Avoid redundant per-row `measure_in` for clean measured rows (measured-mode gate).
+    - [x] Apply scroll offsets via a children-only render transform (content-space bounds).
+    - [x] Treat visible-range set-children churn as a layout barrier.
+    - [x] Wrap heavyweight rows in per-row view-cache roots (stable per-item identity).
+    - [x] Export VirtualList scroll/range diagnostics counters (range recompute, children churn, barrier relayouts) to bundles to make regressions explainable.
+      - Fields: `set_children_barrier_writes`, `barrier_relayouts_scheduled`, `barrier_relayouts_performed`, `virtual_list_visible_range_checks`, `virtual_list_visible_range_refreshes`.
+      - Evidence: `crates/fret-ui/src/tree/mod.rs` (`UiDebugFrameStats`, `debug_record_virtual_list_visible_range_check`),
+        `crates/fret-ui/src/tree/layout.rs` (`barrier_relayouts_performed`),
+        `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` export),
+        `crates/fret-ui/src/declarative/host_widget/paint.rs` (range checks).
+    - [ ] Move “visible range” computation toward `prepaint` (GPUI-style), so steady-state scroll can reuse recorded ranges without rebuilding large declarative subtrees.
+    - [ ] Move `scroll_to_item` consumption toward `prepaint` (or earlier than layout), so the scroll target can be applied without forcing extra layout-driven invalidation.
+    - [ ] Repeat the perf runs (baseline vs cache+shell) and update the p50/p95 snapshots after each structural change.
+  - Sketch (target shape):
     - Keep per-item identity stable (do not recycle cells) while making the “range delta” path cheap.
+    - Make “range delta” a prepaint-plan update whenever possible (offset/visible range), and keep layout limited to true geometry changes.
 - [~] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.
   - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-core/src/*` (data-only shapes as needed)
@@ -266,8 +283,9 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
 - [x] GPUI-MVP4-eco-001 Add an ecosystem-facing “cached subtree” helper API (policy-free).
   - Touches: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`, `CachedSubtreeProps`)
-- [ ] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
+- [~] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
   - Touches: `apps/fret-ui-gallery/src/*`, selected `ecosystem/*` components
+  - Progress: VirtualList torture rows are now wrapped in per-row view-cache roots (keyed by item key) so the shell can rerender without rebuilding heavy rows.
 
 ## Open Questions (Keep Short)
 
