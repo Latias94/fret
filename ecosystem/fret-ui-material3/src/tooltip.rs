@@ -15,7 +15,6 @@ use fret_ui::element::{
     SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::theme::CubicBezier;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::OverlayPresence;
 use fret_ui_kit::declarative::ModelWatchExt;
@@ -31,8 +30,8 @@ use fret_ui_kit::tooltip_provider;
 use crate::foundation::elevation::{
     apply_surface_tint_if_surface, shadow_for_elevation_with_color,
 };
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::ms_to_frames;
+use crate::tokens::tooltip as tooltip_tokens;
 
 fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: Color) -> AnyElement {
     match &mut element.kind {
@@ -300,7 +299,6 @@ impl PlainTooltip {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let resolver = MaterialTokenResolver::new(&theme);
 
         let align = self.align;
         let side = self.side;
@@ -317,28 +315,22 @@ impl PlainTooltip {
         let trigger_id = base_trigger.id;
         let anchor_id = anchor_override.unwrap_or(trigger_id);
 
-        let container_bg = resolver.color_comp_or_sys(
-            "md.comp.plain-tooltip.container.color",
-            "md.sys.color.inverse-surface",
-        );
-        let text_fg = resolver.color_comp_or_sys(
-            "md.comp.plain-tooltip.supporting-text.color",
-            "md.sys.color.inverse-on-surface",
-        );
-        let radius = theme
-            .metric_by_key("md.comp.plain-tooltip.container.shape")
-            .unwrap_or(Px(4.0));
+        let container_bg = tooltip_tokens::plain_container_background(&theme);
+        let text_fg = tooltip_tokens::plain_supporting_text_color(&theme);
+        let radius = tooltip_tokens::plain_container_shape_radius(&theme);
         let corner_radii = Corners::all(radius);
         // Material Web v30 plain tooltip tokens do not include elevation; keep it flat by default.
         let elevation = Px(0.0);
         let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
-        let shadow_color = resolver.color_sys("md.sys.color.shadow");
+        let shadow_color = tooltip_tokens::shadow_color(&theme);
         let shadow =
             shadow_for_elevation_with_color(&theme, elevation, Some(shadow_color), corner_radii);
 
         let body_small = theme
             .text_style_by_key("md.sys.typescale.body-small")
             .unwrap_or_default();
+        let content_max_width = tooltip_tokens::max_width(&theme);
+        let container_padding = tooltip_tokens::plain_container_padding(&theme);
 
         let content = cx.named("content", move |cx| {
             let child = match content_spec {
@@ -354,17 +346,12 @@ impl PlainTooltip {
             };
 
             let mut layout = LayoutStyle::default();
-            layout.size.max_width = Some(Px(240.0));
+            layout.size.max_width = Some(content_max_width);
 
             let container = cx.container(
                 ContainerProps {
                     layout,
-                    padding: Edges {
-                        left: Px(8.0),
-                        right: Px(8.0),
-                        top: Px(4.0),
-                        bottom: Px(4.0),
-                    },
+                    padding: container_padding,
                     background: Some(container_bg),
                     shadow,
                     corner_radii,
@@ -627,24 +614,12 @@ impl PlainTooltip {
 
             let opening = update.open;
             let open_ticks = ms_to_frames(
-                theme
-                    .duration_ms_by_key("md.sys.motion.duration.short2")
-                    .unwrap_or(100),
+                tooltip_tokens::open_duration_ms(&theme),
             );
             let close_ticks = ms_to_frames(
-                theme
-                    .duration_ms_by_key("md.sys.motion.duration.short1")
-                    .unwrap_or(50),
+                tooltip_tokens::close_duration_ms(&theme),
             );
-            let easing = theme
-                .easing_by_key("md.sys.motion.easing.emphasized")
-                .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"))
-                .unwrap_or(CubicBezier {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: 1.0,
-                    y2: 1.0,
-                });
+            let easing = tooltip_tokens::easing(&theme);
             let motion = transition::drive_transition_with_durations_and_cubic_bezier(
                 cx,
                 opening,
