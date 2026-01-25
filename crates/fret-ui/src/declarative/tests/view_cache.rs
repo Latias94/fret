@@ -507,6 +507,110 @@ fn view_cache_rerenders_on_virtual_list_scroll_to_item() {
 }
 
 #[test]
+fn view_cache_row_cached_virtual_list_keeps_semantics_in_viewport_space() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(40.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let mut root: Option<NodeId> = None;
+    let mut scene = Scene::default();
+
+    let render_frame =
+        |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut FakeTextService| {
+            let scroll_handle = scroll_handle.clone();
+            render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "view-cache-virtual-list-row-cache-semantics",
+                move |cx| {
+                    vec![cx.virtual_list_keyed(
+                        500,
+                        crate::element::VirtualListOptions::fixed(Px(10.0), 0),
+                        &scroll_handle,
+                        |i| i as u64,
+                        |cx, index| {
+                            cx.view_cache(
+                                crate::element::ViewCacheProps {
+                                    cache_key: index as u64,
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    let test_id = Arc::<str>::from(format!("row-{index}"));
+                                    vec![cx.semantics(
+                                        crate::element::SemanticsProps {
+                                            test_id: Some(test_id),
+                                            ..Default::default()
+                                        },
+                                        |cx| vec![cx.text("row")],
+                                    )]
+                                },
+                            )
+                        },
+                    )]
+                },
+            )
+        };
+
+    // Frame 0: mount at offset 0.
+    let root0 = render_frame(&mut ui, &mut app, &mut services);
+    root.get_or_insert(root0);
+    ui.set_root(root0);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    app.advance_frame();
+
+    // Out-of-band scroll-to-item triggers a deferred scroll request.
+    scroll_handle.scroll_to_item(80, crate::scroll::ScrollStrategy::Start);
+    assert!(scroll_handle.deferred_scroll_to_item().is_some());
+
+    // Frame 1: after the layout pass consumes the deferred request, semantics for the target row
+    // must be expressed in viewport/window space (not unscrolled content space).
+    let root1 = render_frame(&mut ui, &mut app, &mut services);
+    root.get_or_insert(root1);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    scene.clear();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "expected final layout to consume deferred scroll request"
+    );
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected a semantics snapshot to be requested");
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("row-80"))
+        .expect("expected semantics node for target row");
+
+    let y = node.bounds.origin.y.0;
+    assert!(
+        y.abs() <= 20.0,
+        "expected row semantics bounds to be near the top of the viewport; got y={y}"
+    );
+    assert!(
+        node.bounds.size.height.0 > 0.0,
+        "expected semantics bounds to have a non-zero height"
+    );
+}
+
+#[test]
 fn view_cache_inherits_model_observations_on_cache_hit_layout() {
     let mut app = TestHost::new();
     let model = app.models_mut().insert(0u32);
