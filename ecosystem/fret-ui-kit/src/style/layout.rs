@@ -170,6 +170,20 @@ impl LayoutRefinement {
         self
     }
 
+    pub fn top_px(mut self, top: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.top = Some(SignedMetricRef::pos(top));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn top_neg_px(mut self, top: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.top = Some(SignedMetricRef::neg(top));
+        self.inset = Some(inset);
+        self
+    }
+
     pub fn right(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.right = Some(SignedMetricRef::pos(MetricRef::space(space)));
@@ -180,6 +194,20 @@ impl LayoutRefinement {
     pub fn right_neg(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.right = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn right_px(mut self, right: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.right = Some(SignedMetricRef::pos(right));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn right_neg_px(mut self, right: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.right = Some(SignedMetricRef::neg(right));
         self.inset = Some(inset);
         self
     }
@@ -198,6 +226,20 @@ impl LayoutRefinement {
         self
     }
 
+    pub fn bottom_px(mut self, bottom: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.bottom = Some(SignedMetricRef::pos(bottom));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn bottom_neg_px(mut self, bottom: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.bottom = Some(SignedMetricRef::neg(bottom));
+        self.inset = Some(inset);
+        self
+    }
+
     pub fn left(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.left = Some(SignedMetricRef::pos(MetricRef::space(space)));
@@ -208,6 +250,20 @@ impl LayoutRefinement {
     pub fn left_neg(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.left = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn left_px(mut self, left: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.left = Some(SignedMetricRef::pos(left));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn left_neg_px(mut self, left: MetricRef) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.left = Some(SignedMetricRef::neg(left));
         self.inset = Some(inset);
         self
     }
