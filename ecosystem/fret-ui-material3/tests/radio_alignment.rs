@@ -15,58 +15,8 @@ use fret_runtime::{
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SceneSig {
-    PushTransform,
-    PopTransform,
-    PushOpacity,
-    PopOpacity,
-    PushLayer,
-    PopLayer,
-    PushClipRect,
-    PushClipRRect,
-    PopClip,
-    PushEffect,
-    PopEffect,
-    Quad(DrawOrder),
-    Image(DrawOrder),
-    ImageRegion(DrawOrder),
-    MaskImage(DrawOrder),
-    SvgMaskIcon(DrawOrder),
-    SvgImage(DrawOrder),
-    Text(DrawOrder),
-    Path(DrawOrder),
-    ViewportSurface(DrawOrder),
-}
-
-fn scene_signature(scene: &Scene) -> Vec<SceneSig> {
-    scene
-        .ops()
-        .iter()
-        .map(|op| match *op {
-            SceneOp::PushTransform { .. } => SceneSig::PushTransform,
-            SceneOp::PopTransform => SceneSig::PopTransform,
-            SceneOp::PushOpacity { .. } => SceneSig::PushOpacity,
-            SceneOp::PopOpacity => SceneSig::PopOpacity,
-            SceneOp::PushLayer { .. } => SceneSig::PushLayer,
-            SceneOp::PopLayer => SceneSig::PopLayer,
-            SceneOp::PushClipRect { .. } => SceneSig::PushClipRect,
-            SceneOp::PushClipRRect { .. } => SceneSig::PushClipRRect,
-            SceneOp::PopClip => SceneSig::PopClip,
-            SceneOp::PushEffect { .. } => SceneSig::PushEffect,
-            SceneOp::PopEffect => SceneSig::PopEffect,
-            SceneOp::Quad { order, .. } => SceneSig::Quad(order),
-            SceneOp::Image { order, .. } => SceneSig::Image(order),
-            SceneOp::ImageRegion { order, .. } => SceneSig::ImageRegion(order),
-            SceneOp::MaskImage { order, .. } => SceneSig::MaskImage(order),
-            SceneOp::SvgMaskIcon { order, .. } => SceneSig::SvgMaskIcon(order),
-            SceneOp::SvgImage { order, .. } => SceneSig::SvgImage(order),
-            SceneOp::Text { order, .. } => SceneSig::Text(order),
-            SceneOp::Path { order, .. } => SceneSig::Path(order),
-            SceneOp::ViewportSurface { order, .. } => SceneSig::ViewportSurface(order),
-        })
-        .collect()
-}
+mod interaction_harness;
+use interaction_harness::{SceneSig, scene_signature};
 
 #[derive(Default)]
 struct TestHost {
@@ -1212,6 +1162,285 @@ fn tabs_pressed_scene_structure_is_stable() {
             assert_eq!(
                 sig, *prev,
                 "expected Tabs to keep a stable scene structure while pressed"
+            );
+        } else {
+            baseline = Some(sig);
+        }
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+}
+
+#[test]
+fn icon_button_pressed_scene_structure_is_stable() {
+    use fret_icons::ids;
+    use fret_ui_material3::IconButton;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+
+    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+        fret_ui_material3::tokens::v30::TypographyOptions::default(),
+        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+    );
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let button = IconButton::new(ids::ui::CHECK)
+                .a11y_label("icon button")
+                .test_id("icon-button")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), button)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let button_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("icon-button") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected icon-button in semantics snapshot");
+    let button_bounds = ui
+        .debug_node_visual_bounds(button_node)
+        .expect("expected icon-button visual bounds");
+    let press_at = Point::new(
+        Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+        Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+
+    let mut baseline: Option<Vec<SceneSig>> = None;
+    for frame in 0..6 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        if frame < 2 {
+            continue;
+        }
+
+        let sig = scene_signature(&scene);
+        if let Some(prev) = baseline.as_ref() {
+            assert_eq!(
+                sig, *prev,
+                "expected IconButton to keep a stable scene structure while pressed"
+            );
+        } else {
+            baseline = Some(sig);
+        }
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+}
+
+#[test]
+fn switch_pressed_scene_structure_is_stable() {
+    use fret_ui_material3::Switch;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+
+    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+        fret_ui_material3::tokens::v30::TypographyOptions::default(),
+        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+    );
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let selected = app.models_mut().insert(false);
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let switch = Switch::new(selected.clone())
+                .a11y_label("switch")
+                .test_id("switch")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), switch)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let switch_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("switch") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected switch in semantics snapshot");
+    let switch_bounds = ui
+        .debug_node_visual_bounds(switch_node)
+        .expect("expected switch visual bounds");
+    let press_at = Point::new(
+        Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+        Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+
+    let mut baseline: Option<Vec<SceneSig>> = None;
+    for frame in 0..6 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        if frame < 2 {
+            continue;
+        }
+
+        let sig = scene_signature(&scene);
+        if let Some(prev) = baseline.as_ref() {
+            assert_eq!(
+                sig, *prev,
+                "expected Switch to keep a stable scene structure while pressed"
+            );
+        } else {
+            baseline = Some(sig);
+        }
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+}
+
+#[test]
+fn radio_pressed_scene_structure_is_stable() {
+    use fret_ui_material3::Radio;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+
+    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+        fret_ui_material3::tokens::v30::TypographyOptions::default(),
+        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
+    );
+    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(240.0)),
+    );
+
+    let selected = app.models_mut().insert(false);
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let radio = Radio::new(selected.clone())
+                .a11y_label("radio")
+                .test_id("radio")
+                .into_element(cx);
+            vec![with_padding(cx, Px(32.0), radio)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let radio_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("radio") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected radio in semantics snapshot");
+    let radio_bounds = ui
+        .debug_node_visual_bounds(radio_node)
+        .expect("expected radio visual bounds");
+    let press_at = Point::new(
+        Px(radio_bounds.origin.x.0 + radio_bounds.size.width.0 * 0.5),
+        Px(radio_bounds.origin.y.0 + radio_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), press_at),
+    );
+
+    let mut baseline: Option<Vec<SceneSig>> = None;
+    for frame in 0..6 {
+        app.advance_frame();
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        if frame < 2 {
+            continue;
+        }
+
+        let sig = scene_signature(&scene);
+        if let Some(prev) = baseline.as_ref() {
+            assert_eq!(
+                sig, *prev,
+                "expected Radio to keep a stable scene structure while pressed"
             );
         } else {
             baseline = Some(sig);

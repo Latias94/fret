@@ -367,7 +367,8 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TEXT_FIELD`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_text_field`).
 - [x] Add a small, scripted interaction test harness for Material states (hover/press/ripple).
-  - Evidence: tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tabs_pressed_scene_structure_is_stable`).
+  - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_signature`),
+    tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tabs_pressed_scene_structure_is_stable`, `icon_button_pressed_scene_structure_is_stable`, `switch_pressed_scene_structure_is_stable`, `radio_pressed_scene_structure_is_stable`).
 - [ ] Add golden-style visual snapshots per component state (light/dark, density variants).
 
 ## Proposed ADRs (drafts)
