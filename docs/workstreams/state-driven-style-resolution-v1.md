@@ -50,8 +50,8 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - [x] SDSR-120 Tabs: migrate trigger/button-like styling to `WidgetStates`.
 - [x] SDSR-121 Tabs: add and export `TabsStyle` (at least tab trigger background/foreground/border/ring).
 
-- [ ] SDSR-130 Input: introduce `InputStyle` for chrome/background/border/ring (note: some chrome already resolves via `fret-ui-kit::recipes::input`).
-- [ ] SDSR-131 Input: ensure focus-visible semantics for ring/border (aligned with ADR 0061).
+- [x] SDSR-130 Input: introduce `InputStyle` for chrome/background/border/ring (note: some chrome already resolves via `fret-ui-kit::recipes::input`).
+- [x] SDSR-131 Input: ensure focus-visible semantics for ring/border (aligned with ADR 0061).
 
 ### P2 — Overlay/Menu Surfaces (Radix-like)
 
@@ -95,3 +95,5 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-shadcn/src/lib.rs`
 - `ecosystem/fret-ui-shadcn/src/toggle.rs`
 - `ecosystem/fret-ui-shadcn/src/tabs.rs`
+- `ecosystem/fret-ui-shadcn/src/input.rs`
+- `crates/fret-ui/src/text_input/widget.rs`
