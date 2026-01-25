@@ -132,7 +132,7 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
         .size(shadcn::ButtonSize::Icon)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
-        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
+        .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx);
 "#
     } else {
@@ -148,7 +148,7 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
         .size(shadcn::ButtonSize::Icon)
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(remove_cmd)
-        .children(vec![icon::icon(cx, IconId::new("lucide.trash"))])
+        .children([icon::icon(cx, IconId::new("lucide.trash"))])
         .into_element(cx);
 "#
     } else {
@@ -211,7 +211,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement> {
-    cx.observe_model(&st.todos, Invalidation::Layout);
+    let todos = cx
+        .watch_model(&st.todos)
+        .layout()
+        .cloned()
+        .unwrap_or_default();
     let draft_value = cx
         .watch_model(&st.draft)
         .layout()
@@ -234,27 +238,15 @@ __ADD_BTN_DEF__
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2)
             .items_center(),
-        |_cx| vec![input, add_btn],
+        |_cx| [input, add_btn],
     );
-
-    let todos = cx
-        .app
-        .models()
-        .read(&st.todos, |v| v.clone())
-        .ok()
-        .unwrap_or_default();
 
     let rows = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N3),
-        |cx| {
-            todos
-                .iter()
-                .map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, t)))
-                .collect()
-        },
+        |cx| todos.iter().map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, t))),
     );
 
     let chrome = ChromeRefinement::default()
@@ -263,19 +255,19 @@ __ADD_BTN_DEF__
         .border_1()
         .border_color(ColorRef::Color(theme.color_required("border")));
 
-    let card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
+    let card = shadcn::Card::new([
+        shadcn::CardHeader::new([
             shadcn::CardTitle::new("Todo").into_element(cx),
             shadcn::CardDescription::new("A minimal Fret + shadcn template.").into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![
+        shadcn::CardContent::new([
             stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full())
                     .gap(Space::N4),
-                |_cx| vec![input_row, rows],
+                |_cx| [input_row, rows],
             ),
         ])
         .into_element(cx),
@@ -292,16 +284,14 @@ __ADD_BTN_DEF__
                 .p(Space::N6),
             LayoutRefinement::default().w_full().h_full(),
         ),
-        |cx| {
-            vec![stack::vstack(
+        |cx| [stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full().h_full())
                     .justify_center()
                     .items_center(),
-                |_cx| vec![card],
-            )]
-        },
+                |_cx| [card],
+            )],
     );
 
     vec![page]
@@ -328,41 +318,39 @@ __REMOVE_BTN_DEF__
         LayoutRefinement::default().w_full(),
     );
 
-    cx.container(props, |cx| {
-        vec![stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_between()
-                .items_center(),
-            |cx| {
-                let label = cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: item.text.clone(),
-                    style: None,
-                    color: Some(theme.color_required(if done {
-                        "muted-foreground"
-                    } else {
-                        "foreground"
-                    })),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Ellipsis,
-                });
+    cx.container(props, |cx| [stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_between()
+            .items_center(),
+        |cx| {
+            let label = cx.text_props(TextProps {
+                layout: Default::default(),
+                text: item.text.clone(),
+                style: None,
+                color: Some(theme.color_required(if done {
+                    "muted-foreground"
+                } else {
+                    "foreground"
+                })),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+            });
 
-                vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().flex_1().min_w_0())
-                            .gap(Space::N3)
-                            .items_center(),
-                        |_cx| vec![checkbox.clone(), label],
-                    ),
-                    remove_btn.clone(),
-                ]
-            },
-        )]
-    })
+            [
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().flex_1().min_w_0())
+                        .gap(Space::N3)
+                        .items_center(),
+                    |_cx| [checkbox.clone(), label],
+                ),
+                remove_btn.clone(),
+            ]
+        },
+    )])
 }
 
 fn on_command(
@@ -449,7 +437,7 @@ pub(super) fn todo_mvu_template_main_rs(_package_name: &str, opts: ScaffoldOptio
         .size(shadcn::ButtonSize::Icon)
         .disabled(!add_enabled)
         .on_click(add_cmd.clone())
-        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
+        .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx);
 "#
     } else {
@@ -466,7 +454,7 @@ pub(super) fn todo_mvu_template_main_rs(_package_name: &str, opts: ScaffoldOptio
         .size(shadcn::ButtonSize::Icon)
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(remove_cmd.clone())
-        .children(vec![icon::icon(cx, IconId::new("lucide.trash"))])
+        .children([icon::icon(cx, IconId::new("lucide.trash"))])
         .into_element(cx);
 "#
     } else {
@@ -613,7 +601,7 @@ __ADD_BTN_DEF__
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N2)
                 .items_center(),
-            |_cx| vec![input, add_btn],
+            |_cx| [input, add_btn],
         );
 
         let rows = stack::vstack(
@@ -621,12 +609,7 @@ __ADD_BTN_DEF__
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N3),
-            |cx| {
-                todos
-                    .iter()
-                    .map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, msg, t)))
-                    .collect()
-            },
+            |cx| todos.iter().map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, msg, t))),
         );
 
         let clear_done = shadcn::Button::new("Clear done")
@@ -640,20 +623,20 @@ __ADD_BTN_DEF__
             .border_1()
             .border_color(ColorRef::Color(theme.color_required("border")));
 
-        let card = shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
+        let card = shadcn::Card::new([
+            shadcn::CardHeader::new([
                 shadcn::CardTitle::new("Todo (MVU)").into_element(cx),
                 shadcn::CardDescription::new("Typed messages via MessageRouter.")
                     .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new(vec![
+            shadcn::CardContent::new([
                 stack::vstack(
                     cx,
                     stack::VStackProps::default()
                         .layout(LayoutRefinement::default().w_full())
                         .gap(Space::N4),
-                    |_cx| vec![input_row, rows, clear_done],
+                    |_cx| [input_row, rows, clear_done],
                 ),
             ])
             .into_element(cx),
@@ -670,16 +653,14 @@ __ADD_BTN_DEF__
                     .p(Space::N6),
                 LayoutRefinement::default().w_full().h_full(),
             ),
-            |cx| {
-                vec![stack::vstack(
+            |cx| [stack::vstack(
                     cx,
                     stack::VStackProps::default()
                         .layout(LayoutRefinement::default().w_full().h_full())
                         .justify_center()
                         .items_center(),
-                    |_cx| vec![card],
-                )]
-            },
+                    |_cx| [card],
+                )],
         );
 
         vec![page]
@@ -712,8 +693,7 @@ __REMOVE_BTN_DEF__
         LayoutRefinement::default().w_full(),
     );
 
-    cx.container(props, |cx| {
-        vec![stack::hstack(
+    cx.container(props, |cx| [stack::hstack(
             cx,
             stack::HStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
@@ -733,20 +713,19 @@ __REMOVE_BTN_DEF__
                     overflow: TextOverflow::Ellipsis,
                 });
 
-                vec![
+                [
                     stack::hstack(
                         cx,
                         stack::HStackProps::default()
                             .layout(LayoutRefinement::default().flex_1().min_w_0())
                             .gap(Space::N3)
                             .items_center(),
-                        |_cx| vec![checkbox.clone(), label],
+                        |_cx| [checkbox.clone(), label],
                     ),
                     remove_btn.clone(),
                 ]
             },
-        )]
-    })
+        )])
 }
 "#;
 
@@ -788,7 +767,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {{
             .items_center()
             .justify_center(),
         |cx| {{
-            vec![
+            [
                 shadcn::Label::new("Hello, world!").into_element(cx),
                 shadcn::Button::new("Click me")
                     .on_click(CMD_CLICK)
