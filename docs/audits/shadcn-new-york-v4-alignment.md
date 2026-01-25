@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `248/448` keys referenced (`55.4%`)
+- shadcn-web `v4/new-york-v4`: `250/448` keys referenced (`55.8%`)
 
 ## Executive summary (current status + next targets)
 
@@ -48,7 +48,7 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 ### Recommended next alignment targets (P0 order)
 
 1. **Calendar dropdown caption + popover composition**
-   - Blocks: `calendar-27..30`, `calendar-32` (`captionLayout="dropdown"`) and `calendar-hijri`.
+   - Blocks: `calendar-27..29` (`captionLayout="dropdown"`) and `calendar-hijri`.
 2. **Forms / Field validation chrome**
    - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
 3. **Carousel**
