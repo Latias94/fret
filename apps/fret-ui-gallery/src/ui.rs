@@ -575,6 +575,8 @@ fn page_preview(
                 material3_switch,
                 material3_radio_value,
                 material3_tabs_value,
+                material3_list_value,
+                material3_navigation_bar_value,
                 material3_text_field_value,
                 material3_text_field_disabled,
                 material3_text_field_error,
@@ -1443,6 +1445,8 @@ fn preview_material3_gallery(
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
     material3_tabs_value: Model<Arc<str>>,
+    material3_list_value: Model<Arc<str>>,
+    material3_navigation_bar_value: Model<Arc<str>>,
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
@@ -1561,6 +1565,32 @@ fn preview_material3_gallery(
                 material3::TabItem::new("overview", "Overview"),
                 material3::TabItem::new("security", "Security"),
                 material3::TabItem::new("settings", "Settings"),
+            ])
+            .into_element(cx),
+    );
+
+    out.push(cx.text("— Navigation Bar —"));
+    out.push(
+        material3::NavigationBar::new(material3_navigation_bar_value)
+            .a11y_label("Navigation bar")
+            .items(vec![
+                material3::NavigationBarItem::new("search", "Search", ids::ui::SEARCH),
+                material3::NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS),
+                material3::NavigationBarItem::new("more", "More", ids::ui::MORE_HORIZONTAL),
+            ])
+            .into_element(cx),
+    );
+
+    out.push(cx.text("— List —"));
+    out.push(
+        material3::List::new(material3_list_value)
+            .a11y_label("List")
+            .items(vec![
+                material3::ListItem::new("alpha", "Alpha").leading_icon(ids::ui::SEARCH),
+                material3::ListItem::new("beta", "Beta").leading_icon(ids::ui::SETTINGS),
+                material3::ListItem::new("disabled", "Disabled")
+                    .leading_icon(ids::ui::SLASH)
+                    .disabled(true),
             ])
             .into_element(cx),
     );
