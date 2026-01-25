@@ -27,6 +27,15 @@ Current golden parity snapshot (new-york-v4):
 Strategy: fill **breadth first** (one canonical viewport per page), then add a small set of targeted
 viewport/DPI stress variants for the highest-risk families (menus, listboxes, calendars, typography).
 
+Decision note (scope + sequencing):
+
+- We do **not** wait for 100% component breadth before adding resolution/viewport stress variants.
+  For overlay families (menus/listboxes/popovers/dialogs) and typography, the “constrained viewport” gates
+  are part of the *first* meaningful parity check because they validate max-height clamping, scroll buttons,
+  truncation/wrap behavior, and “menu height” as a styling outcome.
+- We *do* keep the **DPI/font-metrics** dimension small until breadth is higher, because it tends to be
+  more sensitive and is best added once core geometry is stable.
+
 P0 (next):
 
 - Gate `carousel-*` pages (default first, then constrained viewport if policy changes).

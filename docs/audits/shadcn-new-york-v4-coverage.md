@@ -48,20 +48,22 @@ At the time of writing, the largest missing groups were:
 - `item` (8; list row chrome + slot alignment)
 - `carousel` (6; layout + snapping + spacing)
 
-The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were:
+The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
+(heuristic grouping by key prefix):
 
+- `calendar` (34)
 - `button` (25)
-- `input` (17)
+- `form` (19)
 - `navigation` (17)
-- `calendar` (23)
+- `input` (17)
 - `sidebar` (16)
 - `toggle` (13)
 - `dropdown` (10)
 - `scroll` (10)
 - `sheet` (10)
 - `field` (9)
-- `breadcrumb` (9)
 - `menubar` (9)
+- `breadcrumb` (9)
 
 Recompute locally:
 
@@ -81,18 +83,19 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## What to do next (recommended order)
 
-1. **Gate missing form composition + validation chrome** (high leverage):
-   - `form-*` and any remaining `field-*` / `input-*` invalid variants
-2. **Gate missing medium-surface components** next:
+1. **Finish the small missing families** (fast breadth gains):
    - Carousel (`carousel-*`)
    - Typography breadth (`typography-*`)
-3. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
-4. **Add constrained viewport variants** for overlay-like components (if not already gated):
-   - menus: height/width clamp + scroll buttons
+   - Spinner + item patterns (`spinner-*`, `item-*`)
+2. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
+3. **Add constrained viewport variants** early for overlay-like components:
+   - menus/listboxes: max-height clamp + scroll buttons + row height (treat “menu height” as a styling outcome)
    - popovers/tooltips: flip/shift under low height
    - dialogs/sheets: insets under low height/width
-5. Keep `docs/audits/shadcn-new-york-v4-alignment.md` updated as behavior becomes audited (add
-   “Conformance gates” anchors and “Known gaps” notes).
+4. **DPI / font-metrics gates**: keep this dimension small and targeted until breadth is higher
+   (recommended targets: typography + menus/listboxes).
+5. **Chart push**: treat `chart-*` as a dedicated sprint (surface area is large; likely needs additional audit
+   notes + more selective gates).
 
 ## Common “coverage smells”
 

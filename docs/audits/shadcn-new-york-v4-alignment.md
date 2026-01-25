@@ -16,6 +16,10 @@ Coverage snapshot (time of writing):
 
 - shadcn-web `v4/new-york-v4`: `273/448` keys referenced (`60.9%`)
 
+Heuristic “where we already have gates” (top key families by prefix):
+
+- `calendar` (34), `button` (25), `form` (19), `navigation` (17), `input` (17), `sidebar` (16)
+
 ## Executive summary (current status + next targets)
 
 This audit intentionally separates “breadth coverage” (what is gated at all) from “depth conformance”
