@@ -475,6 +475,8 @@ pub struct UiDebugSetChildrenWrite {
     pub frame_id: FrameId,
     pub old_len: u32,
     pub new_len: u32,
+    pub old_elements_head: [Option<GlobalElementId>; 4],
+    pub new_elements_head: [Option<GlobalElementId>; 4],
     pub file: &'static str,
     pub line: u32,
     pub column: u32,
@@ -1113,6 +1115,18 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    #[cfg(feature = "diagnostics")]
+    fn debug_sample_child_elements_head(
+        &self,
+        children: &[NodeId],
+    ) -> [Option<GlobalElementId>; 4] {
+        let mut out: [Option<GlobalElementId>; 4] = [None; 4];
+        for (i, &child) in children.iter().take(out.len()).enumerate() {
+            out[i] = self.nodes.get(child).and_then(|n| n.element);
+        }
+        out
+    }
+
     fn invalidation_marks_view_dirty(
         source: UiDebugInvalidationSource,
         detail: UiDebugInvalidationDetail,
@@ -2230,6 +2244,12 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         if self.debug_enabled {
             let location = std::panic::Location::caller();
+            let old_elements_head = self
+                .nodes
+                .get(parent)
+                .map(|n| self.debug_sample_child_elements_head(&n.children))
+                .unwrap_or([None; 4]);
+            let new_elements_head = self.debug_sample_child_elements_head(&children);
             self.debug_set_children_writes.insert(
                 parent,
                 UiDebugSetChildrenWrite {
@@ -2237,6 +2257,8 @@ impl<H: UiHost> UiTree<H> {
                     frame_id: self.debug_stats.frame_id,
                     old_len: _old_len.min(u32::MAX as usize) as u32,
                     new_len: children.len().min(u32::MAX as usize) as u32,
+                    old_elements_head,
+                    new_elements_head,
                     file: location.file(),
                     line: location.line(),
                     column: location.column(),
@@ -2324,6 +2346,12 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         if self.debug_enabled {
             let location = std::panic::Location::caller();
+            let old_elements_head = self
+                .nodes
+                .get(parent)
+                .map(|n| self.debug_sample_child_elements_head(&n.children))
+                .unwrap_or([None; 4]);
+            let new_elements_head = self.debug_sample_child_elements_head(&children);
             self.debug_set_children_writes.insert(
                 parent,
                 UiDebugSetChildrenWrite {
@@ -2331,6 +2359,8 @@ impl<H: UiHost> UiTree<H> {
                     frame_id: self.debug_stats.frame_id,
                     old_len: _old_len.min(u32::MAX as usize) as u32,
                     new_len: children.len().min(u32::MAX as usize) as u32,
+                    old_elements_head,
+                    new_elements_head,
                     file: location.file(),
                     line: location.line(),
                     column: location.column(),

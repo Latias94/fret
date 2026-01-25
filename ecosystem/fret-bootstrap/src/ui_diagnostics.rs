@@ -3162,6 +3162,14 @@ pub struct UiCacheRootStatsV1 {
     pub children_last_set_old_len: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub children_last_set_new_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_old_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_new_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_old_elements_head_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_new_elements_head_paths: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub children_last_set_frame_id: Option<u64>,
     #[serde(default)]
@@ -3209,18 +3217,55 @@ impl UiCacheRootStatsV1 {
             children_last_set_location,
             children_last_set_old_len,
             children_last_set_new_len,
+            children_last_set_old_elements_head,
+            children_last_set_new_elements_head,
+            children_last_set_old_elements_head_paths,
+            children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
         ) = ui
             .debug_set_children_write_for(stats.root)
             .map(|w| {
+                let old_elements_head: Vec<_> =
+                    w.old_elements_head.iter().flatten().copied().collect();
+                let new_elements_head: Vec<_> =
+                    w.new_elements_head.iter().flatten().copied().collect();
+
+                let old_paths: Vec<String> = old_elements_head
+                    .iter()
+                    .filter_map(|id| {
+                        element_runtime
+                            .and_then(|runtime| runtime.debug_path_for_element(window, *id))
+                    })
+                    .collect();
+                let new_paths: Vec<String> = new_elements_head
+                    .iter()
+                    .filter_map(|id| {
+                        element_runtime
+                            .and_then(|runtime| runtime.debug_path_for_element(window, *id))
+                    })
+                    .collect();
+
                 (
                     Some(format!("{}:{}:{}", w.file, w.line, w.column)),
                     Some(w.old_len),
                     Some(w.new_len),
+                    old_elements_head.iter().map(|id| id.0).collect::<Vec<_>>(),
+                    new_elements_head.iter().map(|id| id.0).collect::<Vec<_>>(),
+                    old_paths,
+                    new_paths,
                     Some(w.frame_id.0),
                 )
             })
-            .unwrap_or((None, None, None, None));
+            .unwrap_or((
+                None,
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                None,
+            ));
         Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),
@@ -3235,6 +3280,10 @@ impl UiCacheRootStatsV1 {
             children_last_set_location,
             children_last_set_old_len,
             children_last_set_new_len,
+            children_last_set_old_elements_head,
+            children_last_set_new_elements_head,
+            children_last_set_old_elements_head_paths,
+            children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
         }
