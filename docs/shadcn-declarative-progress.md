@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `243/448` (`54.2%`)
-- Next P0 gaps: calendar dropdown caption + popover composition (`calendar-22..30`, `calendar-32`, `calendar-hijri`), then forms/field validation chrome and carousel.
+- Keys referenced by tests: `244/448` (`54.5%`)
+- Next P0 gaps: open-state date pickers with calendar dropdown caption (`calendar-23..30`, `calendar-32`) and `calendar-hijri`, then forms/field validation chrome and carousel.
 
 ## Scope
 

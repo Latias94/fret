@@ -28,10 +28,10 @@ Practical rule:
 
 This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
-- Golden files: `477`
+- Golden files: `478`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `243` (`54.2%`)
-- Keys not referenced by tests: `205`
+- Keys referenced by tests: `244` (`54.5%`)
+- Keys not referenced by tests: `204`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -43,7 +43,7 @@ At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
 - `form` (19; field composition + validation chrome)
-- `calendar` (11; primitives-heavy; tends to expose text metrics + grid layout edge cases)
+- `calendar` (10; primitives-heavy; tends to expose text metrics + grid layout edge cases)
 - `typography` (13; baseline text metrics and prose defaults)
 - `input` (10; control chrome + stacking patterns)
 
@@ -81,8 +81,8 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 ## What to do next (recommended order)
 
 1. **Gate missing primitives-heavy widgets** first (high churn risk):
-   - Remaining calendar variants (11 missing): prioritize `captionLayout="dropdown"` + popover composition
-     (`calendar-22..30`, `calendar-32`) and `calendar-hijri`.
+   - Remaining calendar variants (10 missing): prioritize open-state popover/drawer composition
+     (`calendar-23..30`, `calendar-32`) and `calendar-hijri`.
 2. **Gate missing form composition + validation chrome** (high leverage):
    - `form-*` and any remaining `field-*` / `input-*` invalid variants
 3. **Gate missing medium-surface components** next:

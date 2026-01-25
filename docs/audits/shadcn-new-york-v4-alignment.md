@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `243/448` keys referenced (`54.2%`)
+- shadcn-web `v4/new-york-v4`: `244/448` keys referenced (`54.5%`)
 
 ## Executive summary (current status + next targets)
 
@@ -48,7 +48,7 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 ### Recommended next alignment targets (P0 order)
 
 1. **Calendar dropdown caption + popover composition**
-   - Blocks: `calendar-22..30`, `calendar-32` (`captionLayout="dropdown"`) and `calendar-hijri`.
+   - Blocks: `calendar-23..30`, `calendar-32` (`captionLayout="dropdown"`) and `calendar-hijri`.
 2. **Forms / Field validation chrome**
    - Bring `Form`/`Field`/`Input` invalid states under gates (ARIA + border/ring tokens + spacing).
 3. **Carousel**
@@ -199,6 +199,7 @@ Recent fixes:
   - Month-bounds gating (`startMonth`/`endMonth`) and `disableNavigation` parity (`calendar-11`).
   - Locale-aware month titles + day labels for Spanish (`calendar-12`).
 - Multiple selection (`mode="multiple"`) parity is now gated for `calendar-03` (including `required` + `max` selection policy).
+- Popover date picker composition open-state overlay placement is now gated for `calendar-22.open` (`align="start"`, `sideOffset=4`).
 - Day buttons support `--cell-size` variants (per-golden) via `Calendar::{cell_size, show_week_number}` and
   nav button sizing.
 - `showOutsideDays=false` now keeps invisible outside-day placeholders (a11y-hidden) so x/y geometry matches.
@@ -210,6 +211,7 @@ Conformance gates:
 - Layout + a11y labels: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_demo_day_grid_geometry_and_a11y_labels_match_web`).
 - Variant geometry (single-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_*_geometry_matches`).
 - Variant geometry (multi-month): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_{02,03,05,07,09,11,12}_geometry_matches`).
+- Popover open-state placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_calendar_22_open_overlay_placement_matches`).
 
 ### `DropdownMenu`
 
