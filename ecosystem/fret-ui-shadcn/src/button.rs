@@ -14,6 +14,43 @@ use fret_ui_kit::{
     Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
+#[derive(Debug, Clone, Default)]
+pub struct ButtonStyle {
+    pub background: Option<WidgetStateProperty<ColorRef>>,
+    pub foreground: Option<WidgetStateProperty<ColorRef>>,
+    pub border_color: Option<WidgetStateProperty<ColorRef>>,
+}
+
+impl ButtonStyle {
+    pub fn background(mut self, background: WidgetStateProperty<ColorRef>) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn foreground(mut self, foreground: WidgetStateProperty<ColorRef>) -> Self {
+        self.foreground = Some(foreground);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: WidgetStateProperty<ColorRef>) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.foreground.is_some() {
+            self.foreground = other.foreground;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        self
+    }
+}
+
 fn contains_svg_icon_like(el: &AnyElement) -> bool {
     match &el.kind {
         fret_ui::element::ElementKind::SvgIcon(_) | fret_ui::element::ElementKind::Spinner(_) => {
@@ -60,10 +97,11 @@ impl ButtonSize {
     }
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct ButtonVariantStyle {
     pub background: WidgetStateProperty<ColorRef>,
     pub border_color: WidgetStateProperty<ColorRef>,
-    pub foreground: ColorRef,
+    pub foreground: WidgetStateProperty<ColorRef>,
 }
 
 fn token(key: &'static str, fallback: ColorFallback) -> ColorRef {
@@ -97,7 +135,10 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                     ),
                 ),
             border_color: WidgetStateProperty::new(transparent.clone()),
-            foreground: token("primary-foreground", ColorFallback::ThemeTextPrimary),
+            foreground: WidgetStateProperty::new(token(
+                "primary-foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
         },
         ButtonVariant::Destructive => ButtonVariantStyle {
             background: WidgetStateProperty::new(token("destructive", ColorFallback::ThemeAccent))
@@ -122,12 +163,12 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                     ),
                 ),
             border_color: WidgetStateProperty::new(transparent.clone()),
-            foreground: ColorRef::Color(Color {
+            foreground: WidgetStateProperty::new(ColorRef::Color(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 1.0,
-            }),
+            })),
         },
         ButtonVariant::Secondary => ButtonVariantStyle {
             background: WidgetStateProperty::new(token(
@@ -155,7 +196,10 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                 ),
             ),
             border_color: WidgetStateProperty::new(transparent.clone()),
-            foreground: token("secondary-foreground", ColorFallback::ThemeTextPrimary),
+            foreground: WidgetStateProperty::new(token(
+                "secondary-foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
         },
         ButtonVariant::Outline => ButtonVariantStyle {
             background: WidgetStateProperty::new(token(
@@ -184,7 +228,10 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                 WidgetStates::FOCUS_VISIBLE,
                 token("ring", ColorFallback::ThemeFocusRing),
             ),
-            foreground: token("foreground", ColorFallback::ThemeTextPrimary),
+            foreground: WidgetStateProperty::new(token(
+                "foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
         },
         ButtonVariant::Ghost => ButtonVariantStyle {
             background: WidgetStateProperty::new(transparent.clone())
@@ -203,12 +250,15 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                     ),
                 ),
             border_color: WidgetStateProperty::new(transparent.clone()),
-            foreground: token("foreground", ColorFallback::ThemeTextPrimary),
+            foreground: WidgetStateProperty::new(token(
+                "foreground",
+                ColorFallback::ThemeTextPrimary,
+            )),
         },
         ButtonVariant::Link => ButtonVariantStyle {
             background: WidgetStateProperty::new(transparent.clone()),
             border_color: WidgetStateProperty::new(transparent.clone()),
-            foreground: token("primary", ColorFallback::ThemeAccent),
+            foreground: WidgetStateProperty::new(token("primary", ColorFallback::ThemeAccent)),
         },
     }
 }
@@ -235,7 +285,10 @@ pub(crate) fn variant_colors(
         .border_color
         .resolve(WidgetStates::empty())
         .resolve(theme);
-    let fg = style.foreground.resolve(theme);
+    let fg = style
+        .foreground
+        .resolve(WidgetStates::empty())
+        .resolve(theme);
 
     (bg, bg_hover, bg_active, border, fg)
 }
@@ -267,6 +320,7 @@ pub struct Button {
     size: ButtonSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: ButtonStyle,
     border_override: Option<Edges>,
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
@@ -294,6 +348,7 @@ impl std::fmt::Debug for Button {
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("style", &self.style)
             .field("border_override", &self.border_override)
             .field("border_width_override", &self.border_width_override)
             .field("corner_radii_override", &self.corner_radii_override)
@@ -316,6 +371,7 @@ impl Button {
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
             layout: fret_ui_kit::LayoutRefinement::default(),
+            style: ButtonStyle::default(),
             border_override: None,
             border_width_override: BorderWidthOverride::default(),
             corner_radii_override: None,
@@ -364,6 +420,11 @@ impl Button {
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn style(mut self, style: ButtonStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -470,6 +531,7 @@ impl Button {
             let user_chrome = self.chrome;
             let user_bg_override = user_chrome.background.is_some();
             let user_border_override = user_chrome.border_color.is_some();
+            let style_override = self.style;
             let border_override = self.border_override;
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
@@ -503,9 +565,22 @@ impl Button {
                     st.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
                 states.set(WidgetState::FocusVisible, focus_visible && !disabled);
 
-                let bg = variant_style.background.resolve(states).clone();
-                let border_color = variant_style.border_color.resolve(states).clone();
-                let fg = variant_style.foreground.clone();
+                let bg_prop = style_override
+                    .background
+                    .as_ref()
+                    .unwrap_or(&variant_style.background);
+                let fg_prop = style_override
+                    .foreground
+                    .as_ref()
+                    .unwrap_or(&variant_style.foreground);
+                let border_prop = style_override
+                    .border_color
+                    .as_ref()
+                    .unwrap_or(&variant_style.border_color);
+
+                let bg = bg_prop.resolve(states).clone();
+                let fg = fg_prop.resolve(states).clone();
+                let border_color = border_prop.resolve(states).clone();
 
                 let padding = if is_icon {
                     ChromeRefinement::default()

@@ -23,6 +23,10 @@ Make “state → style” authoring consistent across ecosystem component libra
 - `ColorFallback::ThemeTokenAlphaMul` supports minimal hover/active derivation.
 - Pilot migration: `fret-ui-shadcn::Button` uses per-state tokens + focus-visible border semantics.
 
+## Worktree Progress
+
+- `ButtonStyle` exists and is exported in `fret-ui-shadcn` (v0: optional overrides; merged into the variant-derived defaults).
+
 ## Milestones
 
 1. Define stable per-component style structs
@@ -46,4 +50,4 @@ Make “state → style” authoring consistent across ecosystem component libra
 - `ecosystem/fret-ui-kit/src/style/state.rs`
 - `ecosystem/fret-ui-kit/src/style/tokens.rs`
 - `ecosystem/fret-ui-shadcn/src/button.rs`
-
+- `ecosystem/fret-ui-shadcn/src/lib.rs`

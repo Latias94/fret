@@ -96,7 +96,7 @@ pub use aspect_ratio::AspectRatio;
 pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
-pub use button::{Button, ButtonSize, ButtonVariant};
+pub use button::{Button, ButtonSize, ButtonStyle, ButtonVariant};
 pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use calendar::Calendar;
 pub use calendar_range::CalendarRange;
