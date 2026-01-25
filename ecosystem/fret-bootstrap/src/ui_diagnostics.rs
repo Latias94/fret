@@ -2408,6 +2408,37 @@ struct WaitUntilState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInputArbitrationSnapshotV1 {
+    #[serde(default)]
+    pub modal_barrier_root: Option<u64>,
+    #[serde(default)]
+    pub pointer_occlusion: String,
+    #[serde(default)]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    #[serde(default)]
+    pub pointer_capture_active: bool,
+    #[serde(default)]
+    pub pointer_capture_layer_id: Option<u64>,
+    #[serde(default)]
+    pub pointer_capture_multiple_layers: bool,
+}
+
+impl UiInputArbitrationSnapshotV1 {
+    fn from_snapshot(snapshot: fret_ui::tree::UiInputArbitrationSnapshot) -> Self {
+        Self {
+            modal_barrier_root: snapshot.modal_barrier_root.map(key_to_u64),
+            pointer_occlusion: pointer_occlusion_label(snapshot.pointer_occlusion),
+            pointer_occlusion_layer_id: snapshot
+                .pointer_occlusion_layer
+                .map(|id| id.data().as_ffi()),
+            pointer_capture_active: snapshot.pointer_capture_active,
+            pointer_capture_layer_id: snapshot.pointer_capture_layer.map(|id| id.data().as_ffi()),
+            pointer_capture_multiple_layers: snapshot.pointer_capture_multiple_layers,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiTreeDebugSnapshotV1 {
     pub stats: UiFrameStatsV1,
     #[serde(default)]
@@ -2430,6 +2461,8 @@ pub struct UiTreeDebugSnapshotV1 {
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
+    #[serde(default)]
+    pub input_arbitration: UiInputArbitrationSnapshotV1,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
@@ -2506,6 +2539,9 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiLayoutEngineSolveV1::from_solve)
                 .collect(),
+            input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
+                ui.input_arbitration_snapshot(),
+            ),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
