@@ -40,6 +40,9 @@ Preview (Observer)  ->  Capture  ->  Bubble  ->  DefaultActions
 
 This keeps policy-heavy crates out of runtime internals while still enabling editor-grade overrides.
 
+Implementation note: component-owned pointer hooks can call `host.prevent_default(DefaultAction::FocusOnPointerDown)`
+to suppress focus shifts without blocking propagation (avoids coupling to widget-private `SkipDefault` protocols).
+
 ### 3) Action availability is a pure query with tri-state semantics
 
 Widget-scoped commands need a pure query surface:
