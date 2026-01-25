@@ -133,6 +133,72 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
 }
 
 #[test]
+fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let outer = ui.create_node(TestStack::default());
+    let mid = ui.create_node(TestStack::default());
+    let inner = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![outer]);
+    ui.set_children(outer, vec![mid]);
+    ui.set_children(mid, vec![inner]);
+    ui.set_children(inner, vec![leaf]);
+
+    for id in [root, outer, mid, inner, leaf] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+    ui.nodes[outer].view_cache.enabled = true;
+    ui.nodes[inner].view_cache.enabled = true;
+
+    ui.mark_nearest_view_cache_root_needs_rerender(
+        leaf,
+        UiDebugInvalidationSource::Notify,
+        UiDebugInvalidationDetail::ScrollHandleLayout,
+    );
+
+    assert!(
+        ui.nodes[inner].view_cache_needs_rerender,
+        "expected nearest cache root to be marked for rerender"
+    );
+    assert!(
+        ui.nodes[outer].view_cache_needs_rerender,
+        "expected ancestor cache roots to be marked for rerender"
+    );
+
+    // Ensure the dirty-view list is surfaced in debug snapshots.
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let dirty = ui.debug_dirty_views();
+    assert!(
+        dirty
+            .iter()
+            .any(|d| d.root == inner && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
+        "expected dirty views to include inner cache root with ScrollHandleLayout detail"
+    );
+    assert!(
+        dirty
+            .iter()
+            .any(|d| d.root == outer && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
+        "expected dirty views to include outer cache root with ScrollHandleLayout detail"
+    );
+}
+
+#[test]
 fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
