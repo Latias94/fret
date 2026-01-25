@@ -54,6 +54,43 @@ pub fn default_range_extractor(range: VirtualRange) -> Vec<usize> {
     (start..=end).collect()
 }
 
+pub(crate) fn visible_item_index_span(items: &[VirtualItem]) -> Option<(usize, usize)> {
+    let first = items.first()?.index;
+    let mut prev = first;
+    for item in items.iter().skip(1) {
+        if item.index <= prev {
+            return None;
+        }
+        prev = item.index;
+    }
+    Some((first, prev))
+}
+
+pub(crate) fn expanded_range_index_span(range: VirtualRange) -> Option<(usize, usize)> {
+    if range.count == 0 {
+        return None;
+    }
+    let start = range.start_index.saturating_sub(range.overscan);
+    let end = (range.end_index + range.overscan).min(range.count.saturating_sub(1));
+    Some((start, end))
+}
+
+pub(crate) fn virtual_list_needs_visible_range_refresh(
+    mounted_items: &[VirtualItem],
+    desired_range: VirtualRange,
+) -> bool {
+    let Some((desired_start, desired_end)) = expanded_range_index_span(desired_range) else {
+        return false;
+    };
+    if mounted_items.is_empty() {
+        return true;
+    }
+    let Some((mounted_start, mounted_end)) = visible_item_index_span(mounted_items) else {
+        return true;
+    };
+    desired_start < mounted_start || desired_end > mounted_end
+}
+
 #[derive(Debug, Clone)]
 pub struct VirtualListMetrics {
     estimate: Px,
@@ -567,6 +604,60 @@ pub(crate) fn debug_take_virtual_list_item_measures() -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn dummy_items(indices: &[usize]) -> Vec<VirtualItem> {
+        indices
+            .iter()
+            .copied()
+            .map(|index| VirtualItem {
+                key: index as crate::ItemKey,
+                index,
+                start: Px(0.0),
+                end: Px(0.0),
+                size: Px(0.0),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn virtual_list_needs_visible_range_refresh_when_span_exceeded() {
+        let mounted = dummy_items(&[0, 1, 2, 3, 4]);
+        let desired = VirtualRange {
+            start_index: 1,
+            end_index: 3,
+            overscan: 0,
+            count: 100,
+        };
+        assert!(!virtual_list_needs_visible_range_refresh(&mounted, desired));
+
+        let desired = VirtualRange {
+            start_index: 5,
+            end_index: 6,
+            overscan: 0,
+            count: 100,
+        };
+        assert!(virtual_list_needs_visible_range_refresh(&mounted, desired));
+
+        let desired = VirtualRange {
+            start_index: 4,
+            end_index: 4,
+            overscan: 2,
+            count: 100,
+        };
+        // Expanded is 2..=6, which exceeds the mounted span 0..=4.
+        assert!(virtual_list_needs_visible_range_refresh(&mounted, desired));
+    }
+
+    #[test]
+    fn visible_item_index_span_requires_strictly_increasing_indices() {
+        assert_eq!(
+            visible_item_index_span(&dummy_items(&[0, 1, 2])),
+            Some((0, 2))
+        );
+        assert_eq!(visible_item_index_span(&dummy_items(&[2])), Some((2, 2)));
+        assert_eq!(visible_item_index_span(&dummy_items(&[1, 1])), None);
+        assert_eq!(visible_item_index_span(&dummy_items(&[2, 1])), None);
+    }
 
     #[test]
     fn fenwick_sums_match_uniform_heights() {

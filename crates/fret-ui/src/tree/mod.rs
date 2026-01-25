@@ -241,6 +241,19 @@ pub struct UiDebugFrameStats {
     pub view_cache_invalidation_truncations: u32,
     /// How many "contained" view-cache roots were re-laid out during the final pass.
     pub view_cache_contained_relayouts: u32,
+    /// How many times `set_children_barrier` was applied (structural changes without forcing
+    /// ancestor relayout).
+    pub set_children_barrier_writes: u32,
+    /// How many barrier relayout roots were scheduled via `set_children_barrier` in this frame.
+    pub barrier_relayouts_scheduled: u32,
+    /// How many barrier relayout roots were actually laid out in this frame.
+    pub barrier_relayouts_performed: u32,
+    /// How many VirtualList visible-range checks were evaluated (used to request rerenders under
+    /// view-cache reuse).
+    pub virtual_list_visible_range_checks: u32,
+    /// How many VirtualList visible-range checks requested a refresh (range delta outside the
+    /// currently mounted span).
+    pub virtual_list_visible_range_refreshes: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -1027,6 +1040,11 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.view_cache_active = self.view_cache_active();
         self.debug_stats.view_cache_invalidation_truncations = 0;
         self.debug_stats.view_cache_contained_relayouts = 0;
+        self.debug_stats.set_children_barrier_writes = 0;
+        self.debug_stats.barrier_relayouts_scheduled = 0;
+        self.debug_stats.barrier_relayouts_performed = 0;
+        self.debug_stats.virtual_list_visible_range_checks = 0;
+        self.debug_stats.virtual_list_visible_range_refreshes = 0;
 
         self.debug_view_cache_roots.clear();
         self.debug_paint_cache_replays.clear();
@@ -2055,6 +2073,17 @@ impl<H: UiHost> UiTree<H> {
             );
         }
 
+        if self.debug_enabled {
+            self.debug_stats.set_children_barrier_writes = self
+                .debug_stats
+                .set_children_barrier_writes
+                .saturating_add(1);
+            self.debug_stats.barrier_relayouts_scheduled = self
+                .debug_stats
+                .barrier_relayouts_scheduled
+                .saturating_add(1);
+        }
+
         let Some(old_children) = self
             .nodes
             .get_mut(parent)
@@ -2093,6 +2122,25 @@ impl<H: UiHost> UiTree<H> {
         );
 
         self.pending_barrier_relayouts.push(parent);
+    }
+
+    pub(crate) fn debug_record_virtual_list_visible_range_check(
+        &mut self,
+        requested_refresh: bool,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.virtual_list_visible_range_checks = self
+            .debug_stats
+            .virtual_list_visible_range_checks
+            .saturating_add(1);
+        if requested_refresh {
+            self.debug_stats.virtual_list_visible_range_refreshes = self
+                .debug_stats
+                .virtual_list_visible_range_refreshes
+                .saturating_add(1);
+        }
     }
 
     pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {

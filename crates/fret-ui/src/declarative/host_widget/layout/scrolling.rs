@@ -1,7 +1,6 @@
 use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
-use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
@@ -331,15 +330,14 @@ impl ElementHostWidget {
         );
 
         if !is_probe_layout && needs_redraw && cx.tree.view_cache_enabled() {
-            // Virtual list visible-item sets are computed during the declarative render pass. When a
-            // scroll handle change is consumed during layout (e.g. deferred scroll-to-item), we
-            // must ensure the nearest view-cache root re-renders on the next frame so it can
-            // rebuild the visible range.
+            // Virtual list visible-item sets are computed during the declarative render pass. When
+            // a scroll handle change is consumed during layout, ensure the nearest view-cache
+            // root rerenders on the next frame so it can rebuild the visible range.
             cx.tree.invalidate_with_source_and_detail(
                 cx.node,
                 Invalidation::Layout,
-                UiDebugInvalidationSource::Notify,
-                UiDebugInvalidationDetail::ScrollHandle,
+                crate::tree::UiDebugInvalidationSource::Notify,
+                crate::tree::UiDebugInvalidationDetail::ScrollHandle,
             );
         }
 

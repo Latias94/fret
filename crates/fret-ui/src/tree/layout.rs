@@ -328,6 +328,12 @@ impl<H: UiHost> UiTree<H> {
 
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+            if self.debug_enabled {
+                self.debug_stats.barrier_relayouts_performed = self
+                    .debug_stats
+                    .barrier_relayouts_performed
+                    .saturating_add(1);
+            }
             self.flush_viewport_roots_after_root(
                 app,
                 services,

@@ -767,7 +767,55 @@ impl ElementHostWidget {
                 group.set_style(props.chrome.clone());
                 group.paint(cx);
             }
-            ElementInstance::VirtualList(_props) => {
+            ElementInstance::VirtualList(props) => {
+                if cx.tree.view_cache_enabled()
+                    && !cx.tree.inspection_active()
+                    && let Some(window) = cx.window
+                {
+                    let requested_refresh = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            let axis = props.axis;
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+                            let viewport = match axis {
+                                fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return false;
+                            }
+
+                            let handle_offset = match axis {
+                                fret_core::Axis::Vertical => props.scroll_handle.offset().y,
+                                fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                            };
+                            let offset = state.metrics.clamp_offset(handle_offset, viewport);
+                            let Some(range) =
+                                state
+                                    .metrics
+                                    .visible_range(offset, viewport, props.overscan)
+                            else {
+                                return false;
+                            };
+                            crate::virtual_list::virtual_list_needs_visible_range_refresh(
+                                &props.visible_items,
+                                range,
+                            )
+                        },
+                    );
+                    cx.tree
+                        .debug_record_virtual_list_visible_range_check(requested_refresh);
+                }
+
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
 
                 let children_transform = cx.children_render_transform;

@@ -3380,6 +3380,16 @@ pub struct UiFrameStatsV1 {
     pub view_cache_invalidation_truncations: u32,
     #[serde(default)]
     pub view_cache_contained_relayouts: u32,
+    #[serde(default)]
+    pub set_children_barrier_writes: u32,
+    #[serde(default)]
+    pub barrier_relayouts_scheduled: u32,
+    #[serde(default)]
+    pub barrier_relayouts_performed: u32,
+    #[serde(default)]
+    pub virtual_list_visible_range_checks: u32,
+    #[serde(default)]
+    pub virtual_list_visible_range_refreshes: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -3435,6 +3445,11 @@ impl UiFrameStatsV1 {
             view_cache_active: stats.view_cache_active,
             view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
             view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
+            set_children_barrier_writes: stats.set_children_barrier_writes,
+            barrier_relayouts_scheduled: stats.barrier_relayouts_scheduled,
+            barrier_relayouts_performed: stats.barrier_relayouts_performed,
+            virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
+            virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
