@@ -200,6 +200,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] Switch token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/switch.rs`,
       `ecosystem/fret-ui-material3/src/switch.rs`.
+  - [x] Radio token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/radio.rs`,
+      `ecosystem/fret-ui-material3/src/radio.rs`.
 
 ### Interaction Outcomes
 
