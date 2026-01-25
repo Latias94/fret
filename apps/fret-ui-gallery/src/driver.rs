@@ -1740,7 +1740,7 @@ impl UiGalleryDriver {
                                                     overflow: TextOverflow::Clip,
                                                 })
                                             })
-                                            .collect()
+                                            .collect::<Vec<_>>()
                                     },
                                 );
 
