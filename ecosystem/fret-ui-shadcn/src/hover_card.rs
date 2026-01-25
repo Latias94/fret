@@ -2016,6 +2016,22 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
             "expected hover card content to remain mounted during close transition"
         );
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let content_layer = ui.node_layer(content_node).expect("content layer");
+        let layer = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == content_layer)
+            .expect("overlay layer");
+        assert!(layer.visible);
+        assert!(!layer.hit_testable);
+        assert_eq!(
+            layer.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
+        assert!(!layer.wants_pointer_move_events);
+        assert!(!layer.wants_timer_events);
 
         ui.dispatch_event(
             &mut app,

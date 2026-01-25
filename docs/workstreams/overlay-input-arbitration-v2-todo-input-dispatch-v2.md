@@ -86,6 +86,14 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/combobox.rs` (`combobox_close_transition_disables_pointer_move_and_timer_events`)
 
+- [x] OIA2-test-014 Close transition disables hover observers/timers (hover card).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`hover_card_close_transition_is_click_through`)
+
+- [x] OIA2-test-015 Close transition disables hover observers/timers (tooltip).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (`tooltip_close_transition_is_click_through`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
