@@ -56,7 +56,7 @@ Keep this list short and evidence-backed:
     - text selection start / drag selection
     - scroll routing heuristics beyond normal dispatch + scroll widgets
     - "activate on pointer up", press/capture semantics, and other Radix/shadcn interaction policies
-- [x] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+- [ ] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
   - Status: deferred. New defaults must be motivated by a cross-surface, hard-to-change behavior and come with
     focused tests that prove we are not leaking ecosystem policy into `crates/fret-ui`.
 
