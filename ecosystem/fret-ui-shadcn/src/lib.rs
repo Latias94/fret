@@ -219,7 +219,7 @@ pub use sonner::{
     ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
-pub use switch::{Switch, switch};
+pub use switch::{Switch, SwitchStyle, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };

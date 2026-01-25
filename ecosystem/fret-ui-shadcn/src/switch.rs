@@ -16,7 +16,10 @@ use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::switch::{
     switch_a11y, switch_checked_from_optional_bool, switch_use_checked_model, toggle_optional_bool,
 };
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, WidgetState,
+    WidgetStateProperty, WidgetStates,
+};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -72,6 +75,43 @@ fn switch_ring_color(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_required("ring"))
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct SwitchStyle {
+    pub track_background: Option<WidgetStateProperty<ColorRef>>,
+    pub thumb_background: Option<WidgetStateProperty<ColorRef>>,
+    pub border_color: Option<WidgetStateProperty<ColorRef>>,
+}
+
+impl SwitchStyle {
+    pub fn track_background(mut self, track_background: WidgetStateProperty<ColorRef>) -> Self {
+        self.track_background = Some(track_background);
+        self
+    }
+
+    pub fn thumb_background(mut self, thumb_background: WidgetStateProperty<ColorRef>) -> Self {
+        self.thumb_background = Some(thumb_background);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: WidgetStateProperty<ColorRef>) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.track_background.is_some() {
+            self.track_background = other.track_background;
+        }
+        if other.thumb_background.is_some() {
+            self.thumb_background = other.thumb_background;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Switch {
     model: SwitchModel,
@@ -81,6 +121,7 @@ pub struct Switch {
     on_click: Option<CommandId>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: SwitchStyle,
 }
 
 #[derive(Clone)]
@@ -99,6 +140,7 @@ impl Switch {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: SwitchStyle::default(),
         }
     }
 
@@ -115,6 +157,7 @@ impl Switch {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: SwitchStyle::default(),
         }
     }
 
@@ -170,6 +213,11 @@ impl Switch {
         self
     }
 
+    pub fn style(mut self, style: SwitchStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -187,8 +235,38 @@ impl Switch {
             let pad_x = switch_padding(&theme);
 
             let radius = Px((h.0 * 0.5).max(0.0));
+            let ring_border = switch_ring_color(&theme);
             let mut ring = decl_style::focus_ring(&theme, radius);
-            ring.color = alpha_mul(switch_ring_color(&theme), 0.5);
+            ring.color = alpha_mul(ring_border, 0.5);
+
+            let bg_off = switch_bg_off(&theme);
+            let bg_on = switch_bg_on(&theme);
+            let thumb_bg = switch_thumb_bg(&theme);
+
+            let default_track_background = WidgetStateProperty::new(ColorRef::Color(bg_off))
+                .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
+                .when(
+                    WidgetStates::HOVERED,
+                    ColorRef::Color(alpha_mul(bg_off, 0.7)),
+                )
+                .when(
+                    WidgetStates::HOVERED | WidgetStates::SELECTED,
+                    ColorRef::Color(alpha_mul(bg_on, 0.9)),
+                )
+                .when(
+                    WidgetStates::ACTIVE,
+                    ColorRef::Color(alpha_mul(bg_off, 0.6)),
+                )
+                .when(
+                    WidgetStates::ACTIVE | WidgetStates::SELECTED,
+                    ColorRef::Color(alpha_mul(bg_on, 0.8)),
+                );
+
+            let default_thumb_background = WidgetStateProperty::new(ColorRef::Color(thumb_bg));
+
+            let default_border_color =
+                WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
+                    .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
             let layout = LayoutRefinement::default()
                 .w_px(MetricRef::Px(w))
@@ -205,6 +283,7 @@ impl Switch {
                     .as_ref()
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let chrome = self.chrome.clone();
+            let style_override = self.style.clone();
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(on_click);
@@ -227,21 +306,25 @@ impl Switch {
                     }
                 };
 
-                let mut bg = if on {
-                    switch_bg_on(&theme)
-                } else {
-                    switch_bg_off(&theme)
-                };
-                let hovered = st.hovered && !disabled;
-                if hovered {
-                    bg = alpha_mul(bg, if on { 0.9 } else { 0.7 });
-                }
+                let mut states = WidgetStates::from_pressable(cx, st, !disabled);
+                states.set(WidgetState::Selected, on);
 
-                let border_color = if st.focused {
-                    switch_ring_color(&theme)
-                } else {
-                    Color::TRANSPARENT
-                };
+                let track_prop = style_override
+                    .track_background
+                    .as_ref()
+                    .unwrap_or(&default_track_background);
+                let thumb_prop = style_override
+                    .thumb_background
+                    .as_ref()
+                    .unwrap_or(&default_thumb_background);
+                let border_prop = style_override
+                    .border_color
+                    .as_ref()
+                    .unwrap_or(&default_border_color);
+
+                let bg = track_prop.resolve(states).clone().resolve(&theme);
+                let border_color = border_prop.resolve(states).clone().resolve(&theme);
+                let thumb_color = thumb_prop.resolve(states).clone().resolve(&theme);
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,
@@ -291,11 +374,10 @@ impl Switch {
                         ..Default::default()
                     };
 
-                    let thumb_bg = switch_thumb_bg(&theme);
                     let thumb_props = ContainerProps {
                         layout: thumb_layout,
                         padding: Edges::all(Px(0.0)),
-                        background: Some(thumb_bg),
+                        background: Some(thumb_color),
                         shadow: None,
                         border: Edges::all(Px(0.0)),
                         border_color: None,

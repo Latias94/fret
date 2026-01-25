@@ -99,6 +99,7 @@ Recommended baseline:
 
 - `ButtonStyle`: `ecosystem/fret-ui-shadcn/src/button.rs`
 - `CheckboxStyle`: `ecosystem/fret-ui-shadcn/src/checkbox.rs`
+- `SwitchStyle`: `ecosystem/fret-ui-shadcn/src/switch.rs`
 - `ToggleStyle`: `ecosystem/fret-ui-shadcn/src/toggle.rs`
 - `TabsStyle`: `ecosystem/fret-ui-shadcn/src/tabs.rs`
 - `InputStyle` (focus-specific v0 shape): `ecosystem/fret-ui-shadcn/src/input.rs`
