@@ -30,7 +30,7 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, ui,
+    Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::overlay_motion;
@@ -1154,13 +1154,29 @@ impl MenubarMenuEntries {
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                     menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
                 });
-                let trigger_bg = if is_open {
-                    Some(bg_open)
-                } else if st.hovered || st.pressed || st.focused {
-                    Some(alpha_mul(bg_hover, 0.8))
-                } else {
-                    None
-                };
+                let mut states = WidgetStates::empty();
+                states.set(WidgetState::Disabled, !enabled);
+                states.set(WidgetState::Hovered, st.hovered);
+                states.set(WidgetState::Active, st.pressed);
+                states.set(WidgetState::Focused, st.focused);
+                states.set(
+                    WidgetState::FocusVisible,
+                    st.focused
+                        && fret_ui::focus_visible::is_focus_visible(
+                            cx.app,
+                            Some(cx.window),
+                        ),
+                );
+                states.set(WidgetState::Open, is_open);
+
+                let trigger_bg_prop = WidgetStateProperty::new(None)
+                    .when(WidgetStates::HOVERED, Some(alpha_mul(bg_hover, 0.8)))
+                    .when(WidgetStates::ACTIVE, Some(alpha_mul(bg_hover, 0.8)))
+                    .when(WidgetStates::FOCUSED, Some(alpha_mul(bg_hover, 0.8)))
+                    .when(WidgetStates::OPEN, Some(bg_open))
+                    .when(WidgetStates::DISABLED, None);
+
+                let trigger_bg = *trigger_bg_prop.resolve(states);
 
                 let props = PressableProps {
                     layout: trigger_layout,
@@ -1530,7 +1546,7 @@ impl MenubarMenuEntries {
                                                             let first_item_focus_id_for_items =
                                                                 first_item_focus_id_for_children_for_content.clone();
 
-                                                            let theme = theme.clone();
+                                                            let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let checked_now = cx
@@ -1583,18 +1599,55 @@ impl MenubarMenuEntries {
                                                                         }
                                                                     }
 
-                                                                    let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
-                                                                        );
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        fg
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                    let mut states =
+                                                                        WidgetStates::empty();
+                                                                    states.set(
+                                                                        WidgetState::Disabled,
+                                                                        !item_enabled,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Hovered,
+                                                                        st.hovered,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Active,
+                                                                        st.pressed,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Focused,
+                                                                        st.focused,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::FocusVisible,
+                                                                        st.focused
+                                                                            && fret_ui::focus_visible::is_focus_visible(
+                                                                                cx.app,
+                                                                                Some(cx.window),
+                                                                            ),
+                                                                    );
+                                                                    states.set(WidgetState::Open, false);
+
+                                                                    let highlight_bg =
+                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -1687,7 +1740,7 @@ impl MenubarMenuEntries {
                                                             let first_item_focus_id_for_items =
                                                                 first_item_focus_id_for_children_for_content.clone();
 
-                                                            let theme = theme.clone();
+                                                            let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let selected = cx
@@ -1745,18 +1798,55 @@ impl MenubarMenuEntries {
                                                                         }
                                                                     }
 
-                                                                    let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
-                                                                        );
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        fg
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                    let mut states =
+                                                                        WidgetStates::empty();
+                                                                    states.set(
+                                                                        WidgetState::Disabled,
+                                                                        !item_enabled,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Hovered,
+                                                                        st.hovered,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Active,
+                                                                        st.pressed,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Focused,
+                                                                        st.focused,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::FocusVisible,
+                                                                        st.focused
+                                                                            && fret_ui::focus_visible::is_focus_visible(
+                                                                                cx.app,
+                                                                                Some(cx.window),
+                                                                            ),
+                                                                    );
+                                                                    states.set(WidgetState::Open, false);
+
+                                                                    let highlight_bg =
+                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -1902,7 +1992,7 @@ impl MenubarMenuEntries {
                                                               let test_id = item.test_id.clone();
                                                                let pad_left =
                                                                    if item.inset { pad_x_inset } else { pad_x };
-                                                               let theme = theme.clone();
+                                                            let _theme = theme.clone();
                                                                 let overlay_root_name_for_controls =
                                                                     overlay_root_name_for_controls.clone();
                                                                 let first_item_focus_id_for_items =
@@ -1956,34 +2046,70 @@ impl MenubarMenuEntries {
                                                                         }
                                                                      }
 
-                                                                    let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                        || expanded.unwrap_or(false)
-                                                                    {
-                                                                        bg = if variant
-                                                                            == MenubarItemVariant::Destructive
-                                                                        {
+                                                                    let mut states =
+                                                                        WidgetStates::empty();
+                                                                    states.set(
+                                                                        WidgetState::Disabled,
+                                                                        !item_enabled,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Hovered,
+                                                                        st.hovered,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Active,
+                                                                        st.pressed,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Focused,
+                                                                        st.focused,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::FocusVisible,
+                                                                        st.focused
+                                                                            && fret_ui::focus_visible::is_focus_visible(
+                                                                                cx.app,
+                                                                                Some(cx.window),
+                                                                            ),
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Open,
+                                                                        expanded.unwrap_or(false),
+                                                                    );
+
+                                                                    let highlight_bg =
+                                                                        if variant == MenubarItemVariant::Destructive {
                                                                             destructive_bg
                                                                         } else {
-                                                                            alpha_mul(
-                                                                                theme.color_required("accent"),
-                                                                                0.9,
-                                                                            )
+                                                                            alpha_mul(bg_hover, 0.9)
                                                                         };
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        if variant
-                                                                            == MenubarItemVariant::Destructive
-                                                                        {
+                                                                    let base_fg =
+                                                                        if variant == MenubarItemVariant::Destructive {
                                                                             destructive_fg
                                                                         } else {
                                                                             fg
-                                                                        }
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                        };
+
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(WidgetStates::OPEN, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(base_fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     let props = PressableProps {
                                                                         layout: {
@@ -2103,19 +2229,55 @@ impl MenubarMenuEntries {
                                                                         }),
                                                                     );
 
-                                                                    let mut bg =
-                                                                        Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
-                                                                        );
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        fg
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                    let mut states =
+                                                                        WidgetStates::empty();
+                                                                    states.set(
+                                                                        WidgetState::Disabled,
+                                                                        !item_enabled,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Hovered,
+                                                                        st.hovered,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Active,
+                                                                        st.pressed,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::Focused,
+                                                                        st.focused,
+                                                                    );
+                                                                    states.set(
+                                                                        WidgetState::FocusVisible,
+                                                                        st.focused
+                                                                            && fret_ui::focus_visible::is_focus_visible(
+                                                                                cx.app,
+                                                                                Some(cx.window),
+                                                                            ),
+                                                                    );
+                                                                    states.set(WidgetState::Open, false);
+
+                                                                    let highlight_bg =
+                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     vec![cx.container(
                                                                         ContainerProps {
@@ -2594,18 +2756,52 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 }
 
-                                                                                let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed || st.focused {
-                                                                                    bg = alpha_mul(
-                                                                                        theme.color_required("accent"),
-                                                                                        0.9,
+                                                                                let mut states =
+                                                                                    WidgetStates::empty();
+                                                                                states.set(
+                                                                                    WidgetState::Disabled,
+                                                                                    !item_enabled,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Hovered,
+                                                                                    st.hovered,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Active,
+                                                                                    st.pressed,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Focused,
+                                                                                    st.focused,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::FocusVisible,
+                                                                                    st.focused
+                                                                                        && fret_ui::focus_visible::is_focus_visible(
+                                                                                            cx.app,
+                                                                                            Some(cx.window),
+                                                                                        ),
+                                                                                );
+                                                                                states.set(WidgetState::Open, false);
+
+                                                                                let highlight_bg = alpha_mul(
+                                                                                    theme.color_required("accent"),
+                                                                                    0.9,
+                                                                                );
+                                                                                let bg_prop =
+                                                                                    WidgetStateProperty::new(Color::TRANSPARENT)
+                                                                                        .when(WidgetStates::HOVERED, highlight_bg)
+                                                                                        .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                                        .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                                        .when(WidgetStates::DISABLED, Color::TRANSPARENT);
+                                                                                let fg_prop =
+                                                                                    WidgetStateProperty::new(fg).when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        alpha_mul(fg_muted, 0.85),
                                                                                     );
-                                                                                }
-                                                                                let fg = if item_enabled {
-                                                                                    fg
-                                                                                } else {
-                                                                                    alpha_mul(fg_muted, 0.85)
-                                                                                };
+
+                                                                                let bg = *bg_prop.resolve(states);
+                                                                                let fg = *fg_prop.resolve(states);
 
                                                                                 let trailing = trailing.clone().or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
@@ -2735,18 +2931,52 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 }
 
-                                                                                let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed || st.focused {
-                                                                                    bg = alpha_mul(
-                                                                                        theme.color_required("accent"),
-                                                                                        0.9,
+                                                                                let mut states =
+                                                                                    WidgetStates::empty();
+                                                                                states.set(
+                                                                                    WidgetState::Disabled,
+                                                                                    !item_enabled,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Hovered,
+                                                                                    st.hovered,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Active,
+                                                                                    st.pressed,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Focused,
+                                                                                    st.focused,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::FocusVisible,
+                                                                                    st.focused
+                                                                                        && fret_ui::focus_visible::is_focus_visible(
+                                                                                            cx.app,
+                                                                                            Some(cx.window),
+                                                                                        ),
+                                                                                );
+                                                                                states.set(WidgetState::Open, false);
+
+                                                                                let highlight_bg = alpha_mul(
+                                                                                    theme.color_required("accent"),
+                                                                                    0.9,
+                                                                                );
+                                                                                let bg_prop =
+                                                                                    WidgetStateProperty::new(Color::TRANSPARENT)
+                                                                                        .when(WidgetStates::HOVERED, highlight_bg)
+                                                                                        .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                                        .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                                        .when(WidgetStates::DISABLED, Color::TRANSPARENT);
+                                                                                let fg_prop =
+                                                                                    WidgetStateProperty::new(fg).when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        alpha_mul(fg_muted, 0.85),
                                                                                     );
-                                                                                }
-                                                                                let fg = if item_enabled {
-                                                                                    fg
-                                                                                } else {
-                                                                                    alpha_mul(fg_muted, 0.85)
-                                                                                };
+
+                                                                                let bg = *bg_prop.resolve(states);
+                                                                                let fg = *fg_prop.resolve(states);
 
                                                                                 let trailing = trailing.clone().or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
@@ -2866,11 +3096,36 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 }
 
-                                                                                let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed || st.focused {
-                                                                                    bg = if variant
-                                                                                        == MenubarItemVariant::Destructive
-                                                                                    {
+                                                                                let mut states =
+                                                                                    WidgetStates::empty();
+                                                                                states.set(
+                                                                                    WidgetState::Disabled,
+                                                                                    !item_enabled,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Hovered,
+                                                                                    st.hovered,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Active,
+                                                                                    st.pressed,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::Focused,
+                                                                                    st.focused,
+                                                                                );
+                                                                                states.set(
+                                                                                    WidgetState::FocusVisible,
+                                                                                    st.focused
+                                                                                        && fret_ui::focus_visible::is_focus_visible(
+                                                                                            cx.app,
+                                                                                            Some(cx.window),
+                                                                                        ),
+                                                                                );
+                                                                                states.set(WidgetState::Open, false);
+
+                                                                                let highlight_bg =
+                                                                                    if variant == MenubarItemVariant::Destructive {
                                                                                         destructive_bg
                                                                                     } else {
                                                                                         alpha_mul(
@@ -2878,18 +3133,27 @@ impl MenubarMenuEntries {
                                                                                             0.9,
                                                                                         )
                                                                                     };
-                                                                                }
-                                                                                let fg = if item_enabled {
-                                                                                    if variant
-                                                                                        == MenubarItemVariant::Destructive
-                                                                                    {
+                                                                                let base_fg =
+                                                                                    if variant == MenubarItemVariant::Destructive {
                                                                                         destructive_fg
                                                                                     } else {
                                                                                         fg
-                                                                                    }
-                                                                                } else {
-                                                                                    alpha_mul(fg_muted, 0.85)
-                                                                                };
+                                                                                    };
+
+                                                                                let bg_prop =
+                                                                                    WidgetStateProperty::new(Color::TRANSPARENT)
+                                                                                        .when(WidgetStates::HOVERED, highlight_bg)
+                                                                                        .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                                        .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                                        .when(WidgetStates::DISABLED, Color::TRANSPARENT);
+                                                                                let fg_prop =
+                                                                                    WidgetStateProperty::new(base_fg).when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        alpha_mul(fg_muted, 0.85),
+                                                                                    );
+
+                                                                                let bg = *bg_prop.resolve(states);
+                                                                                let fg = *fg_prop.resolve(states);
 
                                                                                 let trailing = trailing.clone().or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {

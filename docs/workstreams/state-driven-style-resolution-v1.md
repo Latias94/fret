@@ -56,7 +56,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 ### P2 — Overlay/Menu Surfaces (Radix-like)
 
 - [x] SDSR-200 DropdownMenu items: unify hover/active/disabled/open states via `WidgetStates`.
-- [ ] SDSR-201 Menubar items: unify hover/active/disabled/open states via `WidgetStates`.
+- [x] SDSR-201 Menubar items: unify hover/active/disabled/open states via `WidgetStates`.
 - [ ] SDSR-210 Tooltip / HoverCard: decide whether per-state styling is needed or keep policy-only (document rationale).
 
 ### P3 — Token Naming + Slot Vocabulary
@@ -99,3 +99,4 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - `ecosystem/fret-ui-shadcn/src/input.rs`
 - `crates/fret-ui/src/text_input/widget.rs`
 - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
+- `ecosystem/fret-ui-shadcn/src/menubar.rs`
