@@ -482,6 +482,17 @@ pub struct UiDebugSetChildrenWrite {
 
 #[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone, Copy)]
+pub struct UiDebugParentSeverWrite {
+    pub child: NodeId,
+    pub parent: NodeId,
+    pub frame_id: FrameId,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
 pub struct UiDebugSetLayerVisibleWrite {
     pub layer: UiLayerId,
     pub frame_id: FrameId,
@@ -517,6 +528,8 @@ pub struct UiDebugRemoveSubtreeFrameContext {
     pub root_reachable_from_view_cache_roots: Option<bool>,
     pub trigger_element: Option<GlobalElementId>,
     pub trigger_element_root: Option<GlobalElementId>,
+    pub trigger_element_in_view_cache_keep_alive: Option<bool>,
+    pub trigger_element_listed_under_reuse_root: Option<GlobalElementId>,
     pub path_edge_len: u8,
     /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
     /// contains the child node:
@@ -549,6 +562,8 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub reachable_from_view_cache_roots: Option<bool>,
     pub trigger_element: Option<GlobalElementId>,
     pub trigger_element_root: Option<GlobalElementId>,
+    pub trigger_element_in_view_cache_keep_alive: Option<bool>,
+    pub trigger_element_listed_under_reuse_root: Option<GlobalElementId>,
     pub root_children_len: u32,
     pub root_parent_children_len: Option<u32>,
     pub root_parent_children_contains_root: Option<bool>,
@@ -934,6 +949,8 @@ pub struct UiTree<H: UiHost> {
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
     #[cfg(feature = "diagnostics")]
+    debug_parent_sever_writes: HashMap<NodeId, UiDebugParentSeverWrite>,
+    #[cfg(feature = "diagnostics")]
     debug_layer_visible_writes: Vec<UiDebugSetLayerVisibleWrite>,
     #[cfg(feature = "diagnostics")]
     debug_overlay_policy_decisions: Vec<UiDebugOverlayPolicyDecisionWrite>,
@@ -1021,6 +1038,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_scroll_handle_changes: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_parent_sever_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
             debug_layer_visible_writes: Vec::new(),
             #[cfg(feature = "diagnostics")]
@@ -1182,7 +1201,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_virtual_list_windows.clear();
         self.debug_scroll_handle_changes.clear();
         #[cfg(feature = "diagnostics")]
-        self.debug_set_children_writes.clear();
+        {
+            // Keep `debug_set_children_writes` and `debug_parent_sever_writes` across frames so
+            // GC sweep records can point back to the structural operation that detached an island.
+        }
         #[cfg(feature = "diagnostics")]
         self.debug_layer_visible_writes.clear();
         #[cfg(feature = "diagnostics")]
@@ -1401,6 +1423,14 @@ impl<H: UiHost> UiTree<H> {
             return None;
         }
         self.debug_set_children_writes.get(&parent).copied()
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_parent_sever_write_for(&self, child: NodeId) -> Option<UiDebugParentSeverWrite> {
+        if !self.debug_enabled {
+            return None;
+        }
+        self.debug_parent_sever_writes.get(&child).copied()
     }
 
     #[cfg(feature = "diagnostics")]
@@ -2226,6 +2256,21 @@ impl<H: UiHost> UiTree<H> {
             if let Some(n) = self.nodes.get_mut(old)
                 && n.parent == Some(parent)
             {
+                #[cfg(feature = "diagnostics")]
+                if self.debug_enabled {
+                    let location = std::panic::Location::caller();
+                    self.debug_parent_sever_writes.insert(
+                        old,
+                        UiDebugParentSeverWrite {
+                            child: old,
+                            parent,
+                            frame_id: self.debug_stats.frame_id,
+                            file: location.file(),
+                            line: location.line(),
+                            column: location.column(),
+                        },
+                    );
+                }
                 n.parent = None;
             }
         }
@@ -2305,6 +2350,21 @@ impl<H: UiHost> UiTree<H> {
             if let Some(n) = self.nodes.get_mut(old)
                 && n.parent == Some(parent)
             {
+                #[cfg(feature = "diagnostics")]
+                if self.debug_enabled {
+                    let location = std::panic::Location::caller();
+                    self.debug_parent_sever_writes.insert(
+                        old,
+                        UiDebugParentSeverWrite {
+                            child: old,
+                            parent,
+                            frame_id: self.debug_stats.frame_id,
+                            file: location.file(),
+                            line: location.line(),
+                            column: location.column(),
+                        },
+                    );
+                }
                 n.parent = None;
             }
         }
@@ -2471,6 +2531,10 @@ impl<H: UiHost> UiTree<H> {
                     frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
                 let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
                 let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
+                let trigger_element_in_view_cache_keep_alive =
+                    frame_context.and_then(|ctx| ctx.trigger_element_in_view_cache_keep_alive);
+                let trigger_element_listed_under_reuse_root =
+                    frame_context.and_then(|ctx| ctx.trigger_element_listed_under_reuse_root);
                 let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                     frame_context
                         .map(|ctx| {
@@ -2502,6 +2566,8 @@ impl<H: UiHost> UiTree<H> {
                         reachable_from_view_cache_roots,
                         trigger_element,
                         trigger_element_root,
+                        trigger_element_in_view_cache_keep_alive,
+                        trigger_element_listed_under_reuse_root,
                         root_children_len,
                         root_parent_children_len,
                         root_parent_children_contains_root,
@@ -2560,6 +2626,10 @@ impl<H: UiHost> UiTree<H> {
                 frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
             let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
             let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
+            let trigger_element_in_view_cache_keep_alive =
+                frame_context.and_then(|ctx| ctx.trigger_element_in_view_cache_keep_alive);
+            let trigger_element_listed_under_reuse_root =
+                frame_context.and_then(|ctx| ctx.trigger_element_listed_under_reuse_root);
             let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
                 frame_context
                     .map(|ctx| {
@@ -2611,6 +2681,8 @@ impl<H: UiHost> UiTree<H> {
                     reachable_from_view_cache_roots,
                     trigger_element,
                     trigger_element_root,
+                    trigger_element_in_view_cache_keep_alive,
+                    trigger_element_listed_under_reuse_root,
                     root_children_len,
                     root_parent_children_len,
                     root_parent_children_contains_root,

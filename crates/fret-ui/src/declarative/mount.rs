@@ -333,7 +333,16 @@ where
             .next()
             .is_some()
         {
-            touch_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, root_node);
+            with_window_frame(app, window, |window_frame| {
+                touch_existing_declarative_subtree_seen(
+                    ui,
+                    window_state,
+                    window_frame,
+                    root_id,
+                    frame_id,
+                    root_node,
+                );
+            });
         }
 
         // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
@@ -467,6 +476,16 @@ where
                     root_reachable_from_view_cache_roots,
                     trigger_element: Some(record.element),
                     trigger_element_root: Some(record.element_root),
+                    trigger_element_in_view_cache_keep_alive: Some(
+                        keep_alive_view_cache_elements.contains(&record.element),
+                    ),
+                    trigger_element_listed_under_reuse_root: window_state
+                        .view_cache_reuse_roots()
+                        .find(|&root| {
+                            window_state
+                                .view_cache_elements_for_root(root)
+                                .is_some_and(|elements| elements.contains(&record.element))
+                        }),
                     path_edge_len,
                     path_edge_frame_contains_child,
                 })
@@ -669,7 +688,16 @@ where
             .next()
             .is_some()
         {
-            touch_existing_declarative_subtree_seen(ui, window_state, root_id, frame_id, root_node);
+            with_window_frame(app, window, |window_frame| {
+                touch_existing_declarative_subtree_seen(
+                    ui,
+                    window_state,
+                    window_frame,
+                    root_id,
+                    frame_id,
+                    root_node,
+                );
+            });
         }
 
         // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
@@ -797,6 +825,16 @@ where
                     root_reachable_from_view_cache_roots,
                     trigger_element: Some(record.element),
                     trigger_element_root: Some(record.element_root),
+                    trigger_element_in_view_cache_keep_alive: Some(
+                        keep_alive_view_cache_elements.contains(&record.element),
+                    ),
+                    trigger_element_listed_under_reuse_root: window_state
+                        .view_cache_reuse_roots()
+                        .find(|&root| {
+                            window_state
+                                .view_cache_elements_for_root(root)
+                                .is_some_and(|elements| elements.contains(&record.element))
+                        }),
                     path_edge_len,
                     path_edge_frame_contains_child,
                 })
@@ -1328,6 +1366,7 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
 fn touch_existing_declarative_subtree_seen<H: UiHost>(
     ui: &UiTree<H>,
     window_state: &mut crate::elements::WindowElementState,
+    window_frame: Option<&WindowFrame>,
     root_id: GlobalElementId,
     frame_id: FrameId,
     root: NodeId,
@@ -1351,8 +1390,12 @@ fn touch_existing_declarative_subtree_seen<H: UiHost>(
             window_state.touch_debug_identity_for_element(frame_id, element);
         }
 
-        for child in ui.children(node) {
-            stack.push(child);
+        if let Some(window_frame) = window_frame {
+            push_existing_subtree_children(ui, window_frame, node, &mut stack);
+        } else {
+            for child in ui.children(node) {
+                stack.push(child);
+            }
         }
     }
 }
@@ -1452,6 +1495,64 @@ mod tests {
         assert!(reachable.contains(&root));
         assert!(reachable.contains(&ui_child));
         assert!(reachable.contains(&frame_child));
+    }
+
+    #[test]
+    fn touch_existing_subtree_can_walk_window_frame_children() {
+        use crate::UiHost;
+        use crate::declarative::frame::WindowFrame;
+        use crate::tree::UiTree;
+        use crate::widget::{LayoutCx, PaintCx, Widget};
+        use fret_runtime::FrameId;
+
+        #[derive(Default)]
+        struct TestWidget;
+
+        impl<H: UiHost> Widget<H> for TestWidget {
+            fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+                for &child in cx.children {
+                    let _ = cx.layout_in(child, cx.bounds);
+                }
+                cx.available
+            }
+
+            fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+        }
+
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        ui.set_window(AppWindowId::default());
+
+        let root_node = ui.create_node(TestWidget::default());
+        let child_node = ui.create_node(TestWidget::default());
+
+        let root_element = GlobalElementId(1);
+        let child_element = GlobalElementId(2);
+        let root_id = GlobalElementId(999);
+
+        ui.set_node_element(root_node, Some(root_element));
+        ui.set_node_element(child_node, Some(child_element));
+
+        // Intentionally omit `ui.set_children(root_node, ..)` so `UiTree` has no child edges.
+        let mut window_frame = WindowFrame::default();
+        window_frame.children.insert(root_node, vec![child_node]);
+
+        let mut window_state = crate::elements::WindowElementState::default();
+
+        touch_existing_declarative_subtree_seen(
+            &ui,
+            &mut window_state,
+            Some(&window_frame),
+            root_id,
+            FrameId(1),
+            root_node,
+        );
+
+        let entry = window_state
+            .node_entry(child_element)
+            .expect("child touched");
+        assert_eq!(entry.node, child_node);
+        assert_eq!(entry.last_seen_frame, FrameId(1));
+        assert_eq!(entry.root, root_id);
     }
 }
 fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(

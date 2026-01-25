@@ -2882,6 +2882,18 @@ pub struct UiRemovedSubtreeV1 {
     pub root_parent: Option<u64>,
     #[serde(default)]
     pub root_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent_is_view_cache_reuse_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_location: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_frame_id: Option<u64>,
     #[serde(default)]
     pub root_layer: Option<u64>,
     #[serde(default)]
@@ -2892,6 +2904,10 @@ pub struct UiRemovedSubtreeV1 {
     pub trigger_element: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trigger_element_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_in_view_cache_keep_alive: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_listed_under_reuse_root: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trigger_element_path: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3005,6 +3021,42 @@ impl UiRemovedSubtreeV1 {
             })
             .unwrap_or((None, None, None, None));
 
+        let (
+            root_root_parent_sever_parent,
+            root_root_parent_sever_parent_element,
+            root_root_parent_sever_parent_path,
+            root_root_parent_sever_parent_is_view_cache_reuse_root,
+            root_root_parent_sever_location,
+            root_root_parent_sever_frame_id,
+        ) = r
+            .root_root
+            .and_then(|root| ui.debug_parent_sever_write_for(root))
+            .map(|w| {
+                let parent_element = element_runtime_state
+                    .and_then(|runtime| runtime.element_for_node(window, w.parent));
+                let parent_path = parent_element.and_then(|element| {
+                    element_runtime_state
+                        .and_then(|runtime| runtime.debug_path_for_element(window, element))
+                });
+                let parent_is_view_cache_reuse_root = parent_element.and_then(|element| {
+                    element_runtime_state.and_then(|runtime| {
+                        runtime
+                            .diagnostics_snapshot(window)
+                            .map(|s| s.view_cache_reuse_roots.contains(&element))
+                    })
+                });
+
+                (
+                    Some(key_to_u64(w.parent)),
+                    parent_element.map(|e| e.0),
+                    parent_path,
+                    parent_is_view_cache_reuse_root,
+                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    Some(w.frame_id.0),
+                )
+            })
+            .unwrap_or((None, None, None, None, None, None));
+
         Self {
             root: key_to_u64(r.root),
             root_element: r.root_element.map(|e| e.0),
@@ -3012,11 +3064,21 @@ impl UiRemovedSubtreeV1 {
             root_element_path,
             root_parent: r.root_parent.map(key_to_u64),
             root_root: r.root_root.map(key_to_u64),
+            root_root_parent_sever_parent,
+            root_root_parent_sever_parent_element,
+            root_root_parent_sever_parent_path,
+            root_root_parent_sever_parent_is_view_cache_reuse_root,
+            root_root_parent_sever_location,
+            root_root_parent_sever_frame_id,
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
             reachable_from_layer_roots: r.reachable_from_layer_roots,
             reachable_from_view_cache_roots: r.reachable_from_view_cache_roots,
             trigger_element: r.trigger_element.map(|e| e.0),
             trigger_element_root: r.trigger_element_root.map(|e| e.0),
+            trigger_element_in_view_cache_keep_alive: r.trigger_element_in_view_cache_keep_alive,
+            trigger_element_listed_under_reuse_root: r
+                .trigger_element_listed_under_reuse_root
+                .map(|id| id.0),
             trigger_element_path,
             trigger_element_root_path,
             root_children_len: r.root_children_len,
