@@ -1012,7 +1012,7 @@ impl CommandList {
             empty_text: Arc::from("No results."),
             highlight_query: None,
             scroll: LayoutRefinement::default()
-                .max_h(MetricRef::Px(Px(300.0)))
+                .max_h(Px(300.0))
                 .w_full()
                 .min_w_0(),
         }
@@ -1473,7 +1473,7 @@ impl CommandPalette {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
-                .max_h(MetricRef::Px(Px(300.0)))
+                .max_h(Px(300.0))
                 .w_full()
                 .min_w_0(),
         }
@@ -3384,9 +3384,7 @@ mod tests {
                     vec![
                         CommandPalette::new(model, items)
                             .refine_scroll_layout(
-                                LayoutRefinement::default()
-                                    .h_px(Px(40.0))
-                                    .max_h(MetricRef::Px(Px(40.0))),
+                                LayoutRefinement::default().h_px(Px(40.0)).max_h(Px(40.0)),
                             )
                             .into_element(cx),
                     ]

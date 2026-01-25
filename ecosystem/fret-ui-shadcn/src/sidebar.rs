@@ -12,7 +12,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
 use crate::hover_card::{HoverCard, HoverCardAlign};
 use crate::layout as shadcn_layout;
@@ -141,7 +141,7 @@ impl Sidebar {
             sidebar_width(&theme)
         };
         let layout = LayoutRefinement::default()
-            .w_px(MetricRef::Px(w))
+            .w_px(w)
             .h_full()
             .merge(self.layout);
 
@@ -470,9 +470,7 @@ impl SidebarMenuButton {
             let mut props = decl_style::container_props(
                 &theme,
                 chrome,
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_h(fret_ui_kit::MetricRef::Px(Px(32.0))),
+                LayoutRefinement::default().w_full().min_h(Px(32.0)),
             );
             props.layout.overflow = Overflow::Clip;
 

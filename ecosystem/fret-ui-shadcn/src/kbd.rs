@@ -66,8 +66,8 @@ fn kbd_with_patch<H: UiHost>(
 
     let layout_override = LayoutRefinement::default()
         .h_px(Px(20.0))
-        .min_h(MetricRef::Px(Px(20.0)))
-        .min_w(MetricRef::Px(Px(20.0)))
+        .min_h(Px(20.0))
+        .min_w(Px(20.0))
         .merge(layout_override);
 
     let props = decl_style::container_props(&theme, chrome, layout_override);
@@ -101,7 +101,7 @@ fn kbd_with_patch<H: UiHost>(
                         .line_height_px(line_height)
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(ColorRef::Color(fg))
-                        .h_px(MetricRef::Px(line_height))
+                        .h_px(line_height)
                         .into_element(cx),
                 ]
             },
