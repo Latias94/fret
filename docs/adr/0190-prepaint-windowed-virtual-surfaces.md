@@ -70,6 +70,13 @@ Windowed surfaces MUST compose with view caching:
   view boundary deterministically, without relying on unrelated input-driven `notify()` calls.
   - Examples: `scroll_to_item`, `ensure_line_visible`, `center_on_node`, `zoom_to_fit`.
 
+View-cache boundary constraint:
+
+- Nested cache roots inside barrier-driven windowed surfaces (virtual lists, scroll content, etc.) MUST remain safe under
+  scroll-driven coordinate space updates. In particular, a cache root inside a windowed surface MUST NOT assume it can
+  run an out-of-band “contained relayout” pass against default/stale placement bounds; otherwise semantics/hit-testing
+  can be desynchronized (e.g. bounds expressed in unscrolled content space). See ADR 1152 section 5.
+
 ### 4) Diagnostics requirements
 
 To keep the model explainable, the runtime MUST expose (debug-only) enough data to answer:
@@ -124,3 +131,7 @@ Early evidence that the runtime is moving toward this model:
   - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`)
 - Diagnostics bundles can export virtual-surface window telemetry for postmortem explanation:
   - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.virtual_list_windows`)
+- VirtualList “rowcached” experiments (nested cache roots per row) are validated for correctness under `scroll_to_item`
+  once `contained_layout` is treated as opt-in (nested row cache roots should not run contained relayout under barrier
+  placement):
+  - Unit regression: `crates/fret-ui/src/declarative/tests/view_cache.rs`
