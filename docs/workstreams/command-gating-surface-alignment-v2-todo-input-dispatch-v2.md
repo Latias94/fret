@@ -30,3 +30,8 @@ Each TODO is labeled:
   - Goal: `set_snapshot` updates the base snapshot without clobbering overlay-pushed snapshots.
   - Evidence anchors:
     - `crates/fret-runtime/src/window_command_gating.rs` (`setting_base_snapshot_does_not_override_stack_top`)
+
+- [x] CGSA2-rt-003 Clearing the base snapshot does not pop pushed overrides.
+  - Goal: allow overlays to safely `push_snapshot` without being affected by `clear_snapshot` calls.
+  - Evidence anchors:
+    - `crates/fret-runtime/src/window_command_gating.rs` (`clear_snapshot_only_clears_base_not_pushed_overrides`)
