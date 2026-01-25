@@ -272,15 +272,15 @@ let sw = m3::Switch::new(selected)
 "#;
 
 pub(crate) const DOC_MATERIAL3_RADIO: &str = r#"
-## Material 3 Radio (MVP)
+## RadioGroup (Material3 pilot)
 
-This page validates a Material 3 radio button surface:
+This page validates that the state-driven Material3 pilot surface can express a RadioGroup:
 
-- token-driven sizing + colors
-- state layer (hover / pressed / focus)
-- bounded ripple (pointer-origin)
+- group-value binding (`Model<Option<Arc<str>>>`)
+- roving focus + keyboard navigation
+- state-driven hover/active/focus-visible outcomes
 
-This page uses the group-value binding API (`Model<Option<Arc<str>>>`) so multiple items behave like a real radio group.
+This is intentionally a minimal pilot; detailed Material3 parity work is tracked in the workstream.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_RADIO: &str = r#"
@@ -289,32 +289,13 @@ use fret_ui_material3 as m3;
 use std::sync::Arc;
 
 let value = app.models_mut().insert(None::<Arc<str>>);
-let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
-```
-"#;
-
-pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
-## Material 3 Text Field (MVP)
-
-This page validates Material 3 text field variants:
-
-- outlined: token-driven outline colors + widths (hover/focus/error/disabled)
-- filled: token-driven filled container + active indicator + hover state layer
-- label + placeholder outcomes (best-effort)
-- outlined: animated label float + an outline "notch" patch (best-effort)
-
-This is built on top of `fret-ui`'s `TextInput` mechanism widget (caret/selection/IME).
-"#;
-
-pub(crate) const USAGE_MATERIAL3_TEXT_FIELD: &str = r#"
-```rust
-use fret_ui_material3 as m3;
-
-let model = app.models_mut().insert(String::new());
-let tf = m3::TextField::new(model)
-    .variant(m3::TextFieldVariant::Filled)
-    .label("Name")
-    .placeholder("Type here")
+let group = m3::RadioGroup::new(value)
+    .a11y_label("Options")
+    .items([
+        m3::RadioGroupItem::new("a", "A"),
+        m3::RadioGroupItem::new("b", "B"),
+        m3::RadioGroupItem::new("c", "C").disabled(true),
+    ])
     .into_element(cx);
 ```
 "#;

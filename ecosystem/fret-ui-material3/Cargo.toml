@@ -11,10 +11,10 @@ documentation.workspace = true
 
 [features]
 default = []
+material3_full = []
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit" }
-

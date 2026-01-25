@@ -109,8 +109,6 @@ pub(crate) const PAGE_FIELD: &str = "field";
 pub(crate) const PAGE_OVERLAY: &str = "overlay";
 pub(crate) const PAGE_FORMS: &str = "forms";
 pub(crate) const PAGE_SELECT: &str = "select";
-pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
-pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
 pub(crate) const PAGE_COMBOBOX: &str = "combobox";
 pub(crate) const PAGE_DATE_PICKER: &str = "date_picker";
 pub(crate) const PAGE_RESIZABLE: &str = "resizable";
@@ -123,24 +121,42 @@ pub(crate) const PAGE_PROGRESS: &str = "progress";
 pub(crate) const PAGE_MENUS: &str = "menus";
 pub(crate) const PAGE_COMMAND: &str = "command";
 pub(crate) const PAGE_TOAST: &str = "toast";
+
+// Material 3 (pilot surface; aligned with `ecosystem/fret-ui-material3` on main).
 pub(crate) const PAGE_MATERIAL3_GALLERY: &str = "material3_gallery";
 pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
-pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
 pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
 pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
+pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
 pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
+
+// Material 3 "full runtime" pages (in-progress; behind a feature gate).
+#[cfg(feature = "material3_full")]
+pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_BAR: &str = "material3_navigation_bar";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_RAIL: &str = "material3_navigation_rail";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_DRAWER: &str = "material3_navigation_drawer";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = "material3_modal_navigation_drawer";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_DIALOG: &str = "material3_dialog";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_LIST: &str = "material3_list";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_SNACKBAR: &str = "material3_snackbar";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_TOOLTIP: &str = "material3_tooltip";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_STATE_MATRIX: &str = "material3_state_matrix";
+#[cfg(feature = "material3_full")]
 pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
@@ -160,8 +176,6 @@ pub(crate) const CMD_NAV_FIELD: &str = "ui_gallery.nav.select.field";
 pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
 pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
 pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
-pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
-pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
 pub(crate) const CMD_NAV_COMBOBOX: &str = "ui_gallery.nav.select.combobox";
 pub(crate) const CMD_NAV_DATE_PICKER: &str = "ui_gallery.nav.select.date_picker";
 pub(crate) const CMD_NAV_RESIZABLE: &str = "ui_gallery.nav.select.resizable";
@@ -174,30 +188,48 @@ pub(crate) const CMD_NAV_PROGRESS: &str = "ui_gallery.nav.select.progress";
 pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
 pub(crate) const CMD_NAV_COMMAND: &str = "ui_gallery.nav.select.command";
 pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
+
+// Material 3 (pilot surface).
 pub(crate) const CMD_NAV_MATERIAL3_GALLERY: &str = "ui_gallery.nav.select.material3_gallery";
 pub(crate) const CMD_NAV_MATERIAL3_BUTTON: &str = "ui_gallery.nav.select.material3_button";
-pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
-    "ui_gallery.nav.select.material3_icon_button";
 pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
 pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
+pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
 pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
+
+// Material 3 "full runtime" pages.
+#[cfg(feature = "material3_full")]
+pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
+    "ui_gallery.nav.select.material3_icon_button";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_BAR: &str =
     "ui_gallery.nav.select.material3_navigation_bar";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_RAIL: &str =
     "ui_gallery.nav.select.material3_navigation_rail";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_DRAWER: &str =
     "ui_gallery.nav.select.material3_navigation_drawer";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str =
     "ui_gallery.nav.select.material3_modal_navigation_drawer";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_DIALOG: &str = "ui_gallery.nav.select.material3_dialog";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_MENU: &str = "ui_gallery.nav.select.material3_menu";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_LIST: &str = "ui_gallery.nav.select.material3_list";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_SNACKBAR: &str = "ui_gallery.nav.select.material3_snackbar";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_TOOLTIP: &str = "ui_gallery.nav.select.material3_tooltip";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_STATE_MATRIX: &str =
     "ui_gallery.nav.select.material3_state_matrix";
+#[cfg(feature = "material3_full")]
 pub(crate) const CMD_NAV_MATERIAL3_TOUCH_TARGETS: &str =
     "ui_gallery.nav.select.material3_touch_targets";
 
@@ -614,6 +646,83 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(not(feature = "material3_full"))]
+    PageGroupSpec {
+        title: "Material 3",
+        items: &[
+            PageSpec::new(
+                PAGE_MATERIAL3_GALLERY,
+                "Gallery",
+                "Material 3 Gallery (pilot surface)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_GALLERY,
+                &["material3", "gallery", "pilot"],
+                docs::DOC_MATERIAL3_GALLERY,
+                docs::USAGE_MATERIAL3_GALLERY,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_BUTTON,
+                "Button",
+                "Material 3 Button (pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_BUTTON,
+                &["material3", "button"],
+                docs::DOC_MATERIAL3_BUTTON,
+                docs::USAGE_MATERIAL3_BUTTON,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_CHECKBOX,
+                "Checkbox",
+                "Material 3 Checkbox (pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_CHECKBOX,
+                &["material3", "checkbox"],
+                docs::DOC_MATERIAL3_CHECKBOX,
+                docs::USAGE_MATERIAL3_CHECKBOX,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SWITCH,
+                "Switch",
+                "Material 3 Switch (pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SWITCH,
+                &["material3", "switch"],
+                docs::DOC_MATERIAL3_SWITCH,
+                docs::USAGE_MATERIAL3_SWITCH,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_RADIO,
+                "RadioGroup",
+                "Material 3 RadioGroup (pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_RADIO,
+                &["material3", "radio", "radio-group"],
+                docs::DOC_MATERIAL3_RADIO,
+                docs::USAGE_MATERIAL3_RADIO,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SELECT,
+                "Select",
+                "Select (Material3 pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SELECT,
+                &["material3", "select", "state-driven-style"],
+                docs::DOC_MATERIAL3_SELECT,
+                docs::USAGE_MATERIAL3_SELECT,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TEXT_FIELD,
+                "TextField",
+                "TextField (Material3 pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TEXT_FIELD,
+                &["material3", "text-field", "state-driven-style"],
+                docs::DOC_MATERIAL3_TEXT_FIELD,
+                docs::USAGE_MATERIAL3_TEXT_FIELD,
+            ),
+        ],
+    },
+    #[cfg(feature = "material3_full")]
     PageGroupSpec {
         title: "Material 3",
         items: &[

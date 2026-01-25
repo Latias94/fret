@@ -566,6 +566,16 @@ fn page_preview(
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
+        #[cfg(not(feature = "material3_full"))]
+        PAGE_MATERIAL3_GALLERY => preview_material3_gallery(
+            cx,
+            material3_checkbox,
+            material3_switch,
+            material3_radio_value,
+            material3_text_field_value,
+            material3_text_field_disabled,
+        ),
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_GALLERY => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_gallery(
                 cx,
@@ -581,6 +591,12 @@ fn page_preview(
                 last_action.clone(),
             )
         }),
+        PAGE_MATERIAL3_BUTTON => preview_material3_button(cx),
+        PAGE_MATERIAL3_CHECKBOX => preview_material3_checkbox(cx, material3_checkbox),
+        PAGE_MATERIAL3_SWITCH => preview_material3_switch(cx, material3_switch),
+        PAGE_MATERIAL3_RADIO => preview_material3_radio(cx, material3_radio_value),
+
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_STATE_MATRIX => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_state_matrix(
@@ -598,6 +614,7 @@ fn page_preview(
                 )
             })
         }
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_TOUCH_TARGETS => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_touch_targets(
@@ -609,54 +626,39 @@ fn page_preview(
                 )
             })
         }
-        PAGE_MATERIAL3_BUTTON => {
-            material3_scoped_page(cx, material3_expressive.clone(), preview_material3_button)
-        }
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_ICON_BUTTON => material3_scoped_page(
             cx,
             material3_expressive.clone(),
             preview_material3_icon_button,
         ),
-        PAGE_MATERIAL3_CHECKBOX => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-            preview_material3_checkbox(cx, material3_checkbox)
-        }),
-        PAGE_MATERIAL3_SWITCH => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-            preview_material3_switch(cx, material3_switch)
-        }),
-        PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-            preview_material3_radio(cx, material3_radio_value)
-        }),
-        PAGE_MATERIAL3_TEXT_FIELD => {
-            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
-                preview_material3_text_field(
-                    cx,
-                    material3_text_field_value,
-                    material3_text_field_disabled,
-                    material3_text_field_error,
-                )
-            })
-        }
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_TABS => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_tabs(cx, material3_tabs_value)
         }),
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_LIST => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_list(cx, material3_list_value)
         }),
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_NAVIGATION_BAR => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_navigation_bar(cx, material3_navigation_bar_value)
             })
         }
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_NAVIGATION_RAIL => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_navigation_rail(cx, material3_navigation_rail_value)
             })
         }
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_NAVIGATION_DRAWER => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_navigation_drawer(cx, material3_navigation_drawer_value)
             })
         }
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_modal_navigation_drawer(
@@ -666,15 +668,19 @@ fn page_preview(
                 )
             })
         }
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_DIALOG => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_dialog(cx, material3_dialog_open, last_action.clone())
         }),
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_MENU => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_menu(cx, material3_menu_open, last_action.clone())
         }),
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_SNACKBAR => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_snackbar(cx, last_action.clone())
         }),
+        #[cfg(feature = "material3_full")]
         PAGE_MATERIAL3_TOOLTIP => {
             material3_scoped_page(cx, material3_expressive.clone(), preview_material3_tooltip)
         }
@@ -694,6 +700,7 @@ fn page_preview(
     .into_element(cx)
 }
 
+#[cfg(feature = "material3_full")]
 fn material3_scoped_page(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
@@ -720,6 +727,7 @@ fn material3_scoped_page(
     out
 }
 
+#[cfg(feature = "material3_full")]
 fn material3_variant_toggle_row(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
@@ -1422,15 +1430,91 @@ fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     vec![
-        cx.text("Material 3 Buttons: token-driven colors + state layer + bounded ripple."),
+        cx.text("Material 3 Buttons (pilot): state-driven tokens via `WidgetStates`."),
         row(cx, material3::ButtonVariant::Filled, "Filled"),
-        row(cx, material3::ButtonVariant::Tonal, "Tonal"),
-        row(cx, material3::ButtonVariant::Elevated, "Elevated"),
         row(cx, material3::ButtonVariant::Outlined, "Outlined"),
         row(cx, material3::ButtonVariant::Text, "Text"),
     ]
 }
 
+#[cfg(not(feature = "material3_full"))]
+fn preview_material3_gallery(
+    cx: &mut ElementContext<'_, App>,
+    material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+) -> Vec<AnyElement> {
+    let disabled = cx
+        .get_model_copied(&material3_text_field_disabled, Invalidation::Layout)
+        .unwrap_or(false);
+
+    vec![
+        cx.text("Material 3 Gallery (pilot): compact surface for SDSR-based components."),
+        cx.text("— Buttons —"),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    material3::Button::new("Filled")
+                        .variant(material3::ButtonVariant::Filled)
+                        .into_element(cx),
+                    material3::Button::new("Outlined")
+                        .variant(material3::ButtonVariant::Outlined)
+                        .into_element(cx),
+                    material3::Button::new("Text")
+                        .variant(material3::ButtonVariant::Text)
+                        .into_element(cx),
+                ]
+            },
+        ),
+        cx.text("— Selection —"),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N3).items_center(),
+            |cx| {
+                vec![
+                    material3::Checkbox::new(material3_checkbox.clone())
+                        .a11y_label("Checkbox")
+                        .into_element(cx),
+                    material3::Switch::new(material3_switch.clone())
+                        .a11y_label("Switch")
+                        .into_element(cx),
+                    material3::RadioGroup::new(material3_radio_value.clone())
+                        .a11y_label("RadioGroup")
+                        .items([
+                            material3::RadioGroupItem::new("alpha", "Alpha"),
+                            material3::RadioGroupItem::new("beta", "Beta"),
+                            material3::RadioGroupItem::new("disabled", "Disabled").disabled(true),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        ),
+        cx.text("— TextField —"),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Switch::new(material3_text_field_disabled.clone())
+                        .a11y_label("Disable TextField")
+                        .into_element(cx),
+                    cx.text("Disabled"),
+                ]
+            },
+        ),
+        material3::TextField::new(material3_text_field_value)
+            .a11y_label("Material3 text field")
+            .placeholder("Type here…")
+            .disabled(disabled)
+            .into_element(cx),
+    ]
+}
+
+#[cfg(feature = "material3_full")]
 fn preview_material3_gallery(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1590,6 +1674,7 @@ fn preview_material3_gallery(
     out
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_state_matrix(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1628,6 +1713,7 @@ fn preview_material3_state_matrix(
     out
 }
 
+#[cfg(feature = "material3_full")]
 fn material3_state_matrix_content(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1659,7 +1745,7 @@ fn material3_state_matrix_content(
     out.extend(preview_material3_radio(cx, material3_radio_value));
 
     out.push(cx.text("— Text Field —"));
-    out.extend(preview_material3_text_field(
+    out.extend(preview_material3_text_field_full(
         cx,
         material3_text_field_value,
         material3_text_field_disabled,
@@ -1681,6 +1767,7 @@ fn material3_state_matrix_content(
     out
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_touch_targets(
     cx: &mut ElementContext<'_, App>,
     material3_checkbox: Model<bool>,
@@ -1901,6 +1988,7 @@ fn preview_material3_touch_targets(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_icons::ids;
 
@@ -2050,20 +2138,11 @@ fn preview_material3_radio(
         move |cx| {
             vec![
                 material3::RadioGroup::new(group_value.clone())
-                    .a11y_label("Material 3 RadioGroup")
-                    .orientation(material3::RadioGroupOrientation::Horizontal)
-                    .gap(Px(8.0))
-                    .items(vec![
-                        material3::RadioGroupItem::new("Alpha")
-                            .a11y_label("Radio Alpha")
-                            .test_id("ui-gallery-material3-radio-a"),
-                        material3::RadioGroupItem::new("Beta")
-                            .a11y_label("Radio Beta")
-                            .test_id("ui-gallery-material3-radio-b"),
-                        material3::RadioGroupItem::new("Charlie")
-                            .a11y_label("Radio Charlie (disabled)")
-                            .disabled(true)
-                            .test_id("ui-gallery-material3-radio-c-disabled"),
+                    .a11y_label("Material3 RadioGroup")
+                    .items([
+                        material3::RadioGroupItem::new("alpha", "Alpha"),
+                        material3::RadioGroupItem::new("beta", "Beta"),
+                        material3::RadioGroupItem::new("disabled", "Disabled").disabled(true),
                     ])
                     .into_element(cx),
                 cx.text(format!("value={}", current.as_ref())),
@@ -2073,13 +2152,14 @@ fn preview_material3_radio(
 
     vec![
         cx.text(
-            "Material 3 Radio: group-value binding + roving focus + typeahead + state layer + bounded ripple.",
+            "RadioGroup (Material3 pilot): group-value binding + roving focus + state-driven outcomes.",
         ),
         row,
     ]
 }
 
-fn preview_material3_text_field(
+#[cfg(feature = "material3_full")]
+fn preview_material3_text_field_full(
     cx: &mut ElementContext<'_, App>,
     value: Model<String>,
     disabled: Model<bool>,
@@ -2173,6 +2253,7 @@ fn preview_material3_text_field(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_tabs(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2222,6 +2303,7 @@ fn preview_material3_tabs(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_navigation_bar(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2255,6 +2337,7 @@ fn preview_material3_navigation_bar(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_navigation_rail(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2304,6 +2387,7 @@ fn preview_material3_navigation_rail(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_navigation_drawer(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2353,6 +2437,7 @@ fn preview_material3_navigation_drawer(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_modal_navigation_drawer(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -2455,6 +2540,7 @@ fn preview_material3_modal_navigation_drawer(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_dialog(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -2562,6 +2648,7 @@ fn preview_material3_dialog(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_menu(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -2662,6 +2749,7 @@ fn preview_material3_menu(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_list(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
@@ -2733,6 +2821,7 @@ fn preview_material3_list(
     ]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_snackbar(
     cx: &mut ElementContext<'_, App>,
     last_action: Model<Arc<str>>,
@@ -2855,6 +2944,7 @@ fn preview_material3_snackbar(
     vec![card]
 }
 
+#[cfg(feature = "material3_full")]
 fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let content = material3::TooltipProvider::new().with(cx, |cx| {
         let outlined = material3::ButtonVariant::Outlined;

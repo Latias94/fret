@@ -11,3 +11,15 @@ pub use radio_group::{RadioGroup, RadioGroupItem, RadioGroupStyle};
 pub use select::{Select, SelectItem, SelectStyle};
 pub use switch::{Switch, SwitchStyle};
 pub use text_field::{TextField, TextFieldStyle};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pilot_surfaces_are_constructible() {
+        let _ = Button::new("Test").variant(ButtonVariant::Filled);
+        let _ = SelectItem::new("value", "Label").disabled(true);
+        let _ = RadioGroupItem::new("value", "Label").disabled(true);
+    }
+}
