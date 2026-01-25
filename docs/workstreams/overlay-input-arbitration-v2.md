@@ -10,6 +10,7 @@ progress here to avoid document ownership conflicts.
 Primary roadmap document:
 
 - `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
+- Worktree tracker (this branch): `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md`
 
 Related ADRs:
 
