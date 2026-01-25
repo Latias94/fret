@@ -203,6 +203,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] Radio token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/radio.rs`,
       `ecosystem/fret-ui-material3/src/radio.rs`.
+  - [x] Tabs token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/tabs.rs`,
+      `ecosystem/fret-ui-material3/src/tabs.rs`.
 
 ### Interaction Outcomes
 
