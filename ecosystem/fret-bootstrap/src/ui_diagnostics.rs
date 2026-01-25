@@ -2877,6 +2877,8 @@ pub struct UiRemovedSubtreeV1 {
     #[serde(default)]
     pub root_parent_element: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_element_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub root_element_path: Option<String>,
     #[serde(default)]
     pub root_parent: Option<u64>,
@@ -2894,6 +2896,14 @@ pub struct UiRemovedSubtreeV1 {
     pub root_root_parent_sever_location: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub root_root_parent_sever_frame_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_old_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_old_elements_head_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_new_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_new_elements_head_paths: Vec<String>,
     #[serde(default)]
     pub root_layer: Option<u64>,
     #[serde(default)]
@@ -2984,6 +2994,11 @@ impl UiRemovedSubtreeV1 {
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
 
+        let root_parent_element_path = r.root_parent_element.and_then(|element| {
+            element_runtime_state
+                .and_then(|runtime| runtime.debug_path_for_element(window, element))
+        });
+
         let trigger_element_path = r.trigger_element.and_then(|element| {
             element_runtime_state
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
@@ -3028,6 +3043,10 @@ impl UiRemovedSubtreeV1 {
             root_root_parent_sever_parent_is_view_cache_reuse_root,
             root_root_parent_sever_location,
             root_root_parent_sever_frame_id,
+            root_root_parent_sever_parent_children_last_set_old_elements_head,
+            root_root_parent_sever_parent_children_last_set_old_elements_head_paths,
+            root_root_parent_sever_parent_children_last_set_new_elements_head,
+            root_root_parent_sever_parent_children_last_set_new_elements_head_paths,
         ) = r
             .root_root
             .and_then(|root| ui.debug_parent_sever_write_for(root))
@@ -3046,6 +3065,30 @@ impl UiRemovedSubtreeV1 {
                     })
                 });
 
+                let mut old_elements_head: Vec<u64> = Vec::new();
+                let mut old_elements_head_paths: Vec<String> = Vec::new();
+                let mut new_elements_head: Vec<u64> = Vec::new();
+                let mut new_elements_head_paths: Vec<String> = Vec::new();
+
+                if let Some(write) = ui.debug_set_children_write_for(w.parent) {
+                    for element in write.old_elements_head.into_iter().flatten() {
+                        old_elements_head.push(element.0);
+                        if let Some(path) = element_runtime_state
+                            .and_then(|runtime| runtime.debug_path_for_element(window, element))
+                        {
+                            old_elements_head_paths.push(path);
+                        }
+                    }
+                    for element in write.new_elements_head.into_iter().flatten() {
+                        new_elements_head.push(element.0);
+                        if let Some(path) = element_runtime_state
+                            .and_then(|runtime| runtime.debug_path_for_element(window, element))
+                        {
+                            new_elements_head_paths.push(path);
+                        }
+                    }
+                }
+
                 (
                     Some(key_to_u64(w.parent)),
                     parent_element.map(|e| e.0),
@@ -3053,14 +3096,30 @@ impl UiRemovedSubtreeV1 {
                     parent_is_view_cache_reuse_root,
                     Some(format!("{}:{}:{}", w.file, w.line, w.column)),
                     Some(w.frame_id.0),
+                    old_elements_head,
+                    old_elements_head_paths,
+                    new_elements_head,
+                    new_elements_head_paths,
                 )
             })
-            .unwrap_or((None, None, None, None, None, None));
+            .unwrap_or((
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            ));
 
         Self {
             root: key_to_u64(r.root),
             root_element: r.root_element.map(|e| e.0),
             root_parent_element: r.root_parent_element.map(|e| e.0),
+            root_parent_element_path,
             root_element_path,
             root_parent: r.root_parent.map(key_to_u64),
             root_root: r.root_root.map(key_to_u64),
@@ -3070,6 +3129,10 @@ impl UiRemovedSubtreeV1 {
             root_root_parent_sever_parent_is_view_cache_reuse_root,
             root_root_parent_sever_location,
             root_root_parent_sever_frame_id,
+            root_root_parent_sever_parent_children_last_set_old_elements_head,
+            root_root_parent_sever_parent_children_last_set_old_elements_head_paths,
+            root_root_parent_sever_parent_children_last_set_new_elements_head,
+            root_root_parent_sever_parent_children_last_set_new_elements_head_paths,
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
             reachable_from_layer_roots: r.reachable_from_layer_roots,
             reachable_from_view_cache_roots: r.reachable_from_view_cache_roots,
