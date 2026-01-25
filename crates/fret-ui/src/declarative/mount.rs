@@ -123,21 +123,6 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
     })
 }
 
-#[cfg(all(feature = "diagnostics", not(target_arch = "wasm32")))]
-fn view_cache_gc_stopgap_disabled() -> bool {
-    use std::sync::OnceLock;
-
-    static DISABLED: OnceLock<bool> = OnceLock::new();
-    *DISABLED.get_or_init(|| {
-        std::env::var_os("FRET_UI_DISABLE_VIEW_CACHE_GC_STOPGAP").is_some_and(|v| !v.is_empty())
-    })
-}
-
-#[cfg(not(all(feature = "diagnostics", not(target_arch = "wasm32"))))]
-fn view_cache_gc_stopgap_disabled() -> bool {
-    false
-}
-
 /// Render a declarative element tree into an existing `UiTree` root.
 ///
 /// Call this once per frame *before* `layout_all`/`paint_all`, for the relevant window.
@@ -359,6 +344,44 @@ where
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
+        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if view_cache_has_reuse_roots
+        {
+            let view_cache_reuse_roots: Vec<GlobalElementId> =
+                window_state.view_cache_reuse_roots().collect();
+            let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
+                .iter()
+                .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
+                .collect();
+
+            let mut reachable: HashSet<NodeId> = HashSet::new();
+
+            if !view_cache_reuse_root_nodes.is_empty() {
+                reachable.extend(with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc(
+                        ui,
+                        window_frame,
+                        view_cache_reuse_root_nodes.iter().copied(),
+                    )
+                }));
+            }
+
+            // Also treat recorded view-cache subtree memberships as authoritative reachability,
+            // so cache hits can keep subtrees alive even when child edges are temporarily
+            // incomplete (ADR 0191).
+            for root in view_cache_reuse_roots {
+                if let Some(elements) = window_state.view_cache_elements_for_root(root) {
+                    for &element in elements {
+                        if let Some(entry) = window_state.node_entry(element) {
+                            reachable.insert(entry.node);
+                        }
+                    }
+                }
+            }
+
+            Some(reachable)
+        } else {
+            None
+        };
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -378,9 +401,6 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            if view_cache_has_reuse_roots && !view_cache_gc_stopgap_disabled() {
-                return true;
-            }
             let reachable = reachable_from_layers.get_or_insert_with(|| {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
@@ -397,6 +417,11 @@ where
             if reachable.contains(&entry.node) {
                 return true;
             }
+            if let Some(reachable) = reachable_from_view_cache_roots.as_ref()
+                && reachable.contains(&entry.node)
+            {
+                return true;
+            }
             stale.push(StaleNodeRecord {
                 node: entry.node,
                 element: *id,
@@ -409,27 +434,6 @@ where
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
         }
-
-        #[cfg(feature = "diagnostics")]
-        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if ui.debug_enabled() {
-            let view_cache_reuse_root_nodes: Vec<NodeId> = window_state
-                .view_cache_reuse_roots()
-                .filter_map(|root| window_state.node_entry(root).map(|e| e.node))
-                .collect();
-            if view_cache_reuse_root_nodes.is_empty() {
-                None
-            } else {
-                Some(with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc(
-                        ui,
-                        window_frame,
-                        view_cache_reuse_root_nodes.iter().copied(),
-                    )
-                }))
-            }
-        } else {
-            None
-        };
 
         for record in stale {
             let node = record.node;
@@ -706,6 +710,41 @@ where
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
+        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if view_cache_has_reuse_roots
+        {
+            let view_cache_reuse_roots: Vec<GlobalElementId> =
+                window_state.view_cache_reuse_roots().collect();
+            let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
+                .iter()
+                .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
+                .collect();
+
+            let mut reachable: HashSet<NodeId> = HashSet::new();
+
+            if !view_cache_reuse_root_nodes.is_empty() {
+                reachable.extend(with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc(
+                        ui,
+                        window_frame,
+                        view_cache_reuse_root_nodes.iter().copied(),
+                    )
+                }));
+            }
+
+            for root in view_cache_reuse_roots {
+                if let Some(elements) = window_state.view_cache_elements_for_root(root) {
+                    for &element in elements {
+                        if let Some(entry) = window_state.node_entry(element) {
+                            reachable.insert(entry.node);
+                        }
+                    }
+                }
+            }
+
+            Some(reachable)
+        } else {
+            None
+        };
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -727,9 +766,6 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            if view_cache_has_reuse_roots && !view_cache_gc_stopgap_disabled() {
-                return true;
-            }
             let reachable = reachable_from_layers.get_or_insert_with(|| {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
@@ -746,6 +782,11 @@ where
             if reachable.contains(&entry.node) {
                 return true;
             }
+            if let Some(reachable) = reachable_from_view_cache_roots.as_ref()
+                && reachable.contains(&entry.node)
+            {
+                return true;
+            }
             stale.push(StaleNodeRecord {
                 node: entry.node,
                 element: *id,
@@ -758,27 +799,6 @@ where
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
         }
-
-        #[cfg(feature = "diagnostics")]
-        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if ui.debug_enabled() {
-            let view_cache_reuse_root_nodes: Vec<NodeId> = window_state
-                .view_cache_reuse_roots()
-                .filter_map(|root| window_state.node_entry(root).map(|e| e.node))
-                .collect();
-            if view_cache_reuse_root_nodes.is_empty() {
-                None
-            } else {
-                Some(with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc(
-                        ui,
-                        window_frame,
-                        view_cache_reuse_root_nodes.iter().copied(),
-                    )
-                }))
-            }
-        } else {
-            None
-        };
 
         for record in stale {
             let node = record.node;
@@ -1100,7 +1120,12 @@ fn mount_element<H: UiHost>(
             );
             window_state.record_view_cache_subtree_elements(
                 id,
-                collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
+                collect_declarative_elements_for_existing_subtree(
+                    ui,
+                    window_state,
+                    window_frame,
+                    node,
+                ),
             );
         } else if !touched {
             mark_existing_declarative_subtree_seen(
@@ -1113,7 +1138,12 @@ fn mount_element<H: UiHost>(
             );
             window_state.record_view_cache_subtree_elements(
                 id,
-                collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
+                collect_declarative_elements_for_existing_subtree(
+                    ui,
+                    window_state,
+                    window_frame,
+                    node,
+                ),
             );
         }
         inherit_observations_for_existing_subtree(ui, window_state, window_frame, node);
@@ -1169,7 +1199,7 @@ fn mount_element<H: UiHost>(
         // can refresh liveness without re-running the render closure.
         window_state.record_view_cache_subtree_elements(
             id,
-            collect_declarative_elements_for_existing_subtree(ui, window_frame, node),
+            collect_declarative_elements_for_existing_subtree(ui, window_state, window_frame, node),
         );
     } else {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
@@ -1345,13 +1375,18 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
             .get(&node)
             .map(|r| r.element)
             .or_else(|| ui.node_element(node))
+            .or_else(|| window_state.element_for_node(node))
         {
+            let root = window_state
+                .node_entry(element)
+                .map(|e| e.root)
+                .unwrap_or(root_id);
             window_state.set_node_entry(
                 element,
                 NodeEntry {
                     node,
                     last_seen_frame: frame_id,
-                    root: root_id,
+                    root,
                 },
             );
 
@@ -1376,13 +1411,21 @@ fn touch_existing_declarative_subtree_seen<H: UiHost>(
         if !ui.node_exists(node) {
             continue;
         }
-        if let Some(element) = ui.node_element(node) {
+        if let Some(element) = window_frame
+            .and_then(|window_frame| window_frame.instances.get(&node).map(|r| r.element))
+            .or_else(|| ui.node_element(node))
+            .or_else(|| window_state.element_for_node(node))
+        {
+            let root = window_state
+                .node_entry(element)
+                .map(|e| e.root)
+                .unwrap_or(root_id);
             window_state.set_node_entry(
                 element,
                 NodeEntry {
                     node,
                     last_seen_frame: frame_id,
-                    root: root_id,
+                    root,
                 },
             );
 
@@ -1402,6 +1445,7 @@ fn touch_existing_declarative_subtree_seen<H: UiHost>(
 
 fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
     ui: &UiTree<H>,
+    window_state: &crate::elements::WindowElementState,
     window_frame: &WindowFrame,
     root: NodeId,
 ) -> Vec<GlobalElementId> {
@@ -1417,6 +1461,7 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
             .get(&node)
             .map(|r| r.element)
             .or_else(|| ui.node_element(node))
+            .or_else(|| window_state.element_for_node(node))
         {
             if seen.insert(element) {
                 out.push(element);

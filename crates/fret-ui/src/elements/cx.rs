@@ -39,7 +39,7 @@ pub struct ElementContext<'a, H: UiHost> {
     pub bounds: Rect,
     window_state: &'a mut WindowElementState,
     stack: Vec<GlobalElementId>,
-    child_counters: Vec<u32>,
+    callsite_counters: Vec<HashMap<u64, u32>>,
     view_cache_should_reuse: Option<&'a mut dyn FnMut(NodeId) -> bool>,
 }
 
@@ -63,7 +63,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             bounds,
             window_state,
             stack: vec![root],
-            child_counters: vec![0],
+            callsite_counters: vec![HashMap::new()],
             view_cache_should_reuse: None,
         }
     }
@@ -196,15 +196,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let root = global_root(self.window, root_name);
 
         let prev_stack = std::mem::take(&mut self.stack);
-        let prev_counters = std::mem::take(&mut self.child_counters);
+        let prev_counters = std::mem::take(&mut self.callsite_counters);
 
         self.stack = vec![root];
-        self.child_counters = vec![0];
+        self.callsite_counters = vec![HashMap::new()];
 
         let out = f(self);
 
         self.stack = prev_stack;
-        self.child_counters = prev_counters;
+        self.callsite_counters = prev_counters;
 
         out
     }
@@ -501,9 +501,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         f: impl FnOnce(&mut Self) -> R,
     ) -> R {
         let parent = self.root_id();
-        let child_index = self.child_counters.last_mut().expect("counter exists");
-        let slot = *child_index as u64;
-        *child_index = child_index.saturating_add(1);
+        let counters = self
+            .callsite_counters
+            .last_mut()
+            .expect("callsite counters exist");
+        let next = counters.entry(callsite).or_insert(0);
+        let slot = *next as u64;
+        *next = next.saturating_add(1);
 
         let child_salt = key_hash.unwrap_or(slot);
         let id = derive_child_id(parent, callsite, child_salt);
@@ -522,9 +526,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         );
 
         self.stack.push(id);
-        self.child_counters.push(0);
+        self.callsite_counters.push(HashMap::new());
         let out = f(self);
-        self.child_counters.pop();
+        self.callsite_counters.pop();
         self.stack.pop();
         out
     }

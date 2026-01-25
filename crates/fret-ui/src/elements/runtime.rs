@@ -503,18 +503,28 @@ impl WindowElementState {
 
         self.view_cache_elements_next.insert(root, elements.clone());
 
+        let mut missing_node_entries: u32 = 0;
         for element in elements {
             let Some(entry) = self.nodes.get_mut(&element) else {
+                missing_node_entries = missing_node_entries.saturating_add(1);
                 continue;
             };
             entry.last_seen_frame = frame_id;
-            entry.root = root_id;
+            // Touching a retained subtree must not reassign cross-root ownership (ADR 0191).
+            // If the element is already owned by a different root, keep the original owner and
+            // rely on diagnostics to flag the mismatch rather than "repairing" it implicitly.
+            if entry.root == root_id {
+                // Fast path: expected owner.
+            }
 
             #[cfg(feature = "diagnostics")]
             self.touch_debug_identity_for_element(frame_id, element);
         }
 
-        true
+        // If the recorded list references elements that no longer have node entries, treat the
+        // list as potentially incomplete/stale so the caller can fall back to a retained-subtree
+        // walk and re-record the membership deterministically.
+        missing_node_entries == 0
     }
 
     pub(crate) fn view_cache_elements_for_root(
