@@ -2879,6 +2879,8 @@ pub struct UiRemovedSubtreeV1 {
     pub root_layer: Option<u64>,
     #[serde(default)]
     pub reachable_from_layer_roots: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reachable_from_view_cache_roots: Option<bool>,
     #[serde(default)]
     pub root_children_len: u32,
     #[serde(default)]
@@ -2987,6 +2989,7 @@ impl UiRemovedSubtreeV1 {
             root_root: r.root_root.map(key_to_u64),
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
             reachable_from_layer_roots: r.reachable_from_layer_roots,
+            reachable_from_view_cache_roots: r.reachable_from_view_cache_roots,
             root_children_len: r.root_children_len,
             root_parent_children_len: r.root_parent_children_len,
             root_parent_children_contains_root: r.root_parent_children_contains_root,

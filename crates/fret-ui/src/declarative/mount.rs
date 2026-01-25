@@ -390,12 +390,36 @@ where
             window_state.forget_view_cache_subtree_elements(element);
         }
 
+        #[cfg(feature = "diagnostics")]
+        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if ui.debug_enabled() {
+            let view_cache_reuse_root_nodes: Vec<NodeId> = window_state
+                .view_cache_reuse_roots()
+                .filter_map(|root| window_state.node_entry(root).map(|e| e.node))
+                .collect();
+            if view_cache_reuse_root_nodes.is_empty() {
+                None
+            } else {
+                Some(with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc(
+                        ui,
+                        window_frame,
+                        view_cache_reuse_root_nodes.iter().copied(),
+                    )
+                }))
+            }
+        } else {
+            None
+        };
+
         for node in stale_nodes {
             #[cfg(feature = "diagnostics")]
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
+                    .as_ref()
+                    .map(|reachable| reachable.contains(&node));
                 let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
                 let mut path_edge_len: u8 = 0;
                 let mut current = Some(node);
@@ -428,6 +452,7 @@ where
                         .children
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    root_reachable_from_view_cache_roots,
                     path_edge_len,
                     path_edge_frame_contains_child,
                 })
@@ -689,12 +714,36 @@ where
             window_state.forget_view_cache_subtree_elements(element);
         }
 
+        #[cfg(feature = "diagnostics")]
+        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if ui.debug_enabled() {
+            let view_cache_reuse_root_nodes: Vec<NodeId> = window_state
+                .view_cache_reuse_roots()
+                .filter_map(|root| window_state.node_entry(root).map(|e| e.node))
+                .collect();
+            if view_cache_reuse_root_nodes.is_empty() {
+                None
+            } else {
+                Some(with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc(
+                        ui,
+                        window_frame,
+                        view_cache_reuse_root_nodes.iter().copied(),
+                    )
+                }))
+            }
+        } else {
+            None
+        };
+
         for node in stale_nodes {
             #[cfg(feature = "diagnostics")]
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
+                    .as_ref()
+                    .map(|reachable| reachable.contains(&node));
                 let mut path_edge_frame_contains_child: [u8; 16] = [2u8; 16];
                 let mut path_edge_len: u8 = 0;
                 let mut current = Some(node);
@@ -727,6 +776,7 @@ where
                         .children
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    root_reachable_from_view_cache_roots,
                     path_edge_len,
                     path_edge_frame_contains_child,
                 })
