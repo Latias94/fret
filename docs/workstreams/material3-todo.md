@@ -191,6 +191,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
 - [ ] Decide how to represent spring configs long-term (ecosystem-only vs core mechanism).
 - [ ] Introduce typed token modules per component to reduce raw string key usage and centralize
   derived token math (disabled alpha, state-layer alpha selection).
+  - [x] IconButton token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`,
+      `ecosystem/fret-ui-material3/src/icon_button.rs`.
 
 ### Interaction Outcomes
 
