@@ -121,7 +121,7 @@ fn on_event(
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {
+fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElements {
     cx.watch_global::<Theme>().layout().observe();
 
     let theme = Theme::global(&*cx.app).clone();
@@ -248,7 +248,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {
     .h_full()
     .into_element(cx);
 
-    vec![page]
+    vec![page].into()
 }
 
 fn render_image_panel(

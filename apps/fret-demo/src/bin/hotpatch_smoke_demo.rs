@@ -63,7 +63,10 @@ mod hotpatch {
 
     #[inline(never)]
     #[unsafe(export_name = "fret_hotpatch_smoke_demo_view")]
-    fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Vec<AnyElement> {
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        st: &mut State,
+    ) -> fret_bootstrap::ui_app_driver::ViewElements {
         if cfg!(debug_assertions)
             && std::env::var_os("DIOXUS_CLI_ENABLED").is_some_and(|v| !v.is_empty())
             && VIEW_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 3
@@ -128,7 +131,7 @@ mod hotpatch {
             fret_ui_kit::LayoutRefinement::default().w_full().h_full(),
         );
 
-        vec![cx.container(wrap, |_cx| vec![content])]
+        vec![cx.container(wrap, |_cx| vec![content])].into()
     }
 
     fn on_event(

@@ -80,7 +80,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement> {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewElements {
     let theme = Theme::global(&*cx.app).clone();
 
     let filter_value = cx
@@ -304,6 +304,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         },
         move |_cx| [page],
     )]
+    .into()
 }
 
 fn todo_list_panel(

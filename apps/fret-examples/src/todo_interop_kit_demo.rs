@@ -112,9 +112,9 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoInteropKitState {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> Vec<AnyElement> {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> fret_kit::ViewElements {
     let Some(models) = embedded::models(&*cx.app, cx.window) else {
-        return vec![cx.text("Embedded viewport models are not installed.")];
+        return vec![cx.text("Embedded viewport models are not installed.")].into();
     };
     cx.watch_model(&st.draft).layout().observe();
 
@@ -155,7 +155,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> Vec<A
     .h_full()
     .into_element(cx);
 
-    vec![root]
+    vec![root].into()
 }
 
 fn todo_panel(

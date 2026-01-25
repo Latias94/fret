@@ -181,11 +181,14 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoForeignIcedStyleState 
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoForeignIcedStyleState) -> Vec<AnyElement> {
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut TodoForeignIcedStyleState,
+) -> fret_kit::ViewElements {
     let theme = Theme::global(&*cx.app).clone();
 
     let Some(models) = embedded::models(&*cx.app, cx.window) else {
-        return vec![cx.text("Embedded viewport models are not installed.")];
+        return vec![cx.text("Embedded viewport models are not installed.")].into();
     };
     cx.watch_model(&models.target).paint().observe();
 
@@ -263,5 +266,5 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoForeignIcedStyleState) ->
     .h_full()
     .into_element(cx);
 
-    vec![root]
+    vec![root].into()
 }

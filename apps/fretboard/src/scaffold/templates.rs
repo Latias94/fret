@@ -210,7 +210,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement> {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let todos = cx
         .watch_model(&st.todos)
         .layout()
@@ -280,7 +280,7 @@ __ADD_BTN_DEF__
     .h_full()
     .into_element(cx);
 
-    vec![page]
+    vec![page].into()
 }
 
 fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) -> AnyElement {
@@ -714,7 +714,7 @@ fn main() -> anyhow::Result<()> {{
 
 fn init_window(_app: &mut App, _window: AppWindowId) {{}}
 
-fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> Vec<AnyElement> {{
+fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> ViewElements {{
     vec![ui::v_flex(cx, |cx| {{
         [
             shadcn::Label::new("Hello, world!").into_element(cx),
@@ -729,6 +729,7 @@ __PALETTE_BUTTON__
     .items_center()
     .justify_center()
     .into_element(cx)]
+    .into()
 }}
 
 fn on_command(
