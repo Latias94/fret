@@ -2506,13 +2506,13 @@ mod tests {
     use std::time::Duration;
 
     use fret_app::App;
+    use fret_core::UiServices;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
         PathMetrics,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_core::{TextStyle, UiServices};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::tree::UiTree;
 

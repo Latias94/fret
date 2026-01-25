@@ -3186,9 +3186,7 @@ mod tests {
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
-    use fret_core::{
-        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::element::PressableA11y;
@@ -3914,9 +3912,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4045,9 +4040,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4122,9 +4114,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4687,9 +4676,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),

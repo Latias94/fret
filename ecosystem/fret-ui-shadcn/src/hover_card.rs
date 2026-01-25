@@ -745,7 +745,7 @@ mod tests {
     use fret_core::{
         AppWindowId, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
         PathStyle, Point, Px, Rect, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
-        TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{

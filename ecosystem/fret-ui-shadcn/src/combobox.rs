@@ -662,7 +662,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle, UiServices,
+        TextConstraints, TextMetrics, TextService, UiServices,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::FrameId;

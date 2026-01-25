@@ -636,7 +636,7 @@ mod tests {
         AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]

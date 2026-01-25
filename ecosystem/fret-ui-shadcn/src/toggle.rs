@@ -427,7 +427,7 @@ mod tests {
         AppWindowId, Modifiers, PathCommand, Point, Px, Rect, Size, SvgId, SvgService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{
         CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
         WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,

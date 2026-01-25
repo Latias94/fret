@@ -991,7 +991,7 @@ mod tests {
         SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::ColumnProps;
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};

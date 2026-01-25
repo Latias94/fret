@@ -602,7 +602,7 @@ mod tests {
         AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::TickId;
     use fret_ui::element::{ColumnProps, ContainerProps, LayoutStyle, Length};
     use fret_ui::tree::UiTree;

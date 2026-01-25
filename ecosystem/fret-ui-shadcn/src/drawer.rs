@@ -934,7 +934,7 @@ mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;

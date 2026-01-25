@@ -535,7 +535,7 @@ mod tests {
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{
         CommandMeta, CommandScope, WindowCommandActionAvailabilityService,

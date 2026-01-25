@@ -494,7 +494,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, PathCommand, SemanticsRole, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle,
+        TextConstraints, TextMetrics, TextService,
     };
     use fret_core::{Event, KeyCode};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};

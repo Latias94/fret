@@ -791,9 +791,7 @@ mod tests {
     };
     use fret_core::{KeyCode, Modifiers};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{
-        Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
