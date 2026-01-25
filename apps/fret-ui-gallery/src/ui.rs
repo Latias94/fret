@@ -162,9 +162,7 @@ pub(crate) fn sidebar_view(
             ChromeRefinement::default()
                 .bg(ColorRef::Color(theme.color_required("muted")))
                 .p(Space::N4),
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(280.0)))
-                .h_full(),
+            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
         ),
         |cx| {
             vec![stack::vstack(
@@ -273,7 +271,7 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("neutral/light", "Neutral (light)"),
                     shadcn::SelectItem::new("neutral/dark", "Neutral (dark)"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
                 .into_element(cx);
 
             let copy_actions = stack::hstack(
@@ -794,11 +792,7 @@ fn preview_view_cache(
                 .gap(Space::N1),
             |_cx| rows,
         )])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(cx);
 
         vec![
@@ -1114,9 +1108,7 @@ fn preview_virtual_list_torture(
                     ChromeRefinement::default()
                         .bg(ColorRef::Color(background))
                         .p(Space::N2),
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(height_hint)),
+                    LayoutRefinement::default().w_full().h_px(height_hint),
                 );
                 container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -1317,11 +1309,7 @@ fn preview_avatar(
         .into_element(cx);
 
     let c = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("?").into_element(cx)])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(48.0)))
-                .h_px(MetricRef::Px(Px(48.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
         .into_element(cx);
 
     vec![
@@ -1343,16 +1331,16 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |cx| {
             vec![
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(180.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new().into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
                     .into_element(cx),
             ]
         },
@@ -1387,11 +1375,7 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     );
 
     let scroll = shadcn::ScrollArea::new(vec![body])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(240.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
         .into_element(cx);
 
     vec![
@@ -1693,7 +1677,7 @@ fn preview_select(
                 shadcn::SelectItem::new(value, label).test_id(test_id)
             })),
         )
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
         .into_element(cx);
 
     let selected = cx
@@ -1798,11 +1782,7 @@ fn preview_resizable(
 
     let root = shadcn::ResizablePanelGroup::new(h_fractions)
         .axis(fret_core::Axis::Horizontal)
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(320.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
         .entries(vec![
             shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
                 .min_px(Px(140.0))
@@ -1924,11 +1904,7 @@ fn preview_data_table(
 
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(
             cx,
             assets.data.clone(),
@@ -1973,11 +1949,7 @@ fn preview_data_grid(
 
         let grid =
             shadcn::experimental::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(Px(320.0))),
-                )
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
                 .into_element(
                     cx,
                     1,

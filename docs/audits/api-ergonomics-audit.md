@@ -100,6 +100,7 @@ This document is meant to stay “live” while we iterate. Update this section 
   - Evidence: `ecosystem/fret-ui-kit/src/style/layout.rs` (`w_px`/`min_w`/`max_w`/`basis_px` accept `Into<MetricRef>`)
   - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs` (`gap` accepts `Into<MetricRef>`, `padding_px`)
   - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayRequest::*` accepts `IntoIterator<Item=AnyElement>`)
+  - Example: `apps/fret-ui-gallery/src/ui.rs` (uses `.w_px(Px(..))`/`.h_px(Px(..))` without `MetricRef::Px(...)`)
 - [x] Provide a fluent scroll-area wrapper in the default authoring dialect (`ui::*`).
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs` (`ui::scroll_area`)
   - Example: `apps/fret-examples/src/markdown_demo.rs`
