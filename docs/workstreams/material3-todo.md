@@ -194,6 +194,9 @@ Material foundation layer (interaction/indication/token resolution) inspired by 
   - [x] IconButton token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/icon_button.rs`,
       `ecosystem/fret-ui-material3/src/icon_button.rs`.
+  - [x] Checkbox token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/checkbox.rs`,
+      `ecosystem/fret-ui-material3/src/checkbox.rs`.
   - [x] Button token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/button.rs`,
       `ecosystem/fret-ui-material3/src/button.rs`.
