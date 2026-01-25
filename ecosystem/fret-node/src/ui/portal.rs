@@ -349,9 +349,10 @@ impl<P, C> NodeGraphPortalHost<P, C> {
     }
 }
 
-impl<H: UiHost, P, C> Widget<H> for NodeGraphPortalHost<P, C>
+impl<H: UiHost, P, C, R> Widget<H> for NodeGraphPortalHost<P, C>
 where
-    P: for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> Elements,
+    P: for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> R,
+    R: Into<Elements>,
     C: NodeGraphPortalCommandHandler<H>,
 {
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
@@ -481,7 +482,7 @@ where
                             kind_version: node.kind_version,
                         };
                         let children =
-                            ecx.keyed(key, |ecx| render(ecx, &graph_snapshot, layout).into_vec());
+                            ecx.keyed(key, |ecx| render(ecx, &graph_snapshot, layout).into());
                         if children.is_empty() {
                             continue;
                         }

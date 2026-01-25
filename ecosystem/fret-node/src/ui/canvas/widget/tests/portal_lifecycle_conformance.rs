@@ -77,7 +77,7 @@ fn portal_subtree_resets_state_on_node_kind_change() {
               _layout: crate::ui::portal::NodeGraphPortalNodeLayout| {
             let id = ecx.with_state(|| next_instance2.fetch_add(1, Ordering::SeqCst), |s| *s);
             last_instance2.store(id, Ordering::SeqCst);
-            vec![ecx.semantics(SemanticsProps::default(), |_ecx| Vec::new())].into()
+            vec![ecx.semantics(SemanticsProps::default(), |_ecx| Vec::new())]
         },
     )
     .with_cull_margin_px(0.0);
