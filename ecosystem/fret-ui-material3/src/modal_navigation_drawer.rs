@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Px};
 use fret_runtime::Model;
-use fret_ui::action::{DismissReason, OnActivate, OnDismissRequest};
+use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, FractionalRenderTransformProps, InsetStyle, InteractivityGateProps,
     LayoutStyle, Length, PositionStyle, PressableA11y, PressableProps,
@@ -156,7 +156,7 @@ impl ModalNavigationDrawer {
                 let dismiss_handler: OnDismissRequest =
                     self.on_dismiss_request.clone().unwrap_or_else(|| {
                         let open = self.open.clone();
-                        Arc::new(move |host, action_cx, _reason: DismissReason| {
+                        Arc::new(move |host, action_cx, _cx: &mut DismissRequestCx| {
                             let _ = host.models_mut().update(&open, |v| *v = false);
                             host.request_redraw(action_cx.window);
                         })
@@ -209,10 +209,15 @@ impl ModalNavigationDrawer {
                                             let on_activate: OnActivate = {
                                                 let dismiss_handler = dismiss_handler.clone();
                                                 Arc::new(move |host, action_cx, _reason| {
+                                                    let mut dismiss_cx = DismissRequestCx::new(
+                                                        DismissReason::OutsidePress {
+                                                            pointer: None,
+                                                        },
+                                                    );
                                                     dismiss_handler(
                                                         host,
                                                         action_cx,
-                                                        DismissReason::OutsidePress,
+                                                        &mut dismiss_cx,
                                                     );
                                                 })
                                             };

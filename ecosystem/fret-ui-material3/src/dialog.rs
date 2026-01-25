@@ -12,7 +12,7 @@ use fret_core::{
     Axis, Color, Corners, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::action::{DismissReason, OnActivate, OnDismissRequest};
+use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, TextProps,
@@ -359,7 +359,7 @@ impl Dialog {
                 let dismiss_handler: OnDismissRequest =
                     self.on_dismiss_request.clone().unwrap_or_else(|| {
                         let open = self.open.clone();
-                        Arc::new(move |host, action_cx, _reason: DismissReason| {
+                        Arc::new(move |host, action_cx, _cx: &mut DismissRequestCx| {
                             let _ = host.models_mut().update(&open, |v| *v = false);
                             host.request_redraw(action_cx.window);
                         })
@@ -429,11 +429,10 @@ impl Dialog {
                                             let on_activate: OnActivate = {
                                                 let dismiss_handler = dismiss_handler.clone();
                                                 Arc::new(move |host, action_cx, _reason| {
-                                                    dismiss_handler(
-                                                        host,
-                                                        action_cx,
-                                                        DismissReason::OutsidePress,
+                                                    let mut dismiss_cx = DismissRequestCx::new(
+                                                        DismissReason::OutsidePress { pointer: None },
                                                     );
+                                                    dismiss_handler(host, action_cx, &mut dismiss_cx);
                                                 })
                                             };
                                             cx.pressable_on_activate(on_activate);
