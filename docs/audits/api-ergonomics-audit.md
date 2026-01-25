@@ -80,6 +80,7 @@ This document is meant to stay “live” while we iterate. Update this section 
   - Example: `apps/fret-examples/src/assets_demo.rs`
   - Example: `apps/fret-examples/src/markdown_demo.rs`
 - [ ] Make a single “default authoring dialect” the norm in examples/templates (ADR 0175 + `UiExt::ui()`).
+  - Templates: `apps/fretboard/src/scaffold/templates.rs` (todo/todo-mvu/hello use `ui::*` + `.ui()`).
 - [x] Reduce Vec-first friction (P1, first batch): accept `IntoIterator<Item = AnyElement>` across high-frequency APIs.
   - Evidence: `crates/fret-ui/src/elements/cx.rs` (`pressable_with_id_props`), `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayController::hover`)
   - Evidence: `ecosystem/fret-ui-kit/src/{ui,ui_builder}.rs`, `ecosystem/fret-ui-kit/src/declarative/{cached_subtree,chrome,dismissible,glass,pixelate,scroll,stack,visually_hidden}.rs`, `ecosystem/fret-ui-kit/src/primitives/{accordion,dismissable_layer,menu/*,popover,popper_content,roving_focus_group,tabs,toggle,toolbar}.rs`, `ecosystem/fret-ui-primitives/src/focus_scope.rs`
