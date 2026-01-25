@@ -38,7 +38,9 @@ Each TODO is labeled:
 - [x] OIA2-test-003 Viewport tool capture suppresses hover overlays/tooltips (ADR 0049 follow-up baseline).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
 - [x] OIA2-test-004 “Present vs interactive” close-transition invariants are locked by tests.
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+  - Evidence anchors:
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_while_closing`)
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_does_not_request_pointer_move_observer_while_closing`)
 
 ## P0 — Diagnostics & Debuggability
 
