@@ -9,8 +9,8 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::{popper, popper_content, select as radix_select};
@@ -730,9 +730,7 @@ impl Select {
                 let selected = cx.watch_model(&model).layout().cloned().flatten();
                 let label = selected
                     .as_ref()
-                    .and_then(|v: &Arc<str>| {
-                        items.iter().find(|i| i.value.as_ref() == v.as_ref())
-                    })
+                    .and_then(|v: &Arc<str>| items.iter().find(|i| i.value.as_ref() == v.as_ref()))
                     .map(|i| i.label.clone())
                     .unwrap_or_else(|| placeholder.clone());
 

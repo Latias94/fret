@@ -1484,6 +1484,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-headless",
  "fret-ui-kit",
+ "fret-ui-material3",
  "fret-ui-shadcn",
  "fret-undo",
  "fret-workspace",

@@ -109,6 +109,8 @@ pub(crate) const PAGE_FIELD: &str = "field";
 pub(crate) const PAGE_OVERLAY: &str = "overlay";
 pub(crate) const PAGE_FORMS: &str = "forms";
 pub(crate) const PAGE_SELECT: &str = "select";
+pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
+pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
 pub(crate) const PAGE_COMBOBOX: &str = "combobox";
 pub(crate) const PAGE_DATE_PICKER: &str = "date_picker";
 pub(crate) const PAGE_RESIZABLE: &str = "resizable";
@@ -139,6 +141,8 @@ pub(crate) const CMD_NAV_FIELD: &str = "ui_gallery.nav.select.field";
 pub(crate) const CMD_NAV_OVERLAY: &str = "ui_gallery.nav.select.overlay";
 pub(crate) const CMD_NAV_FORMS: &str = "ui_gallery.nav.select.forms";
 pub(crate) const CMD_NAV_SELECT: &str = "ui_gallery.nav.select.select";
+pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
+pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
 pub(crate) const CMD_NAV_COMBOBOX: &str = "ui_gallery.nav.select.combobox";
 pub(crate) const CMD_NAV_DATE_PICKER: &str = "ui_gallery.nav.select.date_picker";
 pub(crate) const CMD_NAV_RESIZABLE: &str = "ui_gallery.nav.select.resizable";
@@ -400,6 +404,38 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["select", "popover", "listbox"],
                 docs::DOC_SELECT,
                 docs::USAGE_SELECT,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SELECT,
+                "Select (Material3)",
+                "Select (Material3 pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SELECT,
+                &[
+                    "select",
+                    "material3",
+                    "popover",
+                    "listbox",
+                    "state-driven-style",
+                ],
+                docs::DOC_MATERIAL3_SELECT,
+                docs::USAGE_MATERIAL3_SELECT,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TEXT_FIELD,
+                "TextField (Material3)",
+                "TextField (Material3 pilot)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TEXT_FIELD,
+                &[
+                    "text",
+                    "input",
+                    "material3",
+                    "focus-visible",
+                    "state-driven-style",
+                ],
+                docs::DOC_MATERIAL3_TEXT_FIELD,
+                docs::USAGE_MATERIAL3_TEXT_FIELD,
             ),
             PageSpec::new(
                 PAGE_COMBOBOX,

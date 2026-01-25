@@ -162,6 +162,53 @@ let select = shadcn::Select::new(value, open)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_SELECT: &str = r#"
+## Select (Material3 pilot)
+
+This page validates that the **state-driven style** surface is sufficient to build a Material-like
+select on top of Radix-shaped primitives:
+
+- trigger resolves colors from `WidgetStates` (hover/active/focus-visible/open/disabled),
+- content is mounted in a modal overlay layer (outside input is blocked while open),
+- options resolve state layers and selected styling via `WidgetStates`.
+
+This is intentionally a minimal pilot; typeahead/roving focus parity is tracked in the workstream.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SELECT: &str = r#"
+```rust
+use fret_ui_material3 as material3;
+
+let select = material3::Select::new(value, open)
+    .placeholder("Pick one…")
+    .items([
+        material3::SelectItem::new("apple", "Apple"),
+        material3::SelectItem::new("banana", "Banana"),
+    ])
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
+## TextField (Material3 pilot)
+
+This page validates the "WidgetStates → TextInputStyle" mapping outcome:
+
+- focus-visible drives outline/ring styling (keyboard vs pointer),
+- disabled uses state-driven fallbacks,
+- overrides can partially override per-state values without deep merging.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TEXT_FIELD: &str = r#"
+```rust
+use fret_ui_material3 as material3;
+
+let field = material3::TextField::new(model)
+    .placeholder("Type here…")
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_COMBOBOX: &str = r#"
 ## Combobox
 

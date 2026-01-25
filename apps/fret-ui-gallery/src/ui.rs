@@ -5,6 +5,8 @@ use fret_ui::Theme;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
+use fret_ui_kit::{WidgetStateProperty, WidgetStates};
+use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
@@ -498,6 +500,8 @@ fn page_preview(
         ),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_SELECT => preview_select(cx, select_value, select_open),
+        PAGE_MATERIAL3_SELECT => preview_material3_select(cx),
+        PAGE_MATERIAL3_TEXT_FIELD => preview_material3_text_field(cx),
         PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
         PAGE_DATE_PICKER => preview_date_picker(
             cx,
@@ -1689,6 +1693,218 @@ fn preview_select(
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     vec![select, cx.text(format!("Selected: {selected}"))]
+}
+
+fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct Models {
+        value: Option<Model<Option<Arc<str>>>>,
+        open: Option<Model<bool>>,
+        value_override: Option<Model<Option<Arc<str>>>>,
+        open_override: Option<Model<bool>>,
+        disabled: Option<Model<bool>>,
+    }
+
+    let (value, open, value_override, open_override, disabled) =
+        cx.with_state(Models::default, |st| {
+            (
+                st.value.clone(),
+                st.open.clone(),
+                st.value_override.clone(),
+                st.open_override.clone(),
+                st.disabled.clone(),
+            )
+        });
+
+    let (value, open, value_override, open_override, disabled) =
+        match (value, open, value_override, open_override, disabled) {
+            (
+                Some(value),
+                Some(open),
+                Some(value_override),
+                Some(open_override),
+                Some(disabled),
+            ) => (value, open, value_override, open_override, disabled),
+            _ => {
+                let value = cx.app.models_mut().insert(None::<Arc<str>>);
+                let open = cx.app.models_mut().insert(false);
+                let value_override = cx.app.models_mut().insert(None::<Arc<str>>);
+                let open_override = cx.app.models_mut().insert(false);
+                let disabled = cx.app.models_mut().insert(false);
+                cx.with_state(Models::default, |st| {
+                    st.value = Some(value.clone());
+                    st.open = Some(open.clone());
+                    st.value_override = Some(value_override.clone());
+                    st.open_override = Some(open_override.clone());
+                    st.disabled = Some(disabled.clone());
+                });
+                (value, open, value_override, open_override, disabled)
+            }
+        };
+
+    let disabled_now = cx
+        .get_model_copied(&disabled, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let toggle_disabled = shadcn::Button::new(if disabled_now { "Enable" } else { "Disable" })
+        .variant(shadcn::ButtonVariant::Outline)
+        .toggle_model(disabled.clone())
+        .into_element(cx);
+
+    let theme = Theme::global(&*cx.app).clone();
+    let override_style = material3::SelectStyle::default()
+        .trigger_border_color(WidgetStateProperty::new(None).when(
+            WidgetStates::FOCUS_VISIBLE,
+            Some(ColorRef::Color(theme.color_required("destructive"))),
+        ))
+        .option_background(
+            WidgetStateProperty::new(None).when(
+                WidgetStates::SELECTED,
+                Some(ColorRef::Color(
+                    theme
+                        .color_by_key("accent")
+                        .unwrap_or_else(|| theme.color_required("accent")),
+                )),
+            ),
+        );
+
+    let select = material3::Select::new(value.clone(), open.clone())
+        .placeholder("Default (pilot)")
+        .disabled(disabled_now)
+        .items([
+            material3::SelectItem::new("apple", "Apple"),
+            material3::SelectItem::new("banana", "Banana"),
+            material3::SelectItem::new("orange", "Orange").disabled(true),
+        ])
+        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+        .into_element(cx);
+
+    let select_override = material3::Select::new(value_override.clone(), open_override.clone())
+        .placeholder("Override (focus outline = destructive)")
+        .disabled(disabled_now)
+        .style(override_style)
+        .items([
+            material3::SelectItem::new("apple", "Apple"),
+            material3::SelectItem::new("banana", "Banana"),
+            material3::SelectItem::new("orange", "Orange").disabled(true),
+        ])
+        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+        .into_element(cx);
+
+    let selected = cx
+        .app
+        .models()
+        .read(&value, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    vec![
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |_cx| vec![toggle_disabled],
+        ),
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N3),
+            |_cx| vec![select, select_override],
+        ),
+        cx.text(format!("Selected: {selected}")),
+        cx.text(
+            "Tip: Tab to focus the trigger (focus-visible ring), then Space/Enter/ArrowDown to open.",
+        ),
+    ]
+}
+
+fn preview_material3_text_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct Models {
+        model: Option<Model<String>>,
+        model_override: Option<Model<String>>,
+        disabled: Option<Model<bool>>,
+    }
+
+    let (model, model_override, disabled) = cx.with_state(Models::default, |st| {
+        (
+            st.model.clone(),
+            st.model_override.clone(),
+            st.disabled.clone(),
+        )
+    });
+    let (model, model_override, disabled) = match (model, model_override, disabled) {
+        (Some(model), Some(model_override), Some(disabled)) => (model, model_override, disabled),
+        _ => {
+            let model = cx.app.models_mut().insert(String::new());
+            let model_override = cx.app.models_mut().insert(String::new());
+            let disabled = cx.app.models_mut().insert(false);
+            cx.with_state(Models::default, |st| {
+                st.model = Some(model.clone());
+                st.model_override = Some(model_override.clone());
+                st.disabled = Some(disabled.clone());
+            });
+            (model, model_override, disabled)
+        }
+    };
+
+    let disabled_now = cx
+        .get_model_copied(&disabled, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let toggle_disabled = shadcn::Button::new(if disabled_now { "Enable" } else { "Disable" })
+        .variant(shadcn::ButtonVariant::Outline)
+        .toggle_model(disabled.clone())
+        .into_element(cx);
+
+    let clear = {
+        let model_for_clear = model.clone();
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&model_for_clear, |v| v.clear());
+            host.request_redraw(action_cx.window);
+        });
+        shadcn::Button::new("Clear")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .on_activate(on_activate)
+            .into_element(cx)
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+    let override_style = material3::TextFieldStyle::default()
+        .border_color_focused(WidgetStateProperty::new(None).when(
+            WidgetStates::FOCUS_VISIBLE,
+            Some(ColorRef::Color(theme.color_required("destructive"))),
+        ))
+        .focus_ring_color(WidgetStateProperty::new(None).when(
+            WidgetStates::FOCUS_VISIBLE,
+            Some(ColorRef::Color(theme.color_required("destructive"))),
+        ));
+
+    let field = material3::TextField::new(model.clone())
+        .a11y_label("Material3 text field")
+        .placeholder("Default (pilot)")
+        .disabled(disabled_now)
+        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
+        .into_element(cx);
+
+    let field_override = material3::TextField::new(model_override.clone())
+        .a11y_label("Material3 text field (override)")
+        .placeholder("Override (focus ring = destructive)")
+        .disabled(disabled_now)
+        .style(override_style)
+        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
+        .into_element(cx);
+
+    vec![
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |_cx| vec![toggle_disabled, clear],
+        ),
+        stack::vstack(cx, stack::VStackProps::default().gap(Space::N3), |_cx| {
+            vec![field, field_override]
+        }),
+        cx.text("Tip: use Tab to focus the field and observe focus-visible ring behavior."),
+    ]
 }
 
 fn preview_combobox(
