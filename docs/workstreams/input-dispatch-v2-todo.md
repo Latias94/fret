@@ -48,9 +48,11 @@ Keep this list short and evidence-backed:
 
 ## MVP0.1 — Default Actions Expansion (Keep Mechanism/Policy Boundary Clean)
 
-- [ ] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
+- [x] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
+  - Decision tracker: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
   - Notes: keep v1 minimal to avoid smuggling Radix/shadcn policies into `crates/fret-ui`.
 - [ ] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+  - Notes: deferred until a candidate meets the mechanism boundary criteria (see the decision tracker above).
 
 ## MVP1 — Action Availability (GPUI `is_action_available` Parity)
 
