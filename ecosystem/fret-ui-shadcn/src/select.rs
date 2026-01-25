@@ -170,6 +170,7 @@ where
                                 return fret_ui::action::PressablePointerDownResult::Continue;
                             }
                             on_scroll(host, action_cx);
+                            host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                             fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
                         }));
 
