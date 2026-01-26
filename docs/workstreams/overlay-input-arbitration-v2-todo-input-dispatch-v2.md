@@ -157,6 +157,16 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (`alert_dialog_open_auto_focus_can_be_prevented`, `alert_dialog_close_auto_focus_can_be_prevented_and_redirected`)
 
+- [x] OIA2-test-026 Dialog open auto-focus can be redirected (Radix parity).
+  - Target: cover redirecting focus in `onOpenAutoFocus` with `preventDefault`.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`dialog_open_auto_focus_can_be_redirected`)
+
+- [x] OIA2-test-027 Popover open auto-focus can be redirected (Radix parity).
+  - Target: cover redirecting focus in `onOpenAutoFocus` with `preventDefault`.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/popover.rs` (`popover_open_auto_focus_can_be_redirected`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
