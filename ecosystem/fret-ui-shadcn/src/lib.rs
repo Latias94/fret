@@ -61,6 +61,8 @@ pub mod popover;
 mod popper_arrow;
 pub mod progress;
 pub mod radio_group;
+#[doc(hidden)]
+pub mod recharts_geometry;
 pub mod resizable;
 pub mod scroll_area;
 pub mod select;

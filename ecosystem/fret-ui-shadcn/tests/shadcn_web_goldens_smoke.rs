@@ -102,12 +102,13 @@ fn shadcn_web_goldens_smoke_parse_and_rects_valid() {
                 path.display()
             )
         });
-        let golden: WebGolden = serde_json::from_reader(BufReader::new(file)).unwrap_or_else(|err| {
-            panic!(
-                "failed to parse shadcn web golden: {}\nerror: {err}",
-                path.display()
-            )
-        });
+        let golden: WebGolden =
+            serde_json::from_reader(BufReader::new(file)).unwrap_or_else(|err| {
+                panic!(
+                    "failed to parse shadcn web golden: {}\nerror: {err}",
+                    path.display()
+                )
+            });
 
         assert!(!golden.themes.is_empty(), "missing themes in {name}");
         let theme = golden

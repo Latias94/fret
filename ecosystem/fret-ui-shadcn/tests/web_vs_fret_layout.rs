@@ -24778,6 +24778,28 @@ fn web_find_chart_curve<'a>(root: &'a WebNode) -> Option<&'a WebNode> {
     })
 }
 
+fn web_find_chart_bar_rects<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.tag == "path"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c == "recharts-rectangle")
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
 fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -24982,6 +25004,101 @@ fn web_vs_fret_layout_chart_line_default_scaffold_geometry_matches_web() {
 #[test]
 fn web_vs_fret_layout_chart_bar_default_scaffold_geometry_matches_web() {
     assert_chart_scaffold_geometry_matches_web("chart-bar-default", false);
+}
+
+#[test]
+fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
+    let web = read_web_golden("chart-bar-default");
+    let theme = web_theme(&web);
+
+    let web_chart = web_find_chart_container(&theme.root);
+    let web_plot = web_find_chart_grid(web_chart);
+    let web_bars = web_find_chart_bar_rects(web_chart);
+    assert_eq!(web_bars.len(), 6, "expected 6 bars in chart-bar-default");
+
+    let values = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+    let plot = Rect::new(
+        Point::new(Px(web_plot.rect.x), Px(web_plot.rect.y)),
+        CoreSize::new(Px(web_plot.rect.w), Px(web_plot.rect.h)),
+    );
+    let bars = fret_ui_shadcn::recharts_geometry::bar_rects(
+        plot,
+        &values,
+        fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default(),
+    );
+    assert_eq!(bars.len(), web_bars.len());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let chart_label = Arc::<str>::from("Golden:chart-bar-default:chart");
+    let bar_labels: Vec<Arc<str>> = (0..bars.len())
+        .map(|i| Arc::<str>::from(format!("Golden:chart-bar-default:bar-{i}")))
+        .collect();
+
+    let snap = run_fret_root(bounds, move |cx| {
+        let chart = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(chart_label.clone()),
+                layout: LayoutStyle {
+                    position: fret_ui::element::PositionStyle::Absolute,
+                    inset: fret_ui::element::InsetStyle {
+                        left: Some(Px(web_chart.rect.x)),
+                        top: Some(Px(web_chart.rect.y)),
+                        ..Default::default()
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_chart.rect.w)),
+                        height: Length::Px(Px(web_chart.rect.h)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |cx| {
+                let mut out = Vec::new();
+                for (i, bar) in bars.iter().enumerate() {
+                    let rect = bar.rect;
+                    out.push(cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: SemanticsRole::Panel,
+                            label: Some(bar_labels[i].clone()),
+                            layout: LayoutStyle {
+                                position: fret_ui::element::PositionStyle::Absolute,
+                                inset: fret_ui::element::InsetStyle {
+                                    left: Some(Px(rect.origin.x.0 - web_chart.rect.x)),
+                                    top: Some(Px(rect.origin.y.0 - web_chart.rect.y)),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(rect.size.width),
+                                    height: Length::Px(rect.size.height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.container(Default::default(), |_cx| Vec::new())],
+                    ));
+                }
+                out
+            },
+        );
+
+        vec![chart]
+    });
+
+    for (i, web_bar) in web_bars.iter().enumerate() {
+        let label = format!("Golden:chart-bar-default:bar-{i}");
+        let node = find_semantics(&snap, SemanticsRole::Panel, Some(&label))
+            .unwrap_or_else(|| panic!("missing fret semantics for {label}"));
+        assert_rect_close_px(&label, node.bounds, web_bar.rect, 1.0);
+    }
 }
 
 #[test]
