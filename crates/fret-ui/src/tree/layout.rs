@@ -298,6 +298,7 @@ impl<H: UiHost> UiTree<H> {
         );
 
         self.layout_engine.end_frame();
+        self.sync_element_bounds_cache_after_layout(app);
         size
     }
 
@@ -335,6 +336,7 @@ impl<H: UiHost> UiTree<H> {
             &mut viewport_cursor,
         );
         self.layout_engine.end_frame();
+        self.sync_element_bounds_cache_after_layout(app);
         size
     }
 
@@ -349,6 +351,26 @@ impl<H: UiHost> UiTree<H> {
         pass_kind: LayoutPassKind,
     ) -> Size {
         self.layout_node(app, services, root, bounds, scale_factor, pass_kind)
+    }
+
+    fn sync_element_bounds_cache_after_layout(&mut self, app: &mut H) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let element_nodes =
+            crate::elements::with_window_state(app, window, |st| st.element_nodes());
+
+        let bounds: Vec<(GlobalElementId, Rect)> = element_nodes
+            .into_iter()
+            .filter_map(|(element, node)| self.node_bounds(node).map(|rect| (element, rect)))
+            .collect();
+
+        crate::elements::with_window_state(app, window, |st| {
+            for (element, rect) in bounds {
+                st.record_bounds(element, rect);
+            }
+        })
     }
 
     pub fn measure_in(

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-table" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-table" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-cell-fret-ui" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-table-smoke" }
+  ]
+}
