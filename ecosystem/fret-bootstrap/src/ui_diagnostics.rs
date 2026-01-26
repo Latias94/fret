@@ -2836,6 +2836,12 @@ pub enum UiVirtualListWindowSourceV1 {
     Prepaint,
 }
 
+impl Default for UiVirtualListWindowSourceV1 {
+    fn default() -> Self {
+        Self::Layout
+    }
+}
+
 impl UiVirtualListWindowSourceV1 {
     fn from_source(source: fret_ui::tree::UiDebugVirtualListWindowSource) -> Self {
         match source {
