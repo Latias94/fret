@@ -7,7 +7,7 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
@@ -756,6 +756,8 @@ pub struct Menubar {
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -767,6 +769,8 @@ impl std::fmt::Debug for Menubar {
             .field("disabled", &self.disabled)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -779,6 +783,8 @@ impl Menubar {
             typeahead_timeout_ticks: 30,
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -805,6 +811,18 @@ impl Menubar {
     /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    /// Sets an optional open autofocus handler (Radix `onOpenAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Sets an optional close autofocus handler (Radix `onCloseAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -864,6 +882,8 @@ impl Menubar {
             let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
             let align_leading_icons = self.align_leading_icons;
             let on_dismiss_request = self.on_dismiss_request.clone();
+            let on_open_auto_focus = self.on_open_auto_focus.clone();
+            let on_close_auto_focus = self.on_close_auto_focus.clone();
 
             let trigger_labels: Arc<[Arc<str>]> = Arc::from(
                 menus
@@ -882,7 +902,11 @@ impl Menubar {
 
             let menus: Vec<MenubarMenuEntries> = menus
                 .into_iter()
-                .map(|menu| menu.on_dismiss_request(on_dismiss_request.clone()))
+                .map(|menu| {
+                    menu.on_dismiss_request(on_dismiss_request.clone())
+                        .on_open_auto_focus(on_open_auto_focus.clone())
+                        .on_close_auto_focus(on_close_auto_focus.clone())
+                })
                 .collect();
 
             cx.semantics(
@@ -1000,6 +1024,8 @@ impl MenubarMenu {
             entries: Arc::from(entries.into_boxed_slice()),
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -1030,6 +1056,8 @@ pub struct MenubarMenuEntries {
     entries: Arc<[MenubarEntry]>,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for MenubarMenuEntries {
@@ -1039,6 +1067,8 @@ impl std::fmt::Debug for MenubarMenuEntries {
             .field("disabled", &self.menu.disabled)
             .field("entries_len", &self.entries.len())
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -1054,12 +1084,24 @@ impl MenubarMenuEntries {
         self
     }
 
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let group = cx.root_id();
         let key = self.menu.label.clone();
         let entries = self.entries.clone();
         let align_leading_icons = self.align_leading_icons;
         let on_dismiss_request = self.on_dismiss_request.clone();
+        let on_open_auto_focus = self.on_open_auto_focus.clone();
+        let on_close_auto_focus = self.on_close_auto_focus.clone();
         cx.keyed(key, |cx| {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
             let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
@@ -3028,6 +3070,8 @@ impl MenubarMenuEntries {
                         menu::root::MenuInitialFocusTargets::new()
                             .pointer_content_focus(content_focus_id.get())
                             .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                        on_open_auto_focus.clone(),
+                        on_close_auto_focus.clone(),
                         on_dismiss_request.clone(),
                         dismissible_on_pointer_move,
                         false,
@@ -3091,6 +3135,7 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::FrameId;
+    use fret_ui::action::OnOpenAutoFocus;
     use fret_ui::tree::UiTree;
     use std::sync::Arc;
     use std::sync::Mutex;
@@ -3197,6 +3242,42 @@ mod tests {
                         ]),
                     ]
                 })]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_open_auto_focus(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
+                    ])
+                    .on_open_auto_focus(on_open_auto_focus)
+                    .into_element(cx),
+                ]
             });
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
@@ -3662,6 +3743,69 @@ mod tests {
         assert!(
             ui.debug_node_path(focus).contains(&first_item.id),
             "keyboard-open should move focus into the first menu item (Radix entry focus)"
+        );
+    }
+
+    #[test]
+    fn menubar_keyboard_open_auto_focus_can_be_prevented() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |_host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        render_frame_with_open_auto_focus(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(handler.clone()),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let file = menu_trigger_node_id(snap0, "File");
+        ui.set_focus(Some(file));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame_with_open_auto_focus(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(handler),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(file),
+            "expected preventDefault open autofocus to keep focus on trigger"
         );
     }
 
