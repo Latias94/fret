@@ -2955,10 +2955,10 @@ pub struct UiPrepaintActionV1 {
 impl UiPrepaintActionV1 {
     fn from_action(action: &fret_ui::tree::UiDebugPrepaintAction) -> Self {
         let invalidation = action.invalidation.map(|inv| match inv {
-            fret_ui::widget::Invalidation::Layout => "layout",
-            fret_ui::widget::Invalidation::Paint => "paint",
-            fret_ui::widget::Invalidation::HitTest => "hit_test",
-            fret_ui::widget::Invalidation::HitTestOnly => "hit_test_only",
+            fret_ui::Invalidation::Layout => "layout",
+            fret_ui::Invalidation::Paint => "paint",
+            fret_ui::Invalidation::HitTest => "hit_test",
+            fret_ui::Invalidation::HitTestOnly => "hit_test_only",
         });
 
         Self {
