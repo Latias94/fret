@@ -59,6 +59,7 @@ $rules = @(
     @{
         Rule      = "no-raw-thread-spawn"
         Pattern   = "\b(std::thread::spawn|thread::spawn)\b"
+        Scope     = @("crates/", "ecosystem/", "apps/")
         AllowList = @(
             "crates/fret-launch/src/runner/desktop/dispatcher.rs",
             "crates/fret-launch/src/runner/desktop/hotpatch.rs"
@@ -67,10 +68,29 @@ $rules = @(
     @{
         Rule      = "no-raw-thread-sleep"
         Pattern   = "\b(std::thread::sleep|thread::sleep)\b"
+        Scope     = @("crates/", "ecosystem/", "apps/")
         AllowList = @(
             "apps/fretboard/",
             "crates/fret-launch/src/runner/desktop/hotpatch.rs"
         )
+    },
+    @{
+        Rule      = "no-bespoke-channels"
+        Pattern   = "\b(std::sync::mpsc|crossbeam_channel|async_channel|flume)\b"
+        Scope     = @("ecosystem/", "apps/")
+        AllowList = @()
+    },
+    @{
+        Rule      = "no-bespoke-futures-channels"
+        Pattern   = "\b(futures::channel::(mpsc|oneshot)|futures_channel)\b"
+        Scope     = @("ecosystem/", "apps/")
+        AllowList = @()
+    },
+    @{
+        Rule      = "no-split-brain-timers"
+        Pattern   = "\b(gloo_timers|futures_timer|wasm_timer|tokio::time::sleep|async_std::task::sleep)\b"
+        Scope     = @("ecosystem/", "apps/")
+        AllowList = @()
     }
 )
 
@@ -84,6 +104,17 @@ foreach ($file in $files) {
     $rel = Normalize-RepoPath -RepoRoot $repoRoot -Path $file.FullName
 
     foreach ($rule in $rules) {
+        $inScope = $false
+        foreach ($prefix in $rule.Scope) {
+            if ($rel.StartsWith($prefix)) {
+                $inScope = $true
+                break
+            }
+        }
+        if (-not $inScope) {
+            continue
+        }
+
         $matches = Select-String -Path $file.FullName -Pattern $rule.Pattern -AllMatches
         foreach ($match in $matches) {
             if (IsAllowedPath -Path $rel -AllowList $rule.AllowList) {
