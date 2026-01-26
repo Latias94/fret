@@ -15,6 +15,12 @@ For each component page, the exporter writes a JSON file with:
 - optional scroll metrics for scrollable viewports (`scrollWidth/clientWidth`, `scrollHeight/clientHeight`, `scrollLeft/scrollTop`, ...).
 - `portals[]` and `portalWrappers[]` snapshots for Radix portal content (wrapper geometry is used for placement checks).
 
+## Stability notes
+
+- Recharts-backed `chart-*` pages render key SVG nodes asynchronously (ResizeObserver + RAF + JS-driven animation).
+  The extractor waits for non-trivial bounds on common series nodes (bars/lines/areas/sectors/polygons) to avoid
+  capturing partial frames (e.g. `chart-bar-default` missing `path.recharts-rectangle`).
+
 ## Prerequisites
 
 - `pnpm`

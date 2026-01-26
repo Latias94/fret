@@ -14,6 +14,8 @@ To reach 1:1 parity, we need to be explicit about which parts are “wrapper UI�
   - Registry index: `repo-ref/ui/apps/v4/registry/new-york-v4/charts/_registry.ts`
 - Goldens (expected outcomes):
   - `goldens/shadcn-web/v4/new-york-v4/chart-*.json` (76 variants today)
+  - Note: the extractor (`goldens/shadcn-web/scripts/extract-golden.mts`) includes a Recharts “settle” wait so
+    bar/radar series nodes are present in both light/dark themes (avoid partial SVG frames).
 
 ## Fret implementation status
 

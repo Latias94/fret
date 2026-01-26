@@ -1608,6 +1608,62 @@ async function waitForShadcnStyles(page: puppeteer.Page, timeoutMs: number) {
   await waitForExpr(page, expr, timeoutMs)
 }
 
+async function settleRaf(page: puppeteer.Page, frames = 2) {
+  const n = Math.max(1, Math.min(8, Math.floor(frames)))
+  const expr = `(() => new Promise((resolve) => {
+    let left = ${n};
+    const tick = () => {
+      left -= 1;
+      if (left <= 0) return resolve(true);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }))()`
+  await page.evaluate(expr)
+}
+
+async function waitForRechartsSeriesIfPresent(
+  page: puppeteer.Page,
+  timeoutMs: number
+) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+  if (debug) {
+    console.log(`- waitForRechartsSeriesIfPresent: enter (timeoutMs=${timeoutMs})`)
+  }
+
+  const expr = `(() => {
+    const root = document.querySelector("[data-fret-golden-target]") || document.body;
+    if (!root) return false;
+
+    const hasRecharts =
+      root.querySelector(".recharts-wrapper") ||
+      root.querySelector("svg.recharts-surface");
+    if (!hasRecharts) return true;
+
+    const candidates = root.querySelectorAll(
+      ".recharts-curve,.recharts-rectangle,.recharts-sector,.recharts-radial-bar-sector,.recharts-polygon,.recharts-radar-polygon,.recharts-radar-area"
+    );
+    if (!candidates || candidates.length === 0) return false;
+
+    for (const el of Array.from(candidates)) {
+      if (!(el instanceof Element)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 0.5 || r.height > 0.5) return true;
+      if (el instanceof SVGGraphicsElement) {
+        try {
+          const b = el.getBBox();
+          if (b.width > 0.5 || b.height > 0.5) return true;
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return false;
+  })()`
+
+  await waitForExpr(page, expr, timeoutMs, 25)
+}
+
 async function setThemeBeforeLoad(page: puppeteer.Page, theme: Theme) {
   await page.evaluateOnNewDocument((theme) => {
     localStorage.setItem("theme", theme)
@@ -1992,6 +2048,16 @@ async function run(options: GoldenOptions): Promise<string[]> {
                   "[data-fret-golden-target]"
                 )
               }
+
+              // Some pages (notably Recharts-backed `chart-*` examples) render key SVG nodes
+              // asynchronously (ResizeObserver + RAF + JS-driven animation). Wait for those
+              // nodes to exist with non-trivial bounds to keep goldens stable across themes.
+              await settleRaf(page, 2)
+              await waitForRechartsSeriesIfPresent(
+                page,
+                Math.min(8000, options.timeoutMs)
+              )
+              await settleRaf(page, 2)
 
               if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
               const extracted = await extractOne(page)
