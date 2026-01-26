@@ -33,14 +33,18 @@ Current:
     `chart-tooltip-label-none`, `chart-tooltip-icons`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced`, `chart-tooltip-demo`.
   - Legend variants gated so far: `chart-area-legend`, `chart-bar-demo-legend`, `chart-radar-legend`, `chart-pie-legend`.
-- Scaffold gates: `chart-area-default`, `chart-line-default`, `chart-bar-default` (ChartContainer + grid + xAxis bounds).
-  These do not yet validate full series rendering parity and are meant to unblock the engine workstream.
+- Series-geometry gates (engine math, not full rendering):
+  - `chart-bar-default`: bar rect layout matches web (nice Y domain + single-series bar geometry).
+  - Line/area curves: bounds match web for a first batch of variants (natural/linear/step + stacking/expand stacking).
+    These gates still take the web plot rect (grid bounds) as input, so they validate scale + curve math rather than
+    the full chart layout stack (axes/ticks/margins).
 - Known gap: `chart-tooltip-advanced` currently needs a small height shim on the “Total” row to match web output.
   This likely points to a line-height / box-model mismatch that should be fixed at the text/layout layer instead of
   per-component adjustments.
 - No chart rendering backend is wired for shadcn parity yet (axes/series/tooltip hit-testing, etc).
 
-As a result, most of the `chart-*` golden family is still ungated; only tooltip-panel pages are referenced today.
+As a result, the remaining ungated `chart-*` pages are still the bulk of the work (32 keys today):
+bar variants + pie/radar/radial families + the interactive line/area pages.
 
 ## Parity scope (what “1:1” means here)
 
