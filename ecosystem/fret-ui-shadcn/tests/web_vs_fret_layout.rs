@@ -24759,6 +24759,28 @@ fn web_find_chart_grid<'a>(root: &'a WebNode) -> &'a WebNode {
     .expect("web chart grid")
 }
 
+fn web_find_chart_plot_rect(root: &WebNode) -> WebRect {
+    if let Some(grid) = find_first(root, &|n| {
+        n.tag == "g"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("recharts-cartesian-grid"))
+    }) {
+        return grid.rect;
+    }
+
+    let rects = find_all(root, &|n| n.tag == "rect");
+    rects
+        .into_iter()
+        .max_by(|a, b| {
+            let aa = a.rect.w * a.rect.h;
+            let bb = b.rect.w * b.rect.h;
+            aa.partial_cmp(&bb).unwrap_or(std::cmp::Ordering::Equal)
+        })
+        .unwrap_or_else(|| panic!("web chart plot rect (no grid/rect)"))
+        .rect
+}
+
 fn web_find_chart_x_axis<'a>(root: &'a WebNode) -> &'a WebNode {
     find_first(root, &|n| {
         n.tag == "g"
@@ -24776,6 +24798,28 @@ fn web_find_chart_curve<'a>(root: &'a WebNode) -> Option<&'a WebNode> {
                 .as_deref()
                 .is_some_and(|c| c.contains("recharts-curve"))
     })
+}
+
+fn web_find_chart_series_curves<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.tag == "path"
+            && n.class_name.as_deref().is_some_and(|c| {
+                c.contains("recharts-line-curve") || c.contains("recharts-area-curve")
+            })
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .x
+                    .partial_cmp(&b.rect.x)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
 }
 
 fn web_find_chart_bar_rects<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
@@ -25012,14 +25056,14 @@ fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
     let theme = web_theme(&web);
 
     let web_chart = web_find_chart_container(&theme.root);
-    let web_plot = web_find_chart_grid(web_chart);
+    let web_plot = web_find_chart_plot_rect(web_chart);
     let web_bars = web_find_chart_bar_rects(web_chart);
     assert_eq!(web_bars.len(), 6, "expected 6 bars in chart-bar-default");
 
     let values = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
     let plot = Rect::new(
-        Point::new(Px(web_plot.rect.x), Px(web_plot.rect.y)),
-        CoreSize::new(Px(web_plot.rect.w), Px(web_plot.rect.h)),
+        Point::new(Px(web_plot.x), Px(web_plot.y)),
+        CoreSize::new(Px(web_plot.w), Px(web_plot.h)),
     );
     let bars = fret_ui_shadcn::recharts_geometry::bar_rects(
         plot,
@@ -25099,6 +25143,497 @@ fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
             .unwrap_or_else(|| panic!("missing fret semantics for {label}"));
         assert_rect_close_px(&label, node.bounds, web_bar.rect, 1.0);
     }
+}
+
+fn assert_chart_bar_rects_match_web(
+    web_name: &str,
+    rects: Vec<fret_ui_shadcn::recharts_geometry::BarRect>,
+    expected: &[WebRect],
+) {
+    let mut actual: Vec<Rect> = rects.into_iter().map(|b| b.rect).collect();
+    actual.sort_by(|a, b| {
+        a.origin
+            .x
+            .0
+            .partial_cmp(&b.origin.x.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.origin
+                    .y
+                    .0
+                    .partial_cmp(&b.origin.y.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+
+    let mut expected: Vec<WebRect> = expected.to_vec();
+    expected.sort_by(|a, b| {
+        a.x.partial_cmp(&b.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
+    });
+
+    assert_eq!(
+        actual.len(),
+        expected.len(),
+        "{web_name}: expected {} bar rects, got {}",
+        expected.len(),
+        actual.len()
+    );
+
+    for (i, (actual, expected)) in actual.iter().zip(expected.iter()).enumerate() {
+        assert_rect_close_px(&format!("{web_name} bar-{i}"), *actual, *expected, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_bar_variants_bar_rects_match_web() {
+    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+
+    {
+        let web_name = "chart-bar-active";
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let chart = web_find_chart_container(&theme.root);
+        let plot = web_find_chart_plot_rect(chart);
+        let bars = web_find_chart_bar_rects(chart);
+        let values = [187.0_f32, 200.0, 275.0, 173.0, 90.0];
+
+        let plot = Rect::new(
+            Point::new(Px(plot.x), Px(plot.y)),
+            CoreSize::new(Px(plot.w), Px(plot.h)),
+        );
+        let rects = fret_ui_shadcn::recharts_geometry::bar_rects(plot, &values, layout);
+        assert_chart_bar_rects_match_web(
+            web_name,
+            rects,
+            &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+        );
+    }
+
+    {
+        let web_name = "chart-bar-multiple";
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let chart = web_find_chart_container(&theme.root);
+        let plot = web_find_chart_plot_rect(chart);
+        let bars = web_find_chart_bar_rects(chart);
+        let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+        let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+
+        let plot = Rect::new(
+            Point::new(Px(plot.x), Px(plot.y)),
+            CoreSize::new(Px(plot.w), Px(plot.h)),
+        );
+        let rects = fret_ui_shadcn::recharts_geometry::grouped_bar_rects(
+            plot,
+            &[&desktop, &mobile],
+            layout,
+            4.0,
+        );
+        assert_chart_bar_rects_match_web(
+            web_name,
+            rects,
+            &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+        );
+    }
+
+    {
+        let web_name = "chart-bar-stacked";
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let chart = web_find_chart_container(&theme.root);
+        let plot = web_find_chart_plot_rect(chart);
+        let bars = web_find_chart_bar_rects(chart);
+        let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+        let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+
+        let plot = Rect::new(
+            Point::new(Px(plot.x), Px(plot.y)),
+            CoreSize::new(Px(plot.w), Px(plot.h)),
+        );
+        let rects = fret_ui_shadcn::recharts_geometry::stacked_bar_rects(
+            plot,
+            &[&desktop, &mobile],
+            layout,
+        );
+        assert_chart_bar_rects_match_web(
+            web_name,
+            rects,
+            &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+        );
+    }
+
+    {
+        let web_name = "chart-bar-label";
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let chart = web_find_chart_container(&theme.root);
+        let plot = web_find_chart_plot_rect(chart);
+        let bars = web_find_chart_bar_rects(chart);
+        let values = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+
+        let plot = Rect::new(
+            Point::new(Px(plot.x), Px(plot.y)),
+            CoreSize::new(Px(plot.w), Px(plot.h)),
+        );
+        let rects = fret_ui_shadcn::recharts_geometry::bar_rects(plot, &values, layout);
+        assert_chart_bar_rects_match_web(
+            web_name,
+            rects,
+            &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+        );
+    }
+
+    {
+        let web_name = "chart-bar-demo";
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let chart = web_find_chart_container(&theme.root);
+        let plot = web_find_chart_plot_rect(chart);
+        let bars = web_find_chart_bar_rects(chart);
+        let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+        let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+
+        let plot = Rect::new(
+            Point::new(Px(plot.x), Px(plot.y)),
+            CoreSize::new(Px(plot.w), Px(plot.h)),
+        );
+        let rects = fret_ui_shadcn::recharts_geometry::grouped_bar_rects(
+            plot,
+            &[&desktop, &mobile],
+            layout,
+            4.0,
+        );
+        assert_chart_bar_rects_match_web(
+            web_name,
+            rects,
+            &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+        );
+    }
+
+    for web_name in [
+        "chart-bar-demo-grid",
+        "chart-bar-demo-axis",
+        "chart-bar-demo-tooltip",
+    ] {
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let chart = web_find_chart_container(&theme.root);
+        let plot = web_find_chart_plot_rect(chart);
+        let bars = web_find_chart_bar_rects(chart);
+        let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+        let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+
+        let plot = Rect::new(
+            Point::new(Px(plot.x), Px(plot.y)),
+            CoreSize::new(Px(plot.w), Px(plot.h)),
+        );
+        let rects = fret_ui_shadcn::recharts_geometry::grouped_bar_rects(
+            plot,
+            &[&desktop, &mobile],
+            layout,
+            4.0,
+        );
+        assert_chart_bar_rects_match_web(
+            web_name,
+            rects,
+            &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_bar_negative_bar_rects_match_web() {
+    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let web_name = "chart-bar-negative";
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let chart = web_find_chart_container(&theme.root);
+    let plot = web_find_chart_plot_rect(chart);
+    let bars = web_find_chart_bar_rects(chart);
+    let values = [186.0_f32, 205.0, -207.0, 173.0, -209.0, 214.0];
+
+    let plot = Rect::new(
+        Point::new(Px(plot.x), Px(plot.y)),
+        CoreSize::new(Px(plot.w), Px(plot.h)),
+    );
+    let rects = fret_ui_shadcn::recharts_geometry::symmetric_bar_rects(plot, &values, layout);
+    assert_chart_bar_rects_match_web(
+        web_name,
+        rects,
+        &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_bar_horizontal_variants_bar_rects_match_web() {
+    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+
+    let month_desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+    let visitors = [275.0_f32, 200.0, 187.0, 173.0, 90.0];
+
+    let cases = [
+        ("chart-bar-horizontal", month_desktop.as_slice()),
+        ("chart-bar-mixed", visitors.as_slice()),
+        ("chart-bar-label-custom", month_desktop.as_slice()),
+    ];
+
+    for (web_name, values) in cases {
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let chart = web_find_chart_container(&theme.root);
+        let plot = web_find_chart_plot_rect(chart);
+        let bars = web_find_chart_bar_rects(chart);
+
+        let plot = Rect::new(
+            Point::new(Px(plot.x), Px(plot.y)),
+            CoreSize::new(Px(plot.w), Px(plot.h)),
+        );
+        let rects = fret_ui_shadcn::recharts_geometry::horizontal_bar_rects(plot, values, layout);
+        assert_chart_bar_rects_match_web(
+            web_name,
+            rects,
+            &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+        );
+    }
+}
+
+fn assert_chart_series_curve_bounds_match_web(
+    web_name: &str,
+    series: &[(&[f32], fret_ui_shadcn::recharts_geometry::CurveKind)],
+    y_tick_count: usize,
+    domain_max: Option<f32>,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_chart = web_find_chart_container(&theme.root);
+    let web_plot = web_find_chart_grid(web_chart);
+    let web_curves = web_find_chart_series_curves(web_chart);
+    assert_eq!(
+        web_curves.len(),
+        series.len(),
+        "{web_name}: expected {} series curve(s), got {}",
+        series.len(),
+        web_curves.len()
+    );
+
+    let plot = Rect::new(
+        Point::new(Px(web_plot.rect.x), Px(web_plot.rect.y)),
+        CoreSize::new(Px(web_plot.rect.w), Px(web_plot.rect.h)),
+    );
+
+    let domain_max = domain_max.unwrap_or_else(|| {
+        let mut all = Vec::new();
+        for (values, _) in series {
+            all.extend_from_slice(values);
+        }
+        fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(&all, y_tick_count)
+    });
+
+    let mut expected: Vec<Rect> = series
+        .iter()
+        .enumerate()
+        .map(|(i, (values, kind))| {
+            fret_ui_shadcn::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
+                .unwrap_or_else(|| {
+                    panic!("{web_name}: failed to compute curve bounds for series {i}")
+                })
+        })
+        .collect();
+    expected.sort_by(|a, b| {
+        a.origin
+            .y
+            .0
+            .partial_cmp(&b.origin.y.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.origin
+                    .x
+                    .0
+                    .partial_cmp(&b.origin.x.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+
+    for (i, (expected, web_curve)) in expected.iter().zip(web_curves.iter()).enumerate() {
+        assert_rect_close_px(
+            &format!("{web_name} curve-{i}"),
+            *expected,
+            web_curve.rect,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_line_variants_curve_bounds_match_web() {
+    let month_desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+
+    let cases = [
+        (
+            "chart-line-linear",
+            fret_ui_shadcn::recharts_geometry::CurveKind::Linear,
+        ),
+        (
+            "chart-line-step",
+            fret_ui_shadcn::recharts_geometry::CurveKind::Step,
+        ),
+        (
+            "chart-line-dots",
+            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+        ),
+        (
+            "chart-line-dots-custom",
+            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+        ),
+        (
+            "chart-line-label",
+            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+        ),
+    ];
+
+    for (web_name, kind) in cases {
+        assert_chart_series_curve_bounds_match_web(web_name, &[(&month_desktop, kind)], 5, None);
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_line_dots_colors_curve_bounds_match_web() {
+    let visitors = [275.0_f32, 200.0, 187.0, 173.0, 90.0];
+    assert_chart_series_curve_bounds_match_web(
+        "chart-line-dots-colors",
+        &[(
+            &visitors,
+            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+        )],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_line_label_custom_curve_bounds_match_web() {
+    let visitors = [275.0_f32, 200.0, 187.0, 173.0, 90.0];
+    assert_chart_series_curve_bounds_match_web(
+        "chart-line-label-custom",
+        &[(
+            &visitors,
+            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+        )],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_line_multiple_curve_bounds_match_web() {
+    let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+    let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+    assert_chart_series_curve_bounds_match_web(
+        "chart-line-multiple",
+        &[
+            (
+                &desktop,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+            ),
+            (
+                &mobile,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+            ),
+        ],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_area_variants_curve_bounds_match_web() {
+    let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+    let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+    let stacked: Vec<f32> = desktop
+        .iter()
+        .zip(mobile.iter())
+        .map(|(d, m)| d + m)
+        .collect();
+
+    let stacked_series = &[
+        (
+            &mobile[..],
+            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+        ),
+        (
+            &stacked[..],
+            fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+        ),
+    ];
+
+    let cases = [
+        "chart-area-axes",
+        "chart-area-gradient",
+        "chart-area-icons",
+        "chart-area-stacked",
+    ];
+
+    for web_name in cases {
+        let tick_count = if web_name == "chart-area-axes" { 3 } else { 5 };
+        assert_chart_series_curve_bounds_match_web(web_name, stacked_series, tick_count, None);
+    }
+
+    assert_chart_series_curve_bounds_match_web(
+        "chart-area-linear",
+        &[(
+            &desktop,
+            fret_ui_shadcn::recharts_geometry::CurveKind::Linear,
+        )],
+        5,
+        None,
+    );
+
+    assert_chart_series_curve_bounds_match_web(
+        "chart-area-step",
+        &[(&desktop, fret_ui_shadcn::recharts_geometry::CurveKind::Step)],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_area_stacked_expand_curve_bounds_match_web() {
+    let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+    let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+    let other = [45.0_f32, 100.0, 150.0, 50.0, 100.0, 160.0];
+
+    let mut other_top = Vec::new();
+    let mut mobile_top = Vec::new();
+    let mut desktop_top = Vec::new();
+    for ((d, m), o) in desktop.iter().zip(mobile.iter()).zip(other.iter()) {
+        let total = d + m + o;
+        other_top.push(o / total);
+        mobile_top.push((o + m) / total);
+        desktop_top.push(1.0);
+    }
+
+    assert_chart_series_curve_bounds_match_web(
+        "chart-area-stacked-expand",
+        &[
+            (
+                &other_top[..],
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &mobile_top[..],
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &desktop_top[..],
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        Some(1.0),
+    );
 }
 
 #[test]
