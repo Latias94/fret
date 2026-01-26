@@ -16,5 +16,6 @@ Active workstreams:
 - `docs/workstreams/state-driven-style-resolution-v1.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
+- `docs/workstreams/execution-concurrency-surface-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1-todo.md`

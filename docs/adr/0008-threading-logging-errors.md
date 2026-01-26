@@ -47,3 +47,7 @@ This keeps platform and GPU objects single-threaded where required and avoids pe
 - The codebase remains compatible with wasm environments (where threading is constrained).
 - Multi-window behavior stays deterministic because side effects are serialized through the main thread.
 - Debugging is improved by consistent structured logging.
+
+## References
+
+- User-facing execution and concurrency surface: `docs/adr/0190-execution-and-concurrency-surface-v1.md`

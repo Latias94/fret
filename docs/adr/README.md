@@ -315,6 +315,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 ## Cross-Cutting
 
 - `docs/adr/0008-threading-logging-errors.md`
+- `docs/adr/0190-execution-and-concurrency-surface-v1.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - `docs/adr/0097-plot-widgets-and-crate-placement.md`

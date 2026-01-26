@@ -65,6 +65,19 @@ Instead:
 
 We define a minimal set of booleans/enums that cover the “hard portability” boundaries:
 
+- **Execution / scheduling** (see ADR 0190; primarily diagnostics and portability guardrails)
+  - `exec.background_work`: enum:
+    - `none` (no background execution; UI thread only)
+    - `cooperative` (best-effort background work; no threads, time-sliced/cooperative)
+    - `threads` (background threads available; true multi-thread execution)
+  - `exec.wake`: enum:
+    - `none`
+    - `best_effort` (wake may be coalesced/delayed; may be global-only)
+    - `reliable` (wake reliably reaches the next driver boundary)
+  - `exec.timers`: enum:
+    - `none`
+    - `best_effort` (timers exist but precision is limited / clamped)
+    - `reliable` (timers are available with typical OS/runtime semantics)
 - **Windows**
   - `ui.multi_window`: `bool` (wasm/mobile: false; desktop: true)
   - `ui.window_tear_off`: `bool` (may equal `multi_window`)
@@ -172,6 +185,7 @@ Remaining:
 - ADR 0013: `docs/adr/0013-docking-ops-and-persistence.md`
 - ADR 0017: `docs/adr/0017-multi-window-display-and-dpi.md`
 - ADR 0022: `docs/adr/0022-when-expressions.md`
+- ADR 0190: `docs/adr/0190-execution-and-concurrency-surface-v1.md`
 - ADR 0034: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - ADR 0036: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 - ADR 0041: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
