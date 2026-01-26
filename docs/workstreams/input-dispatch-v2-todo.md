@@ -49,16 +49,11 @@ Keep this list short and evidence-backed:
 ## MVP0.1 — Default Actions Expansion (Keep Mechanism/Policy Boundary Clean)
 
 - [x] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
-  - Decision: keep the mechanism-owned default action catalog minimal for now.
-  - Current v1 catalog:
-    - `DefaultAction::FocusOnPointerDown` (stable, widely needed, hard-to-change)
-  - Non-goals (stay widget-/policy-owned until a concrete need shows up):
-    - text selection start / drag selection
-    - scroll routing heuristics beyond normal dispatch + scroll widgets
-    - "activate on pointer up", press/capture semantics, and other Radix/shadcn interaction policies
-- [ ] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
-  - Status: deferred. New defaults must be motivated by a cross-surface, hard-to-change behavior and come with
-    focused tests that prove we are not leaking ecosystem policy into `crates/fret-ui`.
+  - Decision tracker: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
+  - Decision: keep v2 limited to `DefaultAction::FocusOnPointerDown` for now.
+- [x] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+  - Decision: defer until we have a concrete, boundary-safe, cross-surface default.
+  - Evidence: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
 
 ## MVP1 — Action Availability (GPUI `is_action_available` Parity)
 
@@ -122,7 +117,11 @@ Keep this list short and evidence-backed:
 - [x] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (`MenuInitialFocusTargets`, modality-gated `initial_focus`),
     `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (wires focus targets).
-  - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers).
+  - Conformance: shadcn tests cover keyboard-open entry focus and pointer-open “focus content, not first item” for
+    DropdownMenu / Menubar / ContextMenu.
+  - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers, auto-focus hooks).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (plumbs `on_open_auto_focus/on_close_auto_focus`),
+    tests `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (auto-focus preventDefault conformance).
 - [x] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
   - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
 
