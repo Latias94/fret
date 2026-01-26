@@ -9,7 +9,8 @@ OS menubars need a synchronous, best-effort enable/disable signal for menu items
 
 Fret already has:
 
-- `WindowInputContextService` (UI runtime publishes focus/modal state for runner gating).
+- `WindowInputContextService` (UI runtime publishes a window-scoped `InputContext` snapshot for
+  runner gating, including focus/modal and input arbitration state).
 - `WindowCommandAvailabilityService` (v1 seam for Undo/Redo availability, because it is not always
   derivable from focus/modal alone).
 
@@ -51,7 +52,7 @@ the seam: viewports are app/UI details; the OS menubar is a window-level integra
 ### Positive
 
 - Adds a minimal, data-only seam for "hard-to-infer" enablement.
-- Keeps `InputContext` small and stable.
+- Keeps `InputContext` free of app-specific fields.
 - Keeps `fret-ui` as a mechanism/contract layer (no shadcn policy leakage).
 - Makes OS menubar and shortcuts consistent by default.
 

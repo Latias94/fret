@@ -1,4 +1,6 @@
 use crate::PlatformCapabilities;
+use crate::WindowInputArbitrationSnapshot;
+use crate::WindowPointerOcclusion;
 use fret_core::{KeyCode, Modifiers};
 use std::borrow::Cow;
 
@@ -43,6 +45,12 @@ pub struct InputContext {
     pub platform: Platform,
     pub caps: PlatformCapabilities,
     pub ui_has_modal: bool,
+    /// Window-level input arbitration snapshot for the current dispatch pass.
+    ///
+    /// When present, this allows policy-heavy ecosystem layers to observe modal/capture/occlusion
+    /// state without reaching into global services (and keeps the snapshot consistent within a
+    /// single dispatch).
+    pub window_arbitration: Option<WindowInputArbitrationSnapshot>,
     pub focus_is_text_input: bool,
     pub edit_can_undo: bool,
     pub edit_can_redo: bool,
@@ -65,11 +73,24 @@ impl Default for InputContext {
             platform: Platform::current(),
             caps: PlatformCapabilities::default(),
             ui_has_modal: false,
+            window_arbitration: None,
             focus_is_text_input: false,
             edit_can_undo: true,
             edit_can_redo: true,
             dispatch_phase: InputDispatchPhase::Bubble,
         }
+    }
+}
+
+impl InputContext {
+    pub fn window_arbitration(&self) -> Option<WindowInputArbitrationSnapshot> {
+        self.window_arbitration
+    }
+
+    pub fn window_pointer_occlusion(&self) -> WindowPointerOcclusion {
+        self.window_arbitration
+            .map(|snapshot| snapshot.pointer_occlusion)
+            .unwrap_or_default()
     }
 }
 

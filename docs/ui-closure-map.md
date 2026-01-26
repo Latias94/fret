@@ -138,6 +138,8 @@ Validation anchors:
 **Mechanism (runtime)**
 
 - Overlay root stack + barrier flags in `crates/fret-ui/src/tree/mod.rs`
+- Window-scoped input arbitration snapshot is published via `WindowInputContextService`
+  (`fret_runtime::InputContext.window_arbitration`), not via a separate arbitration service.
 
 **Policy (components)**
 

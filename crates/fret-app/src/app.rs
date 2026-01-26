@@ -10,7 +10,7 @@ use fret_runtime::{ClipboardToken, FrameId, ImageUploadToken, TickId, TimerToken
 use crate::drag::{DragKindId, DragSession, DragSessionId};
 use fret_runtime::{
     BindingV1, CommandRegistry, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService, ModelHost,
-    ModelId, ModelStore,
+    ModelId, ModelStore, WindowCommandEnabledService,
 };
 
 use crate::SettingsFileV1;
@@ -376,21 +376,10 @@ impl App {
             command,
         } = &effect
         {
-            let platform = fret_runtime::Platform::current();
-            let caps = self
-                .global::<fret_runtime::PlatformCapabilities>()
-                .cloned()
-                .unwrap_or_default();
-            let fallback_input_ctx = fret_runtime::InputContext::fallback(platform, caps);
-
-            let enabled = fret_runtime::command_is_enabled_for_window_with_input_ctx_fallback(
-                self,
-                *window,
-                command,
-                fallback_input_ctx,
-            );
-
-            if !enabled {
+            if self
+                .global::<WindowCommandEnabledService>()
+                .is_some_and(|svc| svc.enabled(*window, command) == Some(false))
+            {
                 return;
             }
         }
@@ -567,7 +556,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.copy".into()),
+                    command: Some("text.copy".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -576,7 +565,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.cut".into()),
+                    command: Some("text.cut".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -585,7 +574,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.paste".into()),
+                    command: Some("text.paste".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -594,7 +583,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.select_all".into()),
+                    command: Some("text.select_all".into()),
                     platform: Some("windows".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -603,7 +592,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.copy".into()),
+                    command: Some("text.copy".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -612,7 +601,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.cut".into()),
+                    command: Some("text.cut".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -621,7 +610,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.paste".into()),
+                    command: Some("text.paste".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -630,7 +619,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.select_all".into()),
+                    command: Some("text.select_all".into()),
                     platform: Some("linux".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -639,7 +628,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.copy".into()),
+                    command: Some("text.copy".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -648,7 +637,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.cut".into()),
+                    command: Some("text.cut".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -657,7 +646,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.paste".into()),
+                    command: Some("text.paste".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -666,7 +655,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.select_all".into()),
+                    command: Some("text.select_all".into()),
                     platform: Some("web".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -675,7 +664,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.copy".into()),
+                    command: Some("text.copy".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -684,7 +673,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.cut".into()),
+                    command: Some("text.cut".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -693,7 +682,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.paste".into()),
+                    command: Some("text.paste".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -702,7 +691,7 @@ fn default_keymap_service() -> KeymapService {
                     },
                 },
                 BindingV1 {
-                    command: Some("edit.select_all".into()),
+                    command: Some("text.select_all".into()),
                     platform: Some("macos".into()),
                     when: None,
                     keys: KeySpecV1 {
@@ -834,7 +823,7 @@ pub struct Focus {
 mod tests {
     use super::{App, default_keymap_service};
     use fret_core::{KeyCode, Modifiers};
-    use fret_runtime::{CommandId, InputContext, KeyChord, Platform};
+    use fret_runtime::{CommandId, InputContext, InputDispatchPhase, KeyChord, Platform};
     use std::any::TypeId;
     use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -916,7 +905,16 @@ mod tests {
     #[test]
     fn default_keymap_includes_undo_redo() {
         let service = default_keymap_service();
-        let ctx = |platform: Platform| InputContext::fallback(platform, Default::default());
+        let ctx = |platform: Platform| InputContext {
+            platform,
+            caps: Default::default(),
+            ui_has_modal: false,
+            window_arbitration: None,
+            focus_is_text_input: false,
+            edit_can_undo: true,
+            edit_can_redo: true,
+            dispatch_phase: InputDispatchPhase::Bubble,
+        };
 
         let ctrl_z = KeyChord::new(
             KeyCode::KeyZ,

@@ -58,11 +58,14 @@ fn dispatch_event_publishes_post_dispatch_input_arbitration_snapshot() {
         .expect("expected capture node to be attached to a layer");
     let layer_root = ui.layer_root(layer).expect("expected layer root");
 
-    let arbitration = app
-        .global::<fret_runtime::WindowInputArbitrationService>()
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window))
-        .copied()
-        .expect("expected a window input arbitration snapshot");
+        .cloned()
+        .expect("expected a window input context snapshot");
+    let arbitration = input_ctx
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
     assert!(arbitration.pointer_capture_active);
     assert_eq!(arbitration.pointer_capture_root, Some(layer_root));
     assert!(!arbitration.pointer_capture_multiple_roots);
@@ -116,11 +119,14 @@ fn dispatch_command_publishes_post_dispatch_input_arbitration_snapshot() {
 
     ui.dispatch_command(&mut app, &mut services, &CommandId::from("test.open_modal"));
 
-    let arbitration = app
-        .global::<fret_runtime::WindowInputArbitrationService>()
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window))
-        .copied()
-        .expect("expected a window input arbitration snapshot");
+        .cloned()
+        .expect("expected a window input context snapshot");
+    let arbitration = input_ctx
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
     assert_eq!(
         arbitration.modal_barrier_root,
         Some(overlay_root),

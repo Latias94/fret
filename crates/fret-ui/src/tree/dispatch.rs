@@ -1,10 +1,6 @@
 use super::*;
 use std::collections::HashMap;
 
-use fret_runtime::{
-    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
-};
-
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
     inv: Invalidation,
@@ -162,6 +158,92 @@ impl<H: UiHost> UiTree<H> {
             });
     }
 
+    fn dispatch_pointer_move_layer_observers(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        input_ctx: &InputContext,
+        barrier_root: Option<NodeId>,
+        event: &Event,
+        needs_redraw: &mut bool,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
+    ) {
+        let Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            pointer_type,
+            ..
+        }) = event
+        else {
+            return;
+        };
+
+        let captured_layer_for_pointer_move = self
+            .captured
+            .get(pointer_id)
+            .copied()
+            .and_then(|n| self.node_layer(n));
+        let pointer_move_occlusion_layer = captured_layer_for_pointer_move
+            .is_none()
+            .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
+            .flatten()
+            .filter(|(_, occlusion)| {
+                pointer_type_supports_hover(*pointer_type) && *occlusion != PointerOcclusion::None
+            })
+            .map(|(layer, _)| layer);
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        let mut hit_barrier = false;
+        for layer_id in layers.into_iter().rev() {
+            let Some((layer_root, visible, wants_pointer_move_events)) = self
+                .layers
+                .get(layer_id)
+                .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
+            else {
+                continue;
+            };
+            if !visible {
+                continue;
+            }
+            if barrier_root.is_some() && hit_barrier {
+                break;
+            }
+            if !wants_pointer_move_events {
+                if barrier_root == Some(layer_root) {
+                    hit_barrier = true;
+                }
+                if pointer_move_occlusion_layer == Some(layer_id) {
+                    break;
+                }
+                continue;
+            }
+            if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
+                // Pointer-move observer hooks are used by overlay policies (e.g. Radix menu safe
+                // corridor). When a pointer is captured by a different layer (viewport tools,
+                // docking drags, etc.), do not let unrelated overlay layers observe that move
+                // stream. This keeps captured interactions stable and avoids cross-layer
+                // arbitration fights during drags.
+                if barrier_root == Some(layer_root) {
+                    hit_barrier = true;
+                }
+                continue;
+            }
+            let _ = self.dispatch_event_to_node_chain(
+                app,
+                services,
+                input_ctx,
+                layer_root,
+                event,
+                needs_redraw,
+                invalidation_visited,
+            );
+            if barrier_root == Some(layer_root) {
+                hit_barrier = true;
+            }
+            if pointer_move_occlusion_layer == Some(layer_id) {
+                break;
+            }
+        }
+    }
+
     fn node_depth_for_invalidation_order(&self, node: NodeId) -> u32 {
         let mut depth: u32 = 0;
         let mut current: Option<NodeId> = Some(node);
@@ -197,100 +279,6 @@ impl<H: UiHost> UiTree<H> {
                 pending.detail,
             );
         }
-    }
-
-    fn maybe_schedule_virtual_list_visible_range_refresh_for_pending_invalidations(
-        &mut self,
-        app: &mut H,
-        pending: &HashMap<NodeId, PendingInvalidation>,
-        needs_redraw: &mut bool,
-    ) {
-        if !self.view_cache_active() {
-            return;
-        }
-        let Some(window) = self.window else {
-            return;
-        };
-
-        let mut notify_targets: HashMap<NodeId, ()> = HashMap::new();
-        for (&node, entry) in pending {
-            if entry.inv != Invalidation::HitTestOnly {
-                continue;
-            }
-
-            let Some(record) =
-                crate::declarative::frame::element_record_for_node(app, window, node)
-            else {
-                continue;
-            };
-            let crate::declarative::frame::ElementInstance::VirtualList(props) = record.instance
-            else {
-                continue;
-            };
-
-            let requested_refresh = crate::elements::with_element_state(
-                &mut *app,
-                window,
-                record.element,
-                crate::element::VirtualListState::default,
-                |state| {
-                    state.metrics.ensure_with_mode(
-                        props.measure_mode,
-                        props.len,
-                        props.estimate_row_height,
-                        props.gap,
-                        props.scroll_margin,
-                    );
-
-                    let viewport_size = props.scroll_handle.viewport_size();
-                    let viewport = match props.axis {
-                        fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
-                        fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
-                    };
-                    if viewport.0 <= 0.0 || props.len == 0 {
-                        return false;
-                    }
-
-                    let handle_offset = match props.axis {
-                        fret_core::Axis::Vertical => props.scroll_handle.offset().y,
-                        fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
-                    };
-                    let offset = state.metrics.clamp_offset(handle_offset, viewport);
-                    let Some(range) = state
-                        .metrics
-                        .visible_range(offset, viewport, props.overscan)
-                    else {
-                        return false;
-                    };
-                    crate::virtual_list::virtual_list_needs_visible_range_refresh(
-                        &props.visible_items,
-                        range,
-                    )
-                },
-            );
-
-            self.debug_record_virtual_list_visible_range_check(requested_refresh);
-            if !requested_refresh {
-                continue;
-            }
-
-            let notify_target = self.notify_target_for_node(node);
-            notify_targets.insert(notify_target, ());
-        }
-
-        if notify_targets.is_empty() {
-            return;
-        }
-
-        for (notify_target, ()) in notify_targets {
-            self.invalidate_with_source_and_detail(
-                notify_target,
-                Invalidation::Paint,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-            );
-        }
-        *needs_redraw = true;
     }
 
     fn dismiss_topmost_overlay_on_escape(
@@ -373,15 +361,13 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 element: root_element,
             };
-            let mut req =
-                crate::action::DismissRequestCx::new(crate::action::DismissReason::Escape);
             hook(
                 &mut host,
                 crate::action::ActionCx {
                     window,
                     target: root_element,
                 },
-                &mut req,
+                crate::action::DismissReason::Escape,
             );
             return true;
         }
@@ -540,10 +526,9 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
-                    let notify_target = self.notify_target_for_node(node_id);
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
-                        notify_target,
+                        node_id,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Notify,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -674,10 +659,9 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
-                let notify_target = self.notify_target_for_node(node_id);
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
-                    notify_target,
+                    node_id,
                     Invalidation::Paint,
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -725,11 +709,6 @@ impl<H: UiHost> UiTree<H> {
 
             let captured_now = pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
             if captured_now.is_some() || stop_propagation {
-                self.maybe_schedule_virtual_list_visible_range_refresh_for_pending_invalidations(
-                    app,
-                    &pending_invalidations,
-                    needs_redraw,
-                );
                 self.apply_pending_invalidations(
                     std::mem::take(&mut pending_invalidations),
                     invalidation_visited,
@@ -743,11 +722,6 @@ impl<H: UiHost> UiTree<H> {
             };
         }
 
-        self.maybe_schedule_virtual_list_visible_range_refresh_for_pending_invalidations(
-            app,
-            &pending_invalidations,
-            needs_redraw,
-        );
         self.apply_pending_invalidations(
             std::mem::take(&mut pending_invalidations),
             invalidation_visited,
@@ -825,6 +799,7 @@ impl<H: UiHost> UiTree<H> {
             platform: Platform::current(),
             caps,
             ui_has_modal: barrier_root.is_some(),
+            window_arbitration: None,
             focus_is_text_input,
             edit_can_undo: true,
             edit_can_redo: true,
@@ -839,38 +814,16 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
             }
+
+            let window_arbitration = self.window_input_arbitration_snapshot();
+            input_ctx.window_arbitration = Some(window_arbitration);
+
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
-            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
-                let snapshot = self.input_arbitration_snapshot();
-                svc.set_snapshot(
-                    window,
-                    WindowInputArbitrationSnapshot {
-                        modal_barrier_root: snapshot.modal_barrier_root,
-                        pointer_occlusion: match snapshot.pointer_occlusion {
-                            PointerOcclusion::None => WindowPointerOcclusion::None,
-                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
-                            PointerOcclusion::BlockMouseExceptScroll => {
-                                WindowPointerOcclusion::BlockMouseExceptScroll
-                            }
-                        },
-                        pointer_occlusion_root: snapshot
-                            .pointer_occlusion_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_active: snapshot.pointer_capture_active,
-                        pointer_capture_root: snapshot
-                            .pointer_capture_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
-                            || (snapshot.pointer_capture_active
-                                && snapshot.pointer_capture_layer.is_none()),
-                    },
-                );
-            });
         }
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
@@ -1353,18 +1306,6 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
-                if let Some(window) = self.window {
-                    for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
-                        let (Some(element), Some(node)) = (element, node) else {
-                            continue;
-                        };
-                        let Some(bounds) = self.node_bounds(node) else {
-                            continue;
-                        };
-                        crate::elements::record_bounds_for_element(app, window, element, bounds);
-                    }
-                }
-
                 if let Some(element) = prev_element
                     && prev_node.is_some()
                 {
@@ -1554,72 +1495,17 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
-            // Pointer occlusion blocks underlay pointer interaction. However, some overlays (e.g.
-            // Radix menus) still need global pointer movement to drive safe-hover corridors.
-            //
-            // When occlusion suppresses hit-tested pointer routing, deliver pointer-move observer
-            // events to interested overlay layers (DismissibleLayer observer pass), then return
-            // early to prevent any underlay dispatch.
             if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-                let mut hit_barrier = false;
-                let captured_layer_for_pointer_move = event_pointer_id_for_capture
-                    .and_then(|pointer_id| self.captured.get(&pointer_id).copied())
-                    .and_then(|n| self.node_layer(n));
-                let pointer_move_occlusion_layer = captured_layer_for_pointer_move
-                    .is_none()
-                    .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
-                    .flatten()
-                    .map(|(layer, _)| layer);
-
-                for layer_id in layers.into_iter().rev() {
-                    let Some((layer_root, visible, wants_pointer_move_events)) = self
-                        .layers
-                        .get(layer_id)
-                        .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
-                    else {
-                        continue;
-                    };
-                    if !visible {
-                        continue;
-                    }
-                    if barrier_root.is_some() && hit_barrier {
-                        break;
-                    }
-                    if !wants_pointer_move_events {
-                        if barrier_root == Some(layer_root) {
-                            hit_barrier = true;
-                        }
-                        if pointer_move_occlusion_layer == Some(layer_id) {
-                            break;
-                        }
-                        continue;
-                    }
-                    if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
-                        if barrier_root == Some(layer_root) {
-                            hit_barrier = true;
-                        }
-                        continue;
-                    }
-
-                    self.dispatch_event_to_node_chain_observer(
-                        app,
-                        services,
-                        &input_ctx,
-                        layer_root,
-                        event,
-                        &mut invalidation_visited,
-                    );
-
-                    if barrier_root == Some(layer_root) {
-                        hit_barrier = true;
-                    }
-                    if pointer_move_occlusion_layer == Some(layer_id) {
-                        break;
-                    }
-                }
+                self.dispatch_pointer_move_layer_observers(
+                    app,
+                    services,
+                    &input_ctx,
+                    barrier_root,
+                    event,
+                    &mut needs_redraw,
+                    &mut invalidation_visited,
+                );
             }
-
             if needs_redraw {
                 self.request_redraw_coalesced(app);
             }
@@ -1715,9 +1601,8 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
-                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            notify_target,
+                            node_id,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -1779,7 +1664,6 @@ impl<H: UiHost> UiTree<H> {
                         requested_focus,
                         requested_capture,
                         requested_cursor,
-                        cursor_query,
                         notify_requested,
                         stop_propagation,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -1809,15 +1693,12 @@ impl<H: UiHost> UiTree<H> {
                             notify_requested: false,
                             stop_propagation: false,
                         };
-                        let cursor_query = event_position(&event_for_node)
-                            .and_then(|pos| widget.cursor_icon_at(bounds, pos, &cx.input_ctx));
                         widget.event(&mut cx, &event_for_node);
                         (
                             cx.invalidations,
                             cx.requested_focus,
                             cx.requested_capture,
                             cx.requested_cursor,
-                            cursor_query,
                             cx.notify_requested,
                             cx.stop_propagation,
                         )
@@ -1835,9 +1716,8 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
-                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            notify_target,
+                            node_id,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -1876,9 +1756,6 @@ impl<H: UiHost> UiTree<H> {
 
                     if requested_cursor.is_some() && cursor_choice.is_none() {
                         cursor_choice = requested_cursor;
-                    }
-                    if cursor_choice.is_none() && cursor_query.is_some() {
-                        cursor_choice = cursor_query;
                     }
 
                     if stop_propagation {
@@ -1967,9 +1844,8 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
-                            let notify_target = self.notify_target_for_node(node_id);
                             self.mark_invalidation_with_source(
-                                notify_target,
+                                node_id,
                                 Invalidation::Paint,
                                 UiDebugInvalidationSource::Notify,
                             );
@@ -2086,9 +1962,8 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
-                            let notify_target = self.notify_target_for_node(node_id);
                             self.mark_invalidation_with_source(
-                                notify_target,
+                                node_id,
                                 Invalidation::Paint,
                                 UiDebugInvalidationSource::Notify,
                             );
@@ -2201,9 +2076,8 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
-                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            notify_target,
+                            node_id,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -2390,15 +2264,13 @@ impl<H: UiHost> UiTree<H> {
                         window,
                         element: root_element,
                     };
-                    let mut req =
-                        crate::action::DismissRequestCx::new(crate::action::DismissReason::Scroll);
                     hook(
                         &mut host,
                         crate::action::ActionCx {
                             window,
                             target: root_element,
                         },
-                        &mut req,
+                        crate::action::DismissReason::Scroll,
                     );
                     dismissed_any = true;
                 }
@@ -2535,78 +2407,17 @@ impl<H: UiHost> UiTree<H> {
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
-        if let Event::Pointer(PointerEvent::Move {
-            pointer_id,
-            pointer_type,
-            ..
-        }) = event
-        {
-            let captured_layer_for_pointer_move = self
-                .captured
-                .get(pointer_id)
-                .copied()
-                .and_then(|n| self.node_layer(n));
-            let pointer_move_occlusion_layer = captured_layer_for_pointer_move
-                .is_none()
-                .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
-                .flatten()
-                .filter(|(_, occlusion)| {
-                    pointer_type_supports_hover(*pointer_type)
-                        && *occlusion != PointerOcclusion::None
-                })
-                .map(|(layer, _)| layer);
-            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-            let mut hit_barrier = false;
-            for layer_id in layers.into_iter().rev() {
-                let Some((layer_root, visible, wants_pointer_move_events)) = self
-                    .layers
-                    .get(layer_id)
-                    .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
-                else {
-                    continue;
-                };
-                if !visible {
-                    continue;
-                }
-                if barrier_root.is_some() && hit_barrier {
-                    break;
-                }
-                if !wants_pointer_move_events {
-                    if barrier_root == Some(layer_root) {
-                        hit_barrier = true;
-                    }
-                    if pointer_move_occlusion_layer == Some(layer_id) {
-                        break;
-                    }
-                    continue;
-                }
-                if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
-                    // Pointer-move observer hooks are used by overlay policies (e.g. Radix menu safe
-                    // corridor). When a pointer is captured by a different layer (viewport tools,
-                    // docking drags, etc.), do not let unrelated overlay layers observe that move
-                    // stream. This keeps captured interactions stable and avoids cross-layer
-                    // arbitration fights during drags.
-                    if barrier_root == Some(layer_root) {
-                        hit_barrier = true;
-                    }
-                    continue;
-                }
-                let _ = self.dispatch_event_to_node_chain(
-                    app,
-                    services,
-                    &input_ctx,
-                    layer_root,
-                    event,
-                    &mut needs_redraw,
-                    &mut invalidation_visited,
-                );
-                if barrier_root == Some(layer_root) {
-                    hit_barrier = true;
-                }
-                if pointer_move_occlusion_layer == Some(layer_id) {
-                    break;
-                }
-            }
+        self.dispatch_pointer_move_layer_observers(
+            app,
+            services,
+            &input_ctx,
+            barrier_root,
+            event,
+            &mut needs_redraw,
+            &mut invalidation_visited,
+        );
+        if needs_redraw {
+            self.request_redraw_coalesced(app);
         }
 
         // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
@@ -2625,6 +2436,7 @@ impl<H: UiHost> UiTree<H> {
                 platform: Platform::current(),
                 caps,
                 ui_has_modal: barrier_root.is_some(),
+                window_arbitration: None,
                 focus_is_text_input,
                 edit_can_undo: true,
                 edit_can_redo: true,
@@ -2638,45 +2450,16 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
             }
+
+            let window_arbitration = self.window_input_arbitration_snapshot();
+            input_ctx.window_arbitration = Some(window_arbitration);
+
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
-            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
-                let snapshot = self.input_arbitration_snapshot();
-                svc.set_snapshot(
-                    window,
-                    WindowInputArbitrationSnapshot {
-                        modal_barrier_root: snapshot.modal_barrier_root,
-                        pointer_occlusion: match snapshot.pointer_occlusion {
-                            PointerOcclusion::None => WindowPointerOcclusion::None,
-                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
-                            PointerOcclusion::BlockMouseExceptScroll => {
-                                WindowPointerOcclusion::BlockMouseExceptScroll
-                            }
-                        },
-                        pointer_occlusion_root: snapshot
-                            .pointer_occlusion_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_active: snapshot.pointer_capture_active,
-                        pointer_capture_root: snapshot
-                            .pointer_capture_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
-                            || (snapshot.pointer_capture_active
-                                && snapshot.pointer_capture_layer.is_none()),
-                    },
-                );
-            });
-
-            // Keep "is action available?" snapshots up to date for menu/command-palette gating.
-            //
-            // This publishes the retained-runtime baseline (all widget-scoped commands) so
-            // consumers that only have access to data-only services can still render disabled
-            // states without depending on `fret-ui` internals.
-            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
 
@@ -2745,10 +2528,9 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
-                    let notify_target = self.notify_target_for_node(node_id);
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
-                        notify_target,
+                        node_id,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Notify,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -2805,10 +2587,9 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
-                let notify_target = self.notify_target_for_node(node_id);
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
-                    notify_target,
+                    node_id,
                     Invalidation::Paint,
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),

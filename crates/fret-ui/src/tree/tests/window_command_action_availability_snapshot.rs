@@ -61,6 +61,7 @@ fn publish_snapshot(
         platform: Platform::current(),
         caps,
         ui_has_modal: false,
+        window_arbitration: None,
         focus_is_text_input: ui.focus_is_text_input(),
         edit_can_undo: true,
         edit_can_redo: true,
