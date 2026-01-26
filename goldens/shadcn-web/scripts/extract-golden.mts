@@ -719,8 +719,68 @@ async function extractOne(page: puppeteer.Page) {
       return txt;
     };
 
+    function areaOfRect(r) {
+      if (!r) return 0;
+      const w = typeof r.w === "number" ? r.w : typeof r.width === "number" ? r.width : 0;
+      const h = typeof r.h === "number" ? r.h : typeof r.height === "number" ? r.height : 0;
+      if (!isFinite(w) || !isFinite(h)) return 0;
+      return Math.max(0, w) * Math.max(0, h);
+    }
+
+    function rectFromSvgBBox(el) {
+      try {
+        if (!(el instanceof SVGGraphicsElement)) return null;
+
+        // Only apply SVG bbox transforms to Recharts nodes: this avoids churn for unrelated SVG
+        // usage (icons, etc) while fixing getBoundingClientRect() returning near-zero boxes for
+        // <g> layers in Radar/Radial charts.
+        const cls = el.getAttribute("class") || "";
+        if (!cls.includes("recharts-")) return null;
+
+        const bbox = el.getBBox();
+        const ctm = el.getScreenCTM();
+        if (!ctm) return null;
+
+        // Transform bbox corners into screen space; bbox is in local SVG units.
+        const p1 = new DOMPoint(bbox.x, bbox.y).matrixTransform(ctm);
+        const p2 = new DOMPoint(bbox.x + bbox.width, bbox.y).matrixTransform(ctm);
+        const p3 = new DOMPoint(bbox.x, bbox.y + bbox.height).matrixTransform(ctm);
+        const p4 = new DOMPoint(bbox.x + bbox.width, bbox.y + bbox.height).matrixTransform(ctm);
+
+        const xs = [p1.x, p2.x, p3.x, p4.x];
+        const ys = [p1.y, p2.y, p3.y, p4.y];
+
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        const w = maxX - minX;
+        const h = maxY - minY;
+        if (!isFinite(w) || !isFinite(h) || w < 0 || h < 0) return null;
+
+        return {
+          x: minX - rootRect.x,
+          y: minY - rootRect.y,
+          w,
+          h,
+        };
+      } catch {
+        return null;
+      }
+    }
+
     function traverse(el, pathStr) {
       const rect = el.getBoundingClientRect();
+      const bboxRect = rectFromSvgBBox(el);
+      const rectArea = rect.width * rect.height;
+      const bboxArea = areaOfRect(bboxRect);
+      const useBbox =
+        bboxRect &&
+        // getBoundingClientRect() can report near-zero boxes for SVG <g> layers; prefer bbox when it
+        // is meaningfully larger.
+        (rectArea < 1 || bboxArea > rectArea * 4);
+      const finalRect = useBbox ? bboxRect : null;
       const attrs = collectAttrs(el);
       const cls = el.getAttribute("class") || null;
       const id = el.getAttribute("id") || null;
@@ -732,10 +792,10 @@ async function extractOne(page: puppeteer.Page) {
         className: cls || undefined,
         attrs,
         rect: {
-          x: rect.x - rootRect.x,
-          y: rect.y - rootRect.y,
-          w: rect.width,
-          h: rect.height,
+          x: finalRect ? finalRect.x : rect.x - rootRect.x,
+          y: finalRect ? finalRect.y : rect.y - rootRect.y,
+          w: finalRect ? finalRect.w : rect.width,
+          h: finalRect ? finalRect.h : rect.height,
         },
         computedStyle: collectStyle(el),
         text: collectText(el) || undefined,
@@ -1635,30 +1695,114 @@ async function waitForRechartsSeriesIfPresent(
     const root = document.querySelector("[data-fret-golden-target]") || document.body;
     if (!root) return false;
 
-    const hasRecharts =
+    const wrapper =
       root.querySelector(".recharts-wrapper") ||
       root.querySelector("svg.recharts-surface");
+    const hasRecharts = !!wrapper;
     if (!hasRecharts) return true;
 
-    const candidates = root.querySelectorAll(
-      ".recharts-curve,.recharts-rectangle,.recharts-sector,.recharts-radial-bar-sector,.recharts-polygon,.recharts-radar-polygon,.recharts-radar-area"
-    );
-    if (!candidates || candidates.length === 0) return false;
+    const wrapperRect =
+      wrapper && wrapper instanceof Element ? wrapper.getBoundingClientRect() : null;
+    const minDim =
+      wrapperRect && wrapperRect.width > 0 && wrapperRect.height > 0
+        ? Math.min(wrapperRect.width, wrapperRect.height)
+        : 0;
+    const minSeriesDim = minDim > 0 ? Math.max(10, minDim * 0.2) : 10;
 
-    for (const el of Array.from(candidates)) {
-      if (!(el instanceof Element)) continue;
-      const r = el.getBoundingClientRect();
-      if (r.width > 0.5 || r.height > 0.5) return true;
-      if (el instanceof SVGGraphicsElement) {
-        try {
-          const b = el.getBBox();
-          if (b.width > 0.5 || b.height > 0.5) return true;
-        } catch {
-          // ignore
+    const bestRect = (nodes) => {
+      let best = null;
+      let bestArea = 0;
+      for (const el of Array.from(nodes)) {
+        if (!(el instanceof Element)) continue;
+        const r = el.getBoundingClientRect();
+        const area = r.width * r.height;
+        if (area > bestArea) {
+          bestArea = area;
+          best = { x: r.x, y: r.y, w: r.width, h: r.height };
         }
       }
+      return best;
+    };
+
+    const stableRect = (rect) => {
+      const w = rect.w || 0;
+      const h = rect.h || 0;
+      if (w <= 0 || h <= 0) return false;
+      if (w < minSeriesDim && h < minSeriesDim) return false;
+
+      const now = performance.now();
+      const key = "__fretRechartsStable";
+      // eslint-disable-next-line no-undef
+      const state = (window[key] ||= {
+        x: rect.x,
+        y: rect.y,
+        w,
+        h,
+        since: now,
+      });
+
+      const eps = 0.5;
+      const changed =
+        Math.abs(state.x - rect.x) > eps ||
+        Math.abs(state.y - rect.y) > eps ||
+        Math.abs(state.w - w) > eps ||
+        Math.abs(state.h - h) > eps;
+
+      if (changed) {
+        state.x = rect.x;
+        state.y = rect.y;
+        state.w = w;
+        state.h = h;
+        state.since = now;
+        return false;
+      }
+
+      return now - state.since >= 200;
+    };
+
+    // Prefer per-chart-type series layers to avoid picking up axis/grid shapes.
+    const radarLayer = root.querySelector("g.recharts-layer.recharts-radar");
+    if (radarLayer) {
+      const rect = bestRect(radarLayer.querySelectorAll("path,polygon,rect,circle"));
+      return rect ? stableRect(rect) : false;
     }
-    return false;
+
+    const radialLayer = root.querySelector("g.recharts-layer.recharts-radial-bar");
+    if (radialLayer) {
+      const rect = bestRect(radialLayer.querySelectorAll("path,polygon,rect,circle"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const pieLayer = root.querySelector("g.recharts-layer.recharts-pie");
+    if (pieLayer) {
+      const rect = bestRect(pieLayer.querySelectorAll("path,polygon,rect,circle"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const barLayer = root.querySelector("g.recharts-layer.recharts-bar-rectangles");
+    if (barLayer) {
+      const rect = bestRect(barLayer.querySelectorAll("path,rect"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const areaLayer = root.querySelector("g.recharts-layer.recharts-area");
+    if (areaLayer) {
+      const rect = bestRect(areaLayer.querySelectorAll("path"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const lineLayer = root.querySelector("g.recharts-layer.recharts-line");
+    if (lineLayer) {
+      const rect = bestRect(lineLayer.querySelectorAll("path"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    // Fallback: any known series-ish node with non-trivial bounds.
+    const candidates = root.querySelectorAll(
+      ".recharts-curve,.recharts-rectangle,.recharts-sector,.recharts-radial-bar-sector"
+    );
+    const rect = bestRect(candidates);
+    return rect ? stableRect(rect) : false;
   })()`
 
   await waitForExpr(page, expr, timeoutMs, 25)

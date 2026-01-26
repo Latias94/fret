@@ -18,8 +18,9 @@ For each component page, the exporter writes a JSON file with:
 ## Stability notes
 
 - Recharts-backed `chart-*` pages render key SVG nodes asynchronously (ResizeObserver + RAF + JS-driven animation).
-  The extractor waits for non-trivial bounds on common series nodes (bars/lines/areas/sectors/polygons) to avoid
-  capturing partial frames (e.g. `chart-bar-default` missing `path.recharts-rectangle`).
+  The extractor waits for series nodes to reach stable geometry (and may fall back to SVG bbox transforms for
+  Recharts layers) to avoid capturing partial frames (e.g. `chart-bar-default` missing `path.recharts-rectangle`,
+  or radar/radial charts captured at their animation origin).
 
 ## Prerequisites
 

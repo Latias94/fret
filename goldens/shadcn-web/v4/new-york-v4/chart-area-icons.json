@@ -3296,7 +3296,7 @@
                                                     "rect": {
                                                       "x": 36.66379165649414,
                                                       "y": 92.7603759765625,
-                                                      "w": 6.867693901062012,
+                                                      "w": 269.33563232421875,
                                                       "h": 724.826171875
                                                     },
                                                     "computedStyle": {
@@ -3317,7 +3317,7 @@
                                                       "flexGrow": "0",
                                                       "flexShrink": "1",
                                                       "flexBasis": "auto",
-                                                      "width": "6.86934px",
+                                                      "width": "269.4px",
                                                       "height": "725px",
                                                       "minWidth": "0px",
                                                       "minHeight": "0px",
@@ -3921,7 +3921,7 @@
                                                     "rect": {
                                                       "x": 36.66379165649414,
                                                       "y": 92.7603759765625,
-                                                      "w": 6.867693901062012,
+                                                      "w": 269.33563232421875,
                                                       "h": 627.8494873046875
                                                     },
                                                     "computedStyle": {
@@ -3942,7 +3942,7 @@
                                                       "flexGrow": "0",
                                                       "flexShrink": "1",
                                                       "flexBasis": "auto",
-                                                      "width": "6.86934px",
+                                                      "width": "269.4px",
                                                       "height": "628px",
                                                       "minWidth": "0px",
                                                       "minHeight": "0px",
@@ -8905,7 +8905,7 @@
                                                     "rect": {
                                                       "x": 36.66379165649414,
                                                       "y": 92.7603759765625,
-                                                      "w": 6.867693901062012,
+                                                      "w": 238.10202026367188,
                                                       "h": 724.826171875
                                                     },
                                                     "computedStyle": {
@@ -8926,7 +8926,7 @@
                                                       "flexGrow": "0",
                                                       "flexShrink": "1",
                                                       "flexBasis": "auto",
-                                                      "width": "6.86934px",
+                                                      "width": "238.159px",
                                                       "height": "725px",
                                                       "minWidth": "0px",
                                                       "minHeight": "0px",
@@ -9530,7 +9530,7 @@
                                                     "rect": {
                                                       "x": 36.66379165649414,
                                                       "y": 92.7603759765625,
-                                                      "w": 6.867693901062012,
+                                                      "w": 238.10202026367188,
                                                       "h": 627.8494873046875
                                                     },
                                                     "computedStyle": {
@@ -9551,7 +9551,7 @@
                                                       "flexGrow": "0",
                                                       "flexShrink": "1",
                                                       "flexBasis": "auto",
-                                                      "width": "6.86934px",
+                                                      "width": "238.159px",
                                                       "height": "628px",
                                                       "minWidth": "0px",
                                                       "minHeight": "0px",

@@ -1621,10 +1621,10 @@
                                         "className": "recharts-layer recharts-radial-bar-sectors",
                                         "attrs": {},
                                         "rect": {
-                                          "x": 595,
-                                          "y": 92.66667175292969,
-                                          "w": 0,
-                                          "h": 0
+                                          "x": 784.8805541992188,
+                                          "y": 190.12118530273438,
+                                          "w": 27.11946678161621,
+                                          "h": 27.54549217224121
                                         },
                                         "computedStyle": {
                                           "display": "inline",
@@ -1689,10 +1689,10 @@
                                             "className": "recharts-layer",
                                             "attrs": {},
                                             "rect": {
-                                              "x": 595,
-                                              "y": 92.66667175292969,
-                                              "w": 0,
-                                              "h": 0
+                                              "x": 784.8805541992188,
+                                              "y": 190.12118530273438,
+                                              "w": 27.11946678161621,
+                                              "h": 27.54549217224121
                                             },
                                             "computedStyle": {
                                               "display": "inline",
@@ -1750,7 +1750,79 @@
                                               "textAlign": "start",
                                               "textTransform": "none"
                                             },
-                                            "children": []
+                                            "children": [
+                                              {
+                                                "path": "0.1.0.1.0.0.4.1.0.0",
+                                                "tag": "path",
+                                                "className": "recharts-sector recharts-radial-bar-sector undefined",
+                                                "attrs": {
+                                                  "role": "img"
+                                                },
+                                                "rect": {
+                                                  "x": 784.8805541992188,
+                                                  "y": 190.12118530273438,
+                                                  "w": 27.11946678161621,
+                                                  "h": 27.54549217224121
+                                                },
+                                                "computedStyle": {
+                                                  "display": "inline",
+                                                  "position": "static",
+                                                  "boxSizing": "border-box",
+                                                  "overflowX": "visible",
+                                                  "overflowY": "visible",
+                                                  "whiteSpace": "normal",
+                                                  "flexDirection": "row",
+                                                  "flexWrap": "nowrap",
+                                                  "justifyContent": "normal",
+                                                  "alignItems": "normal",
+                                                  "alignSelf": "auto",
+                                                  "gap": "normal",
+                                                  "rowGap": "normal",
+                                                  "columnGap": "normal",
+                                                  "flexGrow": "0",
+                                                  "flexShrink": "1",
+                                                  "flexBasis": "auto",
+                                                  "width": "auto",
+                                                  "height": "auto",
+                                                  "minWidth": "0px",
+                                                  "minHeight": "0px",
+                                                  "maxWidth": "none",
+                                                  "maxHeight": "none",
+                                                  "paddingTop": "0px",
+                                                  "paddingRight": "0px",
+                                                  "paddingBottom": "0px",
+                                                  "paddingLeft": "0px",
+                                                  "marginTop": "0px",
+                                                  "marginRight": "0px",
+                                                  "marginBottom": "0px",
+                                                  "marginLeft": "0px",
+                                                  "borderTopWidth": "0px",
+                                                  "borderRightWidth": "0px",
+                                                  "borderBottomWidth": "0px",
+                                                  "borderLeftWidth": "0px",
+                                                  "borderTopLeftRadius": "0px",
+                                                  "borderTopRightRadius": "0px",
+                                                  "borderBottomRightRadius": "0px",
+                                                  "borderBottomLeftRadius": "0px",
+                                                  "borderTopColor": "oklch(0.922 0 0)",
+                                                  "borderRightColor": "oklch(0.922 0 0)",
+                                                  "borderBottomColor": "oklch(0.922 0 0)",
+                                                  "borderLeftColor": "oklch(0.922 0 0)",
+                                                  "backgroundColor": "rgba(0, 0, 0, 0)",
+                                                  "color": "oklch(0.145 0 0)",
+                                                  "opacity": "1",
+                                                  "boxShadow": "none",
+                                                  "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                                                  "fontSize": "12px",
+                                                  "fontWeight": "400",
+                                                  "lineHeight": "16px",
+                                                  "letterSpacing": "normal",
+                                                  "textAlign": "start",
+                                                  "textTransform": "none"
+                                                },
+                                                "children": []
+                                              }
+                                            ]
                                           }
                                         ]
                                       }
@@ -4092,10 +4164,10 @@
                                         "className": "recharts-layer recharts-radial-bar-sectors",
                                         "attrs": {},
                                         "rect": {
-                                          "x": 787.9974365234375,
-                                          "y": 216.8597869873047,
-                                          "w": 24.002605438232422,
-                                          "h": 0.806884765625
+                                          "x": 784.0170288085938,
+                                          "y": 186.64273071289062,
+                                          "w": 27.98299217224121,
+                                          "h": 31.02394676208496
                                         },
                                         "computedStyle": {
                                           "display": "inline",
@@ -4160,10 +4232,10 @@
                                             "className": "recharts-layer",
                                             "attrs": {},
                                             "rect": {
-                                              "x": 787.9974365234375,
-                                              "y": 216.8597869873047,
-                                              "w": 24.002605438232422,
-                                              "h": 0.806884765625
+                                              "x": 784.0170288085938,
+                                              "y": 186.64273071289062,
+                                              "w": 27.98299217224121,
+                                              "h": 31.02394676208496
                                             },
                                             "computedStyle": {
                                               "display": "inline",
@@ -4230,10 +4302,10 @@
                                                   "role": "img"
                                                 },
                                                 "rect": {
-                                                  "x": 787.9974365234375,
-                                                  "y": 216.8597869873047,
-                                                  "w": 24.002605438232422,
-                                                  "h": 0.806884765625
+                                                  "x": 784.0170288085938,
+                                                  "y": 186.64273071289062,
+                                                  "w": 27.98299217224121,
+                                                  "h": 31.02394676208496
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",

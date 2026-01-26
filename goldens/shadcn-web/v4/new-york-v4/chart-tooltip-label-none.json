@@ -2545,9 +2545,9 @@
                                     "attrs": {},
                                     "rect": {
                                       "x": 52.67661666870117,
-                                      "y": 778.6532592773438,
+                                      "y": 394.488037109375,
                                       "w": 1334.5135498046875,
-                                      "h": 60.92814254760742
+                                      "h": 445.0933532714844
                                     },
                                     "computedStyle": {
                                       "display": "inline",
@@ -2613,9 +2613,9 @@
                                         "attrs": {},
                                         "rect": {
                                           "x": 52.67661666870117,
-                                          "y": 778.6532592773438,
+                                          "y": 394.488037109375,
                                           "w": 1334.5135498046875,
-                                          "h": 60.92814254760742
+                                          "h": 445.0933532714844
                                         },
                                         "computedStyle": {
                                           "display": "inline",
@@ -2681,9 +2681,9 @@
                                             "attrs": {},
                                             "rect": {
                                               "x": 52.67661666870117,
-                                              "y": 778.6532592773438,
+                                              "y": 394.488037109375,
                                               "w": 1334.5135498046875,
-                                              "h": 60.92814254760742
+                                              "h": 445.0933532714844
                                             },
                                             "computedStyle": {
                                               "display": "inline",
@@ -2749,9 +2749,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 52.67661666870117,
-                                                  "y": 793.88525390625,
+                                                  "y": 505.76141357421875,
                                                   "w": 183.95590209960938,
-                                                  "h": 45.696128845214844
+                                                  "h": 333.82000732421875
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -2817,9 +2817,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 52.67661666870117,
-                                                      "y": 793.88525390625,
+                                                      "y": 505.76141357421875,
                                                       "w": 183.95590209960938,
-                                                      "h": 45.696128845214844
+                                                      "h": 333.82000732421875
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -2888,9 +2888,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 282.7881164550781,
-                                                  "y": 800.9935913085938,
+                                                  "y": 557.68896484375,
                                                   "w": 183.95591735839844,
-                                                  "h": 38.58781051635742
+                                                  "h": 281.8924560546875
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -2956,9 +2956,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 282.7881164550781,
-                                                      "y": 800.9935913085938,
+                                                      "y": 557.68896484375,
                                                       "w": 183.95591735839844,
-                                                      "h": 38.58781051635742
+                                                      "h": 281.8924560546875
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -3027,9 +3027,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 512.899658203125,
-                                                  "y": 786.7770385742188,
+                                                  "y": 453.8338317871094,
                                                   "w": 183.9558563232422,
-                                                  "h": 52.80436325073242
+                                                  "h": 385.74755859375
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -3095,9 +3095,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 512.899658203125,
-                                                      "y": 786.7770385742188,
+                                                      "y": 453.8338317871094,
                                                       "w": 183.9558563232422,
-                                                      "h": 52.80436325073242
+                                                      "h": 385.74755859375
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -3166,9 +3166,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 743.0111694335938,
-                                                  "y": 825.36474609375,
+                                                  "y": 735.7262573242188,
                                                   "w": 183.95590209960938,
-                                                  "h": 14.216634750366211
+                                                  "h": 103.85514831542969
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -3234,9 +3234,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 743.0111694335938,
-                                                      "y": 825.36474609375,
+                                                      "y": 735.7262573242188,
                                                       "w": 183.95590209960938,
-                                                      "h": 14.216634750366211
+                                                      "h": 103.85514831542969
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -3305,9 +3305,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 973.1226806640625,
-                                                  "y": 778.6532592773438,
+                                                  "y": 394.488037109375,
                                                   "w": 183.95590209960938,
-                                                  "h": 60.92814254760742
+                                                  "h": 445.0933532714844
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -3373,9 +3373,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 973.1226806640625,
-                                                      "y": 778.6532592773438,
+                                                      "y": 394.488037109375,
                                                       "w": 183.95590209960938,
-                                                      "h": 60.92814254760742
+                                                      "h": 445.0933532714844
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -3444,9 +3444,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 1203.234130859375,
-                                                  "y": 790.8388671875,
+                                                  "y": 483.5067138671875,
                                                   "w": 183.9559783935547,
-                                                  "h": 48.742515563964844
+                                                  "h": 356.0746765136719
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -3512,9 +3512,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 1203.234130859375,
-                                                      "y": 790.8388671875,
+                                                      "y": 483.5067138671875,
                                                       "w": 183.9559783935547,
-                                                      "h": 48.742515563964844
+                                                      "h": 356.0746765136719
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -3579,6 +3579,75 @@
                                             ]
                                           }
                                         ]
+                                      },
+                                      {
+                                        "path": "0.1.0.1.0.0.4.1",
+                                        "tag": "g",
+                                        "className": "recharts-layer",
+                                        "attrs": {},
+                                        "rect": {
+                                          "x": 24.666667938232422,
+                                          "y": 92.76038077309416,
+                                          "w": 0,
+                                          "h": 0
+                                        },
+                                        "computedStyle": {
+                                          "display": "inline",
+                                          "position": "static",
+                                          "boxSizing": "border-box",
+                                          "overflowX": "visible",
+                                          "overflowY": "visible",
+                                          "whiteSpace": "normal",
+                                          "flexDirection": "row",
+                                          "flexWrap": "nowrap",
+                                          "justifyContent": "normal",
+                                          "alignItems": "normal",
+                                          "alignSelf": "auto",
+                                          "gap": "normal",
+                                          "rowGap": "normal",
+                                          "columnGap": "normal",
+                                          "flexGrow": "0",
+                                          "flexShrink": "1",
+                                          "flexBasis": "auto",
+                                          "width": "auto",
+                                          "height": "auto",
+                                          "minWidth": "0px",
+                                          "minHeight": "0px",
+                                          "maxWidth": "none",
+                                          "maxHeight": "none",
+                                          "paddingTop": "0px",
+                                          "paddingRight": "0px",
+                                          "paddingBottom": "0px",
+                                          "paddingLeft": "0px",
+                                          "marginTop": "0px",
+                                          "marginRight": "0px",
+                                          "marginBottom": "0px",
+                                          "marginLeft": "0px",
+                                          "borderTopWidth": "0px",
+                                          "borderRightWidth": "0px",
+                                          "borderBottomWidth": "0px",
+                                          "borderLeftWidth": "0px",
+                                          "borderTopLeftRadius": "0px",
+                                          "borderTopRightRadius": "0px",
+                                          "borderBottomRightRadius": "0px",
+                                          "borderBottomLeftRadius": "0px",
+                                          "borderTopColor": "oklch(0.922 0 0)",
+                                          "borderRightColor": "oklch(0.922 0 0)",
+                                          "borderBottomColor": "oklch(0.922 0 0)",
+                                          "borderLeftColor": "oklch(0.922 0 0)",
+                                          "backgroundColor": "rgba(0, 0, 0, 0)",
+                                          "color": "oklch(0.145 0 0)",
+                                          "opacity": "1",
+                                          "boxShadow": "none",
+                                          "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                                          "fontSize": "12px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "16px",
+                                          "letterSpacing": "normal",
+                                          "textAlign": "start",
+                                          "textTransform": "none"
+                                        },
+                                        "children": []
                                       }
                                     ]
                                   },
@@ -3589,9 +3658,9 @@
                                     "attrs": {},
                                     "rect": {
                                       "x": 52.67661666870117,
-                                      "y": 358.9466552734375,
+                                      "y": 134.85028076171875,
                                       "w": 1334.5135498046875,
-                                      "h": 376.77960205078125
+                                      "h": 600.8759765625
                                     },
                                     "computedStyle": {
                                       "display": "inline",
@@ -3657,9 +3726,9 @@
                                         "attrs": {},
                                         "rect": {
                                           "x": 52.67661666870117,
-                                          "y": 358.9466552734375,
+                                          "y": 134.85028076171875,
                                           "w": 1334.5135498046875,
-                                          "h": 376.77960205078125
+                                          "h": 600.8759765625
                                         },
                                         "computedStyle": {
                                           "display": "inline",
@@ -3725,9 +3794,9 @@
                                             "attrs": {},
                                             "rect": {
                                               "x": 52.67661666870117,
-                                              "y": 358.9466552734375,
+                                              "y": 134.85028076171875,
                                               "w": 1334.5135498046875,
-                                              "h": 376.77960205078125
+                                              "h": 600.8759765625
                                             },
                                             "computedStyle": {
                                               "display": "inline",
@@ -3793,9 +3862,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 52.67661666870117,
-                                                  "y": 475.2973327636719,
+                                                  "y": 283.2147216796875,
                                                   "w": 183.95590209960938,
-                                                  "h": 30.46407127380371
+                                                  "h": 222.5466766357422
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -3861,9 +3930,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 52.67661666870117,
-                                                      "y": 475.2973327636719,
+                                                      "y": 283.2147216796875,
                                                       "w": 183.95590209960938,
-                                                      "h": 30.46407127380371
+                                                      "h": 222.5466766357422
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -3932,9 +4001,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 282.7881164550781,
-                                                  "y": 515.0392456054688,
+                                                  "y": 246.12362670898438,
                                                   "w": 183.95591735839844,
-                                                  "h": 42.64970016479492
+                                                  "h": 311.5653076171875
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -4000,9 +4069,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 282.7881164550781,
-                                                      "y": 515.0392456054688,
+                                                      "y": 246.12362670898438,
                                                       "w": 183.95591735839844,
-                                                      "h": 42.64970016479492
+                                                      "h": 311.5653076171875
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -4071,9 +4140,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 512.899658203125,
-                                                  "y": 441.648193359375,
+                                                  "y": 364.8151550292969,
                                                   "w": 183.9558563232422,
-                                                  "h": 12.185628890991211
+                                                  "h": 89.0186767578125
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -4139,9 +4208,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 512.899658203125,
-                                                      "y": 441.648193359375,
+                                                      "y": 364.8151550292969,
                                                       "w": 183.9558563232422,
-                                                      "h": 12.185628890991211
+                                                      "h": 89.0186767578125
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -4210,9 +4279,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 743.0111694335938,
-                                                  "y": 679.87548828125,
+                                                  "y": 327.72406005859375,
                                                   "w": 183.95590209960938,
-                                                  "h": 55.85074996948242
+                                                  "h": 408.002197265625
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -4278,9 +4347,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 743.0111694335938,
-                                                      "y": 679.87548828125,
+                                                      "y": 327.72406005859375,
                                                       "w": 183.95590209960938,
-                                                      "h": 55.85074996948242
+                                                      "h": 408.002197265625
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -4349,9 +4418,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 973.1226806640625,
-                                                  "y": 358.9466552734375,
+                                                  "y": 134.85028076171875,
                                                   "w": 183.95590209960938,
-                                                  "h": 35.5413818359375
+                                                  "h": 259.63775634765625
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -4417,9 +4486,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 973.1226806640625,
-                                                      "y": 358.9466552734375,
+                                                      "y": 134.85028076171875,
                                                       "w": 183.95590209960938,
-                                                      "h": 35.5413818359375
+                                                      "h": 259.63775634765625
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -4488,9 +4557,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 1203.234130859375,
-                                                  "y": 442.887939453125,
+                                                  "y": 186.77783203125,
                                                   "w": 183.9559783935547,
-                                                  "h": 40.6187744140625
+                                                  "h": 296.7288818359375
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -4556,9 +4625,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 1203.234130859375,
-                                                      "y": 442.887939453125,
+                                                      "y": 186.77783203125,
                                                       "w": 183.9559783935547,
-                                                      "h": 40.6187744140625
+                                                      "h": 296.7288818359375
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -4623,6 +4692,75 @@
                                             ]
                                           }
                                         ]
+                                      },
+                                      {
+                                        "path": "0.1.0.1.0.0.5.1",
+                                        "tag": "g",
+                                        "className": "recharts-layer",
+                                        "attrs": {},
+                                        "rect": {
+                                          "x": 24.666667938232422,
+                                          "y": 92.76038077309416,
+                                          "w": 0,
+                                          "h": 0
+                                        },
+                                        "computedStyle": {
+                                          "display": "inline",
+                                          "position": "static",
+                                          "boxSizing": "border-box",
+                                          "overflowX": "visible",
+                                          "overflowY": "visible",
+                                          "whiteSpace": "normal",
+                                          "flexDirection": "row",
+                                          "flexWrap": "nowrap",
+                                          "justifyContent": "normal",
+                                          "alignItems": "normal",
+                                          "alignSelf": "auto",
+                                          "gap": "normal",
+                                          "rowGap": "normal",
+                                          "columnGap": "normal",
+                                          "flexGrow": "0",
+                                          "flexShrink": "1",
+                                          "flexBasis": "auto",
+                                          "width": "auto",
+                                          "height": "auto",
+                                          "minWidth": "0px",
+                                          "minHeight": "0px",
+                                          "maxWidth": "none",
+                                          "maxHeight": "none",
+                                          "paddingTop": "0px",
+                                          "paddingRight": "0px",
+                                          "paddingBottom": "0px",
+                                          "paddingLeft": "0px",
+                                          "marginTop": "0px",
+                                          "marginRight": "0px",
+                                          "marginBottom": "0px",
+                                          "marginLeft": "0px",
+                                          "borderTopWidth": "0px",
+                                          "borderRightWidth": "0px",
+                                          "borderBottomWidth": "0px",
+                                          "borderLeftWidth": "0px",
+                                          "borderTopLeftRadius": "0px",
+                                          "borderTopRightRadius": "0px",
+                                          "borderBottomRightRadius": "0px",
+                                          "borderBottomLeftRadius": "0px",
+                                          "borderTopColor": "oklch(0.922 0 0)",
+                                          "borderRightColor": "oklch(0.922 0 0)",
+                                          "borderBottomColor": "oklch(0.922 0 0)",
+                                          "borderLeftColor": "oklch(0.922 0 0)",
+                                          "backgroundColor": "rgba(0, 0, 0, 0)",
+                                          "color": "oklch(0.145 0 0)",
+                                          "opacity": "1",
+                                          "boxShadow": "none",
+                                          "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                                          "fontSize": "12px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "16px",
+                                          "letterSpacing": "normal",
+                                          "textAlign": "start",
+                                          "textTransform": "none"
+                                        },
+                                        "children": []
                                       }
                                     ]
                                   }
@@ -8104,9 +8242,9 @@
                                     "attrs": {},
                                     "rect": {
                                       "x": 52.67661666870117,
-                                      "y": 778.8558349609375,
+                                      "y": 394.488037109375,
                                       "w": 1334.5135498046875,
-                                      "h": 60.7255859375
+                                      "h": 445.0933532714844
                                     },
                                     "computedStyle": {
                                       "display": "inline",
@@ -8172,9 +8310,9 @@
                                         "attrs": {},
                                         "rect": {
                                           "x": 52.67661666870117,
-                                          "y": 778.8558349609375,
+                                          "y": 394.488037109375,
                                           "w": 1334.5135498046875,
-                                          "h": 60.7255859375
+                                          "h": 445.0933532714844
                                         },
                                         "computedStyle": {
                                           "display": "inline",
@@ -8240,9 +8378,9 @@
                                             "attrs": {},
                                             "rect": {
                                               "x": 52.67661666870117,
-                                              "y": 778.8558349609375,
+                                              "y": 394.488037109375,
                                               "w": 1334.5135498046875,
-                                              "h": 60.7255859375
+                                              "h": 445.0933532714844
                                             },
                                             "computedStyle": {
                                               "display": "inline",
@@ -8308,9 +8446,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 52.67661666870117,
-                                                  "y": 794.037109375,
+                                                  "y": 505.76141357421875,
                                                   "w": 183.95590209960938,
-                                                  "h": 45.544273376464844
+                                                  "h": 333.82000732421875
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -8376,9 +8514,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 52.67661666870117,
-                                                      "y": 794.037109375,
+                                                      "y": 505.76141357421875,
                                                       "w": 183.95590209960938,
-                                                      "h": 45.544273376464844
+                                                      "h": 333.82000732421875
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -8447,9 +8585,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 282.7881164550781,
-                                                  "y": 801.121826171875,
+                                                  "y": 557.68896484375,
                                                   "w": 183.95591735839844,
-                                                  "h": 38.459556579589844
+                                                  "h": 281.8924560546875
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -8515,9 +8653,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 282.7881164550781,
-                                                      "y": 801.121826171875,
+                                                      "y": 557.68896484375,
                                                       "w": 183.95591735839844,
-                                                      "h": 38.459556579589844
+                                                      "h": 281.8924560546875
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -8586,9 +8724,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 512.899658203125,
-                                                  "y": 786.9525756835938,
+                                                  "y": 453.8338317871094,
                                                   "w": 183.9558563232422,
-                                                  "h": 52.62882614135742
+                                                  "h": 385.74755859375
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -8654,9 +8792,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 512.899658203125,
-                                                      "y": 786.9525756835938,
+                                                      "y": 453.8338317871094,
                                                       "w": 183.9558563232422,
-                                                      "h": 52.62882614135742
+                                                      "h": 385.74755859375
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -8725,9 +8863,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 743.0111694335938,
-                                                  "y": 825.412109375,
+                                                  "y": 735.7262573242188,
                                                   "w": 183.95590209960938,
-                                                  "h": 14.169271469116211
+                                                  "h": 103.85514831542969
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -8793,9 +8931,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 743.0111694335938,
-                                                      "y": 825.412109375,
+                                                      "y": 735.7262573242188,
                                                       "w": 183.95590209960938,
-                                                      "h": 14.169271469116211
+                                                      "h": 103.85514831542969
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -8864,9 +9002,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 973.1226806640625,
-                                                  "y": 778.8558349609375,
+                                                  "y": 394.488037109375,
                                                   "w": 183.95590209960938,
-                                                  "h": 60.7255859375
+                                                  "h": 445.0933532714844
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -8932,9 +9070,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 973.1226806640625,
-                                                      "y": 778.8558349609375,
+                                                      "y": 394.488037109375,
                                                       "w": 183.95590209960938,
-                                                      "h": 60.7255859375
+                                                      "h": 445.0933532714844
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -9003,9 +9141,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 1203.234130859375,
-                                                  "y": 791.0009155273438,
+                                                  "y": 483.5067138671875,
                                                   "w": 183.9559783935547,
-                                                  "h": 48.58048629760742
+                                                  "h": 356.0746765136719
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -9071,9 +9209,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 1203.234130859375,
-                                                      "y": 791.0009155273438,
+                                                      "y": 483.5067138671875,
                                                       "w": 183.9559783935547,
-                                                      "h": 48.58048629760742
+                                                      "h": 356.0746765136719
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -9138,6 +9276,75 @@
                                             ]
                                           }
                                         ]
+                                      },
+                                      {
+                                        "path": "0.1.0.1.0.0.4.1",
+                                        "tag": "g",
+                                        "className": "recharts-layer",
+                                        "attrs": {},
+                                        "rect": {
+                                          "x": 24.666667938232422,
+                                          "y": 92.76038077309416,
+                                          "w": 0,
+                                          "h": 0
+                                        },
+                                        "computedStyle": {
+                                          "display": "inline",
+                                          "position": "static",
+                                          "boxSizing": "border-box",
+                                          "overflowX": "visible",
+                                          "overflowY": "visible",
+                                          "whiteSpace": "normal",
+                                          "flexDirection": "row",
+                                          "flexWrap": "nowrap",
+                                          "justifyContent": "normal",
+                                          "alignItems": "normal",
+                                          "alignSelf": "auto",
+                                          "gap": "normal",
+                                          "rowGap": "normal",
+                                          "columnGap": "normal",
+                                          "flexGrow": "0",
+                                          "flexShrink": "1",
+                                          "flexBasis": "auto",
+                                          "width": "auto",
+                                          "height": "auto",
+                                          "minWidth": "0px",
+                                          "minHeight": "0px",
+                                          "maxWidth": "none",
+                                          "maxHeight": "none",
+                                          "paddingTop": "0px",
+                                          "paddingRight": "0px",
+                                          "paddingBottom": "0px",
+                                          "paddingLeft": "0px",
+                                          "marginTop": "0px",
+                                          "marginRight": "0px",
+                                          "marginBottom": "0px",
+                                          "marginLeft": "0px",
+                                          "borderTopWidth": "0px",
+                                          "borderRightWidth": "0px",
+                                          "borderBottomWidth": "0px",
+                                          "borderLeftWidth": "0px",
+                                          "borderTopLeftRadius": "0px",
+                                          "borderTopRightRadius": "0px",
+                                          "borderBottomRightRadius": "0px",
+                                          "borderBottomLeftRadius": "0px",
+                                          "borderTopColor": "oklch(1 0 0 / 0.1)",
+                                          "borderRightColor": "oklch(1 0 0 / 0.1)",
+                                          "borderBottomColor": "oklch(1 0 0 / 0.1)",
+                                          "borderLeftColor": "oklch(1 0 0 / 0.1)",
+                                          "backgroundColor": "rgba(0, 0, 0, 0)",
+                                          "color": "oklch(0.985 0 0)",
+                                          "opacity": "1",
+                                          "boxShadow": "none",
+                                          "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                                          "fontSize": "12px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "16px",
+                                          "letterSpacing": "normal",
+                                          "textAlign": "start",
+                                          "textTransform": "none"
+                                        },
+                                        "children": []
                                       }
                                     ]
                                   },
@@ -9148,9 +9355,9 @@
                                     "attrs": {},
                                     "rect": {
                                       "x": 52.67661666870117,
-                                      "y": 359.0647888183594,
+                                      "y": 134.85028076171875,
                                       "w": 1334.5135498046875,
-                                      "h": 376.6614685058594
+                                      "h": 600.8759765625
                                     },
                                     "computedStyle": {
                                       "display": "inline",
@@ -9216,9 +9423,9 @@
                                         "attrs": {},
                                         "rect": {
                                           "x": 52.67661666870117,
-                                          "y": 359.0647888183594,
+                                          "y": 134.85028076171875,
                                           "w": 1334.5135498046875,
-                                          "h": 376.6614685058594
+                                          "h": 600.8759765625
                                         },
                                         "computedStyle": {
                                           "display": "inline",
@@ -9284,9 +9491,9 @@
                                             "attrs": {},
                                             "rect": {
                                               "x": 52.67661666870117,
-                                              "y": 359.0647888183594,
+                                              "y": 134.85028076171875,
                                               "w": 1334.5135498046875,
-                                              "h": 376.6614685058594
+                                              "h": 600.8759765625
                                             },
                                             "computedStyle": {
                                               "display": "inline",
@@ -9352,9 +9559,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 52.67661666870117,
-                                                  "y": 475.39862060546875,
+                                                  "y": 283.2147216796875,
                                                   "w": 183.95590209960938,
-                                                  "h": 30.36279296875
+                                                  "h": 222.5466766357422
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -9420,9 +9627,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 52.67661666870117,
-                                                      "y": 475.39862060546875,
+                                                      "y": 283.2147216796875,
                                                       "w": 183.95590209960938,
-                                                      "h": 30.36279296875
+                                                      "h": 222.5466766357422
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -9491,9 +9698,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 282.7881164550781,
-                                                  "y": 515.1810302734375,
+                                                  "y": 246.12362670898438,
                                                   "w": 183.95591735839844,
-                                                  "h": 42.507896423339844
+                                                  "h": 311.5653076171875
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -9559,9 +9766,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 282.7881164550781,
-                                                      "y": 515.1810302734375,
+                                                      "y": 246.12362670898438,
                                                       "w": 183.95591735839844,
-                                                      "h": 42.507896423339844
+                                                      "h": 311.5653076171875
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -9630,9 +9837,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 512.899658203125,
-                                                  "y": 441.6886901855469,
+                                                  "y": 364.8151550292969,
                                                   "w": 183.9558563232422,
-                                                  "h": 12.1451416015625
+                                                  "h": 89.0186767578125
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -9698,9 +9905,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 512.899658203125,
-                                                      "y": 441.6886901855469,
+                                                      "y": 364.8151550292969,
                                                       "w": 183.9558563232422,
-                                                      "h": 12.1451416015625
+                                                      "h": 89.0186767578125
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -9769,9 +9976,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 743.0111694335938,
-                                                  "y": 680.0611572265625,
+                                                  "y": 327.72406005859375,
                                                   "w": 183.95590209960938,
-                                                  "h": 55.665122985839844
+                                                  "h": 408.002197265625
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -9837,9 +10044,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 743.0111694335938,
-                                                      "y": 680.0611572265625,
+                                                      "y": 327.72406005859375,
                                                       "w": 183.95590209960938,
-                                                      "h": 55.665122985839844
+                                                      "h": 408.002197265625
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -9908,9 +10115,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 973.1226806640625,
-                                                  "y": 359.0647888183594,
+                                                  "y": 134.85028076171875,
                                                   "w": 183.95590209960938,
-                                                  "h": 35.42325973510742
+                                                  "h": 259.63775634765625
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -9976,9 +10183,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 973.1226806640625,
-                                                      "y": 359.0647888183594,
+                                                      "y": 134.85028076171875,
                                                       "w": 183.95590209960938,
-                                                      "h": 35.42325973510742
+                                                      "h": 259.63775634765625
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -10047,9 +10254,9 @@
                                                 "attrs": {},
                                                 "rect": {
                                                   "x": 1203.234130859375,
-                                                  "y": 443.02301025390625,
+                                                  "y": 186.77783203125,
                                                   "w": 183.9559783935547,
-                                                  "h": 40.483726501464844
+                                                  "h": 296.7288818359375
                                                 },
                                                 "computedStyle": {
                                                   "display": "inline",
@@ -10115,9 +10322,9 @@
                                                     "attrs": {},
                                                     "rect": {
                                                       "x": 1203.234130859375,
-                                                      "y": 443.02301025390625,
+                                                      "y": 186.77783203125,
                                                       "w": 183.9559783935547,
-                                                      "h": 40.483726501464844
+                                                      "h": 296.7288818359375
                                                     },
                                                     "computedStyle": {
                                                       "display": "inline",
@@ -10182,6 +10389,75 @@
                                             ]
                                           }
                                         ]
+                                      },
+                                      {
+                                        "path": "0.1.0.1.0.0.5.1",
+                                        "tag": "g",
+                                        "className": "recharts-layer",
+                                        "attrs": {},
+                                        "rect": {
+                                          "x": 24.666667938232422,
+                                          "y": 92.76038077309416,
+                                          "w": 0,
+                                          "h": 0
+                                        },
+                                        "computedStyle": {
+                                          "display": "inline",
+                                          "position": "static",
+                                          "boxSizing": "border-box",
+                                          "overflowX": "visible",
+                                          "overflowY": "visible",
+                                          "whiteSpace": "normal",
+                                          "flexDirection": "row",
+                                          "flexWrap": "nowrap",
+                                          "justifyContent": "normal",
+                                          "alignItems": "normal",
+                                          "alignSelf": "auto",
+                                          "gap": "normal",
+                                          "rowGap": "normal",
+                                          "columnGap": "normal",
+                                          "flexGrow": "0",
+                                          "flexShrink": "1",
+                                          "flexBasis": "auto",
+                                          "width": "auto",
+                                          "height": "auto",
+                                          "minWidth": "0px",
+                                          "minHeight": "0px",
+                                          "maxWidth": "none",
+                                          "maxHeight": "none",
+                                          "paddingTop": "0px",
+                                          "paddingRight": "0px",
+                                          "paddingBottom": "0px",
+                                          "paddingLeft": "0px",
+                                          "marginTop": "0px",
+                                          "marginRight": "0px",
+                                          "marginBottom": "0px",
+                                          "marginLeft": "0px",
+                                          "borderTopWidth": "0px",
+                                          "borderRightWidth": "0px",
+                                          "borderBottomWidth": "0px",
+                                          "borderLeftWidth": "0px",
+                                          "borderTopLeftRadius": "0px",
+                                          "borderTopRightRadius": "0px",
+                                          "borderBottomRightRadius": "0px",
+                                          "borderBottomLeftRadius": "0px",
+                                          "borderTopColor": "oklch(1 0 0 / 0.1)",
+                                          "borderRightColor": "oklch(1 0 0 / 0.1)",
+                                          "borderBottomColor": "oklch(1 0 0 / 0.1)",
+                                          "borderLeftColor": "oklch(1 0 0 / 0.1)",
+                                          "backgroundColor": "rgba(0, 0, 0, 0)",
+                                          "color": "oklch(0.985 0 0)",
+                                          "opacity": "1",
+                                          "boxShadow": "none",
+                                          "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                                          "fontSize": "12px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "16px",
+                                          "letterSpacing": "normal",
+                                          "textAlign": "start",
+                                          "textTransform": "none"
+                                        },
+                                        "children": []
                                       }
                                     ]
                                   }
