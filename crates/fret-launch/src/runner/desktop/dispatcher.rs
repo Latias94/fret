@@ -1,6 +1,6 @@
 use std::{
     collections::VecDeque,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -15,7 +15,8 @@ pub(super) struct DesktopDispatcher {
 
 struct DesktopDispatcherInner {
     exec: ExecCapabilities,
-    alive: AtomicBool,
+    alive: Arc<AtomicBool>,
+    generation: Arc<AtomicU64>,
     event_loop_proxy: Mutex<Option<EventLoopProxy>>,
     main_queue: Mutex<VecDeque<Runnable>>,
     delayed: Mutex<Vec<DelayedTask>>,
@@ -31,7 +32,8 @@ impl DesktopDispatcher {
         Self {
             inner: Arc::new(DesktopDispatcherInner {
                 exec,
-                alive: AtomicBool::new(true),
+                alive: Arc::new(AtomicBool::new(true)),
+                generation: Arc::new(AtomicU64::new(0)),
                 event_loop_proxy: Mutex::new(None),
                 main_queue: Mutex::new(VecDeque::new()),
                 delayed: Mutex::new(Vec::new()),
@@ -49,6 +51,21 @@ impl DesktopDispatcher {
         if let Ok(mut proxy) = self.inner.event_loop_proxy.lock() {
             *proxy = None;
         }
+
+        if let Ok(mut delayed) = self.inner.delayed.lock() {
+            delayed.clear();
+        }
+        if let Ok(mut queue) = self.inner.main_queue.lock() {
+            queue.clear();
+        }
+    }
+
+    #[cfg(any(feature = "hotpatch-subsecond", test))]
+    pub(super) fn hot_reload_boundary(&self) {
+        if !self.inner.alive.load(Ordering::SeqCst) {
+            return;
+        }
+        self.inner.generation.fetch_add(1, Ordering::SeqCst);
 
         if let Ok(mut delayed) = self.inner.delayed.lock() {
             delayed.clear();
@@ -113,6 +130,18 @@ impl Dispatcher for DesktopDispatcherInner {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
+        let expected_gen = self.generation.load(Ordering::SeqCst);
+        let alive = self.alive.clone();
+        let generation = self.generation.clone();
+        let task = Box::new(move || {
+            if !alive.load(Ordering::SeqCst) {
+                return;
+            }
+            if generation.load(Ordering::SeqCst) != expected_gen {
+                return;
+            }
+            task();
+        });
         if let Ok(mut queue) = self.main_queue.lock() {
             queue.push_back(task);
         }
@@ -123,13 +152,36 @@ impl Dispatcher for DesktopDispatcherInner {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
-        std::thread::spawn(task);
+        let expected_gen = self.generation.load(Ordering::SeqCst);
+        let alive = self.alive.clone();
+        let generation = self.generation.clone();
+        std::thread::spawn(move || {
+            if !alive.load(Ordering::SeqCst) {
+                return;
+            }
+            if generation.load(Ordering::SeqCst) != expected_gen {
+                return;
+            }
+            task();
+        });
     }
 
     fn dispatch_after(&self, delay: Duration, task: Runnable) {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
+        let expected_gen = self.generation.load(Ordering::SeqCst);
+        let alive = self.alive.clone();
+        let generation = self.generation.clone();
+        let task = Box::new(move || {
+            if !alive.load(Ordering::SeqCst) {
+                return;
+            }
+            if generation.load(Ordering::SeqCst) != expected_gen {
+                return;
+            }
+            task();
+        });
         let deadline = Instant::now() + delay;
         if let Ok(mut delayed) = self.delayed.lock() {
             delayed.push(DelayedTask { deadline, task });
@@ -220,5 +272,48 @@ mod tests {
         }
         assert!(!dispatcher.drain_turn(Instant::now()));
         assert_eq!(ran.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn hot_reload_boundary_fences_queued_tasks() {
+        let dispatcher = DesktopDispatcher::new(ExecCapabilities::default());
+        let ran = Arc::new(AtomicUsize::new(0));
+
+        {
+            let ran = ran.clone();
+            dispatcher
+                .handle()
+                .dispatch_on_main_thread(Box::new(move || {
+                    ran.fetch_add(1, Ordering::SeqCst);
+                }));
+        }
+
+        let queued = {
+            let mut q = dispatcher.inner.main_queue.lock().unwrap();
+            q.pop_front().unwrap()
+        };
+
+        dispatcher.hot_reload_boundary();
+        queued();
+        assert_eq!(ran.load(Ordering::SeqCst), 0);
+
+        {
+            let ran = ran.clone();
+            dispatcher.handle().dispatch_after(
+                Duration::from_millis(0),
+                Box::new(move || {
+                    ran.fetch_add(1, Ordering::SeqCst);
+                }),
+            );
+        }
+
+        let delayed = {
+            let mut d = dispatcher.inner.delayed.lock().unwrap();
+            d.pop().unwrap().task
+        };
+
+        dispatcher.hot_reload_boundary();
+        delayed();
+        assert_eq!(ran.load(Ordering::SeqCst), 0);
     }
 }

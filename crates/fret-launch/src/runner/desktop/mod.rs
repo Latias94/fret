@@ -2281,6 +2281,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             "runner: hot_reload_all_windows begin reason={reason} generation={generation}"
         ));
 
+        // Ensure pending queued work does not cross the reload boundary.
+        self.dispatcher.hot_reload_boundary();
+
         // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
         {
             use fret_runtime::DragHost as _;

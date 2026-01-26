@@ -1,6 +1,6 @@
 use std::{
     collections::VecDeque,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -28,6 +28,7 @@ pub(super) struct WebDispatcher {
 struct WebDispatcherInner {
     exec: ExecCapabilities,
     alive: Arc<AtomicBool>,
+    generation: Arc<AtomicU64>,
     event_loop_proxy: Arc<Mutex<Option<EventLoopProxy>>>,
     main_queue: Arc<Mutex<VecDeque<Runnable>>>,
 }
@@ -38,6 +39,7 @@ impl WebDispatcher {
             inner: Arc::new(WebDispatcherInner {
                 exec,
                 alive: Arc::new(AtomicBool::new(true)),
+                generation: Arc::new(AtomicU64::new(0)),
                 event_loop_proxy: Arc::new(Mutex::new(None)),
                 main_queue: Arc::new(Mutex::new(VecDeque::new())),
             }),
@@ -60,6 +62,18 @@ impl WebDispatcher {
         if let Ok(mut proxy) = self.inner.event_loop_proxy.lock() {
             *proxy = None;
         }
+        if let Ok(mut q) = self.inner.main_queue.lock() {
+            q.clear();
+        }
+    }
+
+    #[cfg(any(feature = "hotpatch-subsecond", test))]
+    pub(super) fn hot_reload_boundary(&self) {
+        if !self.inner.alive.load(Ordering::SeqCst) {
+            return;
+        }
+        self.inner.generation.fetch_add(1, Ordering::SeqCst);
+
         if let Ok(mut q) = self.inner.main_queue.lock() {
             q.clear();
         }
@@ -90,6 +104,18 @@ impl Dispatcher for WebDispatcherInner {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
+        let expected_gen = self.generation.load(Ordering::SeqCst);
+        let alive = self.alive.clone();
+        let generation = self.generation.clone();
+        let task = Box::new(move || {
+            if !alive.load(Ordering::SeqCst) {
+                return;
+            }
+            if generation.load(Ordering::SeqCst) != expected_gen {
+                return;
+            }
+            task();
+        });
         if let Ok(mut q) = self.main_queue.lock() {
             q.push_back(task);
         }
@@ -100,7 +126,16 @@ impl Dispatcher for WebDispatcherInner {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
+        let expected_gen = self.generation.load(Ordering::SeqCst);
+        let alive = self.alive.clone();
+        let generation = self.generation.clone();
         wasm_bindgen_futures::spawn_local(async move {
+            if !alive.load(Ordering::SeqCst) {
+                return;
+            }
+            if generation.load(Ordering::SeqCst) != expected_gen {
+                return;
+            }
             task();
         });
     }
@@ -116,9 +151,14 @@ impl Dispatcher for WebDispatcherInner {
         let main_queue = self.main_queue.clone();
         let event_loop_proxy = self.event_loop_proxy.clone();
         let alive = self.alive.clone();
+        let expected_gen = self.generation.load(Ordering::SeqCst);
+        let generation = self.generation.clone();
 
         let callback = Closure::once_into_js(move || {
             if !alive.load(Ordering::SeqCst) {
+                return;
+            }
+            if generation.load(Ordering::SeqCst) != expected_gen {
                 return;
             }
             if let Ok(mut q) = main_queue.lock() {

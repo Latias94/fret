@@ -44,7 +44,7 @@ Status legend:
 - `[ ]` Observability: add tracing spans for dispatch/wake/drain points
 - `[x]` Safety: fence dispatcher on shutdown (desktop + wasm), plus basic unit tests
 - `[x]` Safety: cancellation baseline (ecosystem task handles; no post-cancel enqueue/wake)
-- `[ ]` Safety: hot reload boundary (no stale callbacks after teardown)
+- `[x]` Safety: hot reload boundary (desktop runner bumps dispatcher generation and clears pending work)
 
 ### Phase 2 (wasm mapping)
 
