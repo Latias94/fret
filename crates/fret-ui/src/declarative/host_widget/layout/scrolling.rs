@@ -384,6 +384,7 @@ impl ElementHostWidget {
 
             cx.tree
                 .debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
+                    source: crate::tree::UiDebugVirtualListWindowSource::Layout,
                     node: cx.node,
                     element: self.element,
                     axis,

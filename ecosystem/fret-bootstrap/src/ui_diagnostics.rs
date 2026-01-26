@@ -2773,6 +2773,8 @@ impl UiVirtualRangeV1 {
 pub struct UiVirtualListWindowV1 {
     pub node: u64,
     pub element: u64,
+    #[serde(default)]
+    pub source: UiVirtualListWindowSourceV1,
     pub axis: UiAxisV1,
     #[serde(default)]
     pub is_probe_layout: bool,
@@ -2804,6 +2806,7 @@ impl UiVirtualListWindowV1 {
         Self {
             node: key_to_u64(window.node),
             element: window.element.0,
+            source: UiVirtualListWindowSourceV1::from_source(window.source),
             axis: UiAxisV1::from_axis(window.axis),
             is_probe_layout: window.is_probe_layout,
             items_len: window.items_len as u64,
@@ -2821,6 +2824,23 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowSourceV1 {
+    #[serde(other)]
+    Layout,
+    Prepaint,
+}
+
+impl UiVirtualListWindowSourceV1 {
+    fn from_source(source: fret_ui::tree::UiDebugVirtualListWindowSource) -> Self {
+        match source {
+            fret_ui::tree::UiDebugVirtualListWindowSource::Layout => Self::Layout,
+            fret_ui::tree::UiDebugVirtualListWindowSource::Prepaint => Self::Prepaint,
         }
     }
 }

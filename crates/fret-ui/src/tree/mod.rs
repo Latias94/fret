@@ -440,7 +440,14 @@ pub struct UiDebugCacheRootStats {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum UiDebugVirtualListWindowSource {
+    Layout,
+    Prepaint,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct UiDebugVirtualListWindow {
+    pub source: UiDebugVirtualListWindowSource,
     pub node: NodeId,
     pub element: GlobalElementId,
     pub axis: fret_core::Axis,

@@ -253,6 +253,7 @@ impl<H: UiHost> UiTree<H> {
 
         if self.debug_enabled {
             self.debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
+                source: crate::tree::UiDebugVirtualListWindowSource::Prepaint,
                 node: record.node,
                 element: inputs.element,
                 axis: inputs.axis,
@@ -614,6 +615,13 @@ mod tests {
             .debug_virtual_list_windows()
             .last()
             .expect("expected a debug virtual list window record");
+        assert!(
+            matches!(
+                last.source,
+                crate::tree::UiDebugVirtualListWindowSource::Prepaint
+            ),
+            "expected the debug window record to be sourced from prepaint"
+        );
         assert!(
             last.window_mismatch,
             "expected the last prepaint window update to report a mismatch"
