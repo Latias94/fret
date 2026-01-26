@@ -633,6 +633,11 @@ topics (if/when we implement them):
       - Unit regression: `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_row_cached_virtual_list_keeps_semantics_in_viewport_space`)
       - Takeaway: nested row caches are viable again for v1.1 experiments, but they do not replace ADR 0190: v1 still requires rerender when the visible-item set changes (window derivation is still render-driven).
   - Next (v2 direction; ADR 0190):
+    - Progress (v2.0): derive VirtualList window telemetry during prepaint (cache-hit safe).
+      - Change: `UiTree::prepaint_virtual_list_window_from_interaction_record` updates `VirtualListState.{window_range,viewport_*,offset_*}` from interaction records, and can dirty the nearest cache root on overscan escape (no rerender required to compute the window).
+      - Change: prepaint also refreshes `VirtualListScrollHandle` internal viewport/content sizes and clamps offset via `set_*_internal`, keeping scroll-state bookkeeping consistent under reuse.
+      - Perf: avoid cloning `VirtualListProps` (which includes `visible_items`) in scroll-handle invalidation paths by adding a borrowed lookup helper (`with_element_record_for_node`) and using it for the fixed-mode scroll-to-item fast path.
+      - Evidence: `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape`), `crates/fret-ui/src/declarative/frame.rs` (`with_element_record_for_node`), `crates/fret-ui/src/tree/layout.rs` (borrowed vlist fast path).
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that still force a cache-root rerender in cache+shell mode.
