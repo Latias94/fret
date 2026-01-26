@@ -830,16 +830,12 @@ impl ElementHostWidget {
                     let Some(child_bounds) = cx.child_bounds(child) else {
                         continue;
                     };
-                    let clip_rect = if let Some(transform) = children_transform {
-                        // Clip rects are expressed in screen-space, so apply the same scroll
-                        // translation used during painting.
-                        Rect::new(
-                            transform.apply_point(child_bounds.origin),
-                            child_bounds.size,
-                        )
-                    } else {
-                        child_bounds
-                    };
+                    // Clip rects live in the current transform space at push time (see
+                    // `fret-render`'s affine clip conformance tests). Since we push the scroll
+                    // translation before painting the children, the per-row clip rect must be
+                    // specified in the same pre-transform/content coordinate space as
+                    // `child_bounds`.
+                    let clip_rect = child_bounds;
                     cx.scene.push(SceneOp::PushClipRect { rect: clip_rect });
                     cx.tree.paint_node(
                         cx.app,
