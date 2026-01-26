@@ -818,13 +818,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_started = hitch_config.map(|_| Instant::now());
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
-
                     let draw_result: Result<(), fret_render::RenderError> = (|| {
                         let (frame, view) =
                             state.surface.get_current_frame_view().map_err(|source| {
                                 fret_render::RenderError::SurfaceAcquireFailed { source }
                             })?;
 
+                        let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
                         let ui_cmd = renderer.render_scene(
@@ -862,6 +862,20 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             }
                         }
 
+                        let mut pending_bundle_screenshot = None;
+                        if let Some(dir) = screenshot_dir
+                            && let Some((pending, copy_cmd)) =
+                                self.diag_bundle_screenshots.begin_readback(
+                                    &context.device,
+                                    &frame.texture,
+                                    state.surface.format(),
+                                    state.surface.size(),
+                                )
+                        {
+                            cmd_buffers.push(copy_cmd);
+                            pending_bundle_screenshot = Some((pending, dir));
+                        }
+
                         context.queue.submit(cmd_buffers);
                         frame.present();
 
@@ -878,9 +892,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             }
                         }
 
+                        if let Some((pending, dir)) = pending_bundle_screenshot {
+                            let _ = self.diag_bundle_screenshots.finish_and_write_bmp(
+                                &context.device,
+                                pending,
+                                &dir,
+                                state.surface.format(),
+                            );
+                        }
+
                         Ok(())
-                    })(
-                    );
+                    })();
                     if let Some(started) = present_started {
                         hitch_present_ms = Some(started.elapsed().as_millis() as u64);
                     }

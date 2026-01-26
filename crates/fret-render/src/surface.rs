@@ -6,12 +6,13 @@ pub struct SurfaceState<'window> {
 }
 
 impl<'window> SurfaceState<'window> {
-    pub fn new(
+    pub fn new_with_usage(
         adapter: &wgpu::Adapter,
         device: &wgpu::Device,
         surface: wgpu::Surface<'window>,
         width: u32,
         height: u32,
+        usage: wgpu::TextureUsages,
     ) -> Result<Self, RenderError> {
         let capabilities = surface.get_capabilities(adapter);
         if capabilities.formats.is_empty() {
@@ -32,7 +33,7 @@ impl<'window> SurfaceState<'window> {
             .unwrap_or(capabilities.formats[0]);
 
         let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage,
             format,
             width: width.max(1),
             height: height.max(1),
@@ -45,6 +46,23 @@ impl<'window> SurfaceState<'window> {
         surface.configure(device, &config);
 
         Ok(Self { surface, config })
+    }
+
+    pub fn new(
+        adapter: &wgpu::Adapter,
+        device: &wgpu::Device,
+        surface: wgpu::Surface<'window>,
+        width: u32,
+        height: u32,
+    ) -> Result<Self, RenderError> {
+        Self::new_with_usage(
+            adapter,
+            device,
+            surface,
+            width,
+            height,
+            wgpu::TextureUsages::RENDER_ATTACHMENT,
+        )
     }
 
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {

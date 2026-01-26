@@ -38,6 +38,7 @@ pub struct UiDiagnosticsConfig {
     pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    pub screenshot_on_dump: bool,
 }
 
 impl Default for UiDiagnosticsConfig {
@@ -131,6 +132,7 @@ impl Default for UiDiagnosticsConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(4096);
+        let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
 
         Self {
             enabled,
@@ -159,6 +161,7 @@ impl Default for UiDiagnosticsConfig {
             inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
+            screenshot_on_dump,
         }
     }
 }
@@ -1791,6 +1794,9 @@ impl UiDiagnosticsService {
             let _ = touch_file(&self.cfg.screenshot_trigger_path);
         }
         let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+        if self.cfg.screenshot_on_dump {
+            let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
+        }
         self.last_dump_dir = Some(dir.clone());
         Some(dir)
     }
