@@ -3239,7 +3239,6 @@ pub fn menubar<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{
