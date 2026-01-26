@@ -898,6 +898,8 @@ fn request_menu_overlay<H: UiHost>(
         menu::root::MenuInitialFocusTargets::new()
             .pointer_content_focus(content_focus_id.get())
             .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+        None,
+        None,
         on_dismiss_request,
         dismissible_on_pointer_move,
         false,
