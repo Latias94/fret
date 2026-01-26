@@ -818,13 +818,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_started = hitch_config.map(|_| Instant::now());
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
-                    let draw_result: Result<(), fret_render::RenderError> = (|| {
+                    let draw_result = (|| -> Result<(), fret_render::RenderError> {
                         let (frame, view) =
                             state.surface.get_current_frame_view().map_err(|source| {
                                 fret_render::RenderError::SurfaceAcquireFailed { source }
                             })?;
 
                         let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
+
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
                         let ui_cmd = renderer.render_scene(
@@ -902,8 +903,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
 
                         Ok(())
-                    })(
-                    );
+                    })();
                     if let Some(started) = present_started {
                         hitch_present_ms = Some(started.elapsed().as_millis() as u64);
                     }
