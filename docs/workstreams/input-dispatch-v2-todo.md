@@ -51,8 +51,9 @@ Keep this list short and evidence-backed:
 - [x] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
   - Decision tracker: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
   - Notes: keep v1 minimal to avoid smuggling Radix/shadcn policies into `crates/fret-ui`.
-- [ ] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
-  - Notes: deferred until a candidate meets the mechanism boundary criteria (see the decision tracker above).
+- [x] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+  - Decision: keep v2 limited to `DefaultAction::FocusOnPointerDown` until we have a concrete, boundary-safe candidate.
+  - Evidence: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
 
 ## MVP1 — Action Availability (GPUI `is_action_available` Parity)
 
@@ -111,7 +112,7 @@ Keep this list short and evidence-backed:
     DropdownMenu / Menubar / ContextMenu.
   - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers, auto-focus hooks).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (plumbs `on_open_auto_focus/on_close_auto_focus`),
-    tests `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs}` (auto-focus preventDefault conformance).
+    tests `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (auto-focus preventDefault conformance).
 - [x] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
   - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
 
