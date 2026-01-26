@@ -212,11 +212,17 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.
   - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-core/src/*` (data-only shapes as needed)
   - Progress: add hit-test path reuse (cached “interaction range”) as an incremental, semantics-preserving step toward replayable interaction output.
+  - Progress: cache focus traversal gates in prepaint (focusable + traversal + scroll-ancestor) so command availability queries do not re-enter widget hit-test hooks for clean nodes.
+  - Progress: export outside-press observer layer metadata (consume flag + branch list) so pointer-down-outside arbitration is explainable from bundles.
   - Notes: reuse is currently enabled only for pointer-move dispatch; other pointer events rebuild the cache from a full hit-test pass.
   - Notes: reuse falls back to full hit-testing if the cached leaf can hit-test children (avoids stale routing when the pointer moves between descendants).
   - Evidence: `crates/fret-ui/src/tree/hit_test.rs` (`hit_test_layers_cached`, `try_hit_test_along_cached_path`),
     `crates/fret-ui/src/tree/dispatch.rs` (pointer-move-only reuse policy),
-    `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_layers_cached_reuses_path_and_respects_layer_order`).
+    `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_layers_cached_reuses_path_and_respects_layer_order`),
+    `crates/fret-ui/src/tree/prepaint.rs` (`InteractionRecord` focus flags),
+    `crates/fret-ui/src/tree/tests/focus_traversal_prepaint_cache.rs`,
+    `crates/fret-ui/src/tree/mod.rs` (`UiDebugLayerInfo` outside-press fields),
+    `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiLayerInfoV1` export).
 - [x] GPUI-MVP3-rec-002 Add a prepaint phase that records interaction ranges (per cache root) in a replayable way.
   - Touches: `crates/fret-ui/src/tree/*`
   - Reference: `repo-ref/zed/crates/gpui/src/element.rs` (prepaint), `repo-ref/zed/crates/gpui/src/view.rs` (`reuse_prepaint`)

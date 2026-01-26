@@ -3679,6 +3679,10 @@ pub struct UiLayerInfoV1 {
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
     pub wants_pointer_down_outside_events: bool,
+    #[serde(default)]
+    pub consume_pointer_down_outside_events: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pointer_down_outside_branches: Vec<u64>,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
 }
@@ -3692,6 +3696,13 @@ impl UiLayerInfoV1 {
             blocks_underlay_input: layer.blocks_underlay_input,
             hit_testable: layer.hit_testable,
             wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
+            consume_pointer_down_outside_events: layer.consume_pointer_down_outside_events,
+            pointer_down_outside_branches: layer
+                .pointer_down_outside_branches
+                .into_iter()
+                .take(32)
+                .map(key_to_u64)
+                .collect(),
             wants_pointer_move_events: layer.wants_pointer_move_events,
             wants_timer_events: layer.wants_timer_events,
         }
