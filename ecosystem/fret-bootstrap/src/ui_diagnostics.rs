@@ -3076,6 +3076,8 @@ impl UiVirtualRangeV1 {
 pub struct UiVirtualListWindowV1 {
     pub node: u64,
     pub element: u64,
+    #[serde(default)]
+    pub source: UiVirtualListWindowSourceV1,
     pub axis: UiAxisV1,
     #[serde(default)]
     pub is_probe_layout: bool,
@@ -3107,6 +3109,7 @@ impl UiVirtualListWindowV1 {
         Self {
             node: key_to_u64(window.node),
             element: window.element.0,
+            source: UiVirtualListWindowSourceV1::from_source(window.source),
             axis: UiAxisV1::from_axis(window.axis),
             is_probe_layout: window.is_probe_layout,
             items_len: window.items_len as u64,
