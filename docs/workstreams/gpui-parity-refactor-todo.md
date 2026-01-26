@@ -641,6 +641,11 @@ topics (if/when we implement them):
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
   - Goal: allow scroll/window membership updates to attach/detach item subtrees without rerendering the parent cache root.
   - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Proposed).
+  - Plan (v1; fixed/known height only):
+    - Add a runtime-owned `WindowedSurfaceHost` boundary that can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
+    - Define an opt-in authoring API that stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
+    - Wire the host to `VirtualListMetrics` (Fixed/Known) for window math and item placement, and defer Measured mode.
+    - Add diagnostics export for attach/detach counts + reuse hits, and gate with a scripted UI Gallery harness (no stale paint + bounded work).
   - Done when:
     - A prototype host can drive a fixed-height “composable rows” list without forcing a parent cache-root rerender when crossing a window boundary (attach/detach delta only).
     - A scripted harness bundle can prove: no stale paint, stable hit-testing, and bounded attach/detach work.
