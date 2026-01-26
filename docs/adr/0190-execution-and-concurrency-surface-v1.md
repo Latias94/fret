@@ -1,6 +1,6 @@
 # ADR 0190: Execution and Concurrency Surface v1 (Dispatcher + Executors)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -85,6 +85,25 @@ Important invariants:
   thread, even if the platform internally uses multiple callbacks/queues).
 - On wasm, "background" may be best-effort (no threads); the API remains, but implementations may
   execute work cooperatively and MUST still preserve the main-thread mutation invariant.
+
+#### Portability and degraded guarantees (required guidance)
+
+The runner MUST surface execution capabilities via `PlatformCapabilities.exec` (ADR 0054). Ecosystem
+crates SHOULD avoid forking on capabilities unless absolutely necessary, but these keys exist to make
+degradation explicit and diagnosable:
+
+- Native (typical): `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable`
+- wasm (typical): `exec.background_work=cooperative`, `exec.wake=best_effort`, `exec.timers=best_effort`
+
+Implications for authors:
+
+- Do not assume background work implies a separate OS thread. On wasm without threads, "background"
+  work may run cooperatively on the same thread and can still block the UI if it is CPU-heavy.
+- Treat `wake()` as a request to reach the next driver boundary, not a precise scheduling guarantee.
+  On wasm it may be delayed or coalesced.
+- Prefer the runner-owned effect pipeline for UI-visible timing (`Effect::SetTimer` / RAF). Treat
+  `dispatch_after` as a low-level primitive for executors/harnesses, and expect timer throttling on
+  constrained platforms.
 
 #### Placement and stability rules
 
@@ -312,7 +331,7 @@ This keeps third-party crates portable while still enabling "real app" workloads
    for heavy apps (Tokio thread + wake).
 4. Gradually update ecosystem crates to converge on the shared surface (reducing bespoke channels).
 
-## Acceptance Criteria (Proposed → Accepted)
+## Acceptance Criteria (Satisfied)
 
 This ADR may transition to `Accepted` once all of the following are true:
 
@@ -330,6 +349,12 @@ This ADR may transition to `Accepted` once all of the following are true:
   - shutdown/cancellation paths are tested (no UI callbacks after shutdown).
 - **Observability hooks exist**:
   - dispatch/wake/drain points are visible in tracing spans (location attribution where feasible).
+
+Evidence (as of 2026-01-26):
+
+- `Dispatcher` + `InboxDrainRegistry`: `crates/fret-runtime/src/execution.rs`
+- Desktop/wasm runner mappings + driver boundary draining: `crates/fret-launch/src/runner/{desktop,web}/dispatcher.rs`, `crates/fret-launch/src/runner/{desktop/mod.rs,web.rs}`
+- Ecosystem + examples + tests: `ecosystem/fret-executor/src/lib.rs`, `ecosystem/fret-markdown/src/mathjax_svg_support.rs`, `apps/fret-examples/src/markdown_demo.rs`
 
 ## References
 

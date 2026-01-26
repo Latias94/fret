@@ -1,11 +1,13 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, SvgId, UiServices};
+use fret_executor::Inbox;
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
 use fret_markdown as markdown;
+use fret_runtime::DispatcherHandle;
 use fret_runtime::Model;
 use fret_ui::declarative;
 use fret_ui::element::{
@@ -18,7 +20,6 @@ use fret_ui_kit::{ColorRef, MetricRef, Space, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::sync::mpsc;
 
 const CMD_TOGGLE_CODE_BLOCK_EXPAND_PREFIX: &str = "markdown_demo.code_block.toggle_expand:";
 
@@ -45,20 +46,16 @@ enum RemoteImageState {
     Error(Arc<str>),
 }
 
-#[derive(Debug)]
 struct RemoteImageCache {
     states: HashMap<Arc<str>, RemoteImageState>,
-    tx: mpsc::Sender<(Arc<str>, Result<RemoteImageState, Arc<str>>)>,
-    rx: mpsc::Receiver<(Arc<str>, Result<RemoteImageState, Arc<str>>)>,
+    inbox: Inbox<(Arc<str>, Result<RemoteImageState, Arc<str>>)>,
 }
 
 impl Default for RemoteImageCache {
     fn default() -> Self {
-        let (tx, rx) = mpsc::channel();
         Self {
             states: HashMap::new(),
-            tx,
-            rx,
+            inbox: Inbox::new(Default::default()),
         }
     }
 }
@@ -66,7 +63,7 @@ impl Default for RemoteImageCache {
 impl RemoteImageCache {
     fn poll_completed(&mut self) -> bool {
         let mut changed = false;
-        while let Ok((url, result)) = self.rx.try_recv() {
+        for (url, result) in self.inbox.drain() {
             changed = true;
             match result {
                 Ok(state) => {
@@ -96,17 +93,19 @@ impl RemoteImageCache {
         changed
     }
 
-    fn ensure_fetch_started(&mut self, url: Arc<str>) {
+    fn ensure_fetch_started(&mut self, dispatcher: &DispatcherHandle, url: Arc<str>) {
         if self.states.contains_key(&url) {
             return;
         }
         self.states.insert(url.clone(), RemoteImageState::Loading);
 
-        let tx = self.tx.clone();
-        std::thread::spawn(move || {
+        let sender = self.inbox.sender();
+        let exec = fret_executor::Executors::new(dispatcher.clone());
+        exec.spawn_background_to_inbox(None, sender, move |_| {
             let result = download_remote_image(&url);
-            let _ = tx.send((url, result));
-        });
+            (url, result)
+        })
+        .detach();
     }
 
     fn get(&self, url: &str) -> Option<&RemoteImageState> {
@@ -407,8 +406,12 @@ $$
             if info.src.starts_with("http://") || info.src.starts_with("https://") {
                 let state = cx
                     .app
-                    .with_global_mut(RemoteImageCache::default, |cache, _app| {
-                        cache.ensure_fetch_started(info.src.clone());
+                    .with_global_mut(RemoteImageCache::default, |cache, app| {
+                        let dispatcher = app
+                            .global::<DispatcherHandle>()
+                            .expect("runner should install DispatcherHandle")
+                            .clone();
+                        cache.ensure_fetch_started(&dispatcher, info.src.clone());
                         cache.get(&info.src).cloned()
                     });
 

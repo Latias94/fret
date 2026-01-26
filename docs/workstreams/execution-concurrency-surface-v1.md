@@ -37,28 +37,30 @@ Status legend:
 
 ### Phase 1 (desktop runner + golden path)
 
-- `[ ]` `Dispatcher` trait: define minimal portable surface (target: `crates/fret-runtime`)
-- `[ ]` Desktop impl: implement `Dispatcher` in the desktop runner (target: `crates/fret-launch`)
-- `[ ]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`)
-- `[ ]` Driver boundary: wire inbox draining + redraw scheduling into the golden path driver (target: `ecosystem/fret-bootstrap`)
-- `[ ]` Observability: add tracing spans for dispatch/wake/drain points
-- `[ ]` Safety: document + test shutdown behavior (no UI callbacks after shutdown/hot reload)
+- `[x]` `Dispatcher` trait: define minimal portable surface (target: `crates/fret-runtime`, implemented at `crates/fret-runtime/src/execution.rs`)
+- `[x]` Desktop impl: implement `Dispatcher` in the desktop runner (target: `crates/fret-launch`, implemented at `crates/fret-launch/src/runner/desktop/dispatcher.rs`)
+- `[x]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`, implemented as `ecosystem/fret-executor`)
+- `[x]` Driver boundary: drain inboxes at runner flush points via `InboxDrainRegistry` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`, web: `crates/fret-launch/src/runner/web.rs`)
+- `[x]` Observability: add tracing spans for dispatch/wake/drain points (dispatcher + driver boundary)
+- `[x]` Safety: fence dispatcher on shutdown (desktop + wasm), plus basic unit tests
+- `[x]` Safety: cancellation baseline (ecosystem task handles; no post-cancel enqueue/wake)
+- `[x]` Safety: hot reload boundary (desktop runner bumps dispatcher generation and clears pending work)
 
 ### Phase 2 (wasm mapping)
 
-- `[ ]` wasm impl: define `dispatch_on_main_thread`/`dispatch_after`/`wake` mapping (RAF/microtask/timeout)
-- `[ ]` wasm "background": define and test cooperative/best-effort behavior (no threads)
-- `[ ]` Portability docs: explicitly document degraded guarantees and recommended patterns
+- `[x]` wasm impl: define `dispatch_on_main_thread`/`dispatch_after`/`wake` mapping (timeout + runner proxy wake; implementation in `crates/fret-launch/src/runner/web/dispatcher.rs`)
+- `[x]` wasm "background": define cooperative/best-effort behavior (no threads; `spawn_local`-based)
+- `[x]` Portability docs: explicitly document degraded guarantees and recommended patterns
 
 ### Phase 3 (ecosystem validation)
 
-- `[ ]` Migrate 1 ecosystem crate to the shared surface (choose a representative: markdown fetch, asset loading, or chart data prep)
-- `[ ]` Add deterministic tests for wake/drain ordering in that crate (no real timers required)
+- `[x]` Migrate 1 ecosystem crate to the shared surface (`ecosystem/fret-markdown` MathJax SVG worker)
+- `[x]` Add deterministic tests for wake/drain ordering in that crate (no real timers required)
 
 ### Phase 4 (acceptance)
 
-- `[ ]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
-- `[ ]` Replace remaining bespoke channel+wake utilities in templates/examples
+- `[x]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
+- `[x]` Replace remaining bespoke channel+wake utilities in templates/examples
 
 ## Proposed public surface (API sketch, non-binding)
 
@@ -80,13 +82,13 @@ Sketch:
   - `fn dispatch_on_main_thread(&self, task: Runnable)`
   - `fn dispatch_background(&self, task: Runnable, priority: Priority)`
   - `fn dispatch_after(&self, delay: Duration, task: Runnable)`
-  - `fn wake(&self)`
-  - `fn capabilities(&self) -> ExecCapabilities` (optional; may be integrated into `PlatformCapabilities`)
+  - `fn wake(&self, window: Option<AppWindowId>)`
+  - `fn exec_capabilities(&self) -> ExecCapabilities` (integrated into `PlatformCapabilities.exec` via ADR 0054 keys)
 
 Notes:
 
-- `Runnable` should support location attribution for tracing where possible.
-- `Priority` should start small (`Low/Normal/High`) and be extendable without breaking the base trait.
+- `Runnable` is currently `Box<dyn FnOnce() + Send + 'static>` (location attribution is a future ergonomics layer).
+- `Priority` is currently `DispatchPriority` (`Low/Normal/High`) and should remain extendable without breaking the base trait.
 
 ### Inbox (portable helper)
 
@@ -210,6 +212,5 @@ See `## Tracking (living TODOs)` at the top of this file for the authoritative p
 
 ## Open questions (to resolve before locking v1)
 
-- Do we expose execution capabilities via `PlatformCapabilities` (ADR 0054) or keep them as separate diagnostics?
 - What is the minimal timer vocabulary that avoids split-brain between effects and dispatcher scheduling?
 - What is the minimal "priority/backpressure" surface we want to reserve in v1?

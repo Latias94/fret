@@ -1095,6 +1095,7 @@ dependencies = [
  "fret-core",
  "fret-docking",
  "fret-editor",
+ "fret-executor",
  "fret-gizmo",
  "fret-icons",
  "fret-kit",
@@ -1120,6 +1121,16 @@ dependencies = [
  "ureq",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "fret-executor"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1217,6 +1228,7 @@ version = "0.1.0"
 dependencies = [
  "fret-code-view",
  "fret-core",
+ "fret-executor",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
