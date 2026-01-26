@@ -565,11 +565,14 @@ topics (if/when we implement them):
 - [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+  - Contract: `docs/adr/0193-ephemeral-prepaint-items-v1.md` (Proposed).
   - Notes: ADR 0190 is now Accepted as the guiding contract; capture any new “hard-to-change” commitments as follow-up ADRs if needed.
   - Progress (v1):
     - Bundles can export VirtualList window telemetry via `UiTreeDebugSnapshotV1.virtual_list_windows` (debug-only, bounded) for postmortem analysis.
     - Bundles expose `debug.dirty_views[*].detail` to distinguish `scroll_handle_hit_test_only` vs `scroll_handle_layout`, making “why did this cache
       root rerender?” explainable for VirtualList scroll/scroll_to_item flows.
+    - Bundles export `debug.prepaint_actions` (bounded) so prepaint-driven invalidations and scheduling requests are explainable without rerunning under a debugger.
+      - Anchors: `crates/fret-ui/src/widget.rs` (`PrepaintCx`), `crates/fret-ui/src/tree/mod.rs` (`debug_prepaint_actions`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
     - `Widget::prepaint(PrepaintCx)` hook exists and is invoked for view-cache roots during the prepaint pass, even when the interaction cache replays.
       - Anchors: `crates/fret-ui/src/widget.rs` (`PrepaintCx`, `Widget::prepaint`),
         `crates/fret-ui/src/tree/prepaint.rs` (prepaint traversal),
