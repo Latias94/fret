@@ -1502,6 +1502,236 @@ mod tests {
     }
 
     #[test]
+    fn dialog_close_transition_restores_trigger_focus_while_barrier_blocks_underlay_pointer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices;
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            open: Model<bool>,
+            underlay_activated: Model<bool>,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "dialog-close-transition-focus-restore",
+                |cx| {
+                    let underlay_activated = underlay_activated.clone();
+                    let underlay = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_set_bool(&underlay_activated, true);
+                            Vec::new()
+                        },
+                    );
+
+                    let trigger_id_out = trigger_id_out.clone();
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout.inset.left = Some(Px(20.0));
+                                layout.inset.top = Some(Px(20.0));
+                                layout.position = PositionStyle::Absolute;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: PressableA11y {
+                                test_id: Some(Arc::from("trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            trigger_id_out.set(Some(id));
+                            cx.pressable_toggle_bool(&open);
+                            Vec::new()
+                        },
+                    );
+
+                    let focusable_id_out = focusable_id_out.clone();
+                    let dialog = Dialog::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let focusable = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(200.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        test_id: Some(Arc::from("dialog-focusable")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |_cx, _st, id| {
+                                    focusable_id_out.set(Some(id));
+                                    Vec::new()
+                                },
+                            );
+                            DialogContent::new(vec![focusable]).into_element(cx)
+                        },
+                    );
+
+                    vec![underlay, dialog]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        // Frame 1: closed.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            focusable_id_out.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            focusable_id_out.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected dialog to install a modal barrier root"
+        );
+
+        let focusable_id = focusable_id_out.get().expect("dialog focusable id");
+        let focusable_node = fret_ui::elements::node_for_element(&mut app, window, focusable_id)
+            .expect("dialog focusable");
+        ui.set_focus(Some(focusable_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false) -> focus should be restored even
+        // though pointer interactions remain blocked by the barrier.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            focusable_id_out.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected close transition to restore focus to the trigger"
+        );
+
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "expected the modal barrier to keep the underlay inert while closing"
+        );
+    }
+
+    #[test]
     fn dialog_escape_closes() {
         let window = AppWindowId::default();
         let mut app = App::new();
