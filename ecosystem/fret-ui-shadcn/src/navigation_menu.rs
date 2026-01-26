@@ -3,8 +3,7 @@ use std::sync::Arc;
 use fret_core::Transform2D;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_runtime::{
-    CommandId, InputContext, Model, Platform, PlatformCapabilities, WindowCommandGatingService,
-    WindowCommandGatingSnapshot,
+    CommandId, InputContext, Model, Platform, PlatformCapabilities, WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
@@ -282,18 +281,11 @@ impl NavigationMenuLink {
         let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
 
         let fallback_input_ctx = navigation_menu_input_context(&*cx.app);
-        let gating = cx
-            .app
-            .global::<WindowCommandGatingService>()
-            .and_then(|svc| svc.snapshot(cx.window))
-            .cloned()
-            .unwrap_or_else(|| {
-                fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                    &*cx.app,
-                    cx.window,
-                    fallback_input_ctx,
-                )
-            });
+        let gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+            &*cx.app,
+            cx.window,
+            fallback_input_ctx,
+        );
         let disabled =
             disabled_explicit || command_is_disabled_by_gating(&*cx.app, &gating, command.as_ref());
 

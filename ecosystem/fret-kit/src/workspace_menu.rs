@@ -339,7 +339,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
 
     let base_ctx = menu_shortcut_input_context(cx, opts.platform);
-    let gating = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+    let gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
         &*cx.app,
         cx.window,
         base_ctx.clone(),
@@ -1252,7 +1252,7 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds(), "menu", |cx| {
             let base_ctx = menu_shortcut_input_context(cx, Platform::current());
-            let gating = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+            let gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
                 &*cx.app, cx.window, base_ctx,
             );
 

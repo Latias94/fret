@@ -392,7 +392,7 @@ fn command_palette_toggle(app: &mut App, window: AppWindowId) -> bool {
 
     if next_open {
         let fallback_input_ctx = fret_ui_shadcn::command::command_palette_input_context(app);
-        let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+        let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
             app,
             window,
             fallback_input_ctx,
