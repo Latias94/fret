@@ -233,6 +233,64 @@ Acceptance:
 - examples can compose children using iterators without `vec![...]` at call sites,
 - third-party crates can expose `fn into_elements(...) -> impl Iterator<Item = AnyElement>` patterns naturally.
 
+### P1.3 — Elements ergonomics pass (in progress)
+
+Tracked on branch/worktree: `refactor/elements-ergonomics-pass`.
+
+Goal: remove remaining high-frequency “vector-first” authoring friction by preferring iterator-friendly inputs and
+the `Elements` return wrapper where it improves composability.
+
+Completed (so far):
+
+- [x] Make `AnyElement::new` accept `children: impl IntoIterator<Item = AnyElement>`.
+  - Evidence: `crates/fret-ui/src/element.rs` (`AnyElement::new`).
+- [x] Make virtual list extension hooks iterator-friendly (avoid forcing `Vec<usize>` allocations).
+  - Evidence: `crates/fret-ui/src/elements/cx.rs` (`virtual_list_*_ex` range extractor).
+- [x] Migrate `fret-ui-kit` overlay primitives to accept iterable children (store internally as `Vec` when needed).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/{dialog,alert_dialog,popover,tooltip,hover_card,menu/root,select}.rs`.
+- [x] Migrate `fret-ui-shadcn` menu/command builder APIs to accept iterables for `entries/items`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{command,dropdown_menu,context_menu,menubar,navigation_menu,select}.rs`.
+- [x] Return `Elements` from navigation menu spec builders where it improves composability.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (spec `children()`).
+- [x] Make high-frequency row/cell render callbacks iterator-friendly (avoid forcing `Vec<AnyElement>`).
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs`,
+    `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`.
+- [x] Make `FormField::new` accept an iterable `control` list.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/form_field.rs`.
+- [x] Make `NavigationMenuItem::new` accept iterable `content`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (`NavigationMenuItem::new`).
+- [x] Prefer `Elements` for provider-scoped subtree returns.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs` (`TooltipProvider::with`).
+- [x] Make overlay motion helpers accept iterable children (avoid forcing `Vec<AnyElement>`).
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`.
+- [x] Prefer `Elements` for Radix-like modal layer assembly helpers and make pressable builder helpers iterator-friendly.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/{dialog,alert_dialog,popover,select,navigation_menu}.rs`.
+- [x] Migrate Material3 tooltip/dialog surfaces away from `Vec<AnyElement>`-only contracts.
+  - Evidence: `ecosystem/fret-ui-material3/src/tooltip.rs` (`TooltipProvider::with`),
+    `ecosystem/fret-ui-material3/src/dialog.rs` (`Dialog::into_element`, `Dialog::actions`).
+- [x] Make UI Gallery previews `Elements`-first (avoid `Vec<AnyElement>` glue at call sites).
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`page_preview`, `material3_scoped_page`, `preview_*` builders).
+- [x] Reduce `Vec<AnyElement>` return friction in ecosystem render helpers (where callers compose lists).
+  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`render_menu_entries -> Elements`).
+  - Evidence: `ecosystem/fret-markdown/src/pulldown_render.rs` (`render_pulldown_blocks -> Elements`).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{menubar,context_menu,dropdown_menu}.rs` (`*_row_children` / `render_entries -> Elements`).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/table.rs` (`assign_grid_column_starts -> Elements`).
+
+Next candidates (rolling):
+
+- Migrate ecosystem APIs that currently accept `children: Vec<AnyElement>` to accept
+  `children: impl IntoIterator<Item = AnyElement>` (store internally as `Vec`).
+- Reduce callback churn where signatures are `FnOnce(...) -> Vec<AnyElement>` by allowing
+  `FnOnce(...) -> Elements` or `FnOnce(...) -> impl IntoIterator<Item = AnyElement>` when feasible.
+- Add lightweight test helpers for pointer events (reduce repeated `PointerId(0)` / `PointerType::Mouse` /
+  `Modifiers::default()` boilerplate and prevent missing-field regressions).
+
+Acceptance:
+
+- common call sites no longer require `vec![...]` or `.collect::<Vec<_>>()` for simple composition,
+- no new kernel-policy coupling (pure authoring ergonomics),
+- examples and templates demonstrate the new patterns.
+
 ### P2 — Standardize “third-party component integration contract”
 
 Define and document a small set of traits a third-party component should implement once:
