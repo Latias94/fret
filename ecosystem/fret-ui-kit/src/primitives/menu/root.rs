@@ -7,7 +7,9 @@
 //! - installing a timer handler for submenu focus/close delays
 //! - producing a DismissableLayer pointer-move observer for submenu grace intent
 
-use fret_ui::action::{OnDismissRequest, OnDismissiblePointerMove};
+use fret_ui::action::{
+    OnCloseAutoFocus, OnDismissRequest, OnDismissiblePointerMove, OnOpenAutoFocus,
+};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -139,6 +141,8 @@ pub fn dismissible_menu_request<H: UiHost>(
     children: Vec<AnyElement>,
     root_name: String,
     initial_focus: MenuInitialFocusTargets,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
 ) -> OverlayRequest {
     dismissible_menu_request_with_modal(
@@ -150,6 +154,8 @@ pub fn dismissible_menu_request<H: UiHost>(
         children,
         root_name,
         initial_focus,
+        on_open_auto_focus,
+        on_close_auto_focus,
         dismissible_on_pointer_move,
         true,
     )
@@ -166,6 +172,8 @@ pub fn dismissible_menu_request_with_dismiss_handler<H: UiHost>(
     children: Vec<AnyElement>,
     root_name: String,
     initial_focus: MenuInitialFocusTargets,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
     on_dismiss_request: Option<OnDismissRequest>,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
 ) -> OverlayRequest {
@@ -178,6 +186,8 @@ pub fn dismissible_menu_request_with_dismiss_handler<H: UiHost>(
         children,
         root_name,
         initial_focus,
+        on_open_auto_focus,
+        on_close_auto_focus,
         on_dismiss_request,
         dismissible_on_pointer_move,
         true,
@@ -199,6 +209,8 @@ pub fn dismissible_menu_request_with_modal<H: UiHost>(
     children: Vec<AnyElement>,
     root_name: String,
     initial_focus: MenuInitialFocusTargets,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     modal: bool,
 ) -> OverlayRequest {
@@ -211,6 +223,8 @@ pub fn dismissible_menu_request_with_modal<H: UiHost>(
         children,
         root_name,
         initial_focus,
+        on_open_auto_focus,
+        on_close_auto_focus,
         None,
         dismissible_on_pointer_move,
         modal,
@@ -228,6 +242,8 @@ pub fn dismissible_menu_request_with_modal_and_dismiss_handler<H: UiHost>(
     children: Vec<AnyElement>,
     root_name: String,
     initial_focus: MenuInitialFocusTargets,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
     on_dismiss_request: Option<OnDismissRequest>,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     modal: bool,
@@ -236,6 +252,8 @@ pub fn dismissible_menu_request_with_modal_and_dismiss_handler<H: UiHost>(
     request.root_name = Some(root_name);
     request.dismissible_on_dismiss_request = on_dismiss_request;
     request.dismissible_on_pointer_move = dismissible_on_pointer_move;
+    request.on_open_auto_focus = on_open_auto_focus;
+    request.on_close_auto_focus = on_close_auto_focus;
 
     let keyboard = fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window));
     request.initial_focus = if keyboard {
@@ -306,6 +324,8 @@ mod tests {
                 Vec::new(),
                 "menu".to_string(),
                 MenuInitialFocusTargets::new(),
+                None,
+                None,
                 Some(handler.clone()),
                 None,
                 true,
@@ -351,6 +371,8 @@ mod tests {
                     .pointer_content_focus(Some(pointer_focus))
                     .keyboard_entry_focus(Some(keyboard_focus)),
                 None,
+                None,
+                None,
             );
             assert_eq!(req.initial_focus, Some(pointer_focus));
 
@@ -375,6 +397,8 @@ mod tests {
                 MenuInitialFocusTargets::new()
                     .pointer_content_focus(Some(pointer_focus))
                     .keyboard_entry_focus(Some(keyboard_focus)),
+                None,
+                None,
                 None,
             );
             assert_eq!(req.initial_focus, Some(keyboard_focus));
