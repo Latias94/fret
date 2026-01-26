@@ -68,6 +68,9 @@ Each TODO is labeled:
 - [x] OVERLAY-reg-010 Add a “menu stack” scripted scenario (submenu hover + outside press + focus handoff).
   - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json`, `apps/fretboard/src/diag.rs`
   - Notes: validates submenu opens on hover and that an outside press dismisses overlays and focuses the underlying target.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`render_entries` in submenu panel propagates `DropdownMenuItem.test_id`,
+    `dropdown_menu_submenu_items_propagate_test_ids`), `apps/fret-ui-gallery/src/ui.rs` (gallery dropdown uses `modal(false)` to validate
+    click-through outside press).
 - [x] OVERLAY-reg-011 Add a “nested popover + dialog” scripted scenario (focus trap + escape + underlay).
   - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json`, `apps/fretboard/src/diag.rs`
   - Notes: opens a dialog from inside a popover, asserts modal barrier blocks underlay, then verifies escape focus restore to the popover trigger.

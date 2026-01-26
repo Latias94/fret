@@ -440,6 +440,15 @@ For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
 
+The UI gallery suite includes lightweight smoke checks for table/grid surfaces:
+
+- `tools/diag-scripts/ui-gallery-table-smoke.json`
+- `tools/diag-scripts/ui-gallery-data-table-smoke.json`
+
+These scripts assert that stable semantics anchors exist *and* that their bounds are within the
+window (`bounds_within_window`), which is a fast way to catch “layout is broken / clipped to zero”
+regressions when a table suddenly “disappears”.
+
 ### View-cache regression gating
 
 Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,

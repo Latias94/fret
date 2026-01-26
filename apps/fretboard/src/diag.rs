@@ -1854,7 +1854,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 11] {
+fn ui_gallery_suite_scripts() -> [&'static str; 13] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -1866,6 +1866,8 @@ fn ui_gallery_suite_scripts() -> [&'static str; 11] {
         "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
         "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
         "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
+        "tools/diag-scripts/ui-gallery-table-smoke.json",
+        "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
     ]
 }
