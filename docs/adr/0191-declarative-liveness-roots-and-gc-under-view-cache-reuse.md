@@ -69,7 +69,7 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
 - **GPUI-style view caching**: cache hits reuse recorded frame ranges and keep view dependencies/state live because the view is still present in the window's view graph.
   - View caching is gated by "dirty views" (e.g. `WindowInvalidator.dirty_views`) plus a cache key (bounds/content mask/text style).
   - Cache hits still restore dependency tracking (e.g. extend `accessed_entities`) and preserve element-local state by "accessing" it as part of `prepaint`/`paint` replay.
-  - Concretely, the per-frame element-state map is driven by an explicit "accessed set": reuse paths extend the next frame's accessed element-state keys from the recorded range, so a cache hit cannot accidentally drop state simply because a subtree did not rebuild.
+  - Concretely, the per-frame element-state map is driven by an explicit "accessed set": `with_element_state` records keys, and `reuse_prepaint`/`reuse_paint` replay extends `next_frame.accessed_element_states` by copying the recorded key slice from the previous frame's range. A cache hit therefore cannot accidentally drop state simply because a subtree did not rebuild.
 
 ### Upstream anchors (non-normative; line numbers may drift)
 
@@ -80,7 +80,10 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
     - Source: https://github.com/zed-industries/zed/blob/main/crates/gpui/src/view.rs
 - **Flutter**
   - `packages/flutter/lib/src/widgets/framework.dart`: `_InactiveElements`, `BuildOwner.finalizeTree`, `BuildOwner.deactivateChild`.
-    - Source: https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/framework.dart
+  - `packages/flutter/lib/src/widgets/overlay.dart`: `OverlayEntry`/`OverlayState` (lifetime is explicit; invisibility/offstage is not disposal).
+    - Sources:
+      - https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/framework.dart
+      - https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/overlay.dart
 
 In all cases, "not rebuilt this frame" is not a signal for disposal. Liveness comes from explicit roots (composition/window roots) and ownership bookkeeping.
 
