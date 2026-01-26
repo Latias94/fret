@@ -1767,6 +1767,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_focus,
                         requested_capture,
                         requested_cursor,
+                        cursor_query,
                         notify_requested,
                         stop_propagation,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -1796,12 +1797,15 @@ impl<H: UiHost> UiTree<H> {
                             notify_requested: false,
                             stop_propagation: false,
                         };
+                        let cursor_query = event_position(&event_for_node)
+                            .and_then(|pos| widget.cursor_icon_at(bounds, pos, &cx.input_ctx));
                         widget.event(&mut cx, &event_for_node);
                         (
                             cx.invalidations,
                             cx.requested_focus,
                             cx.requested_capture,
                             cx.requested_cursor,
+                            cursor_query,
                             cx.notify_requested,
                             cx.stop_propagation,
                         )
@@ -1860,6 +1864,9 @@ impl<H: UiHost> UiTree<H> {
 
                     if requested_cursor.is_some() && cursor_choice.is_none() {
                         cursor_choice = requested_cursor;
+                    }
+                    if cursor_choice.is_none() && cursor_query.is_some() {
+                        cursor_choice = cursor_query;
                     }
 
                     if stop_propagation {
