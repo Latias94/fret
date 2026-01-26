@@ -3238,6 +3238,7 @@ mod tests {
     use super::*;
 
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{
@@ -3383,6 +3384,65 @@ mod tests {
         root
     }
 
+    fn render_frame_with_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu",
+            move |cx| {
+                vec![
+                    ContextMenu::new(open)
+                        .on_dismiss_request(on_dismiss_request)
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            |_cx| {
+                                vec![
+                                    ContextMenuEntry::Item(ContextMenuItem::new("Alpha")),
+                                    ContextMenuEntry::Separator,
+                                    ContextMenuEntry::Item(ContextMenuItem::new("Beta")),
+                                    ContextMenuEntry::Item(ContextMenuItem::new("Gamma")),
+                                ]
+                            },
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_focusable_trigger(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3432,6 +3492,81 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn context_menu_modal_outside_press_can_be_prevented_via_dismiss_handler() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(false);
+
+        let dismiss_calls = Arc::new(AtomicUsize::new(0));
+        let dismiss_calls_for_handler = dismiss_calls.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
+            dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        let _ = render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler.clone()),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler),
+        );
+
+        let outside = Point::new(Px(390.0), Px(230.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert!(dismiss_calls.load(Ordering::SeqCst) > 0);
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     fn render_frame_focusable_trigger_with_underlay(

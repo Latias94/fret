@@ -3093,6 +3093,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Default)]
     struct FakeServices;
@@ -3195,6 +3196,42 @@ mod tests {
                         ]),
                     ]
                 })]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
+                    ])
+                    .on_dismiss_request(on_dismiss_request)
+                    .into_element(cx),
+                ]
             });
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
@@ -3742,6 +3779,118 @@ mod tests {
             Some(underlay_node),
             "expected focus to remain on underlay after click-through outside-press dismissal"
         );
+    }
+
+    #[test]
+    fn menubar_outside_press_can_be_prevented_via_dismiss_handler() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        let dismiss_calls = Arc::new(AtomicUsize::new(0));
+        let dismiss_calls_for_handler = dismiss_calls.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
+            dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        // Frame 0: render and locate triggers.
+        render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(handler.clone()),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file = center(menu_trigger_bounds(&snap0, "File"));
+
+        // Click "File" to open.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 1: "File" is expanded.
+        render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(handler.clone()),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+
+        // Outside press should call the dismiss handler but remain open due to prevent_default.
+        let outside = Point::new(Px(470.0), Px(230.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: outside,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(handler),
+        );
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap2, "File"));
+        assert!(dismiss_calls.load(Ordering::SeqCst) > 0);
     }
 
     #[test]
