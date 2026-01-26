@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `371/448` (`82.8%`)
-- Next P0 gaps: `dashboard` (1), then the `chart-*` sprint (76 variants).
+- Keys referenced by tests: `372/448` (`83.0%`)
+- Next P0 gaps: `chart-*` sprint (76 variants).
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,7 +38,6 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
-- Close the last one-off missing key (`dashboard`).
 - Dedicated `chart-*` alignment push (large surface area; likely needs more selective gates + audit notes).
 - Continue layering constrained viewport variants for overlay families (menus/listboxes) where “menu height” is a styling outcome.
 

@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `371` (`82.8%`)
-- Keys not referenced by tests: `77`
+- Keys referenced by tests: `372` (`83.0%`)
+- Keys not referenced by tests: `76`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -42,7 +42,6 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
-- `dashboard` (1)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
@@ -86,9 +85,8 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## What to do next (recommended order)
 
-1. **Close the last one-off**: gate `dashboard` (1 key).
-2. **Chart push**: treat `chart-*` as a dedicated sprint (surface area is large; likely needs additional audit notes).
-3. **Add constrained viewport variants** early for overlay-like components:
+1. **Chart push**: treat `chart-*` as a dedicated sprint (surface area is large; likely needs additional audit notes).
+2. **Add constrained viewport variants** early for overlay-like components:
    - menus/listboxes: max-height clamp + scroll buttons + row height (treat “menu height” as a styling outcome)
    - popovers/tooltips: flip/shift under low height
    - dialogs/sheets: insets under low height/width
