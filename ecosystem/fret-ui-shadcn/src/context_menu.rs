@@ -3263,6 +3263,9 @@ impl ContextMenu {
 mod tests {
     use super::*;
 
+    use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use fret_app::App;
     use fret_core::UiServices;
     use fret_core::{
@@ -3271,6 +3274,7 @@ mod tests {
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
+    use fret_ui::element::PressableA11y;
     use fret_ui::tree::UiTree;
 
     #[test]
@@ -3450,6 +3454,65 @@ mod tests {
                 )]
             },
         );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_with_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "context-menu-dismiss-handler",
+                move |cx| {
+                    vec![
+                        ContextMenu::new(open)
+                            .on_dismiss_request(on_dismiss_request.clone())
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        |cx, _st| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
+                                },
+                                |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                            ),
+                    ]
+                },
+            );
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
