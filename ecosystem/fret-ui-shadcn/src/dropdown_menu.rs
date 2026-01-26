@@ -7,6 +7,7 @@ use fret_icons::ids;
 use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps,
@@ -1049,6 +1050,8 @@ pub struct DropdownMenu {
     arrow_padding_override: Option<Px>,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for DropdownMenu {
@@ -1061,6 +1064,8 @@ impl std::fmt::Debug for DropdownMenu {
             .field("window_margin", &self.window_margin)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -1083,6 +1088,8 @@ impl DropdownMenu {
             arrow_padding_override: None,
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -1134,6 +1141,24 @@ impl DropdownMenu {
 
     pub fn align_leading_icons(mut self, align: bool) -> Self {
         self.align_leading_icons = align;
+        self
+    }
+
+    /// Sets an optional open autofocus handler (Radix `onOpenAutoFocus`).
+    ///
+    /// To prevent the default focus behavior, call `req.prevent_default()` and optionally request
+    /// focus via `host.request_focus(...)`.
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Sets an optional close autofocus handler (Radix `onCloseAutoFocus`).
+    ///
+    /// To prevent the default focus-restore behavior, call `req.prevent_default()` and optionally
+    /// request focus via `host.request_focus(...)`.
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -1226,6 +1251,8 @@ impl DropdownMenu {
             let trigger =
                 menu::trigger::apply_menu_trigger_a11y(trigger, is_open, Some(content_id_for_trigger));
             let on_dismiss_request = self.on_dismiss_request.clone();
+            let on_open_auto_focus = self.on_open_auto_focus.clone();
+            let on_close_auto_focus = self.on_close_auto_focus.clone();
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu =
                 cx.with_root_name(&overlay_root_name, |cx| {
@@ -1245,6 +1272,8 @@ impl DropdownMenu {
                 let min_width = self.min_width;
                 let submenu_min_width = self.submenu_min_width;
                 let align_leading_icons = self.align_leading_icons;
+                let on_open_auto_focus = on_open_auto_focus.clone();
+                let on_close_auto_focus = on_close_auto_focus.clone();
                 let gating = gating.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
@@ -3392,6 +3421,8 @@ impl DropdownMenu {
                     menu::root::MenuInitialFocusTargets::new()
                         .pointer_content_focus(content_focus_id.get())
                         .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                    on_open_auto_focus.clone(),
+                    on_close_auto_focus.clone(),
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
@@ -3420,6 +3451,7 @@ mod tests {
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
+    use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
     use fret_ui::element::PressableA11y;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
@@ -4135,6 +4167,236 @@ mod tests {
         root
     }
 
+    fn render_frame_with_underlay_and_auto_focus_hooks(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        entries: Vec<DropdownMenuEntry>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+        on_close_auto_focus: Option<OnCloseAutoFocus>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-underlay",
+            move |cx| {
+                let trigger_id_out = trigger_id_out.clone();
+                let underlay_id_out = underlay_id_out.clone();
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Relative;
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let underlay = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout.inset.left = Some(Px(380.0));
+                                    layout.inset.top = Some(Px(200.0));
+                                    layout.size.width = Length::Px(Px(220.0));
+                                    layout.size.height = Length::Px(Px(120.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            {
+                                let underlay_id_out = underlay_id_out.clone();
+                                move |cx, _st, id| {
+                                    underlay_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                }
+                            },
+                        );
+
+                        let dropdown_menu =
+                            DropdownMenu::new(open)
+                                .on_open_auto_focus(on_open_auto_focus.clone())
+                                .on_close_auto_focus(on_close_auto_focus.clone())
+                                .into_element(
+                                    cx,
+                                    {
+                                        let trigger_id_out = trigger_id_out.clone();
+                                        move |cx| {
+                                            cx.pressable_with_id(
+                                                PressableProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                        layout.position =
+                                                        fret_ui::element::PositionStyle::Absolute;
+                                                        layout.inset.left = Some(Px(0.0));
+                                                        layout.inset.top = Some(Px(0.0));
+                                                        layout.size.width = Length::Px(Px(120.0));
+                                                        layout.size.height = Length::Px(Px(40.0));
+                                                        layout
+                                                    },
+                                                    enabled: true,
+                                                    focusable: true,
+                                                    ..Default::default()
+                                                },
+                                                move |cx, _st, id| {
+                                                    trigger_id_out.set(Some(id));
+                                                    vec![cx.container(
+                                                        ContainerProps::default(),
+                                                        |_cx| Vec::new(),
+                                                    )]
+                                                },
+                                            )
+                                        }
+                                    },
+                                    move |_cx| entries.clone(),
+                                );
+
+                        vec![underlay, dropdown_menu]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_with_clickable_underlay_and_modal(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        modal: bool,
+        trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_clicked: Model<bool>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-underlay-clickable",
+            move |cx| {
+                let trigger_id_out = trigger_id_out.clone();
+                let underlay_id_out = underlay_id_out.clone();
+
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Relative;
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let underlay = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout.inset.left = Some(Px(380.0));
+                                    layout.inset.top = Some(Px(200.0));
+                                    layout.size.width = Length::Px(Px(220.0));
+                                    layout.size.height = Length::Px(Px(120.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Underlay")),
+                                    test_id: Some(Arc::from("underlay")),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            {
+                                let underlay_id_out = underlay_id_out.clone();
+                                move |cx, _st, id| {
+                                    underlay_id_out.set(Some(id));
+                                    cx.pressable_toggle_bool(&underlay_clicked);
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                }
+                            },
+                        );
+
+                        let dropdown_menu = DropdownMenu::new(open).modal(modal).into_element(
+                            cx,
+                            {
+                                let trigger_id_out = trigger_id_out.clone();
+                                move |cx| {
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.position =
+                                                    fret_ui::element::PositionStyle::Absolute;
+                                                layout.inset.left = Some(Px(0.0));
+                                                layout.inset.top = Some(Px(0.0));
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            trigger_id_out.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
+                                }
+                            },
+                            move |_cx| entries,
+                        );
+
+                        vec![underlay, dropdown_menu]
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     #[test]
     fn dropdown_menu_items_have_collection_position_metadata_excluding_separators() {
         let window = AppWindowId::default();
@@ -4652,6 +4914,207 @@ mod tests {
             vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
         );
         assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dropdown_menu_keyboard_open_auto_focus_can_be_prevented() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |_host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        let _root = render_frame_with_underlay_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+            Some(handler.clone()),
+            None,
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _root = render_frame_with_underlay_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            underlay_id_out,
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+            Some(handler),
+            None,
+        );
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected preventDefault open autofocus to keep focus on trigger"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_close_auto_focus_can_be_prevented_and_redirected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let underlay_id_out_for_handler = underlay_id_out.clone();
+        let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            if let Some(underlay) = underlay_id_out_for_handler.get() {
+                host.request_focus(underlay);
+            }
+            req.prevent_default();
+        });
+
+        let _root = render_frame_with_underlay_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+            None,
+            Some(handler.clone()),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        let underlay_id = underlay_id_out.get().expect("underlay element id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
+        ui.set_focus(Some(trigger_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _root = render_frame_with_underlay_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+            None,
+            Some(handler.clone()),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+        assert_eq!(ui.focus(), Some(alpha.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        let _root = render_frame_with_underlay_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            underlay_id_out,
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+            None,
+            Some(handler),
+        );
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_close_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected preventDefault close autofocus to allow redirecting focus"
+        );
     }
 
     #[test]

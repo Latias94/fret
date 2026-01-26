@@ -6,7 +6,7 @@ use std::sync::Arc;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model, ModelId, WindowCommandGatingSnapshot};
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle,
@@ -1994,6 +1994,8 @@ pub struct ContextMenu {
     arrow_padding_override: Option<Px>,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for ContextMenu {
@@ -2006,6 +2008,8 @@ impl std::fmt::Debug for ContextMenu {
             .field("window_margin", &self.window_margin)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -2029,6 +2033,8 @@ impl ContextMenu {
             arrow_padding_override: None,
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -2075,6 +2081,18 @@ impl ContextMenu {
 
     pub fn align_leading_icons(mut self, align: bool) -> Self {
         self.align_leading_icons = align;
+        self
+    }
+
+    /// Sets an optional open autofocus handler (Radix `onOpenAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Sets an optional close autofocus handler (Radix `onCloseAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -2164,6 +2182,8 @@ impl ContextMenu {
 
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
+            let on_open_auto_focus = self.on_open_auto_focus.clone();
+            let on_close_auto_focus = self.on_close_auto_focus.clone();
             let open_model_id = open.id();
             let anchor_store_model: Model<HashMap<ModelId, Point>> =
                 menu::context_menu_anchor_store_model(cx.app);
@@ -3225,6 +3245,8 @@ impl ContextMenu {
                     menu::root::MenuInitialFocusTargets::new()
                         .pointer_content_focus(content_focus_id.get())
                         .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                    on_open_auto_focus.clone(),
+                    on_close_auto_focus.clone(),
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
