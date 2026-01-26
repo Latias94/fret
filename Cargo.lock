@@ -1227,6 +1227,7 @@ version = "0.1.0"
 dependencies = [
  "fret-code-view",
  "fret-core",
+ "fret-executor",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",

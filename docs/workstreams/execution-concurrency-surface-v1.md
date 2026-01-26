@@ -54,8 +54,8 @@ Status legend:
 
 ### Phase 3 (ecosystem validation)
 
-- `[ ]` Migrate 1 ecosystem crate to the shared surface (choose a representative: markdown fetch, asset loading, or chart data prep)
-- `[ ]` Add deterministic tests for wake/drain ordering in that crate (no real timers required)
+- `[x]` Migrate 1 ecosystem crate to the shared surface (`ecosystem/fret-markdown` MathJax SVG worker)
+- `[x]` Add deterministic tests for wake/drain ordering in that crate (no real timers required)
 
 ### Phase 4 (acceptance)
 
