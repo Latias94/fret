@@ -128,4 +128,5 @@ Keep this list short and evidence-backed:
 ## Open Questions (Keep Short)
 
 - Resolved: `WindowCommandGatingService` is stack-based per window so nested overlays can publish gating snapshots without clobbering each other (IDV2-freeze-031).
-- Do we want a “diagnostic availability trace” (which node blocked / which node provided available) for debugging complex shells?
+- Resolved: UI diagnostics expose a command gating trace for debugging cross-surface enablement.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`command_gating_trace_for_window`, `command_gating_decision_trace`)
