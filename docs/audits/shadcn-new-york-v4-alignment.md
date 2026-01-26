@@ -11,6 +11,7 @@ for the `new-york-v4` preset, without expanding `fret-ui` mechanism scope.
 For coverage status (what is gated vs only has goldens), see:
 
 - `docs/audits/shadcn-new-york-v4-coverage.md`
+- Chart-specific audit: `docs/audits/shadcn-chart.md`
 
 Coverage snapshot (time of writing):
 
@@ -57,6 +58,7 @@ From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 1. **Chart push**
    - Treat `chart-*` as a dedicated sprint (surface area is large; likely needs new audit notes + more selective gates).
+   - Plan + scope: `docs/audits/shadcn-chart.md`.
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
 second wave (because we can keep the matrix small and stable).

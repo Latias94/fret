@@ -9,6 +9,7 @@ This document tracks **coverage**, not deep conformance details:
 For deep, high-impact alignment notes and “gaps to check” per component, see:
 
 - `docs/audits/shadcn-new-york-v4-alignment.md`
+- Chart-specific audit: `docs/audits/shadcn-chart.md`
 
 ## Why coverage matters (and why viewport variants are not “nice-to-have”)
 

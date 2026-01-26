@@ -330,7 +330,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | calendar | `calendar` | Present | Unreviewed | Headless month grid lives in `fret-ui-kit` (`headless::calendar`); UI surface lives in `fret-ui-shadcn` |
 | card | `card` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`card-with-form`) |
 | carousel | `carousel` | Present | Unreviewed | Layout-only; shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`carousel-*`) |
-| chart | `chart` | Defer | Unreviewed | Not editor-critical |
+| chart | `chart` | Planned | In review | Audit: `docs/audits/shadcn-chart.md`; shadcn-web gap: `chart-*` (76 keys) |
 | checkbox | `checkbox` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`checkbox-demo`) |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
 | command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` + `web_vs_fret_combobox_demo_*` |
