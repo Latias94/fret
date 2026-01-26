@@ -12,7 +12,8 @@ use fret_ui_kit::declarative::style as decl_style;
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space,
-    WidgetState, WidgetStateProperty, WidgetStates, ui,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
+    resolve_override_slot_opt, ui,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -370,22 +371,21 @@ impl Toggle {
             let mut states = WidgetStates::from_pressable(cx, state, !disabled);
             states.set(WidgetState::Selected, on);
 
-            let fg = style_override
-                .foreground
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .unwrap_or_else(|| default_foreground.resolve(states).clone());
-
-            let bg = style_override
-                .background
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_background.resolve(states).clone());
-            let border_color = style_override
-                .border_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .or_else(|| default_border_color.resolve(states).clone());
+            let fg = resolve_override_slot(
+                style_override.foreground.as_ref(),
+                &default_foreground,
+                states,
+            );
+            let bg = resolve_override_slot_opt(
+                style_override.background.as_ref(),
+                &default_background,
+                states,
+            );
+            let border_color = resolve_override_slot_opt(
+                style_override.border_color.as_ref(),
+                &default_border_color,
+                states,
+            );
 
             let mut chrome_props = decl_style::container_props(
                 &theme,

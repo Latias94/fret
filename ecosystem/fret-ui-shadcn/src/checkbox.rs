@@ -20,7 +20,7 @@ use fret_ui_kit::primitives::checkbox::{
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, WidgetState,
-    WidgetStateProperty, WidgetStates,
+    WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -313,26 +313,26 @@ impl Checkbox {
                 let mut states = WidgetStates::from_pressable(cx, st, !disabled);
                 states.set(WidgetState::Selected, is_on);
 
-                let bg = style_override
-                    .background
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .or_else(|| default_background.resolve(states).clone())
-                    .map(|bg| bg.resolve(&theme))
-                    .unwrap_or(Color::TRANSPARENT);
+                let bg = resolve_override_slot_opt(
+                    style_override.background.as_ref(),
+                    &default_background,
+                    states,
+                )
+                .map(|bg| bg.resolve(&theme))
+                .unwrap_or(Color::TRANSPARENT);
 
-                let border_color = style_override
-                    .border_color
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| default_border_color.resolve(states).clone())
-                    .resolve(&theme);
-                let fg = style_override
-                    .foreground
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| default_foreground.resolve(states).clone())
-                    .resolve(&theme);
+                let border_color = resolve_override_slot(
+                    style_override.border_color.as_ref(),
+                    &default_border_color,
+                    states,
+                )
+                .resolve(&theme);
+                let fg = resolve_override_slot(
+                    style_override.foreground.as_ref(),
+                    &default_foreground,
+                    states,
+                )
+                .resolve(&theme);
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,

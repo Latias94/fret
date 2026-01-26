@@ -18,7 +18,7 @@ use fret_ui_kit::primitives::switch::{
 };
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, WidgetState,
-    WidgetStateProperty, WidgetStates,
+    WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -315,24 +315,24 @@ impl Switch {
                 let mut states = WidgetStates::from_pressable(cx, st, !disabled);
                 states.set(WidgetState::Selected, on);
 
-                let bg = style_override
-                    .track_background
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| default_track_background.resolve(states).clone())
-                    .resolve(&theme);
-                let border_color = style_override
-                    .border_color
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| default_border_color.resolve(states).clone())
-                    .resolve(&theme);
-                let thumb_color = style_override
-                    .thumb_background
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| default_thumb_background.resolve(states).clone())
-                    .resolve(&theme);
+                let bg = resolve_override_slot(
+                    style_override.track_background.as_ref(),
+                    &default_track_background,
+                    states,
+                )
+                .resolve(&theme);
+                let border_color = resolve_override_slot(
+                    style_override.border_color.as_ref(),
+                    &default_border_color,
+                    states,
+                )
+                .resolve(&theme);
+                let thumb_color = resolve_override_slot(
+                    style_override.thumb_background.as_ref(),
+                    &default_thumb_background,
+                    states,
+                )
+                .resolve(&theme);
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,

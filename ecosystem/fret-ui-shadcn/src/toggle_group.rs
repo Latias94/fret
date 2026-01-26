@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetState,
-    WidgetStateProperty, WidgetStates,
+    WidgetStateProperty, WidgetStates, resolve_override_slot_opt,
 };
 
 use crate::layout as shadcn_layout;
@@ -633,19 +633,19 @@ impl ToggleGroup {
                                 states.set(WidgetState::Selected, on);
 
                                 let mut props = base_props;
-                                let bg = item_background_override
-                                    .as_ref()
-                                    .and_then(|p| p.resolve(states).clone())
-                                    .or_else(|| default_item_background.resolve(states).clone());
-                                if let Some(bg) = bg {
+                                if let Some(bg) = resolve_override_slot_opt(
+                                    item_background_override.as_ref(),
+                                    &default_item_background,
+                                    states,
+                                ) {
                                     props.background = Some(bg.resolve(&item_theme));
                                 }
 
-                                let border_color = item_border_color_override
-                                    .as_ref()
-                                    .and_then(|p| p.resolve(states).clone())
-                                    .or_else(|| default_item_border_color.resolve(states).clone());
-                                if let Some(border_color) = border_color {
+                                if let Some(border_color) = resolve_override_slot_opt(
+                                    item_border_color_override.as_ref(),
+                                    &default_item_border_color,
+                                    states,
+                                ) {
                                     props.border_color = Some(border_color.resolve(&item_theme));
                                 }
                                 props.layout.size = pressable_layout.size;

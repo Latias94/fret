@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize,
-    Space, WidgetStateProperty, WidgetStates, ui,
+    Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -557,21 +557,21 @@ impl Button {
 
                 let states = WidgetStates::from_pressable(cx, st, !disabled);
 
-                let bg = style_override
-                    .background
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| variant_style.background.resolve(states).clone());
-                let fg = style_override
-                    .foreground
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| variant_style.foreground.resolve(states).clone());
-                let border_color = style_override
-                    .border_color
-                    .as_ref()
-                    .and_then(|p| p.resolve(states).clone())
-                    .unwrap_or_else(|| variant_style.border_color.resolve(states).clone());
+                let bg = resolve_override_slot(
+                    style_override.background.as_ref(),
+                    &variant_style.background,
+                    states,
+                );
+                let fg = resolve_override_slot(
+                    style_override.foreground.as_ref(),
+                    &variant_style.foreground,
+                    states,
+                );
+                let border_color = resolve_override_slot(
+                    style_override.border_color.as_ref(),
+                    &variant_style.border_color,
+                    states,
+                );
 
                 let padding = if is_icon {
                     ChromeRefinement::default()

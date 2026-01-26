@@ -16,7 +16,7 @@ use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, WidgetState,
-    WidgetStateProperty, WidgetStates,
+    WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -410,28 +410,24 @@ impl RadioGroup {
                                             WidgetStates::from_pressable(cx, st, item_enabled);
                                         states.set(WidgetState::Selected, checked);
 
-                                        let border_color = style_override
-                                            .icon_border_color
-                                            .as_ref()
-                                            .and_then(|p| p.resolve(states).clone())
-                                            .unwrap_or_else(|| {
-                                                default_icon_border_color.resolve(states).clone()
-                                            })
-                                            .resolve(&theme);
-                                        let fg = style_override
-                                            .label_color
-                                            .as_ref()
-                                            .and_then(|p| p.resolve(states).clone())
-                                            .unwrap_or_else(|| default_label_color.resolve(states).clone())
-                                            .resolve(&theme);
-                                        let dot = style_override
-                                            .indicator_color
-                                            .as_ref()
-                                            .and_then(|p| p.resolve(states).clone())
-                                            .unwrap_or_else(|| {
-                                                default_indicator_color.resolve(states).clone()
-                                            })
-                                            .resolve(&theme);
+                                        let border_color = resolve_override_slot(
+                                            style_override.icon_border_color.as_ref(),
+                                            &default_icon_border_color,
+                                            states,
+                                        )
+                                        .resolve(&theme);
+                                        let fg = resolve_override_slot(
+                                            style_override.label_color.as_ref(),
+                                            &default_label_color,
+                                            states,
+                                        )
+                                        .resolve(&theme);
+                                        let dot = resolve_override_slot(
+                                            style_override.indicator_color.as_ref(),
+                                            &default_indicator_color,
+                                            states,
+                                        )
+                                        .resolve(&theme);
 
                                         let icon_layout = decl_style::layout_style(
                                             &theme,

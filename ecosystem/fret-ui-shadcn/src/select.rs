@@ -32,7 +32,7 @@ use fret_ui_kit::recipes::input::{
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, ui,
+    WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -1263,12 +1263,12 @@ fn select_impl<H: UiHost>(
                 .when(WidgetStates::FOCUS_VISIBLE, highlight.clone())
                 .when(WidgetStates::OPEN, highlight);
 
-            let border_color = style_for_trigger
-                .trigger_border_color
-                .as_ref()
-                .and_then(|p| p.resolve(states).clone())
-                .unwrap_or_else(|| default_border_color.resolve(states).clone())
-                .resolve(&theme);
+            let border_color = resolve_override_slot(
+                style_for_trigger.trigger_border_color.as_ref(),
+                &default_border_color,
+                states,
+            )
+            .resolve(&theme);
 
             let mut props = PressableProps {
                 layout: trigger_layout,
@@ -2161,18 +2161,18 @@ fn select_impl<H: UiHost>(
                                                                                             ColorRef::Color(alpha_mul(fg_muted, 0.8)),
                                                                                         );
 
-                                                                                    let bg = style_for_item
-                                                                                        .option_background
-                                                                                        .as_ref()
-                                                                                        .and_then(|p| p.resolve(states).clone())
-                                                                                        .unwrap_or_else(|| default_bg.resolve(states).clone())
-                                                                                        .resolve(&theme);
-                                                                                    let fg = style_for_item
-                                                                                        .option_foreground
-                                                                                        .as_ref()
-                                                                                        .and_then(|p| p.resolve(states).clone())
-                                                                                        .unwrap_or_else(|| default_fg.resolve(states).clone())
-                                                                                        .resolve(&theme);
+                                                                                    let bg = resolve_override_slot(
+                                                                                        style_for_item.option_background.as_ref(),
+                                                                                        &default_bg,
+                                                                                        states,
+                                                                                    )
+                                                                                    .resolve(&theme);
+                                                                                    let fg = resolve_override_slot(
+                                                                                        style_for_item.option_foreground.as_ref(),
+                                                                                        &default_fg,
+                                                                                        states,
+                                                                                    )
+                                                                                    .resolve(&theme);
 
                                                                                     let icon = decl_icon::icon_with(
                                                                                         cx,

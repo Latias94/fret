@@ -13,7 +13,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, ui,
+    WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt, ui,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -896,25 +896,25 @@ impl Tabs {
                                             WidgetStates::from_pressable(cx, st, !item_disabled);
                                         states.set(WidgetState::Selected, active);
 
-                                        let fg_ref = style_override
-                                            .trigger_foreground
-                                            .as_ref()
-                                            .and_then(|p| p.resolve(states).clone())
-                                            .unwrap_or_else(|| default_trigger_fg.resolve(states).clone());
+                                        let fg_ref = resolve_override_slot(
+                                            style_override.trigger_foreground.as_ref(),
+                                            &default_trigger_fg,
+                                            states,
+                                        );
                                         let fg = fg_ref.resolve(&theme);
-                                        let bg = style_override
-                                            .trigger_background
-                                            .as_ref()
-                                            .and_then(|p| p.resolve(states).clone())
-                                            .or_else(|| default_trigger_bg.resolve(states).clone())
-                                            .map(|bg| bg.resolve(&theme));
-                                        let border = style_override
-                                            .trigger_border_color
-                                            .as_ref()
-                                            .and_then(|p| p.resolve(states).clone())
-                                            .or_else(|| default_trigger_border.resolve(states).clone())
-                                            .map(|border| border.resolve(&theme))
-                                            .unwrap_or(Color::TRANSPARENT);
+                                        let bg = resolve_override_slot_opt(
+                                            style_override.trigger_background.as_ref(),
+                                            &default_trigger_bg,
+                                            states,
+                                        )
+                                        .map(|bg| bg.resolve(&theme));
+                                        let border = resolve_override_slot_opt(
+                                            style_override.trigger_border_color.as_ref(),
+                                            &default_trigger_border,
+                                            states,
+                                        )
+                                        .map(|border| border.resolve(&theme))
+                                        .unwrap_or(Color::TRANSPARENT);
 
                                         let props = PressableProps {
                                             layout: trigger_layout,
