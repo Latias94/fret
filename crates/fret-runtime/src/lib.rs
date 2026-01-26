@@ -4,6 +4,7 @@ pub mod commands;
 pub mod docking_settings;
 pub mod drag;
 pub mod effect;
+pub mod execution;
 pub mod font_bootstrap;
 pub mod font_catalog;
 pub mod font_catalog_cache;
@@ -27,7 +28,8 @@ pub mod window_menu_bar_focus;
 pub mod window_metrics;
 
 pub use capabilities::{
-    ExternalDragPayloadKind, ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
+    ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
+    ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
 };
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
@@ -37,6 +39,7 @@ pub use docking_settings::{
 };
 pub use drag::{DRAG_KIND_DOCK_PANEL, DragKindId, DragPhase, DragSession, DragSessionId};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+pub use execution::{DispatchPriority, Dispatcher, DispatcherHandle, Runnable};
 pub use font_bootstrap::{FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font_catalog_update};
 pub use font_catalog::{FontCatalog, TextFontStackKey};
 pub use font_catalog_cache::FontCatalogCache;

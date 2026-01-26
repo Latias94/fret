@@ -52,6 +52,7 @@ mod app_handler;
 mod diag_bundle_screenshots;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
+mod dispatcher;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
@@ -61,6 +62,7 @@ mod windows_menu;
 
 use super::streaming_upload::StreamingUploadQueue;
 use diag_bundle_screenshots::DiagBundleScreenshotCapture;
+use dispatcher::DesktopDispatcher;
 use no_services::NoUiServices;
 use renderdoc_capture::RenderDocCapture;
 
@@ -868,6 +870,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     pub config: WinitRunnerConfig,
     pub app: App,
     pub driver: D,
+    dispatcher: DesktopDispatcher,
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
 
@@ -1965,12 +1968,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         tracing::info!(caps = ?caps, "platform capabilities");
 
+        let dispatcher = DesktopDispatcher::new(caps.exec);
+        app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
+
         #[cfg(feature = "hotpatch-subsecond")]
         let now = Instant::now();
         Self {
             config,
             app,
             driver,
+            dispatcher,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
             renderdoc: None,
@@ -2017,6 +2024,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
         {
+            caps.exec.background_work = fret_runtime::ExecBackgroundWork::Threads;
+            caps.exec.wake = fret_runtime::ExecWake::Reliable;
+            caps.exec.timers = fret_runtime::ExecTimers::Reliable;
+
             caps.ui.multi_window = true;
             caps.ui.window_tear_off = true;
             caps.ui.cursor_icons = true;
@@ -2050,6 +2061,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         #[cfg(target_arch = "wasm32")]
         {
+            caps.exec.background_work = fret_runtime::ExecBackgroundWork::Cooperative;
+            caps.exec.wake = fret_runtime::ExecWake::BestEffort;
+            caps.exec.timers = fret_runtime::ExecTimers::BestEffort;
+
             caps.ui.multi_window = false;
             caps.ui.window_tear_off = false;
             caps.ui.cursor_icons = false;
@@ -2075,6 +2090,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
+            caps.exec.background_work = fret_runtime::ExecBackgroundWork::Threads;
+            caps.exec.wake = fret_runtime::ExecWake::Reliable;
+            caps.exec.timers = fret_runtime::ExecTimers::Reliable;
+
             caps.ui.multi_window = false;
             caps.ui.window_tear_off = false;
             caps.ui.cursor_icons = false;
@@ -2107,6 +2126,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     ) -> PlatformCapabilities {
         let available = Self::backend_platform_capabilities(config);
         let mut caps = requested.clone();
+
+        caps.exec.background_work = caps
+            .exec
+            .background_work
+            .clamp_to_available(available.exec.background_work);
+        caps.exec.wake = caps.exec.wake.clamp_to_available(available.exec.wake);
+        caps.exec.timers = caps.exec.timers.clamp_to_available(available.exec.timers);
 
         caps.ui.multi_window &= available.ui.multi_window;
         caps.ui.window_tear_off &= available.ui.window_tear_off;
@@ -2159,6 +2185,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         windows_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         #[cfg(target_os = "macos")]
         macos_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
+        self.dispatcher.set_event_loop_proxy(proxy.clone());
         self.event_loop_proxy = Some(proxy);
     }
 
@@ -2924,6 +2951,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         for _ in 0..MAX_EFFECT_DRAIN_TURNS {
             let now = Instant::now();
+            let mut did_work = self.dispatcher.drain_turn(now);
             let effects = self.app.flush_effects();
             let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
                 self.frame_id,
@@ -2956,7 +2984,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             }
 
-            let mut did_work = self.poll_hotpatch_trigger(now);
+            did_work |= self.poll_hotpatch_trigger(now);
             did_work |= !effects.is_empty();
             let mut window_state_dirty: HashSet<fret_core::AppWindowId> = HashSet::new();
 

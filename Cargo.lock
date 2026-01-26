@@ -1123,6 +1123,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-executor"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "fret-fonts"
 version = "0.1.0"
 

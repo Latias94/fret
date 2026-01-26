@@ -210,6 +210,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     fn effective_platform_capabilities(requested: &PlatformCapabilities) -> PlatformCapabilities {
         let mut available = PlatformCapabilities::default();
+        available.exec.background_work = fret_runtime::ExecBackgroundWork::Cooperative;
+        available.exec.wake = fret_runtime::ExecWake::BestEffort;
+        available.exec.timers = fret_runtime::ExecTimers::BestEffort;
+
         available.ui.multi_window = false;
         available.ui.window_tear_off = false;
         available.ui.cursor_icons = true;
@@ -227,6 +231,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.gfx.webgpu = true;
 
         let mut caps = requested.clone();
+        caps.exec.background_work = caps
+            .exec
+            .background_work
+            .clamp_to_available(available.exec.background_work);
+        caps.exec.wake = caps.exec.wake.clamp_to_available(available.exec.wake);
+        caps.exec.timers = caps.exec.timers.clamp_to_available(available.exec.timers);
+
         caps.ui.multi_window &= available.ui.multi_window;
         caps.ui.window_tear_off &= available.ui.window_tear_off;
         caps.ui.cursor_icons &= available.ui.cursor_icons;

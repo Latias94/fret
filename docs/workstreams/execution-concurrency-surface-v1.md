@@ -37,9 +37,9 @@ Status legend:
 
 ### Phase 1 (desktop runner + golden path)
 
-- `[ ]` `Dispatcher` trait: define minimal portable surface (target: `crates/fret-runtime`)
-- `[ ]` Desktop impl: implement `Dispatcher` in the desktop runner (target: `crates/fret-launch`)
-- `[ ]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`)
+- `[x]` `Dispatcher` trait: define minimal portable surface (target: `crates/fret-runtime`, implemented at `crates/fret-runtime/src/execution.rs`)
+- `[x]` Desktop impl: implement `Dispatcher` in the desktop runner (target: `crates/fret-launch`, implemented at `crates/fret-launch/src/runner/desktop/dispatcher.rs`)
+- `[x]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`, implemented as `ecosystem/fret-executor`)
 - `[ ]` Driver boundary: wire inbox draining + redraw scheduling into the golden path driver (target: `ecosystem/fret-bootstrap`)
 - `[ ]` Observability: add tracing spans for dispatch/wake/drain points
 - `[ ]` Safety: document + test shutdown behavior (no UI callbacks after shutdown/hot reload)
@@ -80,8 +80,8 @@ Sketch:
   - `fn dispatch_on_main_thread(&self, task: Runnable)`
   - `fn dispatch_background(&self, task: Runnable, priority: Priority)`
   - `fn dispatch_after(&self, delay: Duration, task: Runnable)`
-  - `fn wake(&self)`
-  - `fn capabilities(&self) -> ExecCapabilities` (optional; may be integrated into `PlatformCapabilities`)
+  - `fn wake(&self, window: Option<AppWindowId>)`
+  - `fn exec_capabilities(&self) -> ExecCapabilities` (optional; may be integrated into `PlatformCapabilities`)
 
 Notes:
 

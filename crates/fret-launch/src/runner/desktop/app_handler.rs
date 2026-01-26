@@ -1196,6 +1196,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             });
         }
 
+        if let Some(deadline) = self.dispatcher.next_deadline() {
+            next_deadline = Some(match next_deadline {
+                Some(cur) => cur.min(deadline),
+                None => deadline,
+            });
+        }
+
         if let Some(deadline) = self.next_pending_front_deadline() {
             next_deadline = Some(match next_deadline {
                 Some(cur) => cur.min(deadline),
