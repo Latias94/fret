@@ -262,7 +262,8 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     - [x] Avoid view-cache rerenders on scroll-handle `HitTestOnly` invalidations (rerender only on `Layout` invalidations with `detail=ScrollHandle`).
     - [x] Trigger a one-shot rerender when the desired visible range escapes the mounted range (avoid per-frame rerenders but keep virtualization correct under wheel scroll).
     - [x] Move visible-range escape detection toward the runtime dispatch path (GPUI-style "range delta" gate), so scroll-handle changes can schedule a one-shot rerender even when the VirtualList widget does not handle the event directly.
-    - [ ] Use contained-relayout cache-root hotspot diagnostics to reduce post-pass contained relayouts during steady scroll (target: `cache.contained_relayout_roots` stays near 0 for smooth-wheel frames under view-cache + shell).
+    - [x] Use contained-relayout cache-root hotspot diagnostics to reduce post-pass contained relayouts during steady scroll (target: `cache.contained_relayout_roots` stays near 0 for smooth-wheel frames under view-cache + shell).
+      - Evidence: in `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json` with `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, contained relayout is only observed on the two wheel frames where the mounted range escapes the overscan window (typical run: 2/18 snapshots; max 2 roots), e.g. `target/fret-diag-perf-vlist-smooth-cache-shell-r3/*-script-step-0023-wheel/bundle.json`.
     - [~] Move `scroll_to_item` consumption earlier than layout where possible (fixed-mode early consumption; measured-mode still consumed during final layout).
     - [x] Repeat the perf runs (baseline vs cache+shell) and update the p50/p95 snapshots after each structural change (see run dirs above).
   - Sketch (target shape):
