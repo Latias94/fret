@@ -1,5 +1,6 @@
 use std::{
     collections::VecDeque,
+    sync::atomic::{AtomicBool, Ordering},
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -26,6 +27,7 @@ pub(super) struct WebDispatcher {
 
 struct WebDispatcherInner {
     exec: ExecCapabilities,
+    alive: Arc<AtomicBool>,
     event_loop_proxy: Arc<Mutex<Option<EventLoopProxy>>>,
     main_queue: Arc<Mutex<VecDeque<Runnable>>>,
 }
@@ -35,6 +37,7 @@ impl WebDispatcher {
         Self {
             inner: Arc::new(WebDispatcherInner {
                 exec,
+                alive: Arc::new(AtomicBool::new(true)),
                 event_loop_proxy: Arc::new(Mutex::new(None)),
                 main_queue: Arc::new(Mutex::new(VecDeque::new())),
             }),
@@ -51,7 +54,21 @@ impl WebDispatcher {
         }
     }
 
+    pub(super) fn shutdown(&self) {
+        self.inner.alive.store(false, Ordering::SeqCst);
+
+        if let Ok(mut proxy) = self.inner.event_loop_proxy.lock() {
+            *proxy = None;
+        }
+        if let Ok(mut q) = self.inner.main_queue.lock() {
+            q.clear();
+        }
+    }
+
     pub(super) fn drain_turn(&self) -> bool {
+        if !self.inner.alive.load(Ordering::SeqCst) {
+            return false;
+        }
         let mut tasks: Vec<Runnable> = Vec::new();
         if let Ok(mut q) = self.inner.main_queue.lock() {
             tasks.extend(q.drain(..));
@@ -70,6 +87,9 @@ impl WebDispatcher {
 
 impl Dispatcher for WebDispatcherInner {
     fn dispatch_on_main_thread(&self, task: Runnable) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         if let Ok(mut q) = self.main_queue.lock() {
             q.push_back(task);
         }
@@ -77,20 +97,30 @@ impl Dispatcher for WebDispatcherInner {
     }
 
     fn dispatch_background(&self, task: Runnable, _priority: DispatchPriority) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         wasm_bindgen_futures::spawn_local(async move {
             task();
         });
     }
 
     fn dispatch_after(&self, delay: Duration, task: Runnable) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         let Some(window) = window() else {
             return;
         };
 
         let main_queue = self.main_queue.clone();
         let event_loop_proxy = self.event_loop_proxy.clone();
+        let alive = self.alive.clone();
 
         let callback = Closure::once_into_js(move || {
+            if !alive.load(Ordering::SeqCst) {
+                return;
+            }
             if let Ok(mut q) = main_queue.lock() {
                 q.push_back(task);
             }
@@ -108,6 +138,9 @@ impl Dispatcher for WebDispatcherInner {
     }
 
     fn wake(&self, _window: Option<fret_core::AppWindowId>) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         let Ok(proxy) = self.event_loop_proxy.lock() else {
             return;
         };

@@ -212,6 +212,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         self.exiting = true;
+        self.dispatcher.shutdown();
         self.web_cursor.take();
         event_loop.exit();
         true
@@ -1301,6 +1302,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
                         self.exiting = true;
+                        self.dispatcher.shutdown();
                         self.web_cursor.take();
                         event_loop.exit();
                         return true;
@@ -1309,6 +1311,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 },
                 Effect::QuitApp => {
                     self.exiting = true;
+                    self.dispatcher.shutdown();
                     self.web_cursor.take();
                     event_loop.exit();
                     return true;

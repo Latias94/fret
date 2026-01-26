@@ -3057,6 +3057,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             let _ = self.force_close_window(window);
                         }
 
+                        self.dispatcher.shutdown();
                         event_loop.exit();
                         return;
                     }
@@ -3710,11 +3711,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 for window in windows {
                                     let _ = self.force_close_window(window);
                                 }
+                                self.dispatcher.shutdown();
                                 event_loop.exit();
                                 return;
                             }
 
                             if self.windows.is_empty() {
+                                self.dispatcher.shutdown();
                                 event_loop.exit();
                                 return;
                             }

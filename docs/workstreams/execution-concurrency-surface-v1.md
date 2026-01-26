@@ -42,7 +42,7 @@ Status legend:
 - `[x]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`, implemented as `ecosystem/fret-executor`)
 - `[x]` Driver boundary: drain inboxes at runner flush points via `InboxDrainRegistry` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`, web: `crates/fret-launch/src/runner/web.rs`)
 - `[ ]` Observability: add tracing spans for dispatch/wake/drain points
-- `[ ]` Safety: document + test shutdown behavior (no UI callbacks after shutdown/hot reload)
+- `[~]` Safety: document + test shutdown behavior (dispatcher shutdown fences implemented; remaining: background cancellation + hot reload boundaries)
 
 ### Phase 2 (wasm mapping)
 

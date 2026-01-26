@@ -1,5 +1,6 @@
 use std::{
     collections::VecDeque,
+    sync::atomic::{AtomicBool, Ordering},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -14,6 +15,7 @@ pub(super) struct DesktopDispatcher {
 
 struct DesktopDispatcherInner {
     exec: ExecCapabilities,
+    alive: AtomicBool,
     event_loop_proxy: Mutex<Option<EventLoopProxy>>,
     main_queue: Mutex<VecDeque<Runnable>>,
     delayed: Mutex<Vec<DelayedTask>>,
@@ -29,6 +31,7 @@ impl DesktopDispatcher {
         Self {
             inner: Arc::new(DesktopDispatcherInner {
                 exec,
+                alive: AtomicBool::new(true),
                 event_loop_proxy: Mutex::new(None),
                 main_queue: Mutex::new(VecDeque::new()),
                 delayed: Mutex::new(Vec::new()),
@@ -40,6 +43,21 @@ impl DesktopDispatcher {
         self.inner.clone()
     }
 
+    pub(super) fn shutdown(&self) {
+        self.inner.alive.store(false, Ordering::SeqCst);
+
+        if let Ok(mut proxy) = self.inner.event_loop_proxy.lock() {
+            *proxy = None;
+        }
+
+        if let Ok(mut delayed) = self.inner.delayed.lock() {
+            delayed.clear();
+        }
+        if let Ok(mut queue) = self.inner.main_queue.lock() {
+            queue.clear();
+        }
+    }
+
     pub(super) fn set_event_loop_proxy(&self, proxy: EventLoopProxy) {
         if let Ok(mut slot) = self.inner.event_loop_proxy.lock() {
             *slot = Some(proxy);
@@ -47,6 +65,9 @@ impl DesktopDispatcher {
     }
 
     pub(super) fn next_deadline(&self) -> Option<Instant> {
+        if !self.inner.alive.load(Ordering::SeqCst) {
+            return None;
+        }
         let Ok(tasks) = self.inner.delayed.lock() else {
             return None;
         };
@@ -54,6 +75,9 @@ impl DesktopDispatcher {
     }
 
     pub(super) fn drain_turn(&self, now: Instant) -> bool {
+        if !self.inner.alive.load(Ordering::SeqCst) {
+            return false;
+        }
         let mut ready: Vec<Runnable> = Vec::new();
 
         if let Ok(mut delayed) = self.inner.delayed.lock() {
@@ -86,6 +110,9 @@ impl DesktopDispatcher {
 
 impl Dispatcher for DesktopDispatcherInner {
     fn dispatch_on_main_thread(&self, task: Runnable) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         if let Ok(mut queue) = self.main_queue.lock() {
             queue.push_back(task);
         }
@@ -93,10 +120,16 @@ impl Dispatcher for DesktopDispatcherInner {
     }
 
     fn dispatch_background(&self, task: Runnable, _priority: DispatchPriority) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         std::thread::spawn(task);
     }
 
     fn dispatch_after(&self, delay: Duration, task: Runnable) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         let deadline = Instant::now() + delay;
         if let Ok(mut delayed) = self.delayed.lock() {
             delayed.push(DelayedTask { deadline, task });
@@ -105,6 +138,9 @@ impl Dispatcher for DesktopDispatcherInner {
     }
 
     fn wake(&self, _window: Option<fret_core::AppWindowId>) {
+        if !self.alive.load(Ordering::SeqCst) {
+            return;
+        }
         let Ok(proxy) = self.event_loop_proxy.lock() else {
             return;
         };
@@ -116,5 +152,73 @@ impl Dispatcher for DesktopDispatcherInner {
 
     fn exec_capabilities(&self) -> ExecCapabilities {
         self.exec
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn shutdown_prevents_future_dispatch_and_draining() {
+        let dispatcher = DesktopDispatcher::new(ExecCapabilities::default());
+        let ran = Arc::new(AtomicUsize::new(0));
+
+        {
+            let ran = ran.clone();
+            dispatcher
+                .handle()
+                .dispatch_on_main_thread(Box::new(move || {
+                    ran.fetch_add(1, Ordering::SeqCst);
+                }));
+        }
+        assert!(dispatcher.drain_turn(Instant::now()));
+        assert_eq!(ran.load(Ordering::SeqCst), 1);
+
+        dispatcher.shutdown();
+
+        {
+            let ran = ran.clone();
+            dispatcher
+                .handle()
+                .dispatch_on_main_thread(Box::new(move || {
+                    ran.fetch_add(1, Ordering::SeqCst);
+                }));
+        }
+        assert!(!dispatcher.drain_turn(Instant::now()));
+        assert_eq!(ran.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn shutdown_prevents_dispatch_after_callbacks() {
+        let dispatcher = DesktopDispatcher::new(ExecCapabilities::default());
+        let ran = Arc::new(AtomicUsize::new(0));
+
+        {
+            let ran = ran.clone();
+            dispatcher.handle().dispatch_after(
+                Duration::from_millis(0),
+                Box::new(move || {
+                    ran.fetch_add(1, Ordering::SeqCst);
+                }),
+            );
+        }
+        assert!(dispatcher.drain_turn(Instant::now()));
+        assert_eq!(ran.load(Ordering::SeqCst), 1);
+
+        dispatcher.shutdown();
+
+        {
+            let ran = ran.clone();
+            dispatcher.handle().dispatch_after(
+                Duration::from_millis(0),
+                Box::new(move || {
+                    ran.fetch_add(1, Ordering::SeqCst);
+                }),
+            );
+        }
+        assert!(!dispatcher.drain_turn(Instant::now()));
+        assert_eq!(ran.load(Ordering::SeqCst), 1);
     }
 }
