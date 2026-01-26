@@ -109,6 +109,207 @@ fn virtual_list_computes_visible_range_after_first_layout() {
 }
 
 #[test]
+fn virtual_list_can_scroll_to_deep_index_then_to_end() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        list_element_id: &mut Option<crate::elements::GlobalElementId>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let list = cx.virtual_list(
+            10_000,
+            crate::element::VirtualListOptions::new(Px(10.0), 0),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                    .collect::<Vec<_>>()
+            },
+        );
+        *list_element_id = Some(list.id);
+        list
+    }
+
+    // Frame 0: establish viewport size.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 1: compute visible range for offset=0.
+    app.advance_frame();
+    let prev_list_element_id = list_element_id;
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(prev_list_element_id, list_element_id);
+
+    let list_node = ui.children(root)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4]
+    );
+
+    scroll_handle.scroll_to_item(9000, crate::scroll::ScrollStrategy::Start);
+
+    // Frame 2: consume the deferred scroll request during layout.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 3: render the updated visible range.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let list_node = ui.children(root)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert!(props.visible_items.iter().any(|item| item.index == 9000));
+
+    scroll_handle.scroll_to_item(9999, crate::scroll::ScrollStrategy::Start);
+    assert_eq!(
+        scroll_handle.deferred_scroll_to_item(),
+        Some((9999, crate::scroll::ScrollStrategy::Start)),
+        "scroll_to_item should record a deferred request until the next layout pass consumes it"
+    );
+
+    // Frame 4: consume the deferred scroll request during layout.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "layout pass should consume the deferred scroll request"
+    );
+
+    // Frame 5: render the updated visible range.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let list_node = ui.children(root)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    if !props.visible_items.iter().any(|item| item.index == 9999) {
+        let indices: Vec<usize> = props.visible_items.iter().map(|item| item.index).collect();
+        let list_element_id = list_element_id.expect("list element id");
+        let (state_items_len, state_offset_y, state_total_height) =
+            crate::elements::with_element_state(
+                &mut app,
+                window,
+                list_element_id,
+                crate::element::VirtualListState::default,
+                |s| (s.items_len, s.offset_y, s.metrics.total_height()),
+            );
+        panic!(
+            "expected to be able to scroll to the final item after scrolling to a deep index; visible={indices:?} state.items_len={state_items_len} state.offset_y={state_offset_y:?} state.total_height={state_total_height:?}"
+        );
+    }
+}
+
+#[test]
 fn virtual_list_computes_visible_range_after_first_layout_horizontal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
