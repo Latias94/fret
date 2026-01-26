@@ -146,6 +146,12 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     // Default typography scales used across shadcn recipes (via fret-ui-kit helpers).
     // These are also accessed directly by some components (e.g. Calendar) via `metric_required`.
     metrics
+        .entry(theme_tokens::metric::COMPONENT_TEXT_XS_PX.to_string())
+        .or_insert(12.0);
+    metrics
+        .entry(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT.to_string())
+        .or_insert(16.0);
+    metrics
         .entry(theme_tokens::metric::COMPONENT_TEXT_SM_PX.to_string())
         .or_insert(14.0);
     metrics
@@ -297,6 +303,11 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     if let Some(ring) = colors.get("ring").cloned() {
         if let Some(ring_50) = with_oklch_alpha(&ring, 0.5) {
             colors.insert("ring/50".to_string(), ring_50);
+        }
+    }
+    if let Some(border) = colors.get("border").cloned() {
+        if let Some(border_50) = with_oklch_alpha(&border, 0.5) {
+            colors.insert("border/50".to_string(), border_50);
         }
     }
     if let Some(destructive) = colors.get("destructive").cloned() {

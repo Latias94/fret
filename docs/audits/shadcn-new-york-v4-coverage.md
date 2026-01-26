@@ -31,8 +31,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `372` (`83.0%`)
-- Keys not referenced by tests: `76`
+- Keys referenced by tests: `375` (`83.7%`)
+- Keys not referenced by tests: `73`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -42,7 +42,7 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 At the time of writing, the largest missing groups were:
 
-- `chart` (76 variants; high surface area)
+- `chart` (73 variants; high surface area)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):

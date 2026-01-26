@@ -24070,3 +24070,90 @@ fn web_vs_fret_layout_dashboard_01_shell_geometry_matches_web() {
     .expect("fret dashboard header");
     assert_rect_close_px("dashboard-01 header", header.bounds, web_header.rect, 1.0);
 }
+
+fn assert_chart_tooltip_rect_matches_web(
+    web_name: &str,
+    indicator: fret_ui_shadcn::ChartTooltipIndicator,
+    hide_indicator: bool,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_tooltip = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && class_has_token(n, "border-border/50")
+            && class_has_token(n, "bg-background")
+            && class_has_token(n, "shadow-xl")
+            && class_has_token(n, "min-w-[8rem]")
+    })
+    .expect("web chart tooltip node");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = Arc::<str>::from(format!("Golden:{web_name}:tooltip"));
+
+    let snap = run_fret_root(bounds, |cx| {
+        let tooltip = fret_ui_shadcn::ChartTooltipContent::new()
+            .label("Tue")
+            .indicator(indicator)
+            .hide_indicator(hide_indicator)
+            .items([
+                fret_ui_shadcn::ChartTooltipItem::new("Running", "380"),
+                fret_ui_shadcn::ChartTooltipItem::new("Swimming", "420"),
+            ])
+            .into_element(cx);
+
+        let tooltip = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                    layout.inset.left = Some(Px(web_tooltip.rect.x));
+                    layout.inset.top = Some(Px(web_tooltip.rect.y));
+                    layout
+                },
+                role: SemanticsRole::Panel,
+                label: Some(label.clone()),
+                ..Default::default()
+            },
+            move |_cx| vec![tooltip],
+        );
+
+        vec![tooltip]
+    });
+
+    let tooltip = find_semantics(&snap, SemanticsRole::Panel, Some(&label))
+        .unwrap_or_else(|| panic!("missing fret chart tooltip semantics for {web_name}"));
+
+    assert_rect_close_px(web_name, tooltip.bounds, web_tooltip.rect, 1.0);
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_default_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-default",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_indicator_line_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-indicator-line",
+        fret_ui_shadcn::ChartTooltipIndicator::Line,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_indicator_none_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-indicator-none",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        true,
+    );
+}

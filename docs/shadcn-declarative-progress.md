@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `372/448` (`83.0%`)
-- Next P0 gaps: `chart-*` sprint (76 variants).
+- Keys referenced by tests: `375/448` (`83.7%`)
+- Next P0 gaps: `chart-*` sprint (73 variants).
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 

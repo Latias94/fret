@@ -15,7 +15,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `372/448` keys referenced (`83.0%`)
+- shadcn-web `v4/new-york-v4`: `375/448` keys referenced (`83.7%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -47,12 +47,13 @@ Recent breadth wins:
 - **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
 - **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
+- **Chart tooltip wrapper**: initial `chart-tooltip-*` panel geometry gates (min-width + padding + line-height outcomes).
 
 ### Largest remaining gaps (by golden family)
 
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
-- `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
+- `chart` (73 variants): large surface area; likely needs a dedicated alignment push.
 
 ### Recommended next alignment targets (P0 order)
 
