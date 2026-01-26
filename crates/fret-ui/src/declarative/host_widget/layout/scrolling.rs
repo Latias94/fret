@@ -96,27 +96,6 @@ impl ElementHostWidget {
         if (prev_offset_axis.0 - offset.0).abs() > 0.01 {
             needs_redraw = true;
         }
-        match axis {
-            fret_core::Axis::Vertical => {
-                props
-                    .scroll_handle
-                    .set_offset_internal(fret_core::Point::new(prev_offset.x, offset));
-            }
-            fret_core::Axis::Horizontal => {
-                props
-                    .scroll_handle
-                    .set_offset_internal(fret_core::Point::new(offset, prev_offset.y));
-            }
-        }
-
-        props
-            .scroll_handle
-            .set_viewport_size(Size::new(size.width, size.height));
-        let content_size = match axis {
-            fret_core::Axis::Vertical => Size::new(size.width, content_extent),
-            fret_core::Axis::Horizontal => Size::new(content_extent, size.height),
-        };
-        props.scroll_handle.set_content_size(content_size);
 
         let anchor = metrics
             .visible_range(offset, viewport, 0)
@@ -188,29 +167,12 @@ impl ElementHostWidget {
                         && let (Some(anchor), Some(anchor_offset_in_viewport)) =
                             (anchor, anchor_offset_in_viewport)
                     {
+                        let prev_offset = offset;
                         let desired =
                             Px(metrics.offset_for_index(anchor).0 + anchor_offset_in_viewport.0);
                         offset = metrics.clamp_offset(desired, viewport);
-
-                        let prev = props.scroll_handle.offset();
-                        let prev_axis = match axis {
-                            fret_core::Axis::Vertical => prev.y,
-                            fret_core::Axis::Horizontal => prev.x,
-                        };
-                        if (prev_axis.0 - offset.0).abs() > 0.01 {
+                        if (prev_offset.0 - offset.0).abs() > 0.01 {
                             needs_redraw = true;
-                        }
-                        match axis {
-                            fret_core::Axis::Vertical => {
-                                props
-                                    .scroll_handle
-                                    .set_offset_internal(fret_core::Point::new(prev.x, offset));
-                            }
-                            fret_core::Axis::Horizontal => {
-                                props
-                                    .scroll_handle
-                                    .set_offset_internal(fret_core::Point::new(offset, prev.y));
-                            }
                         }
                     }
                 }
@@ -227,20 +189,16 @@ impl ElementHostWidget {
         let content_extent = metrics.total_height();
         props
             .scroll_handle
-            .set_viewport_size(Size::new(size.width, size.height));
+            .set_viewport_size_internal(Size::new(size.width, size.height));
         let content_size = match axis {
             fret_core::Axis::Vertical => Size::new(size.width, content_extent),
             fret_core::Axis::Horizontal => Size::new(content_extent, size.height),
         };
-        props.scroll_handle.set_content_size(content_size);
+        props.scroll_handle.set_content_size_internal(content_size);
 
         let prev_offset = props.scroll_handle.offset();
-        let prev_axis = match axis {
-            fret_core::Axis::Vertical => prev_offset.y,
-            fret_core::Axis::Horizontal => prev_offset.x,
-        };
-        let clamped = metrics.clamp_offset(prev_axis, viewport);
-        if (clamped.0 - prev_axis.0).abs() > 0.01 {
+        let clamped = metrics.clamp_offset(offset, viewport);
+        if (clamped.0 - offset.0).abs() > 0.01 {
             needs_redraw = true;
         }
         match axis {
@@ -417,8 +375,8 @@ impl ElementHostWidget {
                     .unwrap_or(&state.scroll_handle)
                     .clone();
                 if !is_probe_layout {
-                    handle.set_viewport_size(desired);
-                    handle.set_content_size(Size::new(content_w, content_h));
+                    handle.set_viewport_size_internal(desired);
+                    handle.set_content_size_internal(Size::new(content_w, content_h));
                     let prev = handle.offset();
                     handle.set_offset_internal(prev);
                 }
