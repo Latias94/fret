@@ -111,6 +111,11 @@ Each TODO is labeled:
     - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_remains_click_through`)
     - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_disables_safe_hover_observers_and_timers`)
 
+- [x] OIA2-test-020 Focus-outside dismissal can be prevented (Radix `onFocusOutside` parity).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_focus_outside_can_be_prevented_via_dismiss_handler`)
+    - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_focus_outside_can_be_prevented_via_dismiss_handler`)
+
 - [x] OIA2-test-013 Close transition disables pointer-move observers and timers (combobox popover).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/combobox.rs` (`combobox_close_transition_disables_pointer_move_and_timer_events`)
