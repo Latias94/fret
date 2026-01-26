@@ -24075,6 +24075,7 @@ fn assert_chart_tooltip_rect_matches_web(
     web_name: &str,
     indicator: fret_ui_shadcn::ChartTooltipIndicator,
     hide_indicator: bool,
+    hide_label: bool,
 ) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -24100,6 +24101,7 @@ fn assert_chart_tooltip_rect_matches_web(
             .label("Tue")
             .indicator(indicator)
             .hide_indicator(hide_indicator)
+            .hide_label(hide_label)
             .items([
                 fret_ui_shadcn::ChartTooltipItem::new("Running", "380"),
                 fret_ui_shadcn::ChartTooltipItem::new("Swimming", "420"),
@@ -24199,6 +24201,7 @@ fn web_vs_fret_layout_chart_tooltip_default_geometry_matches_web() {
         "chart-tooltip-default",
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         false,
+        false,
     );
 }
 
@@ -24207,6 +24210,7 @@ fn web_vs_fret_layout_chart_tooltip_indicator_line_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-indicator-line",
         fret_ui_shadcn::ChartTooltipIndicator::Line,
+        false,
         false,
     );
 }
@@ -24217,6 +24221,47 @@ fn web_vs_fret_layout_chart_tooltip_indicator_none_geometry_matches_web() {
         "chart-tooltip-indicator-none",
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         true,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_label_none_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-label-none",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        true,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_icons_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-icons",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        true,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_label_custom_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-label-custom",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        false,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_label_formatter_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-label-formatter",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        false,
     );
 }
 
