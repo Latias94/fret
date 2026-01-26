@@ -2436,7 +2436,7 @@ impl<H: UiHost> UiTree<H> {
 
     #[track_caller]
     pub(crate) fn set_children_in_mount(&mut self, parent: NodeId, children: Vec<NodeId>) {
-        let Some(old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
+        if self.nodes.get(parent).is_none() {
             return;
         };
 
@@ -2457,6 +2457,11 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         if self.debug_enabled {
             let location = std::panic::Location::caller();
+            let old_len = self
+                .nodes
+                .get(parent)
+                .map(|n| n.children.len())
+                .unwrap_or_default();
             let old_elements_head = self
                 .nodes
                 .get(parent)
@@ -2550,7 +2555,7 @@ impl<H: UiHost> UiTree<H> {
     /// The tree will schedule a contained relayout for `parent` during the next layout pass.
     #[track_caller]
     pub(crate) fn set_children_barrier(&mut self, parent: NodeId, children: Vec<NodeId>) {
-        let Some(old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
+        if self.nodes.get(parent).is_none() {
             return;
         };
 
@@ -2571,6 +2576,11 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         if self.debug_enabled {
             let location = std::panic::Location::caller();
+            let old_len = self
+                .nodes
+                .get(parent)
+                .map(|n| n.children.len())
+                .unwrap_or_default();
             let old_elements_head = self
                 .nodes
                 .get(parent)
