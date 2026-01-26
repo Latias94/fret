@@ -471,7 +471,7 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
       - `crates/fret-ui/src/elements/cx.rs` + `crates/fret-ui/src/element.rs` (window_range + render_window_range state)
       - Tests: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`scroll_wheel_invalidation_is_hit_test_only`, `virtual_list_wheel_scroll_is_hit_test_only_within_overscan_window`, `virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_paint_clips_each_visible_row`), `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_rerenders_on_virtual_list_scroll_to_item`), `crates/fret-ui/src/tree/tests/scroll_into_view.rs` (`focus_traversal_does_not_scroll_visible_virtual_list_descendant_into_view`)
       - Diagnostics: in an exported `ui-gallery-virtual-list-edit-9000` bundle, find a snapshot where
-        `debug.virtual_list_windows[*].deferred_scroll_consumed=true` and `window_mismatch=true`; the next snapshot should include a
+        `debug.virtual_list_windows[*].source=prepaint`, `deferred_scroll_consumed=true` and `window_mismatch=true`; the next snapshot should include a
         `debug.dirty_views` entry with `detail=scroll_handle_layout`, and `render_window_range` should match `window_range`.
       - Perf capture: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --top 10 --sort time --warmup-frames 5 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery`
         produced worst bundle `target/fret-diag/1769096169296-script-step-0011-click/bundle.json` (top.us(total/layout/prepaint/paint)=503161/476991/241/25929).
