@@ -2927,11 +2927,13 @@ struct BundleStatsInvalidationWalk {
 struct BundleStatsCacheRoot {
     root_node: u64,
     element: Option<u64>,
+    element_path: Option<String>,
     reused: bool,
     contained_layout: bool,
     contained_relayout_in_frame: bool,
     paint_replayed_ops: u32,
     reuse_reason: Option<String>,
+    root_in_semantics: Option<bool>,
     root_role: Option<String>,
     root_test_id: Option<String>,
 }
@@ -3211,6 +3213,14 @@ impl BundleStatsReport {
                         if let Some(el) = c.element {
                             s.push_str(&format!(" element={el}"));
                         }
+                        if let Some(path) = c.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            s.push_str(&format!(" path={path}"));
+                        }
+                        if let Some(in_sem) = c.root_in_semantics {
+                            s.push_str(&format!(" root_in_semantics={in_sem}"));
+                        }
                         s
                     })
                     .collect();
@@ -3241,6 +3251,14 @@ impl BundleStatsReport {
                         }
                         if let Some(el) = c.element {
                             s.push_str(&format!(" element={el}"));
+                        }
+                        if let Some(path) = c.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            s.push_str(&format!(" path={path}"));
+                        }
+                        if let Some(in_sem) = c.root_in_semantics {
+                            s.push_str(&format!(" root_in_semantics={in_sem}"));
                         }
                         s
                     })
@@ -3855,6 +3873,13 @@ impl BundleStatsReport {
                             "element".to_string(),
                             c.element.map(Value::from).unwrap_or(Value::Null),
                         );
+                        c_obj.insert(
+                            "element_path".to_string(),
+                            c.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
                         c_obj.insert("reused".to_string(), Value::from(c.reused));
                         c_obj.insert(
                             "contained_layout".to_string(),
@@ -3874,6 +3899,10 @@ impl BundleStatsReport {
                                 .clone()
                                 .map(Value::from)
                                 .unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_in_semantics".to_string(),
+                            c.root_in_semantics.map(Value::from).unwrap_or(Value::Null),
                         );
                         c_obj.insert(
                             "root_role".to_string(),
@@ -3901,6 +3930,13 @@ impl BundleStatsReport {
                             "element".to_string(),
                             c.element.map(Value::from).unwrap_or(Value::Null),
                         );
+                        c_obj.insert(
+                            "element_path".to_string(),
+                            c.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
                         c_obj.insert("reused".to_string(), Value::from(c.reused));
                         c_obj.insert(
                             "contained_layout".to_string(),
@@ -3920,6 +3956,10 @@ impl BundleStatsReport {
                                 .clone()
                                 .map(Value::from)
                                 .unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_in_semantics".to_string(),
+                            c.root_in_semantics.map(Value::from).unwrap_or(Value::Null),
                         );
                         c_obj.insert(
                             "root_role".to_string(),
@@ -5262,6 +5302,8 @@ fn snapshot_cache_root_stats(
     let mut contained_relayout: u32 = 0;
     let mut replayed_ops_sum: u64 = 0;
 
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+
     let mut out: Vec<BundleStatsCacheRoot> = roots
         .iter()
         .map(|r| {
@@ -5284,10 +5326,14 @@ fn snapshot_cache_root_stats(
             }
             replayed_ops_sum = replayed_ops_sum.saturating_add(paint_replayed_ops as u64);
 
-            let (role, test_id) = snapshot_lookup_semantics(snapshot, root_node);
+            let (role, test_id) = semantics_index.lookup_for_cache_root(root_node);
             BundleStatsCacheRoot {
                 root_node,
                 element: r.get("element").and_then(|v| v.as_u64()),
+                element_path: r
+                    .get("element_path")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
                 reused: reused_flag,
                 contained_layout: r
                     .get("contained_layout")
@@ -5299,6 +5345,7 @@ fn snapshot_cache_root_stats(
                     .get("reuse_reason")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
+                root_in_semantics: r.get("root_in_semantics").and_then(|v| v.as_bool()),
                 root_role: role,
                 root_test_id: test_id,
             }
@@ -5715,6 +5762,107 @@ fn snapshot_lookup_semantics(
         }
     }
     (None, None)
+}
+
+#[derive(Debug, Clone)]
+struct SemanticsNodeLite {
+    id: u64,
+    parent: Option<u64>,
+    role: Option<String>,
+    test_id: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct SemanticsIndex {
+    by_id: std::collections::HashMap<u64, SemanticsNodeLite>,
+    best_descendant_with_test_id: std::collections::HashMap<u64, (Option<String>, Option<String>)>,
+}
+
+impl SemanticsIndex {
+    fn from_snapshot(snapshot: &serde_json::Value) -> Self {
+        let nodes = snapshot
+            .get("debug")
+            .and_then(|v| v.get("semantics"))
+            .and_then(|v| v.get("nodes"))
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        let mut by_id: std::collections::HashMap<u64, SemanticsNodeLite> =
+            std::collections::HashMap::new();
+        by_id.reserve(nodes.len());
+
+        for n in nodes {
+            let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
+                continue;
+            };
+
+            let parent = n.get("parent").and_then(|v| v.as_u64());
+            let role = n
+                .get("role")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let test_id = n
+                .get("test_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            by_id.insert(
+                id,
+                SemanticsNodeLite {
+                    id,
+                    parent,
+                    role,
+                    test_id,
+                },
+            );
+        }
+
+        let mut best_descendant_with_test_id: std::collections::HashMap<
+            u64,
+            (Option<String>, Option<String>),
+        > = std::collections::HashMap::new();
+
+        for node in by_id.values() {
+            let Some(test_id) = node.test_id.as_deref() else {
+                continue;
+            };
+            if test_id.is_empty() {
+                continue;
+            }
+
+            let mut cursor: Option<u64> = Some(node.id);
+            let mut seen: std::collections::HashSet<u64> = std::collections::HashSet::new();
+            while let Some(id) = cursor {
+                if !seen.insert(id) {
+                    break;
+                }
+
+                best_descendant_with_test_id
+                    .entry(id)
+                    .or_insert_with(|| (node.role.clone(), node.test_id.clone()));
+
+                cursor = by_id.get(&id).and_then(|n| n.parent);
+            }
+        }
+
+        Self {
+            by_id,
+            best_descendant_with_test_id,
+        }
+    }
+
+    fn lookup_for_cache_root(&self, root_node: u64) -> (Option<String>, Option<String>) {
+        if let Some(node) = self.by_id.get(&root_node) {
+            return (node.role.clone(), node.test_id.clone());
+        }
+
+        if let Some((role, test_id)) = self.best_descendant_with_test_id.get(&root_node) {
+            return (role.clone(), test_id.clone());
+        }
+
+        (None, None)
+    }
 }
 
 #[derive(Debug, Clone)]
