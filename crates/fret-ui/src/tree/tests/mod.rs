@@ -200,6 +200,7 @@ impl<H: UiHost> Widget<H> for ClickCounter {
 mod children;
 mod command_availability;
 mod command_enabled_service;
+mod cursor_icon_query;
 mod dispatch_phase;
 mod dock_drag;
 mod escape_dismiss;

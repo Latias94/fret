@@ -898,6 +898,23 @@ pub trait Widget<H: UiHost> {
     fn children_render_transform(&self, _bounds: Rect) -> Option<Transform2D> {
         None
     }
+    /// Optional cursor icon request for a pointer position.
+    ///
+    /// This is a pure query used to build an interaction stream that can be reused on cache-hit
+    /// frames (ADR 0182). Prefer this over setting cursor icons via pointer-move event handlers
+    /// when the cursor choice is a function of the current input state only.
+    ///
+    /// The provided `position` is already mapped into this node's coordinate space (including
+    /// ancestor `render_transform` and `children_render_transform`), matching what the widget sees
+    /// during pointer event dispatch.
+    fn cursor_icon_at(
+        &self,
+        _bounds: Rect,
+        _position: Point,
+        _input_ctx: &fret_runtime::InputContext,
+    ) -> Option<fret_core::CursorIcon> {
+        None
+    }
     /// Whether hit-testing should be clipped to `bounds`.
     ///
     /// When `false`, children can receive pointer input even if they are positioned outside the

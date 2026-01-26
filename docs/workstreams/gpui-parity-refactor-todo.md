@@ -106,11 +106,12 @@ Keep this list short and evidence-backed:
 
 Goal: make hover/focus/pressed “cheap by default” and stop subtree shape thrash (ADR 0181).
 
-- [~] GPUI-MVP1-ui-001 Add debug attribution for “hover caused layout invalidation”.
+- [x] GPUI-MVP1-ui-001 Add debug attribution for “hover caused layout invalidation”.
   - Touches: `crates/fret-ui/src/tree/dispatch.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, CLI surfacing in `apps/fretboard/src/diag.rs`.
   - Progress: `bundle.json` exports hover-attributed declarative invalidation counters + top hotspots (`debug.hover_declarative_invalidation_hotspots`); `fretboard diag stats` can gate via `--check-hover-layout[(-max N)]`.
   - Progress: `fretboard diag run` / `fretboard diag suite` can enforce the same gate post-run via `--check-hover-layout-max 0`.
   - Done when: overlay torture + virtual list torture run with 0 hover-attributed layout invalidations (except explicitly whitelisted components).
+  - Evidence: both scripts pass `--check-hover-layout-max 0` (warmup 5): `target/fret-diag-hover-check-overlay/` + `target/fret-diag-hover-check-vlist/`.
 - [x] GPUI-MVP1-eco-002 Refactor top hover offenders to be structurally stable.
   - Start with: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, `ecosystem/fret-ui-shadcn/src/*scroll*`
   - Done when: no hover-driven `set_children` churn in these components (verified via diagnostics + manual UX sanity).
@@ -382,7 +383,8 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     - [x] Avoid view-cache rerenders on scroll-handle `HitTestOnly` invalidations (rerender only on `Layout` invalidations with `detail=ScrollHandle`).
     - [x] Trigger a one-shot rerender when the desired visible range escapes the mounted range (avoid per-frame rerenders but keep virtualization correct under wheel scroll).
     - [x] Move visible-range escape detection toward the runtime dispatch path (GPUI-style "range delta" gate), so scroll-handle changes can schedule a one-shot rerender even when the VirtualList widget does not handle the event directly.
-    - [ ] Use contained-relayout cache-root hotspot diagnostics to reduce post-pass contained relayouts during steady scroll (target: `cache.contained_relayout_roots` stays near 0 for smooth-wheel frames under view-cache + shell).
+    - [x] Use contained-relayout cache-root hotspot diagnostics to reduce post-pass contained relayouts during steady scroll (target: `cache.contained_relayout_roots` stays near 0 for smooth-wheel frames under view-cache + shell).
+      - Evidence: in `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json` with `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, contained relayout is only observed on the two wheel frames where the mounted range escapes the overscan window (typical run: 2/18 snapshots; max 2 roots), e.g. `target/fret-diag-perf-vlist-smooth-cache-shell-r3/*-script-step-0023-wheel/bundle.json`.
     - [~] Move `scroll_to_item` consumption earlier than layout where possible (fixed-mode early consumption; measured-mode still consumed during final layout).
     - [x] Repeat the perf runs (baseline vs cache+shell) and update the p50/p95 snapshots after each structural change (see run dirs above).
   - Sketch (target shape):
@@ -392,11 +394,13 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.
   - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-core/src/*` (data-only shapes as needed)
   - Progress: add hit-test path reuse (cached “interaction range”) as an incremental, semantics-preserving step toward replayable interaction output.
+  - Progress: add a pure cursor request hook (`Widget::cursor_icon_at`) and route pointer-move cursor updates through it when present (cursor requests are now representable without relying on pointer-move side effects).
   - Notes: reuse is currently enabled only for pointer-move dispatch; other pointer events rebuild the cache from a full hit-test pass.
   - Notes: reuse falls back to full hit-testing if the cached leaf can hit-test children (avoids stale routing when the pointer moves between descendants).
   - Evidence: `crates/fret-ui/src/tree/hit_test.rs` (`hit_test_layers_cached`, `try_hit_test_along_cached_path`),
     `crates/fret-ui/src/tree/dispatch.rs` (pointer-move-only reuse policy),
-    `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_layers_cached_reuses_path_and_respects_layer_order`).
+    `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_layers_cached_reuses_path_and_respects_layer_order`),
+    `crates/fret-ui/src/widget.rs` (`Widget::cursor_icon_at`), `crates/fret-ui/src/tree/tests/cursor_icon_query.rs`.
 - [x] GPUI-MVP3-rec-002 Add a prepaint phase that records interaction ranges (per cache root) in a replayable way.
   - Touches: `crates/fret-ui/src/tree/*`
   - Reference: `repo-ref/zed/crates/gpui/src/element.rs` (prepaint), `repo-ref/zed/crates/gpui/src/view.rs` (`reuse_prepaint`)
