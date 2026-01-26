@@ -20,9 +20,18 @@ use super::GlobalElementId;
 #[derive(Debug, Clone)]
 pub struct WindowElementDiagnosticsSnapshot {
     pub focused_element: Option<GlobalElementId>,
+    pub focused_element_node: Option<NodeId>,
+    pub focused_element_bounds: Option<Rect>,
+    pub focused_element_visual_bounds: Option<Rect>,
     pub active_text_selection: Option<(GlobalElementId, GlobalElementId)>,
     pub hovered_pressable: Option<GlobalElementId>,
+    pub hovered_pressable_node: Option<NodeId>,
+    pub hovered_pressable_bounds: Option<Rect>,
+    pub hovered_pressable_visual_bounds: Option<Rect>,
     pub pressed_pressable: Option<GlobalElementId>,
+    pub pressed_pressable_node: Option<NodeId>,
+    pub pressed_pressable_bounds: Option<Rect>,
+    pub pressed_pressable_visual_bounds: Option<Rect>,
     pub hovered_hover_region: Option<GlobalElementId>,
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
@@ -588,6 +597,13 @@ impl WindowElementState {
         self.cur_bounds.insert(element, bounds);
     }
 
+    pub(crate) fn element_nodes(&self) -> Vec<(GlobalElementId, NodeId)> {
+        self.nodes
+            .iter()
+            .map(|(&element, entry)| (element, entry.node))
+            .collect()
+    }
+
     pub(crate) fn last_bounds(&self, element: GlobalElementId) -> Option<Rect> {
         self.prev_bounds.get(&element).copied()
     }
@@ -621,6 +637,26 @@ impl WindowElementState {
 
     #[cfg(feature = "diagnostics")]
     fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        let bounds_for = |element: Option<GlobalElementId>| {
+            element.and_then(|id| {
+                self.prev_bounds
+                    .get(&id)
+                    .copied()
+                    .or_else(|| self.cur_bounds.get(&id).copied())
+            })
+        };
+        let visual_bounds_for = |element: Option<GlobalElementId>| {
+            element.and_then(|id| {
+                self.prev_visual_bounds
+                    .get(&id)
+                    .copied()
+                    .or_else(|| self.cur_visual_bounds.get(&id).copied())
+            })
+        };
+        let node_for = |element: Option<GlobalElementId>| {
+            element.and_then(|id| self.node_entry(id).map(|e| e.node))
+        };
+
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
             self.view_cache_reuse_roots.iter().copied().collect();
         view_cache_reuse_roots.sort_by_key(|id| id.0);
@@ -640,11 +676,20 @@ impl WindowElementState {
 
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
+            focused_element_node: node_for(self.focused_element),
+            focused_element_bounds: bounds_for(self.focused_element),
+            focused_element_visual_bounds: visual_bounds_for(self.focused_element),
             active_text_selection: self
                 .active_text_selection
                 .map(|sel| (sel.root, sel.element)),
             hovered_pressable: self.hovered_pressable,
+            hovered_pressable_node: node_for(self.hovered_pressable),
+            hovered_pressable_bounds: bounds_for(self.hovered_pressable),
+            hovered_pressable_visual_bounds: visual_bounds_for(self.hovered_pressable),
             pressed_pressable: self.pressed_pressable,
+            pressed_pressable_node: node_for(self.pressed_pressable),
+            pressed_pressable_bounds: bounds_for(self.pressed_pressable),
+            pressed_pressable_visual_bounds: visual_bounds_for(self.pressed_pressable),
             hovered_hover_region: self.hovered_hover_region,
             wants_continuous_frames: self.wants_continuous_frames(),
             observed_models: self

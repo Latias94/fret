@@ -120,6 +120,9 @@ struct PrepaintHitTestCache {
     children_render_transform_inv: Option<Transform2D>,
     clips_hit_test: bool,
     clip_hit_test_corner_radii: Option<Corners>,
+    is_focusable: bool,
+    focus_traversal_children: bool,
+    can_scroll_descendant_into_view: bool,
 }
 
 impl<H: UiHost> Node<H> {
@@ -400,7 +403,7 @@ pub struct UiInputArbitrationSnapshot {
     pub pointer_capture_multiple_layers: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct UiDebugLayerInfo {
     pub id: UiLayerId,
     pub root: NodeId,
@@ -409,6 +412,8 @@ pub struct UiDebugLayerInfo {
     pub hit_testable: bool,
     pub pointer_occlusion: PointerOcclusion,
     pub wants_pointer_down_outside_events: bool,
+    pub consume_pointer_down_outside_events: bool,
+    pub pointer_down_outside_branches: Vec<NodeId>,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
 }
@@ -1875,6 +1880,8 @@ impl<H: UiHost> UiTree<H> {
                     hit_testable: layer.hit_testable,
                     pointer_occlusion: layer.pointer_occlusion,
                     wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
+                    consume_pointer_down_outside_events: layer.consume_pointer_down_outside_events,
+                    pointer_down_outside_branches: layer.pointer_down_outside_branches.clone(),
                     wants_pointer_move_events: layer.wants_pointer_move_events,
                     wants_timer_events: layer.wants_timer_events,
                 })
@@ -2783,15 +2790,26 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        if n.widget.as_ref().is_some_and(|w| w.is_focusable()) {
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        let is_focusable = prepaint
+            .as_ref()
+            .map(|p| p.is_focusable)
+            .unwrap_or_else(|| n.widget.as_ref().is_some_and(|w| w.is_focusable()));
+        if is_focusable {
             out.push(node);
         }
 
-        let traverse_children = n
-            .widget
+        let traverse_children = prepaint
             .as_ref()
-            .map(|w| w.focus_traversal_children())
-            .unwrap_or(true);
+            .map(|p| p.focus_traversal_children)
+            .unwrap_or_else(|| {
+                n.widget
+                    .as_ref()
+                    .map(|w| w.focus_traversal_children())
+                    .unwrap_or(true)
+            });
         if traverse_children {
             for &child in &n.children {
                 self.collect_focusables(child, active_layers, scope_bounds, out);
@@ -2825,10 +2843,18 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
-            if n.widget
+            let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+                .then_some(n.prepaint_hit_test)
+                .flatten();
+            let can_scroll_descendant_into_view = prepaint
                 .as_ref()
-                .is_some_and(|w| w.can_scroll_descendant_into_view())
-            {
+                .map(|p| p.can_scroll_descendant_into_view)
+                .unwrap_or_else(|| {
+                    n.widget
+                        .as_ref()
+                        .is_some_and(|w| w.can_scroll_descendant_into_view())
+                });
+            if can_scroll_descendant_into_view {
                 return true;
             }
         }

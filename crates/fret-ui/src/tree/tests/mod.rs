@@ -206,6 +206,7 @@ mod dock_drag;
 mod escape_dismiss;
 mod focus_scope;
 mod focus_traversal_availability;
+mod focus_traversal_prepaint_cache;
 mod globals;
 mod hit_test;
 mod interactivity_gate;
