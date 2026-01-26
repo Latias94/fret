@@ -39,21 +39,26 @@ Each TODO is labeled:
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
   - Notes: baseline lifecycle phases were documented before hover/tooltip gained authoritative presence; see OVERLAY-life-002 for the updated contract.
 - [x] OVERLAY-life-002 Introduce authoritative presence for hover/tooltip overlays.
-  - Target: make hover/tooltip safe under view-cache reuse without creating “ghost overlays” (authoritative `open/present` + liveness gate).
+  - Target: make hover/tooltip behavior explicit (authoritative `open/present/interactive` + liveness gate) and keep it correct under view-cache reuse.
+    - Note: hover/tooltips are intentionally treated as per-frame requests in v1; cache-hit synthesis is deferred until the request surface is stable (see OVERLAY-life-003).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
   - Evidence: `crates/fret-ui/src/elements/queries.rs` (`element_is_live_in_current_frame`)
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (hover/tooltip synthesis + closing interactivity)
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (hover/tooltip per-frame behavior + closing interactivity)
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`, `ecosystem/fret-ui-kit/src/primitives/hover_card.rs` (API surface)
   - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-shadcn/src/hover_card.rs` (integration)
   - Checklist:
     - [x] Add `open: Model<bool>` + `present: bool` to `HoverOverlayRequest`/`TooltipRequest`
-    - [x] Synthesize hover/tooltip requests from cached declarations under view-cache reuse
+    - [x] Treat hover/tooltips as per-frame requests (no cache-hit synthesis yet)
     - [x] Add liveness gate to prevent ghost overlays (trigger must be live in current frame)
     - [x] Update ecosystem primitives + shadcn recipes to provide `open` + `present`
-    - [x] Add regressions for cache-hit synthesis + close-transition interactivity
+    - [x] Add regressions for per-frame behavior + close-transition interactivity
   - Notes: landing this surfaced a Radix parity dependency around menu initial focus targets:
     - `DropdownMenu` pointer-open focuses the `role=menu` content (state regression: `radix_web_dropdown_menu_open_navigate_select_matches_fret`).
     - `Menubar` pointer-open keeps focus on the roving container so ArrowDown navigation can reach submenu triggers (state regression: `radix_web_menubar_submenu_keyboard_open_close_matches_fret`).
+
+- [ ] OVERLAY-life-003 Enable hover/tooltip cache-hit synthesis (deferred).
+  - Target: allow hover/tooltips to remain open under view-cache reuse when their request producer is suppressed, without creating ghost overlays.
+  - Prereqs: stabilize hover/tooltip request surfaces (likely via interaction stream / prepaint-driven policy) and define the contract in `docs/workstreams/overlay-lifecycle-phases.md`.
 - [x] OVERLAY-in-002 Specify input arbitration ordering across roots.
   - Target: consistent rules for: modal barrier, underlay click-through, escape routing, focus restore, pointer capture.
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`active_input_layers`, `topmost_pointer_occlusion_layer`, `enforce_modal_barrier_scope`)

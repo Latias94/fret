@@ -71,8 +71,13 @@ Implementation anchors:
 
 View-cache seam:
 
-- Cached request declarations are used as an optimization so `open=true` overlays can remain present
-  even when view caching skips rerendering the producer subtree.
+- Cached request declarations are used as an optimization for overlays whose `open` model is
+  authoritative (currently: modals, popovers, toast layers) so `open=true` overlays can remain
+  present even when view caching skips rerendering the producer subtree.
+- Hover overlays and tooltips are intentionally treated as **per-frame requests** for now. Their
+  request surfaces are still evolving, and synthesizing them under view-cache reuse can produce
+  “ghost overlays” or stale “hover intent” behavior. The contract for stream-driven hover/tooltip
+  under view-cache reuse is deferred to a later phase (interaction stream / prepaint-driven policy).
 - Close transitions are intentionally treated as "instant" under producer suppression (no request
   producer running): if `open` flips false, the overlay disappears as soon as we stop synthesizing
   a request.
@@ -84,15 +89,17 @@ View-cache seam:
 - `open: Model<bool>`
 - `present: bool`
 
-This makes hover/tooltip safe under view-cache reuse: cached request declarations can be
-synthesized when the producer subtree is skipped.
+These fields make hover/tooltip behavior explicit (authoritative `open` model, close transitions,
+and interactivity gating). They also leave a clear future hook for cache-hit synthesis once the
+hover/tooltip request surface is stable; for now hover/tooltips remain per-frame requests.
 
 Ghost prevention / liveness gate:
 
-- Cached hover/tooltip synthesis requires the trigger element to be **live in the current frame**
-  (`fret_ui::elements::element_is_live_in_current_frame`). This prevents overlays from persisting
-  after their producer subtree unmounts, while still allowing view-cache reuse (cache reuse touches
-  subtree element liveness each frame).
+- Hover/tooltip overlays still require the trigger element to be **live in the current frame**
+  (`fret_ui::elements::element_is_live_in_current_frame`) to prevent ghost overlays.
+- Because hover/tooltips are currently per-frame requests (not synthesized), “producer subtree
+  skipped” implies the request is missing, and the overlay is expected to close (or never appear)
+  rather than persist incorrectly.
 
 ## Contract checkpoints (tests)
 
@@ -101,11 +108,11 @@ The lifecycle contract is enforced by tests at two layers:
 - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
   - Cached request synthesis for view-cache: `cached_modal_request_is_synthesized_when_open_without_rerender`,
     `cached_popover_request_is_synthesized_when_open_without_rerender`
-  - Cached hover/tooltip synthesis + liveness:
-    `cached_hover_overlay_request_is_synthesized_when_open_without_rerender`,
-    `cached_tooltip_request_is_synthesized_when_open_without_rerender`,
-    `cached_hover_overlay_is_not_synthesized_when_trigger_unmounted`,
-    `cached_tooltip_is_not_synthesized_when_trigger_unmounted`
+  - Hover/tooltip per-frame behavior under view-cache:
+    `hover_overlay_request_is_not_synthesized_when_open_without_rerender`,
+    `tooltip_request_is_not_synthesized_when_open_without_rerender`,
+    `hover_overlay_closes_when_request_missing`,
+    `tooltip_closes_when_request_missing`
   - Modal close transition keeps barrier active: `modal_is_hit_testable_while_closing_but_still_present`
   - Non-modal close transition becomes click-through: `non_modal_overlay_does_not_request_outside_press_observer_while_closing`
   - Hover/tooltip close transition becomes non-interactive:
