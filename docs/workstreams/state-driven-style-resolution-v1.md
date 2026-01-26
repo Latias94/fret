@@ -178,6 +178,7 @@ This snapshot focuses on “state → style” authoring consistency, not full v
 - `ecosystem/fret-ui-shadcn/src/button.rs`
 - `ecosystem/fret-ui-shadcn/src/lib.rs`
 - `ecosystem/fret-ui-shadcn/src/toggle.rs`
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`
 - `ecosystem/fret-ui-shadcn/src/tabs.rs`
 - `ecosystem/fret-ui-shadcn/src/input.rs`
 - `crates/fret-ui/src/text_input/widget.rs`

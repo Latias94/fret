@@ -105,6 +105,7 @@ pub use checkbox::{Checkbox, CheckboxStyle, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
+pub use combobox::ComboboxStyle;
 pub use combobox::{Combobox, ComboboxItem, combobox};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
