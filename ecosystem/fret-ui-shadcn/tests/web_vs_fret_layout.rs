@@ -24271,6 +24271,462 @@ fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
     assert_rect_close_px(web_name, legend.bounds, web_legend.rect, 1.0);
 }
 
+fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    label: &str,
+    hide_label: bool,
+    hide_indicator: bool,
+    indicator: fret_ui_shadcn::ChartTooltipIndicator,
+    width_border_box: Px,
+    items: impl IntoIterator<Item = (Arc<str>, Arc<str>)>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    let label = Arc::<str>::from(label);
+    let text_xs_px = theme
+        .metric_by_key(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_XS_PX)
+        .unwrap_or(Px(12.0));
+    let text_xs_line_height = theme
+        .metric_by_key(fret_ui_kit::theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
+        .unwrap_or(Px(16.0));
+
+    let bg = theme.color_required("background");
+    let border = theme
+        .color_by_key("border/50")
+        .or_else(|| theme.color_by_key("border"))
+        .unwrap_or_else(|| theme.color_required("border"));
+    let muted = theme.color_required("muted-foreground");
+
+    let chrome = ChromeRefinement::default()
+        .rounded(Radius::Lg)
+        .bg(ColorRef::Color(bg))
+        .border_1()
+        .border_color(ColorRef::Color(border))
+        .px(Space::N2p5)
+        .py(Space::N1p5)
+        .shadow_xl();
+
+    let gap_1p5 = decl_style::space(&theme, Space::N1p5);
+    let gap_2 = decl_style::space(&theme, Space::N2);
+
+    let items: Vec<(Arc<str>, Arc<str>)> = items.into_iter().collect();
+    let nest_label =
+        !hide_label && items.len() == 1 && indicator != fret_ui_shadcn::ChartTooltipIndicator::Dot;
+
+    let row_height = if nest_label {
+        Px(text_xs_px.0 * 2.0 + gap_1p5.0)
+    } else {
+        text_xs_px
+    };
+
+    fn build_row<H: fret_ui::UiHost>(
+        cx: &mut fret_ui::ElementContext<'_, H>,
+        theme: &Theme,
+        tooltip_label: Arc<str>,
+        muted: fret_core::Color,
+        hide_indicator: bool,
+        indicator: fret_ui_shadcn::ChartTooltipIndicator,
+        nest_label: bool,
+        gap_1p5: Px,
+        gap_2: Px,
+        row_height: Px,
+        text_xs_px: Px,
+        item_label: Arc<str>,
+        item_value: Arc<str>,
+    ) -> AnyElement {
+        let mut row_children: Vec<AnyElement> = Vec::new();
+
+        if !hide_indicator {
+            let indicator_color = theme.color_required("foreground");
+            let (w, h) = match indicator {
+                fret_ui_shadcn::ChartTooltipIndicator::Dot => (Px(10.0), Px(10.0)),
+                fret_ui_shadcn::ChartTooltipIndicator::Line
+                | fret_ui_shadcn::ChartTooltipIndicator::Dashed => (Px(4.0), row_height),
+            };
+
+            let mut indicator_props = decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(indicator_color))
+                    .border_1()
+                    .border_color(ColorRef::Color(indicator_color)),
+                LayoutRefinement::default(),
+            );
+            indicator_props.corner_radii = fret_core::Corners::all(Px(2.0));
+            indicator_props.layout.size.width = Length::Px(w);
+            indicator_props.layout.size.height = Length::Px(h);
+
+            row_children.push(cx.container(indicator_props, |_cx| Vec::new()));
+        }
+
+        let label_col = cx.column(
+            ColumnProps {
+                gap: gap_1p5,
+                align: CrossAlign::Start,
+                ..Default::default()
+            },
+            move |cx| {
+                let mut out = Vec::new();
+                if nest_label {
+                    out.push(
+                        ui::text(cx, tooltip_label)
+                            .text_xs()
+                            .font_medium()
+                            .line_height_px(text_xs_px)
+                            .h_px(MetricRef::Px(text_xs_px))
+                            .nowrap()
+                            .into_element(cx),
+                    );
+                }
+                out.push(
+                    ui::text(cx, item_label)
+                        .text_xs()
+                        .text_color(ColorRef::Color(muted))
+                        .line_height_px(text_xs_px)
+                        .h_px(MetricRef::Px(text_xs_px))
+                        .nowrap()
+                        .into_element(cx),
+                );
+                out
+            },
+        );
+
+        let value_el = ui::text(cx, item_value)
+            .text_xs()
+            .font_medium()
+            .line_height_px(text_xs_px)
+            .h_px(MetricRef::Px(text_xs_px))
+            .nowrap()
+            .into_element(cx);
+
+        let content = cx.flex(
+            FlexProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.flex.grow = 1.0;
+                    layout.flex.shrink = 1.0;
+                    layout
+                },
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::SpaceBetween,
+                align: if nest_label {
+                    CrossAlign::End
+                } else {
+                    CrossAlign::Center
+                },
+                wrap: false,
+            },
+            move |_cx| vec![label_col, value_el],
+        );
+
+        row_children.push(content);
+
+        cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap: gap_2,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: match indicator {
+                    fret_ui_shadcn::ChartTooltipIndicator::Dot => CrossAlign::Center,
+                    fret_ui_shadcn::ChartTooltipIndicator::Line
+                    | fret_ui_shadcn::ChartTooltipIndicator::Dashed => CrossAlign::Stretch,
+                },
+                wrap: false,
+            },
+            move |_cx| row_children,
+        )
+    }
+
+    let theme_for_items = theme.clone();
+    let label_for_items = label.clone();
+
+    let items_column = cx.column(
+        ColumnProps {
+            gap: gap_1p5,
+            align: CrossAlign::Stretch,
+            ..Default::default()
+        },
+        move |cx| {
+            items
+                .iter()
+                .cloned()
+                .map(|(item_label, item_value)| {
+                    build_row(
+                        cx,
+                        &theme_for_items,
+                        label_for_items.clone(),
+                        muted,
+                        hide_indicator,
+                        indicator,
+                        nest_label,
+                        gap_1p5,
+                        gap_2,
+                        row_height,
+                        text_xs_px,
+                        item_label,
+                        item_value,
+                    )
+                })
+                .collect::<Vec<_>>()
+        },
+    );
+
+    let content = if !hide_label && !nest_label {
+        cx.column(
+            ColumnProps {
+                gap: gap_1p5,
+                align: CrossAlign::Start,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    ui::text(cx, label.clone())
+                        .text_xs()
+                        .font_medium()
+                        .line_height_px(text_xs_line_height)
+                        .h_px(MetricRef::Px(text_xs_line_height))
+                        .nowrap()
+                        .into_element(cx),
+                    items_column,
+                ]
+            },
+        )
+    } else {
+        items_column
+    };
+
+    let props = decl_style::container_props(
+        &theme,
+        chrome,
+        LayoutRefinement::default().w_px(MetricRef::Px(width_border_box)),
+    );
+
+    cx.container(props, move |_cx| vec![content])
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_demo_geometry_matches_web() {
+    let web = read_web_golden("chart-tooltip-demo");
+    let theme = web_theme(&web);
+
+    let web_root = find_first(&theme.root, &|n| {
+        n.tag == "div" && class_has_token(n, "max-w-md") && class_has_token(n, "aspect-video")
+    })
+    .expect("web chart-tooltip-demo root");
+
+    let web_panel = |pred: &dyn Fn(&WebNode) -> bool| -> &WebNode {
+        find_all(web_root, &|n| {
+            n.tag == "div"
+                && class_has_token(n, "min-w-[8rem]")
+                && class_has_token(n, "rounded-lg")
+                && class_has_token(n, "shadow-xl")
+        })
+        .into_iter()
+        .find(|n| pred(n))
+        .expect("web chart-tooltip-demo tooltip panel")
+    };
+
+    let web_page_views =
+        web_panel(&|n| contains_text(n, "Page Views") && contains_text(n, "Mobile"));
+    let web_browser_dashed = web_panel(&|n| contains_text(n, "Firefox"));
+    let web_indicator_dot =
+        web_panel(&|n| contains_text(n, "Chrome") && !contains_text(n, "Firefox"));
+    let web_page_views_line = web_panel(&|n| contains_text(n, "12,486"));
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(web_root.rect.w), Px(web_root.rect.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        fn cell<H: fret_ui::UiHost>(
+            cx: &mut fret_ui::ElementContext<'_, H>,
+            align: CrossAlign,
+            justify: MainAlign,
+            child: AnyElement,
+        ) -> AnyElement {
+            cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Px(Px(224.0)),
+                            height: Length::Px(Px(137.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(16.0)),
+                    justify,
+                    align,
+                    wrap: false,
+                },
+                move |_cx| vec![child],
+            )
+        }
+
+        let page_views = chart_tooltip_demo_panel(
+            cx,
+            "Page Views",
+            false,
+            false,
+            fret_ui_shadcn::ChartTooltipIndicator::Dot,
+            Px(128.0),
+            [
+                (Arc::from("Desktop"), Arc::from("186")),
+                (Arc::from("Mobile"), Arc::from("80")),
+            ],
+        );
+        let page_views = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:chart-tooltip-demo:page-views")),
+                ..Default::default()
+            },
+            move |_cx| vec![page_views],
+        );
+
+        let browser_dashed = chart_tooltip_demo_panel(
+            cx,
+            "Browser",
+            true,
+            false,
+            fret_ui_shadcn::ChartTooltipIndicator::Dashed,
+            Px(128.0),
+            [
+                (Arc::from("Chrome"), Arc::from("1,286")),
+                (Arc::from("Firefox"), Arc::from("1,000")),
+            ],
+        );
+        let browser_dashed = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:chart-tooltip-demo:browser-dashed")),
+                ..Default::default()
+            },
+            move |_cx| vec![browser_dashed],
+        );
+
+        let page_views_line = chart_tooltip_demo_panel(
+            cx,
+            "Page Views",
+            false,
+            false,
+            fret_ui_shadcn::ChartTooltipIndicator::Line,
+            Px(144.0),
+            [(Arc::from("Desktop"), Arc::from("12,486"))],
+        );
+        let page_views_line = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:chart-tooltip-demo:page-views-line")),
+                ..Default::default()
+            },
+            move |_cx| vec![page_views_line],
+        );
+
+        let indicator_dot = chart_tooltip_demo_panel(
+            cx,
+            "Browser",
+            true,
+            false,
+            fret_ui_shadcn::ChartTooltipIndicator::Dot,
+            Px(128.0),
+            [(Arc::from("Chrome"), Arc::from("1,286"))],
+        );
+        let indicator_dot = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:chart-tooltip-demo:indicator-dot")),
+                ..Default::default()
+            },
+            move |_cx| vec![indicator_dot],
+        );
+
+        let grid = cx.grid(
+            GridProps {
+                cols: 2,
+                gap: Px(0.0),
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_root.rect.w)),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    cell(cx, CrossAlign::Center, MainAlign::Center, page_views),
+                    cell(cx, CrossAlign::Center, MainAlign::Center, browser_dashed),
+                    cell(cx, CrossAlign::Center, MainAlign::Center, page_views_line),
+                    cell(cx, CrossAlign::Start, MainAlign::Start, indicator_dot),
+                ]
+            },
+        );
+
+        vec![grid]
+    });
+
+    let page_views = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:chart-tooltip-demo:page-views"),
+    )
+    .expect("fret page views tooltip");
+    assert_rect_close_px(
+        "chart-tooltip-demo page views",
+        page_views.bounds,
+        web_page_views.rect,
+        1.0,
+    );
+
+    let browser_dashed = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:chart-tooltip-demo:browser-dashed"),
+    )
+    .expect("fret browser dashed tooltip");
+    assert_rect_close_px(
+        "chart-tooltip-demo browser dashed",
+        browser_dashed.bounds,
+        web_browser_dashed.rect,
+        1.0,
+    );
+
+    let page_views_line = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:chart-tooltip-demo:page-views-line"),
+    )
+    .expect("fret page views line tooltip");
+    assert_rect_close_px(
+        "chart-tooltip-demo page views line",
+        page_views_line.bounds,
+        web_page_views_line.rect,
+        1.0,
+    );
+
+    let indicator_dot = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:chart-tooltip-demo:indicator-dot"),
+    )
+    .expect("fret indicator dot tooltip");
+    assert_rect_close_px(
+        "chart-tooltip-demo indicator dot",
+        indicator_dot.bounds,
+        web_indicator_dot.rect,
+        1.0,
+    );
+}
+
 #[test]
 fn web_vs_fret_layout_chart_tooltip_default_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
