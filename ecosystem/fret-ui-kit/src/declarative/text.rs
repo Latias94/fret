@@ -34,6 +34,22 @@ pub(crate) fn text_sm_style(theme: &Theme) -> TextStyle {
     }
 }
 
+pub(crate) fn text_xs_style(theme: &Theme) -> TextStyle {
+    let size = theme
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_PX)
+        .unwrap_or_else(|| Px(font_size(theme).0 - 2.0));
+    let line_height = theme
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
+        .unwrap_or_else(|| Px(font_line_height(theme).0 - 4.0));
+
+    TextStyle {
+        font: FontId::default(),
+        size,
+        line_height: Some(line_height),
+        ..Default::default()
+    }
+}
+
 pub(crate) fn text_base_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_PX)
@@ -112,6 +128,23 @@ pub fn text_sm<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<st
         layout: LayoutStyle::default(),
         text: text.into(),
         style: Some(text_sm_style(&theme)),
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+/// Declarative text helper that matches Tailwind's `text-xs` default usage in shadcn recipes.
+///
+/// Themes can override this via:
+/// - `component.text.xs_px`
+/// - `component.text.xs_line_height`
+pub fn text_xs<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    cx.text_props(TextProps {
+        layout: LayoutStyle::default(),
+        text: text.into(),
+        style: Some(text_xs_style(&theme)),
         color: None,
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
