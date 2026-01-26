@@ -59,8 +59,8 @@ Status legend:
 
 ### Phase 4 (acceptance)
 
-- `[ ]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
-- `[ ]` Replace remaining bespoke channel+wake utilities in templates/examples
+- `[x]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
+- `[x]` Replace remaining bespoke channel+wake utilities in templates/examples
 
 ## Proposed public surface (API sketch, non-binding)
 

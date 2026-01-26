@@ -1,6 +1,6 @@
 # ADR 0190: Execution and Concurrency Surface v1 (Dispatcher + Executors)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -331,7 +331,7 @@ This keeps third-party crates portable while still enabling "real app" workloads
    for heavy apps (Tokio thread + wake).
 4. Gradually update ecosystem crates to converge on the shared surface (reducing bespoke channels).
 
-## Acceptance Criteria (Proposed → Accepted)
+## Acceptance Criteria (Satisfied)
 
 This ADR may transition to `Accepted` once all of the following are true:
 
@@ -349,6 +349,12 @@ This ADR may transition to `Accepted` once all of the following are true:
   - shutdown/cancellation paths are tested (no UI callbacks after shutdown).
 - **Observability hooks exist**:
   - dispatch/wake/drain points are visible in tracing spans (location attribution where feasible).
+
+Evidence (as of 2026-01-26):
+
+- `Dispatcher` + `InboxDrainRegistry`: `crates/fret-runtime/src/execution.rs`
+- Desktop/wasm runner mappings + driver boundary draining: `crates/fret-launch/src/runner/{desktop,web}/dispatcher.rs`, `crates/fret-launch/src/runner/{desktop/mod.rs,web.rs}`
+- Ecosystem + examples + tests: `ecosystem/fret-executor/src/lib.rs`, `ecosystem/fret-markdown/src/mathjax_svg_support.rs`, `apps/fret-examples/src/markdown_demo.rs`
 
 ## References
 
