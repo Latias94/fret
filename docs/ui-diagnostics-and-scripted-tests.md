@@ -33,7 +33,6 @@ Related ADRs:
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
 
    - `FRET_DIAG=1`
-   - (Optional) `FRET_DIAG_SCREENSHOTS=1` to request a GPU readback screenshot alongside each bundle dump (written under `target/fret-diag/screenshots/<bundle_timestamp>/` with a `manifest.json`).
 
 2. Reproduce the issue.
 
@@ -51,7 +50,7 @@ By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-dia
 ## Optional: dump a frame screenshot alongside the bundle
 
 If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
-enable per-bundle screenshots:
+enable bundle screenshots:
 
 - `FRET_DIAG_SCREENSHOT=1`
 
@@ -82,7 +81,6 @@ Workflow tip:
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
-
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:
@@ -302,6 +300,10 @@ Screenshot capture:
 - `FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH=...`: screenshot completion trigger file (default `<dir>/screenshots.result.touch`).
 
 The screenshot completion log is append-only (bounded) and includes a `request_id` that scripted steps can wait on.
+
+Bundle screenshots (frame dump):
+
+- `FRET_DIAG_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
 
 Picking:
 
