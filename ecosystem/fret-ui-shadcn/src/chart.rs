@@ -273,3 +273,176 @@ impl ChartTooltipContent {
         })
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChartLegendVerticalAlign {
+    Top,
+    Bottom,
+}
+
+impl Default for ChartLegendVerticalAlign {
+    fn default() -> Self {
+        Self::Bottom
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ChartLegendItem {
+    pub label: Arc<str>,
+    pub color: Option<ColorRef>,
+}
+
+impl ChartLegendItem {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            color: None,
+        }
+    }
+
+    pub fn color(mut self, color: ColorRef) -> Self {
+        self.color = Some(color);
+        self
+    }
+}
+
+/// shadcn/ui v4 chart legend content.
+///
+/// Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/chart.tsx` (`ChartLegendContent`).
+#[derive(Debug, Clone)]
+pub struct ChartLegendContent {
+    items: Vec<ChartLegendItem>,
+    vertical_align: ChartLegendVerticalAlign,
+    hide_icon: bool,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl Default for ChartLegendContent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ChartLegendContent {
+    pub fn new() -> Self {
+        Self {
+            items: Vec::new(),
+            vertical_align: ChartLegendVerticalAlign::Bottom,
+            hide_icon: false,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = ChartLegendItem>) -> Self {
+        self.items = items.into_iter().collect();
+        self
+    }
+
+    pub fn vertical_align(mut self, vertical_align: ChartLegendVerticalAlign) -> Self {
+        self.vertical_align = vertical_align;
+        self
+    }
+
+    pub fn hide_icon(mut self, hide: bool) -> Self {
+        self.hide_icon = hide;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let text_xs_line_height = theme
+            .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
+            .unwrap_or(Px(16.0));
+
+        let mut chrome = match self.vertical_align {
+            ChartLegendVerticalAlign::Top => ChromeRefinement::default().pb(Space::N3),
+            ChartLegendVerticalAlign::Bottom => ChromeRefinement::default().pt(Space::N3),
+        };
+        chrome = chrome.merge(self.chrome);
+
+        let layout = LayoutRefinement::default().w_full().merge(self.layout);
+        let outer_props = decl_style::container_props(&theme, chrome, layout);
+
+        let item_gap = decl_style::space(&theme, Space::N1p5);
+        let legend_gap = decl_style::space(&theme, Space::N4);
+
+        let items = self
+            .items
+            .into_iter()
+            .map(|item| {
+                let color = item
+                    .color
+                    .as_ref()
+                    .map(|c| c.resolve(&theme))
+                    .unwrap_or_else(|| theme.color_required("foreground"));
+
+                let indicator = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Px(Px(8.0)),
+                                height: Length::Px(Px(8.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        background: Some(color),
+                        corner_radii: Corners::all(Px(2.0)),
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                );
+
+                let label = ui::text(cx, item.label)
+                    .text_xs()
+                    .line_height_px(text_xs_line_height)
+                    .h_px(MetricRef::Px(text_xs_line_height))
+                    .into_element(cx);
+
+                let mut row = Vec::new();
+                row.push(indicator);
+                row.push(label);
+
+                cx.flex(
+                    FlexProps {
+                        layout: LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: item_gap,
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |_cx| row,
+                )
+            })
+            .collect::<Vec<_>>();
+
+        cx.container(outer_props, move |cx| {
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap: legend_gap,
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| items,
+            )]
+        })
+    }
+}

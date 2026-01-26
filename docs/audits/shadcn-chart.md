@@ -23,8 +23,10 @@ Current:
   (useful for non-chart components too).
 - Wrapper UI: `ecosystem/fret-ui-shadcn/src/chart.rs` exists and currently implements the tooltip panel chrome/layout
   (`ChartTooltipContent`) plus a small data model (`ChartTooltipItem`, `ChartTooltipIndicator`).
-- Golden gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` includes initial `chart-tooltip-*` panel geometry
-  gates (min width + padding/border + line-height outcomes).
+- Wrapper UI: `ecosystem/fret-ui-shadcn/src/chart.rs` also includes `ChartLegendContent` (horizontal legend layout),
+  mirroring the upstream `ChartLegendContent` surface.
+- Golden gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` includes initial `chart-tooltip-*` and
+  `chart-*-legend` geometry gates (min width + padding/border + line-height outcomes).
 - No chart rendering backend is wired for shadcn parity yet (axes/series/tooltip hit-testing, etc).
 
 As a result, most of the `chart-*` golden family is still ungated; only tooltip-panel pages are referenced today.

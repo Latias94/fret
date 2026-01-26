@@ -24131,6 +24131,68 @@ fn assert_chart_tooltip_rect_matches_web(
     assert_rect_close_px(web_name, tooltip.bounds, web_tooltip.rect, 1.0);
 }
 
+fn assert_chart_legend_rect_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_legend = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && class_has_token(n, "flex")
+            && class_has_token(n, "items-center")
+            && class_has_token(n, "justify-center")
+            && class_has_token(n, "gap-4")
+            && (class_has_token(n, "pt-3") || class_has_token(n, "pb-3"))
+    })
+    .expect("web chart legend node");
+
+    let vertical_align = if class_has_token(web_legend, "pb-3") {
+        fret_ui_shadcn::ChartLegendVerticalAlign::Top
+    } else {
+        fret_ui_shadcn::ChartLegendVerticalAlign::Bottom
+    };
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = Arc::<str>::from(format!("Golden:{web_name}:legend"));
+
+    let snap = run_fret_root(bounds, |cx| {
+        let legend = fret_ui_shadcn::ChartLegendContent::new()
+            .vertical_align(vertical_align)
+            .items([
+                fret_ui_shadcn::ChartLegendItem::new("Desktop"),
+                fret_ui_shadcn::ChartLegendItem::new("Mobile"),
+            ])
+            .into_element(cx);
+
+        let legend = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                    layout.inset.left = Some(Px(web_legend.rect.x));
+                    layout.inset.top = Some(Px(web_legend.rect.y));
+                    layout.size.width = Length::Px(Px(web_legend.rect.w));
+                    layout
+                },
+                role: SemanticsRole::Panel,
+                label: Some(label.clone()),
+                ..Default::default()
+            },
+            move |_cx| vec![legend],
+        );
+
+        vec![legend]
+    });
+
+    let legend = find_semantics(&snap, SemanticsRole::Panel, Some(&label))
+        .unwrap_or_else(|| panic!("missing fret chart legend semantics for {web_name}"));
+
+    assert_rect_close_px(web_name, legend.bounds, web_legend.rect, 1.0);
+}
+
 #[test]
 fn web_vs_fret_layout_chart_tooltip_default_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
@@ -24156,4 +24218,19 @@ fn web_vs_fret_layout_chart_tooltip_indicator_none_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         true,
     );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_area_legend_geometry_matches_web() {
+    assert_chart_legend_rect_matches_web("chart-area-legend");
+}
+
+#[test]
+fn web_vs_fret_layout_chart_bar_demo_legend_geometry_matches_web() {
+    assert_chart_legend_rect_matches_web("chart-bar-demo-legend");
+}
+
+#[test]
+fn web_vs_fret_layout_chart_radar_legend_geometry_matches_web() {
+    assert_chart_legend_rect_matches_web("chart-radar-legend");
 }
