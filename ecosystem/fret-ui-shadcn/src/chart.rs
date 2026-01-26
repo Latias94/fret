@@ -539,6 +539,10 @@ pub struct ChartLegendContent {
     items: Vec<ChartLegendItem>,
     vertical_align: ChartLegendVerticalAlign,
     hide_icon: bool,
+    wrap: bool,
+    gap: Space,
+    item_width_px: Option<Px>,
+    item_justify_center: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -555,6 +559,10 @@ impl ChartLegendContent {
             items: Vec::new(),
             vertical_align: ChartLegendVerticalAlign::Bottom,
             hide_icon: false,
+            wrap: false,
+            gap: Space::N4,
+            item_width_px: None,
+            item_justify_center: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -572,6 +580,26 @@ impl ChartLegendContent {
 
     pub fn hide_icon(mut self, hide: bool) -> Self {
         self.hide_icon = hide;
+        self
+    }
+
+    pub fn wrap(mut self, wrap: bool) -> Self {
+        self.wrap = wrap;
+        self
+    }
+
+    pub fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    pub fn item_width_px(mut self, width: Px) -> Self {
+        self.item_width_px = Some(width);
+        self
+    }
+
+    pub fn item_justify_center(mut self, center: bool) -> Self {
+        self.item_justify_center = center;
         self
     }
 
@@ -601,7 +629,7 @@ impl ChartLegendContent {
         let outer_props = decl_style::container_props(&theme, chrome, layout);
 
         let item_gap = decl_style::space(&theme, Space::N1p5);
-        let legend_gap = decl_style::space(&theme, Space::N4);
+        let legend_gap = decl_style::space(&theme, self.gap);
 
         let items = self
             .items
@@ -642,11 +670,21 @@ impl ChartLegendContent {
 
                 cx.flex(
                     FlexProps {
-                        layout: LayoutStyle::default(),
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            if let Some(width) = self.item_width_px {
+                                layout.size.width = Length::Px(width);
+                            }
+                            layout
+                        },
                         direction: fret_core::Axis::Horizontal,
                         gap: item_gap,
                         padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Start,
+                        justify: if self.item_justify_center {
+                            MainAlign::Center
+                        } else {
+                            MainAlign::Start
+                        },
                         align: CrossAlign::Center,
                         wrap: false,
                     },
@@ -664,7 +702,7 @@ impl ChartLegendContent {
                     padding: Edges::all(Px(0.0)),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
-                    wrap: false,
+                    wrap: self.wrap,
                 },
                 move |_cx| items,
             )]

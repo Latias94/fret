@@ -24202,6 +24202,75 @@ fn assert_chart_legend_rect_matches_web(web_name: &str) {
     assert_rect_close_px(web_name, legend.bounds, web_legend.rect, 1.0);
 }
 
+fn assert_chart_pie_legend_rect_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_legend = find_first(&theme.root, &|n| {
+        n.tag == "div" && class_has_token(n, "recharts-legend-wrapper")
+    })
+    .and_then(|wrapper| {
+        find_first(wrapper, &|n| {
+            n.tag == "div"
+                && class_has_token(n, "flex")
+                && class_has_token(n, "items-center")
+                && class_has_token(n, "justify-center")
+                && class_has_token(n, "pt-3")
+                && class_has_token(n, "-translate-y-2")
+                && class_has_token(n, "flex-wrap")
+                && class_has_token(n, "gap-2")
+        })
+    })
+    .expect("web chart pie legend node");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = Arc::<str>::from(format!("Golden:{web_name}:pie-legend"));
+
+    let snap = run_fret_root(bounds, |cx| {
+        let legend = fret_ui_shadcn::ChartLegendContent::new()
+            .gap(Space::N2)
+            .wrap(true)
+            .item_width_px(Px(72.5))
+            .item_justify_center(true)
+            .items([
+                fret_ui_shadcn::ChartLegendItem::new("Chrome"),
+                fret_ui_shadcn::ChartLegendItem::new("Safari"),
+                fret_ui_shadcn::ChartLegendItem::new("Firefox"),
+                fret_ui_shadcn::ChartLegendItem::new("Edge"),
+                fret_ui_shadcn::ChartLegendItem::new("Other"),
+            ])
+            .into_element(cx);
+
+        let legend = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                    layout.inset.left = Some(Px(web_legend.rect.x));
+                    layout.inset.top = Some(Px(web_legend.rect.y));
+                    layout.size.width = Length::Px(Px(web_legend.rect.w));
+                    layout
+                },
+                role: SemanticsRole::Panel,
+                label: Some(label.clone()),
+                ..Default::default()
+            },
+            move |_cx| vec![legend],
+        );
+
+        vec![legend]
+    });
+
+    let legend = find_semantics(&snap, SemanticsRole::Panel, Some(&label))
+        .unwrap_or_else(|| panic!("missing fret chart pie legend semantics for {web_name}"));
+
+    assert_rect_close_px(web_name, legend.bounds, web_legend.rect, 1.0);
+}
+
 #[test]
 fn web_vs_fret_layout_chart_tooltip_default_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
@@ -24323,4 +24392,9 @@ fn web_vs_fret_layout_chart_bar_demo_legend_geometry_matches_web() {
 #[test]
 fn web_vs_fret_layout_chart_radar_legend_geometry_matches_web() {
     assert_chart_legend_rect_matches_web("chart-radar-legend");
+}
+
+#[test]
+fn web_vs_fret_layout_chart_pie_legend_geometry_matches_web() {
+    assert_chart_pie_legend_rect_matches_web("chart-pie-legend");
 }

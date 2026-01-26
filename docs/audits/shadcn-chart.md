@@ -30,6 +30,7 @@ Current:
   - Tooltip variants gated so far: `chart-tooltip-default`, `chart-tooltip-indicator-line`, `chart-tooltip-indicator-none`,
     `chart-tooltip-label-none`, `chart-tooltip-icons`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced`.
+  - Legend variants gated so far: `chart-area-legend`, `chart-bar-demo-legend`, `chart-radar-legend`, `chart-pie-legend`.
 - No chart rendering backend is wired for shadcn parity yet (axes/series/tooltip hit-testing, etc).
 
 As a result, most of the `chart-*` golden family is still ungated; only tooltip-panel pages are referenced today.

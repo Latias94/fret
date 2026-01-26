@@ -15,7 +15,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `384/448` keys referenced (`85.7%`)
+- shadcn-web `v4/new-york-v4`: `385/448` keys referenced (`85.9%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -50,12 +50,13 @@ Recent breadth wins:
 - **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
   - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced`.
+  - Pie legend variant includes `chart-pie-legend` (recharts wrapper + shadcn `*:basis-1/4` layout).
 
 ### Largest remaining gaps (by golden family)
 
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
-- `chart` (64 variants): large surface area; likely needs a dedicated alignment push.
+- `chart` (63 variants): large surface area; likely needs a dedicated alignment push.
 
 ### Recommended next alignment targets (P0 order)
 
