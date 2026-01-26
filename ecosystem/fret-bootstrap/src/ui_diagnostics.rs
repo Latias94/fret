@@ -4130,6 +4130,10 @@ pub struct UiLayerInfoV1 {
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
     pub wants_pointer_down_outside_events: bool,
+    #[serde(default)]
+    pub consume_pointer_down_outside_events: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pointer_down_outside_branches: Vec<u64>,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
 }
@@ -4143,6 +4147,13 @@ impl UiLayerInfoV1 {
             blocks_underlay_input: layer.blocks_underlay_input,
             hit_testable: layer.hit_testable,
             wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
+            consume_pointer_down_outside_events: layer.consume_pointer_down_outside_events,
+            pointer_down_outside_branches: layer
+                .pointer_down_outside_branches
+                .into_iter()
+                .take(32)
+                .map(key_to_u64)
+                .collect(),
             wants_pointer_move_events: layer.wants_pointer_move_events,
             wants_timer_events: layer.wants_timer_events,
         }
@@ -4232,15 +4243,30 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub focused_element: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub focused_element_path: Option<String>,
+    pub focused_element_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_visual_bounds: Option<RectV1>,
     pub active_text_selection: Option<(u64, u64)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_text_selection_path: Option<(String, String)>,
     pub hovered_pressable: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hovered_pressable_path: Option<String>,
+    pub hovered_pressable_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_visual_bounds: Option<RectV1>,
     pub pressed_pressable: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pressed_pressable_path: Option<String>,
+    pub pressed_pressable_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_visual_bounds: Option<RectV1>,
     pub hovered_hover_region: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hovered_hover_region_path: Option<String>,
@@ -4326,12 +4352,25 @@ impl ElementDiagnosticsSnapshotV1 {
         Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
             focused_element_path,
+            focused_element_node: snapshot.focused_element_node.map(key_to_u64),
+            focused_element_bounds: snapshot.focused_element_bounds.map(RectV1::from),
+            focused_element_visual_bounds: snapshot.focused_element_visual_bounds.map(RectV1::from),
             active_text_selection: snapshot.active_text_selection.map(|(a, b)| (a.0, b.0)),
             active_text_selection_path,
             hovered_pressable: snapshot.hovered_pressable.map(|id| id.0),
             hovered_pressable_path,
+            hovered_pressable_node: snapshot.hovered_pressable_node.map(key_to_u64),
+            hovered_pressable_bounds: snapshot.hovered_pressable_bounds.map(RectV1::from),
+            hovered_pressable_visual_bounds: snapshot
+                .hovered_pressable_visual_bounds
+                .map(RectV1::from),
             pressed_pressable: snapshot.pressed_pressable.map(|id| id.0),
             pressed_pressable_path,
+            pressed_pressable_node: snapshot.pressed_pressable_node.map(key_to_u64),
+            pressed_pressable_bounds: snapshot.pressed_pressable_bounds.map(RectV1::from),
+            pressed_pressable_visual_bounds: snapshot
+                .pressed_pressable_visual_bounds
+                .map(RectV1::from),
             hovered_hover_region: snapshot.hovered_hover_region.map(|id| id.0),
             hovered_hover_region_path,
             wants_continuous_frames: snapshot.wants_continuous_frames,
