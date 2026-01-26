@@ -40,7 +40,7 @@ Status legend:
 - `[x]` `Dispatcher` trait: define minimal portable surface (target: `crates/fret-runtime`, implemented at `crates/fret-runtime/src/execution.rs`)
 - `[x]` Desktop impl: implement `Dispatcher` in the desktop runner (target: `crates/fret-launch`, implemented at `crates/fret-launch/src/runner/desktop/dispatcher.rs`)
 - `[x]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`, implemented as `ecosystem/fret-executor`)
-- `[ ]` Driver boundary: wire inbox draining + redraw scheduling into the golden path driver (target: `ecosystem/fret-bootstrap`)
+- `[x]` Driver boundary: drain inboxes at runner flush points via `InboxDrainRegistry` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`, web: `crates/fret-launch/src/runner/web.rs`)
 - `[ ]` Observability: add tracing spans for dispatch/wake/drain points
 - `[ ]` Safety: document + test shutdown behavior (no UI callbacks after shutdown/hot reload)
 

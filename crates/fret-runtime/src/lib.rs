@@ -39,7 +39,10 @@ pub use docking_settings::{
 };
 pub use drag::{DRAG_KIND_DOCK_PANEL, DragKindId, DragPhase, DragSession, DragSessionId};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
-pub use execution::{DispatchPriority, Dispatcher, DispatcherHandle, Runnable};
+pub use execution::{
+    DispatchPriority, Dispatcher, DispatcherHandle, InboxDrain, InboxDrainHost, InboxDrainRegistry,
+    Runnable,
+};
 pub use font_bootstrap::{FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font_catalog_update};
 pub use font_catalog::{FontCatalog, TextFontStackKey};
 pub use font_catalog_cache::FontCatalogCache;

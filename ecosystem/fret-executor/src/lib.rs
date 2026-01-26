@@ -10,7 +10,7 @@ use std::{
 };
 
 use fret_core::AppWindowId;
-use fret_runtime::{DispatchPriority, DispatcherHandle, Runnable};
+use fret_runtime::{DispatchPriority, DispatcherHandle, InboxDrain, InboxDrainHost, Runnable};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InboxOverflowStrategy {
@@ -133,6 +133,50 @@ impl<M> InboxSender<M> {
                 true
             }
         }
+    }
+}
+
+/// Adapter that turns an [`Inbox`] into a runner-drainable [`InboxDrain`] implementation.
+///
+/// Register instances in `fret_runtime::InboxDrainRegistry` so runners can drain inboxes at a
+/// driver boundary (ADR 0190).
+pub struct InboxDrainer<M> {
+    inbox: Inbox<M>,
+    window_hint: Option<AppWindowId>,
+    apply: Arc<dyn Fn(&mut dyn InboxDrainHost, Option<AppWindowId>, M) + Send + Sync>,
+}
+
+impl<M> InboxDrainer<M> {
+    pub fn new(
+        inbox: Inbox<M>,
+        apply: impl Fn(&mut dyn InboxDrainHost, Option<AppWindowId>, M) + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            inbox,
+            window_hint: None,
+            apply: Arc::new(apply),
+        }
+    }
+
+    pub fn with_window_hint(mut self, window: AppWindowId) -> Self {
+        self.window_hint = Some(window);
+        self
+    }
+}
+
+impl<M: Send + 'static> InboxDrain for InboxDrainer<M> {
+    fn drain(&self, host: &mut dyn InboxDrainHost, window: Option<AppWindowId>) -> bool {
+        let window = self.window_hint.or(window);
+        let drained = self.inbox.drain();
+        if drained.is_empty() {
+            return false;
+        }
+
+        for msg in drained {
+            (self.apply)(host, window, msg);
+        }
+
+        true
     }
 }
 

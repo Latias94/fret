@@ -2952,6 +2952,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         for _ in 0..MAX_EFFECT_DRAIN_TURNS {
             let now = Instant::now();
             let mut did_work = self.dispatcher.drain_turn(now);
+            did_work |= self.drain_inboxes(None);
             let effects = self.app.flush_effects();
             let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
                 self.frame_id,
@@ -3918,6 +3919,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 break;
             }
         }
+    }
+
+    fn drain_inboxes(&mut self, window: Option<fret_core::AppWindowId>) -> bool {
+        self.app.with_global_mut_untracked(
+            fret_runtime::InboxDrainRegistry::default,
+            |registry, app| registry.drain_all(app, window),
+        )
     }
 
     fn propagate_model_changes(&mut self) -> bool {

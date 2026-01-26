@@ -870,7 +870,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         gfx: &mut GfxState,
         state: &mut D::WindowState,
     ) -> bool {
-        let did_work = self.dispatcher.drain_turn();
+        let did_work = self.dispatcher.drain_turn() || self.drain_inboxes(Some(self.app_window));
         let effects = self.app.flush_effects();
         let effects = self.web_services.handle_effects(&mut self.app, effects);
         self.pending_events.extend(self.web_services.take_events());
@@ -1410,6 +1410,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         true
+    }
+
+    fn drain_inboxes(&mut self, window: Option<AppWindowId>) -> bool {
+        self.app.with_global_mut_untracked(
+            fret_runtime::InboxDrainRegistry::default,
+            |registry, app| registry.drain_all(app, window),
+        )
     }
 
     fn dispatch_events(&mut self, gfx: &mut GfxState, state: &mut D::WindowState) -> bool {
