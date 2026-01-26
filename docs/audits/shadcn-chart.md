@@ -31,6 +31,8 @@ Current:
     `chart-tooltip-label-none`, `chart-tooltip-icons`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced`, `chart-tooltip-demo`.
   - Legend variants gated so far: `chart-area-legend`, `chart-bar-demo-legend`, `chart-radar-legend`, `chart-pie-legend`.
+- Scaffold gates: `chart-area-default`, `chart-line-default`, `chart-bar-default` (ChartContainer + grid + xAxis bounds).
+  These do not yet validate full series rendering parity and are meant to unblock the engine workstream.
 - Known gap: `chart-tooltip-advanced` currently needs a small height shim on the “Total” row to match web output.
   This likely points to a line-height / box-model mismatch that should be fixed at the text/layout layer instead of
   per-component adjustments.
