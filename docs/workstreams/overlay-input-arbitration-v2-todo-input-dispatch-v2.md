@@ -142,6 +142,16 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/popover.rs` (`popover_open_auto_focus_can_be_prevented`, `popover_close_auto_focus_can_be_prevented_and_redirected`)
 
+- [x] OIA2-test-023 Sheet auto-focus hooks can be prevented and redirected (Radix parity).
+  - Target: cover `onOpenAutoFocus` and `onCloseAutoFocus` preventDefault behavior.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/sheet.rs` (`sheet_open_auto_focus_can_be_prevented`, `sheet_close_auto_focus_can_be_prevented_and_redirected`)
+
+- [x] OIA2-test-024 Drawer auto-focus hooks can be prevented and redirected (Radix parity).
+  - Target: cover `onOpenAutoFocus` and `onCloseAutoFocus` preventDefault behavior.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/drawer.rs` (`drawer_open_auto_focus_can_be_prevented`, `drawer_close_auto_focus_can_be_prevented_and_redirected`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
