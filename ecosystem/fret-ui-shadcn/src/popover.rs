@@ -786,6 +786,7 @@ mod tests {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    use crate::test_support::render_overlay_frame;
     use fret_app::App;
     use fret_core::{
         AppWindowId, Corners, MouseButton, PathCommand, Point, Rect, Size as CoreSize, SvgId,
@@ -3444,11 +3445,7 @@ mod tests {
         );
 
         let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
-            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
-            app.set_frame_id(next_frame);
-
-            OverlayController::begin_frame(app, window);
-            let root = fret_ui::declarative::render_root(
+            let _ = render_overlay_frame(
                 ui,
                 app,
                 services,
@@ -3538,10 +3535,6 @@ mod tests {
                     vec![underlay, popover]
                 },
             );
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, bounds);
-            ui.request_semantics_snapshot();
-            ui.layout_all(app, services, bounds, 1.0);
         };
 
         // Frame 1: closed.
@@ -3655,11 +3648,7 @@ mod tests {
         );
 
         let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
-            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
-            app.set_frame_id(next_frame);
-
-            OverlayController::begin_frame(app, window);
-            let root = fret_ui::declarative::render_root(
+            let _ = render_overlay_frame(
                 ui,
                 app,
                 services,
@@ -3755,10 +3744,6 @@ mod tests {
                     vec![underlay, popover]
                 },
             );
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, bounds);
-            ui.request_semantics_snapshot();
-            ui.layout_all(app, services, bounds, 1.0);
         };
 
         // Frame 1: closed.

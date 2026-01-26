@@ -675,6 +675,7 @@ mod tests {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    use crate::test_support::render_overlay_frame;
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{
@@ -1533,11 +1534,7 @@ mod tests {
             trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
             focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         ) {
-            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
-            app.set_frame_id(next_frame);
-
-            OverlayController::begin_frame(app, window);
-            let root = fret_ui::declarative::render_root(
+            let _ = render_overlay_frame(
                 ui,
                 app,
                 services,
@@ -1624,10 +1621,6 @@ mod tests {
                     vec![underlay, dialog]
                 },
             );
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, bounds);
-            ui.request_semantics_snapshot();
-            ui.layout_all(app, services, bounds, 1.0);
         }
 
         // Frame 1: closed.
@@ -1783,11 +1776,7 @@ mod tests {
             focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
             handler: OnCloseAutoFocus,
         ) {
-            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
-            app.set_frame_id(next_frame);
-
-            OverlayController::begin_frame(app, window);
-            let root = fret_ui::declarative::render_root(
+            let _ = render_overlay_frame(
                 ui,
                 app,
                 services,
@@ -1880,10 +1869,6 @@ mod tests {
                     vec![underlay, dialog]
                 },
             );
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, bounds);
-            ui.request_semantics_snapshot();
-            ui.layout_all(app, services, bounds, 1.0);
         }
 
         // Frame 1: closed.
