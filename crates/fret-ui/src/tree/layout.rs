@@ -213,9 +213,59 @@ impl<H: UiHost> UiTree<H> {
                         props,
                     );
 
-                    if requires_deferred_consumption || requires_window_update {
+                    // Keep element-local scroll state in sync for scroll-handle changes that are
+                    // treated as HitTestOnly (wheel/inertial/transform-only updates). This avoids
+                    // a "layout-or-nothing" coupling for consumers that observe `VirtualListState`.
+                    crate::elements::with_element_state(
+                        &mut *app,
+                        window,
+                        record.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+
+                            let viewport = match props.axis {
+                                fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return;
+                            }
+
+                            let offset_point = props.scroll_handle.offset();
+                            let offset_axis = match props.axis {
+                                fret_core::Axis::Vertical => offset_point.y,
+                                fret_core::Axis::Horizontal => offset_point.x,
+                            };
+                            let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+                            match props.axis {
+                                fret_core::Axis::Vertical => state.offset_y = offset_axis,
+                                fret_core::Axis::Horizontal => state.offset_x = offset_axis,
+                            }
+                        },
+                    );
+
+                    if requires_deferred_consumption {
                         inv = Invalidation::Layout;
                         detail = UiDebugInvalidationDetail::ScrollHandleLayout;
+                    } else if requires_window_update {
+                        // Do not force a layout pass just to discover that the visible window is
+                        // outside the previously rendered overscan window. Instead, treat it as a
+                        // prepaint-windowed "ephemeral update" signal (ADR 0190): mark the nearest
+                        // view-cache root dirty and request a redraw so the next frame rerenders
+                        // the virtual surface children.
+                        self.mark_nearest_view_cache_root_needs_rerender(
+                            node,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                        );
+                        self.request_redraw_coalesced(app);
                     }
                 }
 

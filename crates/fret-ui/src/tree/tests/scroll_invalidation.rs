@@ -178,7 +178,7 @@ fn virtual_list_wheel_scroll_is_hit_test_only_within_overscan_window() {
 }
 
 #[test]
-fn virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window() {
+fn virtual_list_out_of_band_scroll_avoids_layout_after_overscan_window() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -268,7 +268,9 @@ fn virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window() {
     scene.clear();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-    // Larger jump: leaves the overscan window, should upgrade to Layout.
+    // Larger jump: leaves the overscan window. This should remain HitTestOnly: without view-cache
+    // reuse, rerender will rebuild the visible items anyway, so we should not pay for a layout
+    // invalidation walk just to detect a window mismatch.
     scroll_handle.set_offset(Point::new(Px(0.0), Px(28.0 * 25.0)));
     app.advance_frame();
     let root = render_frame(&mut ui, &mut app, &mut services);
@@ -276,9 +278,17 @@ fn virtual_list_out_of_band_scroll_upgrades_to_layout_after_overscan_window() {
     let saw_layout = ui.debug_invalidation_walks().iter().any(|w| {
         w.inv == Invalidation::Layout && w.detail == UiDebugInvalidationDetail::ScrollHandleLayout
     });
+    let saw_hit_test_only = ui.debug_invalidation_walks().iter().any(|w| {
+        w.inv == Invalidation::HitTestOnly
+            && w.detail == UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+    });
     assert!(
-        saw_layout,
-        "expected out-of-band scroll beyond overscan to upgrade to a layout invalidation walk"
+        saw_hit_test_only,
+        "expected out-of-band scroll beyond overscan to record a hit-test-only invalidation walk"
+    );
+    assert!(
+        !saw_layout,
+        "expected out-of-band scroll beyond overscan to avoid layout invalidation walks"
     );
 }
 

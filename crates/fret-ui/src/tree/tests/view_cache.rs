@@ -376,6 +376,125 @@ fn view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender(
 }
 
 #[test]
+fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let boundary = ui.create_node(TestStack::default());
+    let vlist_node = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![vlist_node]);
+
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.nodes[boundary].bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let handle_key = scroll_handle.base_handle().binding_key();
+
+    // Seed element state with a previously rendered overscan window.
+    let vlist_element = crate::GlobalElementId(1);
+    let len = 100usize;
+    let overscan = 2usize;
+    let viewport = fret_core::Px(100.0);
+    let mut metrics = crate::virtual_list::VirtualListMetrics::default();
+    metrics.ensure_with_mode(
+        crate::element::VirtualListMeasureMode::Fixed,
+        len,
+        fret_core::Px(10.0),
+        fret_core::Px(0.0),
+        fret_core::Px(0.0),
+    );
+    let initial_window = metrics
+        .visible_range(fret_core::Px(0.0), viewport, overscan)
+        .expect("initial window range");
+
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        vlist_element,
+        crate::element::VirtualListState::default,
+        |state| {
+            state.viewport_h = viewport;
+            state.metrics = metrics.clone();
+            state.render_window_range = Some(initial_window);
+        },
+    );
+
+    // Register the element instance + scroll-handle binding used by the invalidation pass.
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        window_frame.instances.insert(
+            vlist_node,
+            crate::declarative::frame::ElementRecord {
+                element: vlist_element,
+                instance: crate::declarative::frame::ElementInstance::VirtualList(
+                    crate::element::VirtualListProps {
+                        layout: crate::element::LayoutStyle::default(),
+                        axis: fret_core::Axis::Vertical,
+                        len,
+                        items_revision: 0,
+                        estimate_row_height: fret_core::Px(10.0),
+                        measure_mode: crate::element::VirtualListMeasureMode::Fixed,
+                        key_cache: crate::element::VirtualListKeyCacheMode::AllKeys,
+                        overscan,
+                        scroll_margin: fret_core::Px(0.0),
+                        gap: fret_core::Px(0.0),
+                        scroll_handle: scroll_handle.clone(),
+                        visible_items: Vec::new(),
+                    },
+                ),
+            },
+        );
+    });
+
+    let frame_id = app.frame_id();
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [crate::declarative::frame::ScrollHandleBinding {
+            handle_key,
+            element: vlist_element,
+            handle: scroll_handle.base_handle().clone(),
+        }],
+    );
+
+    // Prime scroll-handle revisions so the next change is treated as a delta.
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
+    for id in [root, boundary, vlist_node] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    // Scroll far enough to fall outside the previously rendered overscan window.
+    scroll_handle.set_offset(fret_core::Point::new(
+        fret_core::Px(0.0),
+        fret_core::Px(250.0),
+    ));
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
+
+    assert!(ui.nodes[boundary].invalidation.hit_test);
+    assert!(ui.nodes[boundary].invalidation.paint);
+    assert!(ui.nodes[boundary].view_cache_needs_rerender);
+    assert!(!ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
 fn widget_request_animation_frame_marks_nearest_view_cache_root_dirty() {
     let mut app = crate::test_host::TestHost::new();
 

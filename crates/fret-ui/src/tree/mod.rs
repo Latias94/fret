@@ -305,6 +305,7 @@ pub enum UiDebugInvalidationDetail {
     FocusEvent,
     ScrollHandleHitTestOnly,
     ScrollHandleLayout,
+    ScrollHandleWindowUpdate,
     FocusVisiblePolicy,
     InputModalityPolicy,
     AnimationFrameRequest,
@@ -332,6 +333,7 @@ impl UiDebugInvalidationDetail {
             Self::FocusEvent => Some("focus_event"),
             Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
             Self::ScrollHandleLayout => Some("scroll_handle_layout"),
+            Self::ScrollHandleWindowUpdate => Some("scroll_handle_window_update"),
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),
             Self::InputModalityPolicy => Some("input_modality_policy"),
             Self::AnimationFrameRequest => Some("animation_frame_request"),
@@ -1144,7 +1146,11 @@ impl<H: UiHost> UiTree<H> {
             UiDebugInvalidationSource::Notify
                 | UiDebugInvalidationSource::ModelChange
                 | UiDebugInvalidationSource::GlobalChange
-        ) || detail == UiDebugInvalidationDetail::ScrollHandleLayout
+        ) || matches!(
+            detail,
+            UiDebugInvalidationDetail::ScrollHandleLayout
+                | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+        )
     }
 
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {

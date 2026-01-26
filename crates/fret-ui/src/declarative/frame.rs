@@ -153,6 +153,17 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
+pub(crate) fn with_window_frame_mut<H: UiHost, R>(
+    app: &mut H,
+    window: AppWindowId,
+    f: impl FnOnce(&mut WindowFrame) -> R,
+) -> R {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+        let window_frame = frame.windows.entry(window).or_default();
+        f(window_frame)
+    })
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct ScrollHandleBinding {
     pub handle_key: usize,
