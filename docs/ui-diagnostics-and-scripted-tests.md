@@ -475,6 +475,70 @@ For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
 
+The UI gallery suite includes lightweight smoke checks for table/grid surfaces:
+
+- `tools/diag-scripts/ui-gallery-table-smoke.json`
+- `tools/diag-scripts/ui-gallery-data-table-smoke.json`
+
+These scripts assert that stable semantics anchors exist *and* that their bounds are within the
+window (`bounds_within_window`), which is a fast way to catch “layout is broken / clipped to zero”
+regressions when a table suddenly “disappears”.
+
+### View-cache regression gating
+
+Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
+you can enforce a minimum number of cache-root reuse events observed in the exported `bundle.json`.
+
+Example (UI gallery):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events in snapshots after `--warmup-frames`.
+- If `view_cache_active` is false for all snapshots (or `cache_roots` are not exported), the check will fail by design.
+
+### Overlay synthesis regression gating
+
+Some overlay regressions only show up when overlay requests must be synthesized from cached declarations
+(because view caching skipped rerendering the producer subtree). To avoid "it passed but never tested
+the synthesis seam", you can gate on synthesis events exported in `bundle.json`:
+
+- `--check-overlay-synthesis-min N` counts `debug.overlay_synthesis[].outcome == "synthesized"` events in snapshots after `--warmup-frames`.
+
+### Matrix runner (uncached vs cached)
+
+To automate the “view-cache is behavior preserving” check across the UI gallery suite, run the matrix:
+
+- `cargo run -p fretboard -- diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- Requires `--launch` so the runner can control `FRET_UI_GALLERY_VIEW_CACHE` (0 vs 1) per run.
+- Writes bundles under `--dir/uncached` and `--dir/cached`, then compares each script pair via `diag compare` semantics.
+- Default reuse gate is `--check-view-cache-reuse-min 1` (pass `--check-view-cache-reuse-min 0` to disable the gate).
+- If `--env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1` is set, the matrix run also defaults to `--check-overlay-synthesis-min 1` for the cached variant (pass `--check-overlay-synthesis-min 0` to disable). The gate is only enforced for overlay-centric scripts (non-overlay scripts in the suite are exempt).
+
+Recommended (CI/automation):
+
+- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+
+### Bundle comparison (cached vs uncached)
+
+To build confidence that view-cache is "behavior preserving", compare two captured bundles.
+`fretboard diag compare` focuses on stable `debug.semantics.nodes[].test_id` anchors and can also compare
+`scene_fingerprint` (paint output fingerprint) for the selected snapshots.
+
+Example:
+
+- `cargo run -p fretboard -- diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json`
+
+Notes:
+
+- By default, the command compares the last snapshot after `--warmup-frames` (per bundle, first window).
+- Use `--compare-ignore-bounds` if you only want structural semantics checks (role/flags/actions).
+- Use `--compare-ignore-scene-fingerprint` if the scene fingerprint is expected to differ (e.g. non-deterministic content).
+
 ## Troubleshooting
 
 **The app never dumps bundles**

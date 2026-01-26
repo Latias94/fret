@@ -1832,6 +1832,188 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
+fn ui_gallery_suite_scripts() -> [&'static str; 13] {
+    [
+        "tools/diag-scripts/ui-gallery-overlay-torture.json",
+        "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
+        "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
+        "tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json",
+        "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+        "tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json",
+        "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+        "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
+        "tools/diag-scripts/ui-gallery-table-smoke.json",
+        "tools/diag-scripts/ui-gallery-data-table-smoke.json",
+        "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+    ]
+}
+
+fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    // These scripts are expected to exercise the cached overlay synthesis seam when view-cache
+    // shell reuse is enabled.
+    matches!(
+        name,
+        "ui-gallery-overlay-torture.json"
+            | "ui-gallery-modal-barrier-underlay-block.json"
+            | "ui-gallery-popover-dialog-escape-underlay.json"
+            | "ui-gallery-portal-geometry-scroll-clamp.json"
+            | "ui-gallery-dropdown-open-select.json"
+            | "ui-gallery-dropdown-submenu-underlay-dismiss.json"
+            | "ui-gallery-context-menu-right-click.json"
+            | "ui-gallery-dialog-escape-focus-restore.json"
+            | "ui-gallery-menubar-keyboard-nav.json"
+    )
+}
+
+#[derive(Debug, Clone)]
+struct ResolvedScriptPaths {
+    out_dir: PathBuf,
+    ready_path: PathBuf,
+    exit_path: PathBuf,
+    script_path: PathBuf,
+    script_trigger_path: PathBuf,
+    script_result_path: PathBuf,
+    script_result_trigger_path: PathBuf,
+}
+
+impl ResolvedScriptPaths {
+    fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
+        let out_dir = resolve_path(workspace_root, out_dir.to_path_buf());
+        Self {
+            ready_path: resolve_path(workspace_root, out_dir.join("ready.touch")),
+            exit_path: resolve_path(workspace_root, out_dir.join("exit.touch")),
+            script_path: resolve_path(workspace_root, out_dir.join("script.json")),
+            script_trigger_path: resolve_path(workspace_root, out_dir.join("script.touch")),
+            script_result_path: resolve_path(workspace_root, out_dir.join("script.result.json")),
+            script_result_trigger_path: resolve_path(
+                workspace_root,
+                out_dir.join("script.result.touch"),
+            ),
+            out_dir,
+        }
+    }
+}
+
+fn matrix_launch_env(
+    base: &[(String, String)],
+    view_cache_enabled: bool,
+) -> Result<Vec<(String, String)>, String> {
+    if base
+        .iter()
+        .any(|(k, _)| k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE")
+    {
+        return Err(
+            "--env cannot override reserved var for diag matrix: FRET_UI_GALLERY_VIEW_CACHE"
+                .to_string(),
+        );
+    }
+    let mut env = base.to_vec();
+    env.push((
+        "FRET_UI_GALLERY_VIEW_CACHE".to_string(),
+        if view_cache_enabled { "1" } else { "0" }.to_string(),
+    ));
+    Ok(env)
+}
+
+fn run_script_suite_collect_bundles(
+    scripts: &[PathBuf],
+    paths: &ResolvedScriptPaths,
+    launch: &[String],
+    launch_env: &[(String, String)],
+    workspace_root: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+    warmup_frames: u64,
+    check_view_cache_reuse_min: Option<u64>,
+    check_overlay_synthesis_min: Option<u64>,
+    overlay_synthesis_gate_predicate: Option<fn(&Path) -> bool>,
+) -> Result<Vec<PathBuf>, String> {
+    std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
+
+    let launch = Some(launch.to_vec());
+    let mut child = maybe_launch_demo(
+        &launch,
+        launch_env,
+        workspace_root,
+        &paths.out_dir,
+        &paths.ready_path,
+        &paths.exit_path,
+        timeout_ms,
+        poll_ms,
+    )?;
+
+    let mut bundle_paths: Vec<PathBuf> = Vec::new();
+    for src in scripts {
+        let mut result = run_script_and_wait(
+            src,
+            &paths.script_path,
+            &paths.script_trigger_path,
+            &paths.script_result_path,
+            &paths.script_result_trigger_path,
+            timeout_ms,
+            poll_ms,
+        );
+        if let Ok(summary) = &result
+            && summary.stage.as_deref() == Some("failed")
+        {
+            if let Some(dir) =
+                wait_for_failure_dump_bundle(&paths.out_dir, summary, timeout_ms, poll_ms)
+            {
+                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                    if let Ok(summary) = result.as_mut() {
+                        summary.last_bundle_dir = Some(name.to_string());
+                    }
+                }
+            }
+        }
+        let result = result?;
+        if result.stage.as_deref() != Some("passed") {
+            stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+            return Err(format!(
+                "unexpected script stage for {}: {:?}",
+                src.display(),
+                result.stage
+            ));
+        }
+
+        let bundle_path =
+            wait_for_bundle_json_from_script_result(&paths.out_dir, &result, timeout_ms, poll_ms)
+                .ok_or_else(|| {
+                format!(
+                    "script passed but no bundle.json was found (required for matrix): {}",
+                    src.display()
+                )
+            })?;
+
+        if let Some(min) = check_view_cache_reuse_min
+            && min > 0
+        {
+            check_bundle_for_view_cache_reuse_min(&bundle_path, min, warmup_frames)?;
+        }
+        if let Some(min) = check_overlay_synthesis_min
+            && min > 0
+        {
+            let should_gate = overlay_synthesis_gate_predicate
+                .map(|pred| pred(src))
+                .unwrap_or(true);
+            if should_gate {
+                check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
+            }
+        }
+
+        bundle_paths.push(bundle_path);
+    }
+
+    stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+    Ok(bundle_paths)
+}
+
 fn apply_post_run_checks(
     bundle_path: &Path,
     check_stale_paint_test_id: Option<&str>,

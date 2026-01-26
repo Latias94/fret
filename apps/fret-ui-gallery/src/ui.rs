@@ -94,26 +94,22 @@ pub(crate) fn sidebar_view(
                     button =
                         button.test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")));
 
-                    if item.id == PAGE_VIRTUAL_LIST_TORTURE {
-                        let on_activate: fret_ui::action::OnActivate =
-                            Arc::new(move |host, action_cx, _reason| {
-                                let _ =
-                                    host.models_mut().update(&selected_page_for_activate, |v| {
-                                        *v = page_id_for_activate.clone();
-                                    });
-                                let _ =
-                                    host.models_mut().update(&workspace_tabs_for_activate, |t| {
-                                        if !t
-                                            .iter()
-                                            .any(|id| id.as_ref() == page_id_for_activate.as_ref())
-                                        {
-                                            t.push(page_id_for_activate.clone());
-                                        }
-                                    });
-                                host.request_redraw(action_cx.window);
+                    let on_activate: fret_ui::action::OnActivate =
+                        Arc::new(move |host, action_cx, _reason| {
+                            let _ = host.models_mut().update(&selected_page_for_activate, |v| {
+                                *v = page_id_for_activate.clone();
                             });
-                        button = button.on_activate(on_activate);
-                    }
+                            let _ = host.models_mut().update(&workspace_tabs_for_activate, |t| {
+                                if !t
+                                    .iter()
+                                    .any(|id| id.as_ref() == page_id_for_activate.as_ref())
+                                {
+                                    t.push(page_id_for_activate.clone());
+                                }
+                            });
+                            host.request_redraw(action_cx.window);
+                        });
+                    button = button.on_activate(on_activate);
 
                     button.into_element(cx)
                 }));
@@ -152,12 +148,21 @@ pub(crate) fn sidebar_view(
             .gap(Space::N4),
         |_cx| nav_sections,
     );
-    let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
-        nav_body
-    } else {
-        shadcn::ScrollArea::new(vec![nav_body])
-            .refine_layout(LayoutRefinement::default().w_full().h_full())
-            .into_element(cx)
+    let nav_scroll = {
+        let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
+            nav_body
+        } else {
+            shadcn::ScrollArea::new(vec![nav_body])
+                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .into_element(cx)
+        };
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::<str>::from("ui-gallery-nav-scroll")),
+                ..Default::default()
+            },
+            move |_cx| vec![nav_scroll],
+        )
     };
 
     let container = cx.container(
@@ -3663,6 +3668,9 @@ fn preview_data_table(
         })
         .unwrap_or_else(|| Arc::<str>::from("Sorting: <none>"));
 
+    let normalize_col_id =
+        |id: &str| -> Arc<str> { Arc::<str>::from(id.replace('%', "pct").replace('_', "-")) };
+
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
         .refine_layout(
@@ -3678,14 +3686,36 @@ fn preview_data_table(
             assets.columns.clone(),
             |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
             |col| col.id.clone(),
-            |cx, col, row| match col.id.as_ref() {
-                "name" => cx.text(row.name.as_ref()),
-                "status" => cx.text(row.status.as_ref()),
-                "cpu%" => cx.text(format!("{}%", row.cpu)),
-                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                _ => cx.text("?"),
+            move |cx, col, row| {
+                let col_id = normalize_col_id(col.id.as_ref());
+                let cell = match col.id.as_ref() {
+                    "name" => cx.text(row.name.as_ref()),
+                    "status" => cx.text(row.status.as_ref()),
+                    "cpu%" => cx.text(format!("{}%", row.cpu)),
+                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                    _ => cx.text("?"),
+                };
+
+                cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        test_id: Some(Arc::<str>::from(format!(
+                            "ui-gallery-data-table-cell-{}-{}",
+                            row.id, col_id
+                        ))),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![cell],
+                )
             },
         );
+
+    let table = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            test_id: Some(Arc::<str>::from("ui-gallery-data-table-root")),
+            ..Default::default()
+        },
+        move |_cx| vec![table],
+    );
 
     vec![
         cx.text("Click header to sort; click row to toggle selection."),
@@ -3851,7 +3881,14 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.text("fret-ui")).into_element(cx),
+                shadcn::TableCell::new(cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        test_id: Some(Arc::<str>::from("ui-gallery-table-cell-fret-ui")),
+                        ..Default::default()
+                    },
+                    |cx| vec![cx.text("fret-ui")],
+                ))
+                .into_element(cx),
                 shadcn::TableCell::new(cx.text("mechanisms")).into_element(cx),
                 shadcn::TableCell::new(cx.text("Element tree + layout")).into_element(cx),
             ],
@@ -3887,7 +3924,13 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx);
 
-    vec![table]
+    vec![cx.semantics(
+        fret_ui::element::SemanticsProps {
+            test_id: Some(Arc::<str>::from("ui-gallery-table-root")),
+            ..Default::default()
+        },
+        move |_cx| vec![table],
+    )]
 }
 
 fn preview_progress(cx: &mut ElementContext<'_, App>, progress: Model<f32>) -> Vec<AnyElement> {
@@ -4114,33 +4157,52 @@ fn preview_overlay(
                     .into_element(cx)
             };
 
-            let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(
-                cx,
-                |cx| {
-                    shadcn::Button::new("DropdownMenu")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dropdown-trigger")
-                        .toggle_model(dropdown_open.clone())
-                        .into_element(cx)
-                },
-                |_cx| {
-                    vec![
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Apple")
-                                .test_id("ui-gallery-dropdown-item-apple")
-                                .on_select(CMD_MENU_DROPDOWN_APPLE),
-                        ),
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Orange")
-                                .on_select(CMD_MENU_DROPDOWN_ORANGE),
-                        ),
-                        shadcn::DropdownMenuEntry::Separator,
-                        shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Disabled").disabled(true),
-                        ),
-                    ]
-                },
-            );
+            let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone())
+                .modal(false)
+                .into_element(
+                    cx,
+                    |cx| {
+                        shadcn::Button::new("DropdownMenu")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-dropdown-trigger")
+                            .toggle_model(dropdown_open.clone())
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Apple")
+                                    .test_id("ui-gallery-dropdown-item-apple")
+                                    .on_select(CMD_MENU_DROPDOWN_APPLE),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("More")
+                                    .test_id("ui-gallery-dropdown-item-more")
+                                    .close_on_select(false)
+                                    .submenu(vec![
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Nested action")
+                                                .test_id("ui-gallery-dropdown-submenu-item-nested")
+                                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                                        ),
+                                        shadcn::DropdownMenuEntry::Separator,
+                                        shadcn::DropdownMenuEntry::Item(
+                                            shadcn::DropdownMenuItem::new("Nested disabled")
+                                                .disabled(true),
+                                        ),
+                                    ]),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Orange")
+                                    .on_select(CMD_MENU_DROPDOWN_ORANGE),
+                            ),
+                            shadcn::DropdownMenuEntry::Separator,
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Disabled").disabled(true),
+                            ),
+                        ]
+                    },
+                );
 
             let context_menu = shadcn::ContextMenu::new(context_menu_open.clone()).into_element(
                 cx,
