@@ -51,7 +51,7 @@ By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-dia
 ## Optional: dump a frame screenshot alongside the bundle
 
 If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
-enable per-bundle screenshots:
+enable bundle screenshots:
 
 - `FRET_DIAG_SCREENSHOT=1`
 
@@ -82,7 +82,6 @@ Workflow tip:
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
-
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:
