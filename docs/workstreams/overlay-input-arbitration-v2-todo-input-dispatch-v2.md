@@ -202,6 +202,17 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (`alert_dialog_open_auto_focus_redirect_to_underlay_is_clamped_to_modal_layer`)
 
+- [x] OIA2-test-035 Modal close transition restores trigger focus while the barrier blocks underlay input (dialog).
+  - Target: confirm close-transition behavior matches Radix-style focus restore semantics (focus may move back to the trigger
+    even while the modal barrier remains active for pointer input).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`dialog_close_transition_restores_trigger_focus_while_barrier_blocks_underlay_pointer`)
+
+- [x] OIA2-test-036 Modal popover close transition restores trigger focus while the barrier blocks underlay input.
+  - Target: same close-transition focus restore semantics as other modal overlays, but for popovers (separate code path).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/popover.rs` (`modal_popover_close_transition_restores_trigger_focus_while_barrier_blocks_underlay_pointer`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
