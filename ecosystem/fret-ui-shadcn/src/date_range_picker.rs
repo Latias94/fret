@@ -64,7 +64,7 @@ impl DateRangePicker {
             disable_outside_days: true,
             disabled_predicate: None,
             disabled: false,
-            format_selected: Arc::new(format_selected_iso),
+            format_selected: Arc::new(format_selected_lll_dd_y_range),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -196,6 +196,41 @@ fn format_selected_iso(sel: DateRangeSelection) -> Arc<str> {
         (Some(from), Some(to)) => Arc::<str>::from(format!("{from} – {to}")),
         (Some(from), None) => Arc::<str>::from(from.to_string()),
         (None, Some(to)) => Arc::<str>::from(to.to_string()),
+        (None, None) => Arc::<str>::from(""),
+    }
+}
+
+fn format_date_lll_dd_y_en(date: Date) -> String {
+    use time::Month;
+
+    let month = match date.month() {
+        Month::January => "Jan",
+        Month::February => "Feb",
+        Month::March => "Mar",
+        Month::April => "Apr",
+        Month::May => "May",
+        Month::June => "Jun",
+        Month::July => "Jul",
+        Month::August => "Aug",
+        Month::September => "Sep",
+        Month::October => "Oct",
+        Month::November => "Nov",
+        Month::December => "Dec",
+    };
+
+    let day = format!("{:02}", date.day());
+    format!("{month} {day}, {}", date.year())
+}
+
+fn format_selected_lll_dd_y_range(sel: DateRangeSelection) -> Arc<str> {
+    match (sel.from, sel.to) {
+        (Some(from), Some(to)) => Arc::<str>::from(format!(
+            "{} - {}",
+            format_date_lll_dd_y_en(from),
+            format_date_lll_dd_y_en(to)
+        )),
+        (Some(from), None) => Arc::<str>::from(format_date_lll_dd_y_en(from)),
+        (None, Some(to)) => Arc::<str>::from(format_date_lll_dd_y_en(to)),
         (None, None) => Arc::<str>::from(""),
     }
 }

@@ -136,6 +136,51 @@ fn subtree_has_flex_grow(element: &AnyElement) -> bool {
     element.children.iter().any(subtree_has_flex_grow)
 }
 
+fn responsive_md_width_auto(mut element: AnyElement) -> AnyElement {
+    if subtree_has_flex_grow(&element) {
+        return element;
+    }
+
+    match &mut element.kind {
+        ElementKind::Semantics(props) => {
+            props.layout.size.width = fret_ui::element::Length::Auto;
+        }
+        ElementKind::Container(props) => {
+            props.layout.size.width = fret_ui::element::Length::Auto;
+        }
+        ElementKind::Pressable(props) => {
+            props.layout.size.width = fret_ui::element::Length::Auto;
+        }
+        ElementKind::TextInput(props) => {
+            // When shadcn's `Field(orientation="responsive")` flips to a row layout, upstream
+            // applies `w-auto` to direct children via container queries. For `<input>` / `<textarea>`
+            // this surfaces the HTML default `cols=20` intrinsic width (≈218px at `text-sm`).
+            //
+            // Fret's `TextInput` intrinsic sizing is placeholder/content driven, so we approximate
+            // the browser behavior by explicitly setting a 20ch-like width derived from the input's
+            // text size and chrome.
+            let ch = props.text_style.size.0 * 0.685;
+            let cols = 20.0;
+            let chrome_w = props.chrome.padding.left.0
+                + props.chrome.padding.right.0
+                + props.chrome.border.left.0
+                + props.chrome.border.right.0;
+            props.layout.size.width = fret_ui::element::Length::Px(Px(ch * cols + chrome_w));
+        }
+        ElementKind::TextArea(props) => {
+            let ch = props.text_style.size.0 * 0.685;
+            let cols = 20.0;
+            let chrome_w = props.chrome.padding_x.0 * 2.0
+                + props.chrome.border.left.0
+                + props.chrome.border.right.0;
+            props.layout.size.width = fret_ui::element::Length::Px(Px(ch * cols + chrome_w));
+        }
+        _ => {}
+    }
+
+    element
+}
+
 fn is_radio_group_element(element: &AnyElement) -> bool {
     match &element.kind {
         ElementKind::Semantics(props) if props.role == SemanticsRole::RadioGroup => true,
@@ -163,6 +208,11 @@ pub enum FieldOrientation {
     #[default]
     Vertical,
     Horizontal,
+    /// Matches the upstream `orientation="responsive"` variant (container-query driven in web).
+    ///
+    /// In Fret we currently approximate the `@md/field-group` container query with a viewport-width
+    /// breakpoint at `768px` (`md`).
+    Responsive,
 }
 
 #[derive(Debug, Clone)]
@@ -856,6 +906,8 @@ impl Field {
             CrossAlign::Center
         };
 
+        let md_breakpoint = cx.bounds.size.width >= Px(768.0);
+
         cx.container(wrapper, move |cx| {
             let inner = match orientation {
                 FieldOrientation::Vertical => cx.column(
@@ -903,6 +955,62 @@ impl Field {
                     },
                     move |_cx| children,
                 ),
+                FieldOrientation::Responsive => {
+                    let children_row = children.clone();
+                    let children_col = children;
+                    if md_breakpoint {
+                        let children_row = children_row
+                            .into_iter()
+                            .map(responsive_md_width_auto)
+                            .collect::<Vec<_>>();
+                        cx.row(
+                            RowProps {
+                                layout: inner_layout,
+                                gap,
+                                justify: MainAlign::Start,
+                                align: align_horizontal,
+                                ..Default::default()
+                            },
+                            move |_cx| children_row,
+                        )
+                    } else {
+                        cx.column(
+                            ColumnProps {
+                                layout: inner_layout.clone(),
+                                gap,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                // Upstream `FieldDescription` includes `nth-last-2:-mt-1`.
+                                let len = children_col.len();
+                                children_col
+                                    .into_iter()
+                                    .enumerate()
+                                    .map(|(idx, child)| {
+                                        if len >= 2
+                                            && idx == len - 2
+                                            && is_field_description(&theme, &child)
+                                        {
+                                            let layout = decl_style::layout_style(
+                                                &theme,
+                                                LayoutRefinement::default().mt_neg(Space::N1),
+                                            );
+                                            cx.container(
+                                                ContainerProps {
+                                                    layout,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![child],
+                                            )
+                                        } else {
+                                            child
+                                        }
+                                    })
+                                    .collect::<Vec<_>>()
+                            },
+                        )
+                    }
+                }
             };
 
             vec![inner]

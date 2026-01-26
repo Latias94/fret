@@ -22937,3 +22937,1003 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
         0.02,
     );
 }
+
+fn web_find_all_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Vec<&'a WebNode> {
+    find_all(root, &|n| {
+        n.attrs.get("data-slot").is_some_and(|v| v == slot)
+    })
+}
+
+#[test]
+fn web_vs_fret_layout_button_as_child_geometry_matches_web() {
+    let web = read_web_golden("button-as-child");
+    let theme = web_theme(&web);
+    let web_link = web_find_by_tag_and_text(&theme.root, "a", "Login").expect("web link");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+        vec![fret_ui_shadcn::Button::new("Login").into_element(cx)]
+    });
+
+    let button = find_semantics(&snap, SemanticsRole::Button, Some("Login"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret button");
+
+    assert_close_px(
+        "button-as-child w",
+        button.bounds.size.width,
+        web_link.rect.w,
+        4.0,
+    );
+    assert_close_px(
+        "button-as-child h",
+        button.bounds.size.height,
+        web_link.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_checkbox_disabled_control_size_matches_web() {
+    let web = read_web_golden("checkbox-disabled");
+    let theme = web_theme(&web);
+    let web_checkbox = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.get("role").is_some_and(|r| r == "checkbox")
+            && n.attrs.get("aria-checked").is_some_and(|v| v == "false")
+            && n.attrs.contains_key("data-disabled")
+    })
+    .expect("web checkbox");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<bool> = cx.app.models_mut().insert(false);
+        vec![
+            fret_ui_shadcn::Checkbox::new(model)
+                .a11y_label("Checkbox")
+                .disabled(true)
+                .into_element(cx),
+        ]
+    });
+
+    let checkbox = find_semantics(&snap, SemanticsRole::Checkbox, Some("Checkbox"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Checkbox, None))
+        .expect("fret checkbox semantics node");
+
+    assert_close_px(
+        "checkbox-disabled width",
+        checkbox.bounds.size.width,
+        web_checkbox.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "checkbox-disabled height",
+        checkbox.bounds.size.height,
+        web_checkbox.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
+    let web = read_web_golden("collapsible-demo");
+    let theme = web_theme(&web);
+
+    let web_trigger = find_first(&theme.root, &|n| {
+        n.tag == "button" && class_has_token(n, "size-8")
+    })
+    .expect("web trigger");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let open: Model<bool> = cx.app.models_mut().insert(false);
+
+        let trigger = fret_ui_shadcn::Button::new("Toggle")
+            .variant(fret_ui_shadcn::ButtonVariant::Ghost)
+            .size(fret_ui_shadcn::ButtonSize::IconSm)
+            .children(vec![decl_icon::icon(cx, fret_icons::ids::ui::CHEVRON_DOWN)])
+            .into_element(cx);
+
+        let header = cx.flex(
+            FlexProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(16.0),
+                padding: Edges::symmetric(Px(16.0), Px(0.0)),
+                justify: MainAlign::SpaceBetween,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |cx| {
+                vec![
+                    ui::text(cx, "@peduarte starred 3 repositories")
+                        .font_semibold()
+                        .into_element(cx),
+                    trigger,
+                ]
+            },
+        );
+
+        let item = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                border: Edges::all(Px(1.0)),
+                padding: Edges::symmetric(Px(16.0), Px(8.0)),
+                ..Default::default()
+            },
+            move |cx| vec![ui::text(cx, "@radix-ui/primitives").into_element(cx)],
+        );
+
+        let trigger_stack = cx.column(
+            ColumnProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                gap: Px(8.0),
+                ..Default::default()
+            },
+            move |_cx| vec![header, item],
+        );
+
+        vec![fret_ui_shadcn::Collapsible::new(open).into_element(
+            cx,
+            move |_cx, _is_open| trigger_stack,
+            move |cx| {
+                cx.column(
+                    ColumnProps {
+                        layout: LayoutStyle::default(),
+                        gap: Px(8.0),
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            ui::text(cx, "@radix-ui/colors").into_element(cx),
+                            ui::text(cx, "@stitches/react").into_element(cx),
+                        ]
+                    },
+                )
+            },
+        )]
+    });
+
+    let trigger = find_semantics(&snap, SemanticsRole::Button, Some("Toggle"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret trigger");
+
+    assert_close_px(
+        "collapsible-demo trigger w",
+        trigger.bounds.size.width,
+        web_trigger.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "collapsible-demo trigger h",
+        trigger.bounds.size.height,
+        web_trigger.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_date_picker_demo_trigger_geometry_matches_web() {
+    let web = read_web_golden("date-picker-demo");
+    let theme = web_theme(&web);
+    let web_button =
+        web_find_by_tag_and_text(&theme.root, "button", "Pick a date").expect("web button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        use fret_ui_headless::calendar::CalendarMonth;
+        use time::Month;
+
+        let open: Model<bool> = cx.app.models_mut().insert(false);
+        let month: Model<CalendarMonth> = cx
+            .app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+
+        vec![
+            fret_ui_shadcn::DatePicker::new(open, month, selected)
+                .refine_layout(
+                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = find_semantics(&snap, SemanticsRole::Button, Some("Pick a date"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret date-picker trigger button");
+
+    assert_close_px(
+        "date-picker-demo trigger w",
+        button.bounds.size.width,
+        web_button.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "date-picker-demo trigger h",
+        button.bounds.size.height,
+        web_button.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_date_picker_with_presets_trigger_geometry_matches_web() {
+    let web = read_web_golden("date-picker-with-presets");
+    let theme = web_theme(&web);
+    let web_button =
+        web_find_by_tag_and_text(&theme.root, "button", "Pick a date").expect("web button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        use fret_ui_headless::calendar::CalendarMonth;
+        use time::Month;
+
+        let open: Model<bool> = cx.app.models_mut().insert(false);
+        let month: Model<CalendarMonth> = cx
+            .app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+
+        vec![
+            fret_ui_shadcn::DatePicker::new(open, month, selected)
+                .refine_layout(
+                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = find_semantics(&snap, SemanticsRole::Button, Some("Pick a date"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret date-picker trigger button");
+
+    assert_close_px(
+        "date-picker-with-presets trigger w",
+        button.bounds.size.width,
+        web_button.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "date-picker-with-presets trigger h",
+        button.bounds.size.height,
+        web_button.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_date_picker_with_range_trigger_geometry_matches_web() {
+    let web = read_web_golden("date-picker-with-range");
+    let theme = web_theme(&web);
+    let web_button = find_first(&theme.root, &|n| {
+        n.tag == "button" && contains_id(n, "date")
+    })
+    .expect("web button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        use fret_ui_headless::calendar::CalendarMonth;
+        use time::{Date, Month};
+
+        let open: Model<bool> = cx.app.models_mut().insert(false);
+        let month: Model<CalendarMonth> = cx
+            .app
+            .models_mut()
+            .insert(CalendarMonth::new(2022, Month::January));
+        let selected: Model<fret_ui_headless::calendar::DateRangeSelection> = cx
+            .app
+            .models_mut()
+            .insert(fret_ui_headless::calendar::DateRangeSelection {
+                from: Some(Date::from_calendar_date(2022, Month::January, 20).expect("from date")),
+                to: Some(Date::from_calendar_date(2022, Month::February, 9).expect("to date")),
+            });
+
+        vec![
+            fret_ui_shadcn::DateRangePicker::new(open, month, selected)
+                .refine_layout(
+                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
+                )
+                .into_element(cx),
+        ]
+    });
+
+    let button = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Jan 20, 2022 - Feb 09, 2022"),
+    )
+    .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+    .expect("fret date-range trigger button");
+
+    assert_close_px(
+        "date-picker-with-range trigger w",
+        button.bounds.size.width,
+        web_button.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "date-picker-with-range trigger h",
+        button.bounds.size.height,
+        web_button.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_field_slider_track_geometry_matches_web() {
+    let web = read_web_golden("field-slider");
+    let theme = web_theme(&web);
+
+    let web_slider = find_first(&theme.root, &|n| {
+        n.tag == "span"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Price Range")
+    })
+    .expect("web slider");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
+        let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![200.0, 800.0]);
+        let slider = fret_ui_shadcn::Slider::new(model)
+            .range(0.0, 1000.0)
+            .step(10.0)
+            .a11y_label("Price Range")
+            .into_element(cx);
+
+        let field = fret_ui_shadcn::Field::new(vec![
+            fret_ui_shadcn::FieldTitle::new("Price Range").into_element(cx),
+            fret_ui_shadcn::FieldDescription::new("Set your budget range ($200 - 800).")
+                .into_element(cx),
+            slider,
+        ])
+        .into_element(cx);
+
+        vec![cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_slider.rect.w)),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![field],
+        )]
+    });
+
+    let thumb = find_semantics(&snap, SemanticsRole::Slider, Some("Price Range"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Slider, None))
+        .expect("fret slider thumb semantics");
+    let slider = thumb
+        .parent
+        .and_then(|parent| snap.nodes.iter().find(|n| n.id == parent))
+        .unwrap_or(thumb);
+
+    assert_close_px(
+        "field-slider track w",
+        slider.bounds.size.width,
+        web_slider.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "field-slider track h",
+        slider.bounds.size.height,
+        web_slider.rect.h,
+        1.0,
+    );
+
+    let _ = ui.debug_node_bounds(slider.id).expect("fret slider bounds");
+}
+
+#[test]
+fn web_vs_fret_layout_field_demo_separator_height_matches_web() {
+    let web = read_web_golden("field-demo");
+    let theme = web_theme(&web);
+    let web_sep = find_first(&theme.root, &|n| {
+        n.tag == "div" && class_has_all_tokens(n, &["relative", "-my-2", "h-5", "text-sm"])
+    })
+    .expect("web field-separator");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let sep = fret_ui_shadcn::FieldSeparator::new()
+            .refine_layout(
+                LayoutRefinement::default()
+                    .mt_neg(Space::N0)
+                    .mb_neg(Space::N0),
+            )
+            .into_element(cx);
+        let sep = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-demo:separator")),
+                ..Default::default()
+            },
+            move |_cx| vec![sep],
+        );
+
+        vec![cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_sep.rect.w)),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![sep],
+        )]
+    });
+
+    let sep = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-demo:separator"),
+    )
+    .expect("fret field-separator");
+
+    assert_close_px(
+        "field-demo separator h",
+        sep.bounds.size.height,
+        web_sep.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content() {
+    let web = read_web_golden("field-responsive");
+    let theme = web_theme(&web);
+
+    let web_max_w = find_first(&theme.root, &|n| {
+        n.tag == "div" && class_has_token(n, "max-w-4xl")
+    })
+    .expect("web max-w-4xl container");
+
+    let web_content = find_first(&theme.root, &|n| {
+        n.tag == "div"
+            && class_has_token(n, "group/field-content")
+            && contains_text(n, "Provide your full name")
+    })
+    .expect("web field-content");
+
+    let web_input = find_first(&theme.root, &|n| n.tag == "input" && contains_id(n, "name"))
+        .expect("web input");
+
+    let web_dx = web_input.rect.x - web_content.rect.x;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let theme = Theme::global(&*cx.app).clone();
+        let content_layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
+
+        let content = fret_ui_shadcn::FieldContent::new(vec![
+            fret_ui_shadcn::FieldLabel::new("Name").into_element(cx),
+            fret_ui_shadcn::FieldDescription::new("Provide your full name for identification")
+                .into_element(cx),
+        ])
+        .into_element(cx);
+
+        let content = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: content_layout,
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:field-responsive:content")),
+                ..Default::default()
+            },
+            move |_cx| vec![content],
+        );
+
+        let model: Model<String> = cx.app.models_mut().insert(String::new());
+        let input = fret_ui_shadcn::Input::new(model)
+            .a11y_label("NameInput")
+            .placeholder("Evil Rabbit")
+            .into_element(cx);
+
+        let field = fret_ui_shadcn::Field::new(vec![content, input])
+            .orientation(fret_ui_shadcn::FieldOrientation::Responsive)
+            .into_element(cx);
+
+        vec![cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_max_w.rect.w)),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![field],
+        )]
+    });
+
+    let fret_content = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:field-responsive:content"),
+    )
+    .expect("fret field-content");
+    let fret_input = find_semantics(&snap, SemanticsRole::TextField, Some("NameInput"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::TextField, None))
+        .expect("fret input");
+
+    let fret_dx = fret_input.bounds.origin.x.0 - fret_content.bounds.origin.x.0;
+
+    assert!(
+        fret_dx >= 1.0,
+        "expected responsive field to place input beside content; dx={fret_dx} (content={:?} input={:?})",
+        fret_content.bounds,
+        fret_input.bounds
+    );
+    assert_close_px("field-responsive input dx", Px(fret_dx), web_dx, 12.0);
+}
+
+fn assert_kbd_first_height_matches_web(web_name: &str, text: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_kbd = find_first(&theme.root, &|n| n.tag == "kbd").expect("web kbd");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let label = format!("Golden:{web_name}:kbd");
+    let snap = run_fret_root(bounds, |cx| {
+        let kbd = fret_ui_shadcn::Kbd::new(text).into_element(cx);
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from(label.clone())),
+                ..Default::default()
+            },
+            move |_cx| vec![kbd],
+        )]
+    });
+
+    let kbd = find_semantics(&snap, SemanticsRole::Panel, Some(&label)).expect("fret kbd");
+
+    assert_close_px("kbd height", kbd.bounds.size.height, web_kbd.rect.h, 1.0);
+}
+
+#[test]
+fn web_vs_fret_layout_kbd_button_kbd_height_matches_web() {
+    assert_kbd_first_height_matches_web("kbd-button", "Esc");
+}
+
+#[test]
+fn web_vs_fret_layout_kbd_group_kbd_height_matches_web() {
+    assert_kbd_first_height_matches_web("kbd-group", "Esc");
+}
+
+#[test]
+fn web_vs_fret_layout_kbd_tooltip_kbd_height_matches_web() {
+    let web = read_web_golden("kbd-tooltip");
+    let theme = web_theme(&web);
+    let web_button = web_find_by_tag_and_text(&theme.root, "button", "Save").expect("web button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Save")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into_element(cx),
+        ]
+    });
+
+    let button = find_semantics(&snap, SemanticsRole::Button, Some("Save"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret button");
+
+    assert_close_px(
+        "kbd-tooltip button h",
+        button.bounds.size.height,
+        web_button.rect.h,
+        1.0,
+    );
+}
+
+fn assert_skeleton_rects_match_web(
+    web_name: &str,
+    layout: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<AnyElement>,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let mut web_skeletons = find_all(&theme.root, &|n| {
+        n.tag == "div" && class_has_token(n, "bg-accent") && class_has_token(n, "animate-pulse")
+    });
+    web_skeletons.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .x
+                    .partial_cmp(&b.rect.x)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    assert!(
+        !web_skeletons.is_empty(),
+        "expected skeleton nodes in {web_name}"
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, layout);
+
+    for (idx, web_node) in web_skeletons.iter().enumerate() {
+        let label = format!("Golden:{web_name}:skeleton:{idx}");
+        let node = find_semantics(&snap, SemanticsRole::Panel, Some(&label))
+            .unwrap_or_else(|| panic!("missing fret skeleton semantics for {label}"));
+        assert_rect_close_px(&label, node.bounds, web_node.rect, 1.0);
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_skeleton_demo_rects_match_web() {
+    assert_skeleton_rects_match_web("skeleton-demo", |cx| {
+        let left = fret_ui_shadcn::Skeleton::new()
+            .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(48.0)))
+                    .h_px(MetricRef::Px(Px(48.0))),
+            )
+            .into_element(cx);
+        let left = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:skeleton-demo:skeleton:0")),
+                ..Default::default()
+            },
+            move |_cx| vec![left],
+        );
+
+        let line0 = fret_ui_shadcn::Skeleton::new()
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(250.0)))
+                    .h_px(MetricRef::Px(Px(16.0))),
+            )
+            .into_element(cx);
+        let line0 = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:skeleton-demo:skeleton:1")),
+                ..Default::default()
+            },
+            move |_cx| vec![line0],
+        );
+
+        let line1 = fret_ui_shadcn::Skeleton::new()
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(200.0)))
+                    .h_px(MetricRef::Px(Px(16.0))),
+            )
+            .into_element(cx);
+        let line1 = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:skeleton-demo:skeleton:2")),
+                ..Default::default()
+            },
+            move |_cx| vec![line1],
+        );
+        let line1 = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(200.0)),
+                        height: Length::Px(Px(16.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![line1],
+        );
+
+        let col = cx.column(
+            ColumnProps {
+                layout: LayoutStyle::default(),
+                gap: Px(8.0),
+                ..Default::default()
+            },
+            move |_cx| vec![line0, line1],
+        );
+
+        vec![cx.flex(
+            FlexProps {
+                layout: LayoutStyle::default(),
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(16.0),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| vec![left, col],
+        )]
+    });
+}
+
+#[test]
+fn web_vs_fret_layout_skeleton_card_rects_match_web() {
+    assert_skeleton_rects_match_web("skeleton-card", |cx| {
+        let top = fret_ui_shadcn::Skeleton::new()
+            .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(250.0)))
+                    .h_px(MetricRef::Px(Px(125.0))),
+            )
+            .into_element(cx);
+        let top = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:skeleton-card:skeleton:0")),
+                ..Default::default()
+            },
+            move |_cx| vec![top],
+        );
+
+        let line0 = fret_ui_shadcn::Skeleton::new()
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(250.0)))
+                    .h_px(MetricRef::Px(Px(16.0))),
+            )
+            .into_element(cx);
+        let line0 = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:skeleton-card:skeleton:1")),
+                ..Default::default()
+            },
+            move |_cx| vec![line0],
+        );
+
+        let line1 = fret_ui_shadcn::Skeleton::new()
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(MetricRef::Px(Px(200.0)))
+                    .h_px(MetricRef::Px(Px(16.0))),
+            )
+            .into_element(cx);
+        let line1 = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:skeleton-card:skeleton:2")),
+                ..Default::default()
+            },
+            move |_cx| vec![line1],
+        );
+        let line1 = cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(200.0)),
+                        height: Length::Px(Px(16.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![line1],
+        );
+
+        let inner = cx.column(
+            ColumnProps {
+                layout: LayoutStyle::default(),
+                gap: Px(8.0),
+                ..Default::default()
+            },
+            move |_cx| vec![line0, line1],
+        );
+
+        vec![cx.column(
+            ColumnProps {
+                layout: LayoutStyle::default(),
+                gap: Px(12.0),
+                ..Default::default()
+            },
+            move |_cx| vec![top, inner],
+        )]
+    });
+}
+
+#[test]
+fn web_vs_fret_layout_sonner_demo_button_height_matches_web() {
+    let web = read_web_golden("sonner-demo");
+    let theme = web_theme(&web);
+    let web_button =
+        web_find_by_tag_and_text(&theme.root, "button", "Show Toast").expect("web button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Show Toast")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx),
+        ]
+    });
+
+    let button = find_semantics(&snap, SemanticsRole::Button, Some("Show Toast"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret button");
+
+    assert_close_px(
+        "sonner-demo button h",
+        button.bounds.size.height,
+        web_button.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_sonner_types_first_button_height_matches_web() {
+    let web = read_web_golden("sonner-types");
+    let theme = web_theme(&web);
+    let web_button =
+        web_find_by_tag_and_text(&theme.root, "button", "Default").expect("web button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Default")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx),
+        ]
+    });
+
+    let button = find_semantics(&snap, SemanticsRole::Button, Some("Default"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret button");
+
+    assert_close_px(
+        "sonner-types button h",
+        button.bounds.size.height,
+        web_button.rect.h,
+        1.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_pagination_demo_active_link_size_matches_web() {
+    let web = read_web_golden("pagination-demo");
+    let theme = web_theme(&web);
+    let web_active = web_find_by_tag_and_text(&theme.root, "a", "2").expect("web active link");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let link = fret_ui_shadcn::PaginationLink::new(vec![ui::text(cx, "2").into_element(cx)])
+            .active(true)
+            .into_element(cx);
+        let link = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: SemanticsRole::Panel,
+                label: Some(Arc::from("Golden:pagination-demo:active")),
+                ..Default::default()
+            },
+            move |_cx| vec![link],
+        );
+
+        vec![link]
+    });
+
+    let active = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:pagination-demo:active"),
+    )
+    .expect("fret active pagination link");
+
+    assert_close_px(
+        "pagination-demo active w",
+        active.bounds.size.width,
+        web_active.rect.w,
+        1.0,
+    );
+    assert_close_px(
+        "pagination-demo active h",
+        active.bounds.size.height,
+        web_active.rect.h,
+        1.0,
+    );
+}
