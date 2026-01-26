@@ -49,6 +49,7 @@ use fret_platform::open_url::OpenUrl as _;
 type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
+mod diag_bundle_screenshots;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
@@ -57,6 +58,7 @@ mod renderdoc_capture;
 mod windows_menu;
 
 use super::streaming_upload::StreamingUploadQueue;
+use diag_bundle_screenshots::DiagBundleScreenshotCapture;
 use no_services::NoUiServices;
 use renderdoc_capture::RenderDocCapture;
 
@@ -872,6 +874,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     renderer: Option<Renderer>,
     renderer_caps: Option<fret_render::RendererCapabilities>,
     no_services: NoUiServices,
+    diag_bundle_screenshots: DiagBundleScreenshotCapture,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
@@ -1970,6 +1973,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             renderer: None,
             renderer_caps: None,
             no_services: NoUiServices,
+            diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
@@ -2405,12 +2409,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let size = window.surface_size();
-        let surface = SurfaceState::new(
+        let surface = SurfaceState::new_with_usage(
             &context.adapter,
             &context.device,
             surface,
             size.width,
             size.height,
+            self.diag_bundle_screenshots.surface_usage(),
         )?;
 
         let id = self.windows.insert_with_key(|id| {

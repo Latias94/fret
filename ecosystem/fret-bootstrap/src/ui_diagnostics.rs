@@ -33,6 +33,7 @@ pub struct UiDiagnosticsConfig {
     pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    pub screenshot_on_dump: bool,
 }
 
 impl Default for UiDiagnosticsConfig {
@@ -108,6 +109,7 @@ impl Default for UiDiagnosticsConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(4096);
+        let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
 
         Self {
             enabled,
@@ -131,6 +133,7 @@ impl Default for UiDiagnosticsConfig {
             inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
+            screenshot_on_dump,
         }
     }
 }
@@ -1597,6 +1600,9 @@ impl UiDiagnosticsService {
             return None;
         }
         let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+        if self.cfg.screenshot_on_dump {
+            let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
+        }
         self.last_dump_dir = Some(dir.clone());
         Some(dir)
     }
@@ -3789,6 +3795,17 @@ fn unix_ms_now() -> u64 {
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or_default()
+}
+
+fn env_flag_default_false(name: &str) -> bool {
+    let Ok(v) = std::env::var(name) else {
+        return false;
+    };
+    let v = v.trim().to_ascii_lowercase();
+    if v.is_empty() {
+        return true;
+    }
+    !matches!(v.as_str(), "0" | "false" | "no" | "off")
 }
 
 fn env_flag_default_true(name: &str) -> bool {
