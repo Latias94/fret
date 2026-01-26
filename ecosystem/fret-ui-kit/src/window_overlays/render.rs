@@ -389,6 +389,23 @@ pub fn render<H: UiHost>(
     }
 
     let modal_barrier_active = !seen_modals.is_empty();
+    let modal_branch_nodes: Vec<NodeId> = if modal_barrier_active {
+        let modal_layers: Vec<fret_ui::tree::UiLayerId> =
+            app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                overlays
+                    .modals
+                    .iter()
+                    .filter(|((w, id), _)| *w == window && seen_modals.contains(id))
+                    .map(|(_, entry)| entry.layer)
+                    .collect()
+            });
+        modal_layers
+            .into_iter()
+            .filter_map(|layer| ui.layer_root(layer))
+            .collect()
+    } else {
+        Vec::new()
+    };
 
     for req in popover_requests {
         if dock_drag_affects_window {
@@ -412,7 +429,7 @@ pub fn render<H: UiHost>(
         // Menu-like overlays that disable outside pointer interactions should *not* treat the
         // trigger as a branch: the trigger press must be considered "outside" so it can close the
         // overlay without activating the underlay.
-        let dismissable_branch_nodes = if disable_outside_pointer_events {
+        let mut dismissable_branch_nodes = if disable_outside_pointer_events {
             dismissable_layer_prim::resolve_branch_nodes_for_elements(
                 app,
                 window,
@@ -426,6 +443,7 @@ pub fn render<H: UiHost>(
                 &req.dismissable_branches,
             )
         };
+        dismissable_branch_nodes.extend(modal_branch_nodes.iter().copied());
 
         let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
         if open_now
