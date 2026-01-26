@@ -43,8 +43,8 @@ Current:
   per-component adjustments.
 - No chart rendering backend is wired for shadcn parity yet (axes/series/tooltip hit-testing, etc).
 
-As a result, the remaining ungated `chart-*` pages are still the bulk of the work (32 keys today):
-bar variants + pie/radar/radial families + the interactive line/area pages.
+As a result, the remaining ungated `chart-*` pages are still the bulk of the work (22 keys today):
+radar/radial families + the interactive bar/line/area pages.
 
 ## Parity scope (what “1:1” means here)
 
