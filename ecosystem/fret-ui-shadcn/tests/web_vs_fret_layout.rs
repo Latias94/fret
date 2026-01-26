@@ -24844,6 +24844,44 @@ fn web_find_chart_bar_rects<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
     out
 }
 
+fn web_find_pie_svg<'a>(root: &'a WebNode) -> &'a WebNode {
+    find_first(root, &|n| {
+        n.tag == "svg" && n.class_name.as_deref() == Some("recharts-surface")
+    })
+    .expect("web pie svg")
+}
+
+fn web_find_pie_sectors<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.tag == "path" && n.class_name.as_deref() == Some("recharts-sector")
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .w
+                    .partial_cmp(&b.rect.w)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .h
+                    .partial_cmp(&b.rect.h)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
 fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -25397,6 +25435,209 @@ fn web_vs_fret_layout_chart_bar_horizontal_variants_bar_rects_match_web() {
             &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
         );
     }
+}
+
+fn assert_pie_sector_rects_match_web(
+    web_name: &str,
+    values: &[f32],
+    inner_radius: f32,
+    outer_radius: Option<f32>,
+    outer_overrides: &[(usize, f32)],
+    extra_rings: &[(usize, f32, f32)],
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let svg = web_find_pie_svg(&theme.root);
+    let web_sectors = web_find_pie_sectors(&theme.root);
+
+    let svg_rect = Rect::new(
+        Point::new(Px(svg.rect.x), Px(svg.rect.y)),
+        CoreSize::new(Px(svg.rect.w), Px(svg.rect.h)),
+    );
+
+    let layout = fret_ui_shadcn::recharts_geometry::PieLayout::default();
+    let mut expected = fret_ui_shadcn::recharts_geometry::pie_sectors_with_outer_radius_overrides(
+        svg_rect,
+        values,
+        inner_radius,
+        outer_radius,
+        layout,
+        outer_overrides,
+    );
+
+    for (index, ring_inner, ring_outer) in extra_rings {
+        let rings = fret_ui_shadcn::recharts_geometry::pie_sectors(
+            svg_rect,
+            values,
+            *ring_inner,
+            Some(*ring_outer),
+            layout,
+        );
+        if let Some(ring) = rings.get(*index) {
+            expected.push(*ring);
+        }
+    }
+
+    expected.sort_by(|a, b| {
+        a.rect
+            .origin
+            .x
+            .0
+            .partial_cmp(&b.rect.origin.x.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .origin
+                    .y
+                    .0
+                    .partial_cmp(&b.rect.origin.y.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .size
+                    .width
+                    .0
+                    .partial_cmp(&b.rect.size.width.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .size
+                    .height
+                    .0
+                    .partial_cmp(&b.rect.size.height.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+
+    assert_eq!(
+        expected.len(),
+        web_sectors.len(),
+        "{web_name}: expected {} sector rects, got {}",
+        expected.len(),
+        web_sectors.len()
+    );
+
+    for (i, (expected, web)) in expected.iter().zip(web_sectors.iter()).enumerate() {
+        assert_rect_close_px(
+            &format!("{web_name} sector-{i}"),
+            expected.rect,
+            web.rect,
+            1.0,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_pie_sector_rects_match_web() {
+    let browsers = [275.0_f32, 200.0, 187.0, 173.0, 90.0];
+    let donut_text = [275.0_f32, 200.0, 287.0, 173.0, 190.0];
+
+    for web_name in [
+        "chart-pie-simple",
+        "chart-pie-separator-none",
+        "chart-pie-label",
+        "chart-pie-label-custom",
+        "chart-pie-label-list",
+    ] {
+        assert_pie_sector_rects_match_web(web_name, &browsers, 0.0, None, &[], &[]);
+    }
+
+    assert_pie_sector_rects_match_web("chart-pie-donut", &browsers, 60.0, None, &[], &[]);
+    assert_pie_sector_rects_match_web("chart-pie-donut-text", &donut_text, 60.0, None, &[], &[]);
+
+    // Active index 0: outerRadius + 10.
+    let svg_outer_250 = 0.8 * ((250.0 - 10.0) / 2.0);
+    assert_pie_sector_rects_match_web(
+        "chart-pie-donut-active",
+        &browsers,
+        60.0,
+        None,
+        &[(0, svg_outer_250 + 10.0)],
+        &[],
+    );
+
+    // Stacked pies: two rings with explicit radii.
+    let desktop = [186.0_f32, 305.0, 237.0, 173.0, 209.0];
+    let mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0];
+    // We gate by matching both pies' sector rects as a multiset, so we compute them separately and concatenate.
+    let web = read_web_golden("chart-pie-stacked");
+    let theme = web_theme(&web);
+    let svg = web_find_pie_svg(&theme.root);
+    let svg_rect = Rect::new(
+        Point::new(Px(svg.rect.x), Px(svg.rect.y)),
+        CoreSize::new(Px(svg.rect.w), Px(svg.rect.h)),
+    );
+    let layout = fret_ui_shadcn::recharts_geometry::PieLayout::default();
+    let mut expected =
+        fret_ui_shadcn::recharts_geometry::pie_sectors(svg_rect, &desktop, 0.0, Some(60.0), layout);
+    expected.extend(fret_ui_shadcn::recharts_geometry::pie_sectors(
+        svg_rect,
+        &mobile,
+        70.0,
+        Some(90.0),
+        layout,
+    ));
+    expected.sort_by(|a, b| {
+        a.rect
+            .origin
+            .x
+            .0
+            .partial_cmp(&b.rect.origin.x.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .origin
+                    .y
+                    .0
+                    .partial_cmp(&b.rect.origin.y.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .size
+                    .width
+                    .0
+                    .partial_cmp(&b.rect.size.width.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .size
+                    .height
+                    .0
+                    .partial_cmp(&b.rect.size.height.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    let web_sectors = web_find_pie_sectors(&theme.root);
+    assert_eq!(
+        expected.len(),
+        web_sectors.len(),
+        "chart-pie-stacked sector count"
+    );
+    for (i, (expected, web)) in expected.iter().zip(web_sectors.iter()).enumerate() {
+        assert_rect_close_px(
+            &format!("chart-pie-stacked sector-{i}"),
+            expected.rect,
+            web.rect,
+            1.0,
+        );
+    }
+
+    // Interactive pie: default outer radius at 300x300 is 116, active index 0 uses +10 plus a second ring.
+    let svg_outer_300 = 0.8 * ((300.0 - 10.0) / 2.0);
+    let desktop_interactive = [186.0_f32, 305.0, 237.0, 173.0, 209.0];
+    assert_pie_sector_rects_match_web(
+        "chart-pie-interactive",
+        &desktop_interactive,
+        60.0,
+        Some(svg_outer_300),
+        &[(0, svg_outer_300 + 10.0)],
+        &[(0, svg_outer_300 + 12.0, svg_outer_300 + 25.0)],
+    );
 }
 
 fn assert_chart_series_curve_bounds_match_web(

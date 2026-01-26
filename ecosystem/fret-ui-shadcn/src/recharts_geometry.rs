@@ -355,6 +355,184 @@ pub fn symmetric_bar_rects(
         .collect()
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PieLayout {
+    pub margin_px: f32,
+    pub outer_radius_ratio: f32,
+}
+
+impl Default for PieLayout {
+    fn default() -> Self {
+        Self {
+            margin_px: 5.0,
+            outer_radius_ratio: 0.8,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PieSectorRect {
+    pub rect: Rect,
+    pub value: f32,
+}
+
+fn pie_default_outer_radius(svg_rect: Rect, layout: PieLayout) -> f32 {
+    let w = svg_rect.size.width.0;
+    let h = svg_rect.size.height.0;
+    if !(w.is_finite() && h.is_finite()) || w <= 0.0 || h <= 0.0 {
+        return 0.0;
+    }
+
+    let inner_w = (w - 2.0 * layout.margin_px).max(0.0);
+    let inner_h = (h - 2.0 * layout.margin_px).max(0.0);
+    let max_r = inner_w.min(inner_h) / 2.0;
+    (layout.outer_radius_ratio * max_r).max(0.0)
+}
+
+fn pie_point(cx: f32, cy: f32, r: f32, deg: f32) -> Pt {
+    let rad = -deg.to_radians();
+    Pt {
+        x: cx + r * rad.cos(),
+        y: cy + r * rad.sin(),
+    }
+}
+
+fn push_pie_bounds_points(points: &mut Vec<Pt>, cx: f32, cy: f32, r: f32, start: f32, end: f32) {
+    points.push(pie_point(cx, cy, r, start));
+    points.push(pie_point(cx, cy, r, end));
+
+    for crit in [0.0_f32, 90.0, 180.0, 270.0, 360.0] {
+        if start <= crit && crit <= end {
+            points.push(pie_point(cx, cy, r, crit));
+        }
+    }
+}
+
+fn pie_sector_rect(
+    svg_rect: Rect,
+    layout: PieLayout,
+    start: f32,
+    end: f32,
+    value: f32,
+    inner_radius: f32,
+    outer_radius: Option<f32>,
+) -> Option<PieSectorRect> {
+    if !is_valid_rect(svg_rect) || !start.is_finite() || !end.is_finite() || start >= end {
+        return None;
+    }
+
+    let cx = svg_rect.origin.x.0 + svg_rect.size.width.0 / 2.0;
+    let cy = svg_rect.origin.y.0 + svg_rect.size.height.0 / 2.0;
+
+    let outer = outer_radius.unwrap_or_else(|| pie_default_outer_radius(svg_rect, layout));
+    if !outer.is_finite() || outer <= 0.0 {
+        return None;
+    }
+
+    let inner = inner_radius.max(0.0).min(outer);
+
+    let mut points = Vec::new();
+    push_pie_bounds_points(&mut points, cx, cy, outer, start, end);
+    if inner > 0.0 {
+        push_pie_bounds_points(&mut points, cx, cy, inner, start, end);
+    } else {
+        points.push(Pt { x: cx, y: cy });
+    }
+
+    let (min_x, min_y, max_x, max_y) = points_bounds(&points)?;
+    Some(PieSectorRect {
+        rect: Rect::new(
+            fret_core::Point::new(Px(min_x), Px(min_y)),
+            fret_core::Size::new(Px(max_x - min_x), Px(max_y - min_y)),
+        ),
+        value,
+    })
+}
+
+pub fn pie_sectors(
+    svg_rect: Rect,
+    values: &[f32],
+    inner_radius: f32,
+    outer_radius: Option<f32>,
+    layout: PieLayout,
+) -> Vec<PieSectorRect> {
+    let finite_values: Vec<f32> = values
+        .iter()
+        .copied()
+        .map(|v| if v.is_finite() && v > 0.0 { v } else { 0.0 })
+        .collect();
+    let total: f32 = finite_values.iter().sum();
+    if total <= 0.0 {
+        return Vec::new();
+    }
+
+    let mut start = 0.0_f32;
+    let mut out = Vec::with_capacity(values.len());
+    for value in finite_values {
+        let end = start + (value / total) * 360.0;
+        if let Some(sector) = pie_sector_rect(
+            svg_rect,
+            layout,
+            start,
+            end,
+            value,
+            inner_radius,
+            outer_radius,
+        ) {
+            out.push(sector);
+        }
+        start = end;
+    }
+    out
+}
+
+pub fn pie_sectors_with_outer_radius_overrides(
+    svg_rect: Rect,
+    values: &[f32],
+    inner_radius: f32,
+    outer_radius: Option<f32>,
+    layout: PieLayout,
+    outer_radius_overrides: &[(usize, f32)],
+) -> Vec<PieSectorRect> {
+    let mut out = pie_sectors(svg_rect, values, inner_radius, outer_radius, layout);
+    if out.is_empty() || outer_radius_overrides.is_empty() {
+        return out;
+    }
+
+    let total: f32 = out.iter().map(|s| s.value).sum();
+    if total <= 0.0 {
+        return out;
+    }
+
+    for (index, override_outer) in outer_radius_overrides {
+        if *index >= out.len() {
+            continue;
+        }
+
+        let mut start = 0.0_f32;
+        for (i, s) in out.iter_mut().enumerate() {
+            let end = start + (s.value / total) * 360.0;
+            if i == *index {
+                if let Some(sector) = pie_sector_rect(
+                    svg_rect,
+                    layout,
+                    start,
+                    end,
+                    s.value,
+                    inner_radius,
+                    Some(*override_outer),
+                ) {
+                    s.rect = sector.rect;
+                }
+                break;
+            }
+            start = end;
+        }
+    }
+
+    out
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CurveKind {
     Natural,
