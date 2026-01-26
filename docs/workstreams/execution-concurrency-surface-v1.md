@@ -41,7 +41,7 @@ Status legend:
 - `[x]` Desktop impl: implement `Dispatcher` in the desktop runner (target: `crates/fret-launch`, implemented at `crates/fret-launch/src/runner/desktop/dispatcher.rs`)
 - `[x]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`, implemented as `ecosystem/fret-executor`)
 - `[x]` Driver boundary: drain inboxes at runner flush points via `InboxDrainRegistry` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`, web: `crates/fret-launch/src/runner/web.rs`)
-- `[ ]` Observability: add tracing spans for dispatch/wake/drain points
+- `[x]` Observability: add tracing spans for dispatch/wake/drain points (dispatcher + driver boundary)
 - `[x]` Safety: fence dispatcher on shutdown (desktop + wasm), plus basic unit tests
 - `[x]` Safety: cancellation baseline (ecosystem task handles; no post-cancel enqueue/wake)
 - `[x]` Safety: hot reload boundary (desktop runner bumps dispatcher generation and clears pending work)

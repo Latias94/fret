@@ -883,6 +883,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.config.streaming_staging_budget_bytes,
             self.config.streaming_update_ack_enabled,
         );
+        tracing::trace!(
+            did_work,
+            effects = effects.len(),
+            acks = acks.len(),
+            "driver: drain_effects turn"
+        );
         if self.config.streaming_update_ack_enabled {
             for ack in acks {
                 match ack.kind {
@@ -1416,10 +1422,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn drain_inboxes(&mut self, window: Option<AppWindowId>) -> bool {
-        self.app.with_global_mut_untracked(
+        let did_work = self.app.with_global_mut_untracked(
             fret_runtime::InboxDrainRegistry::default,
             |registry, app| registry.drain_all(app, window),
-        )
+        );
+        tracing::trace!(?window, did_work, "driver: drain_inboxes");
+        did_work
     }
 
     fn dispatch_events(&mut self, gfx: &mut GfxState, state: &mut D::WindowState) -> bool {

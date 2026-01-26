@@ -92,6 +92,8 @@ impl WebDispatcher {
             return false;
         }
 
+        tracing::trace!(total_ready = tasks.len(), "dispatcher: drain_turn");
+
         for task in tasks {
             task();
         }
@@ -105,6 +107,7 @@ impl Dispatcher for WebDispatcherInner {
             return;
         }
         let expected_gen = self.generation.load(Ordering::SeqCst);
+        tracing::trace!(expected_gen, "dispatcher: dispatch_on_main_thread");
         let alive = self.alive.clone();
         let generation = self.generation.clone();
         let task = Box::new(move || {
@@ -127,6 +130,7 @@ impl Dispatcher for WebDispatcherInner {
             return;
         }
         let expected_gen = self.generation.load(Ordering::SeqCst);
+        tracing::trace!(expected_gen, "dispatcher: dispatch_background");
         let alive = self.alive.clone();
         let generation = self.generation.clone();
         wasm_bindgen_futures::spawn_local(async move {
@@ -144,6 +148,7 @@ impl Dispatcher for WebDispatcherInner {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
+        tracing::trace!(delay_ms = delay.as_millis(), "dispatcher: dispatch_after");
         let Some(window) = window() else {
             return;
         };
@@ -181,6 +186,7 @@ impl Dispatcher for WebDispatcherInner {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
+        tracing::trace!("dispatcher: wake");
         let Ok(proxy) = self.event_loop_proxy.lock() else {
             return;
         };

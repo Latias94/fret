@@ -96,11 +96,14 @@ impl DesktopDispatcher {
             return false;
         }
         let mut ready: Vec<Runnable> = Vec::new();
+        let mut delayed_ready = 0usize;
+        let mut main_ready = 0usize;
 
         if let Ok(mut delayed) = self.inner.delayed.lock() {
             let mut pending = Vec::new();
             for task in delayed.drain(..) {
                 if task.deadline <= now {
+                    delayed_ready += 1;
                     ready.push(task.task);
                 } else {
                     pending.push(task);
@@ -110,12 +113,20 @@ impl DesktopDispatcher {
         }
 
         if let Ok(mut queue) = self.inner.main_queue.lock() {
+            main_ready = queue.len();
             ready.extend(queue.drain(..));
         }
 
         if ready.is_empty() {
             return false;
         }
+
+        tracing::trace!(
+            delayed_ready,
+            main_ready,
+            total_ready = ready.len(),
+            "dispatcher: drain_turn"
+        );
 
         for task in ready {
             task();
@@ -131,6 +142,7 @@ impl Dispatcher for DesktopDispatcherInner {
             return;
         }
         let expected_gen = self.generation.load(Ordering::SeqCst);
+        tracing::trace!(expected_gen, "dispatcher: dispatch_on_main_thread");
         let alive = self.alive.clone();
         let generation = self.generation.clone();
         let task = Box::new(move || {
@@ -153,6 +165,7 @@ impl Dispatcher for DesktopDispatcherInner {
             return;
         }
         let expected_gen = self.generation.load(Ordering::SeqCst);
+        tracing::trace!(expected_gen, "dispatcher: dispatch_background");
         let alive = self.alive.clone();
         let generation = self.generation.clone();
         std::thread::spawn(move || {
@@ -171,6 +184,11 @@ impl Dispatcher for DesktopDispatcherInner {
             return;
         }
         let expected_gen = self.generation.load(Ordering::SeqCst);
+        tracing::trace!(
+            expected_gen,
+            delay_ms = delay.as_millis(),
+            "dispatcher: dispatch_after"
+        );
         let alive = self.alive.clone();
         let generation = self.generation.clone();
         let task = Box::new(move || {
@@ -193,6 +211,7 @@ impl Dispatcher for DesktopDispatcherInner {
         if !self.alive.load(Ordering::SeqCst) {
             return;
         }
+        tracing::trace!("dispatcher: wake");
         let Ok(proxy) = self.event_loop_proxy.lock() else {
             return;
         };
