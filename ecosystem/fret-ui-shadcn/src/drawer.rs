@@ -2360,6 +2360,107 @@ mod tests {
     }
 
     #[test]
+    fn drawer_open_auto_focus_redirect_to_underlay_is_clamped_to_modal_layer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let underlay_id_cell: Arc<Mutex<Option<GlobalElementId>>> = Arc::new(Mutex::new(None));
+        let initial_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let redirect_focus_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let redirect_focus_id_cell: Arc<Mutex<Option<GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let underlay_id_for_handler = underlay_id_cell.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let id = underlay_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(id) = id {
+                host.request_focus(id);
+            }
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        let trigger = render_drawer_frame_with_open_auto_focus_redirect_target(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_id_out.clone(),
+            Some(underlay_id_cell.clone()),
+            initial_focus_id.clone(),
+            redirect_focus_id_cell.clone(),
+            redirect_focus_id_out.clone(),
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(FrameId(2));
+        let _ = render_drawer_frame_with_open_auto_focus_redirect_target(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_id_out.clone(),
+            Some(underlay_id_cell),
+            initial_focus_id.clone(),
+            redirect_focus_id_cell,
+            redirect_focus_id_out,
+            Some(handler),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+
+        let underlay = underlay_id_out.get().expect("underlay element id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay).expect("underlay");
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("initial focus node");
+
+        let focused = ui.focus().expect("expected focus after open");
+        assert_ne!(
+            focused, underlay_node,
+            "expected modal focus containment to prevent focusing the underlay on open"
+        );
+        assert_eq!(
+            ui.node_layer(focused),
+            ui.node_layer(initial_focus_node),
+            "expected focus containment to clamp focus within the drawer layer"
+        );
+    }
+
+    #[test]
     fn drawer_close_auto_focus_can_be_prevented_and_redirected() {
         let window = AppWindowId::default();
         let mut app = App::new();
