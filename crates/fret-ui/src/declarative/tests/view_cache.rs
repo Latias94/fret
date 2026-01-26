@@ -423,3 +423,101 @@ fn view_cache_is_disabled_under_inspection() {
         "view cache should be disabled under inspection, forcing subtree execution"
     );
 }
+
+#[test]
+fn view_cache_matches_non_cached_output_for_stable_frames() {
+    fn run(view_cache_enabled: bool) -> (Vec<u64>, Vec<Option<crate::elements::GlobalElementId>>) {
+        let mut app = TestHost::new();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(view_cache_enabled);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let pressable_id = Arc::new(std::sync::Mutex::new(
+            None::<crate::elements::GlobalElementId>,
+        ));
+        let mut root: Option<NodeId> = None;
+
+        let mut fps: Vec<u64> = Vec::new();
+        let mut hits: Vec<Option<crate::elements::GlobalElementId>> = Vec::new();
+
+        for frame in 0..4 {
+            let pressable_id = pressable_id.clone();
+            let root_node = render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "view-cache-diff-output",
+                move |cx| {
+                    vec![
+                        cx.view_cache(crate::element::ViewCacheProps::default(), |cx| {
+                            let pressable_id = pressable_id.clone();
+
+                            let mut bg = crate::element::ContainerProps::default();
+                            bg.layout.size.width = crate::element::Length::Fill;
+                            bg.layout.size.height = crate::element::Length::Fill;
+                            bg.background = Some(fret_core::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            });
+
+                            vec![cx.container(bg, move |cx| {
+                                let mut props = crate::element::PressableProps::default();
+                                props.layout.size.width = crate::element::Length::Fill;
+                                props.layout.size.height = crate::element::Length::Fill;
+                                props.enabled = true;
+                                props.focusable = true;
+                                vec![cx.pressable_with_id(props, move |_cx, _st, id| {
+                                    *pressable_id.lock().unwrap() = Some(id);
+                                    Vec::new()
+                                })]
+                            })]
+                        }),
+                    ]
+                },
+            );
+
+            root.get_or_insert(root_node);
+            if frame == 0 {
+                ui.set_root(root_node);
+            }
+
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+            fps.push(scene.fingerprint());
+
+            let hit = ui
+                .debug_hit_test(fret_core::Point::new(Px(10.0), Px(10.0)))
+                .hit
+                .and_then(|node| ui.node_element(node));
+            hits.push(hit);
+
+            app.advance_frame();
+        }
+
+        (fps, hits)
+    }
+
+    let (no_cache_fps, no_cache_hits) = run(false);
+    let (cache_fps, cache_hits) = run(true);
+
+    assert_eq!(
+        cache_fps, no_cache_fps,
+        "view cache should not change the recorded scene fingerprint for stable frames"
+    );
+    assert_eq!(
+        cache_hits, no_cache_hits,
+        "view cache should not change hit-test outcomes for stable frames"
+    );
+}
