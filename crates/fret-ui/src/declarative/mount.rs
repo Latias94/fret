@@ -251,9 +251,11 @@ where
             window_frame.children.insert(root_node, mounted_children);
         });
 
-        // View-cache experiments rely on parent pointers for correct cache-root discovery and GC
-        // detachment checks. Repair any reachable inconsistencies before applying invalidations
-        // that may need to propagate across cache-root boundaries.
+        // View-cache experiments rely on explicit liveness bookkeeping (layer roots + view-cache
+        // reuse roots + subtree membership lists; ADR 0191). Parent pointers are still required
+        // for cache-root discovery and `node_layer` detachment checks, so repair any reachable
+        // inconsistencies before applying invalidations that may need to propagate across cache-root
+        // boundaries.
         if ui.view_cache_enabled() {
             let _ = ui.repair_parent_pointers_from_layer_roots();
         }
