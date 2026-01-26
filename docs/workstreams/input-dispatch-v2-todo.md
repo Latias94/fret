@@ -76,10 +76,10 @@ Keep this list short and evidence-backed:
 ## MVP3 — Frozen Gating Target (Overlay Does Not Pollute Availability)
 
 - [x] IDV2-freeze-030 Freeze command palette gating while open (editor-style discoverability).
-  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`WindowCommandGatingService::set_snapshot`)
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`WindowCommandGatingService::push_snapshot`)
 - [x] IDV2-freeze-031 Support nested overlays (stackable gating snapshots per window).
-  - Evidence: `crates/fret-runtime/src/window_command_gating.rs` (`push_snapshot`, `remove_pushed_snapshot`),
-    `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette pushes a snapshot and stores a token; closes pop it),
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs` (`push_snapshot`, `pop_snapshot`, `WindowCommandGatingHandle`),
+    `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette pushes a snapshot and stores a handle; closes pops it),
     `ecosystem/fret-ui-shadcn/src/command.rs` (gating override tests use `push_snapshot`)
 
 ## MVP4 — Coverage Targets (Keep Expanding Incrementally)
