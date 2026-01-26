@@ -152,6 +152,11 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/drawer.rs` (`drawer_open_auto_focus_can_be_prevented`, `drawer_close_auto_focus_can_be_prevented_and_redirected`)
 
+- [x] OIA2-test-025 AlertDialog auto-focus hooks can be prevented and redirected (Radix parity).
+  - Target: cover `onOpenAutoFocus` and `onCloseAutoFocus` preventDefault behavior.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (`alert_dialog_open_auto_focus_can_be_prevented`, `alert_dialog_close_auto_focus_can_be_prevented_and_redirected`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
