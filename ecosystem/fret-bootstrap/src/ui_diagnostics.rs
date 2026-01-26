@@ -2643,6 +2643,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
     #[serde(default)]
+    pub prepaint_actions: Vec<UiPrepaintActionV1>,
+    #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
     pub model_change_unobserved: Vec<UiModelChangeUnobservedV1>,
@@ -2732,6 +2734,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_scroll_handle_changes()
                 .iter()
                 .map(UiScrollHandleChangeV1::from_change)
+                .collect(),
+            prepaint_actions: ui
+                .debug_prepaint_actions()
+                .iter()
+                .map(UiPrepaintActionV1::from_action)
                 .collect(),
             model_change_hotspots: ui
                 .debug_model_change_hotspots()
@@ -3212,6 +3219,57 @@ impl UiScrollHandleChangeV1 {
                 .map(key_to_u64)
                 .collect(),
             upgraded_to_layout_bindings: change.upgraded_to_layout_bindings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPrepaintActionKindV1 {
+    Invalidate,
+    RequestRedraw,
+    RequestAnimationFrame,
+}
+
+impl UiPrepaintActionKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugPrepaintActionKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugPrepaintActionKind::Invalidate => Self::Invalidate,
+            fret_ui::tree::UiDebugPrepaintActionKind::RequestRedraw => Self::RequestRedraw,
+            fret_ui::tree::UiDebugPrepaintActionKind::RequestAnimationFrame => {
+                Self::RequestAnimationFrame
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPrepaintActionV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_node: Option<u64>,
+    pub kind: UiPrepaintActionKindV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub invalidation: Option<String>,
+    #[serde(default)]
+    pub frame_id: u64,
+}
+
+impl UiPrepaintActionV1 {
+    fn from_action(action: &fret_ui::tree::UiDebugPrepaintAction) -> Self {
+        let invalidation = action.invalidation.map(|inv| match inv {
+            fret_ui::widget::Invalidation::Layout => "layout",
+            fret_ui::widget::Invalidation::Paint => "paint",
+            fret_ui::widget::Invalidation::HitTest => "hit_test",
+            fret_ui::widget::Invalidation::HitTestOnly => "hit_test_only",
+        });
+
+        Self {
+            node: key_to_u64(action.node),
+            target_node: action.target.map(key_to_u64),
+            kind: UiPrepaintActionKindV1::from_kind(action.kind),
+            invalidation: invalidation.map(|s| s.to_string()),
+            frame_id: action.frame_id.0,
         }
     }
 }
