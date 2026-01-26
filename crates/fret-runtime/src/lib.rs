@@ -73,7 +73,7 @@ pub use window_command_availability::{
 };
 pub use window_command_enabled::WindowCommandEnabledService;
 pub use window_command_gating::{
-    WindowCommandGatingService, WindowCommandGatingSnapshot, WindowCommandGatingToken,
+    WindowCommandGatingHandle, WindowCommandGatingService, WindowCommandGatingSnapshot,
     best_effort_snapshot_for_window, best_effort_snapshot_for_window_with_input_ctx_fallback,
     command_is_enabled_for_window_with_input_ctx_fallback, snapshot_for_window,
     snapshot_for_window_with_input_ctx_fallback,
