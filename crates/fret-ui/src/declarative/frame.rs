@@ -153,6 +153,7 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
+#[allow(dead_code)]
 pub(crate) fn with_window_frame_mut<H: UiHost, R>(
     app: &mut H,
     window: AppWindowId,

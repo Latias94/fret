@@ -961,7 +961,7 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
-    let row_cache =
+    let _row_cache =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_ROW_CACHE").filter(|v| !v.is_empty()) {
             Some(v) => {
                 let v = v.to_string_lossy().trim().to_ascii_lowercase();

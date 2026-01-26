@@ -189,6 +189,7 @@ pub struct NodeEntryRootOverwrite {
 
 impl WindowElementState {
     #[cfg(any(test, feature = "diagnostics"))]
+    #[allow(dead_code)]
     pub(crate) fn set_strict_ownership(&mut self, strict: bool) {
         self.strict_ownership = strict;
     }
