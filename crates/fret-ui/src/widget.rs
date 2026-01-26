@@ -529,6 +529,14 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
     /// Prefer `Invalidation::Paint` / `Invalidation::HitTest` here. Invalidating `Layout` from
     /// prepaint is allowed but can easily introduce avoidable churn.
     pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
+        self.tree
+            .debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                node: self.node,
+                target: Some(node),
+                kind: crate::tree::UiDebugPrepaintActionKind::Invalidate,
+                invalidation: Some(kind),
+                frame_id: self.app.frame_id(),
+            });
         self.tree.invalidate_with_detail(
             node,
             kind,
@@ -545,6 +553,14 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
     ///
     /// Use this for one-shot updates after prepaint-driven state changes.
     pub fn request_redraw(&mut self) {
+        self.tree
+            .debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                node: self.node,
+                target: None,
+                kind: crate::tree::UiDebugPrepaintActionKind::RequestRedraw,
+                invalidation: None,
+                frame_id: self.app.frame_id(),
+            });
         let Some(window) = self.window else {
             return;
         };
@@ -557,6 +573,14 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
     /// progressive rendering). This also sets `Invalidation::Paint` for the current node so paint
     /// caching cannot skip widget `paint()` on the next frame.
     pub fn request_animation_frame(&mut self) {
+        self.tree
+            .debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                node: self.node,
+                target: Some(self.node),
+                kind: crate::tree::UiDebugPrepaintActionKind::RequestAnimationFrame,
+                invalidation: Some(Invalidation::Paint),
+                frame_id: self.app.frame_id(),
+            });
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
         self.tree.invalidate_with_source_and_detail(
             self.node,

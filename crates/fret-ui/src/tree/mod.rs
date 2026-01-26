@@ -463,6 +463,22 @@ pub struct UiDebugVirtualListWindow {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugPrepaintActionKind {
+    Invalidate,
+    RequestRedraw,
+    RequestAnimationFrame,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugPrepaintAction {
+    pub node: NodeId,
+    pub target: Option<NodeId>,
+    pub kind: UiDebugPrepaintActionKind,
+    pub invalidation: Option<Invalidation>,
+    pub frame_id: FrameId,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugScrollHandleChangeKind {
     Layout,
     HitTestOnly,
@@ -978,6 +994,7 @@ pub struct UiTree<H: UiHost> {
     debug_dirty_views: Vec<UiDebugDirtyView>,
     debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
+    debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
     #[cfg(feature = "diagnostics")]
@@ -1070,6 +1087,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_dirty_views: Vec::new(),
             debug_virtual_list_windows: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
+            debug_prepaint_actions: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
@@ -1258,6 +1276,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_dirty_views.clear();
         self.debug_virtual_list_windows.clear();
         self.debug_scroll_handle_changes.clear();
+        self.debug_prepaint_actions.clear();
         #[cfg(feature = "diagnostics")]
         {
             // Keep `debug_set_children_writes` and `debug_parent_sever_writes` across frames so
@@ -1417,6 +1436,18 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.debug_virtual_list_windows.push(record);
+    }
+
+    pub(crate) fn debug_record_prepaint_action(&mut self, action: UiDebugPrepaintAction) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many prepaint actions.
+        const MAX_RECORDS: usize = 512;
+        if self.debug_prepaint_actions.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_prepaint_actions.push(action);
     }
 
     pub(crate) fn debug_record_paint_cache_replay(&mut self, node: NodeId, replayed_ops: u32) {
@@ -1859,6 +1890,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_scroll_handle_changes.as_slice()
+    }
+
+    pub fn debug_prepaint_actions(&self) -> &[UiDebugPrepaintAction] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_prepaint_actions.as_slice()
     }
 
     pub fn debug_model_change_hotspots(&self) -> &[UiDebugModelChangeHotspot] {
