@@ -361,13 +361,15 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 element: root_element,
             };
+            let mut req =
+                crate::action::DismissRequestCx::new(crate::action::DismissReason::Escape);
             hook(
                 &mut host,
                 crate::action::ActionCx {
                     window,
                     target: root_element,
                 },
-                crate::action::DismissReason::Escape,
+                &mut req,
             );
             return true;
         }
@@ -2264,13 +2266,15 @@ impl<H: UiHost> UiTree<H> {
                         window,
                         element: root_element,
                     };
+                    let mut req =
+                        crate::action::DismissRequestCx::new(crate::action::DismissReason::Scroll);
                     hook(
                         &mut host,
                         crate::action::ActionCx {
                             window,
                             target: root_element,
                         },
-                        crate::action::DismissReason::Scroll,
+                        &mut req,
                     );
                     dismissed_any = true;
                 }
