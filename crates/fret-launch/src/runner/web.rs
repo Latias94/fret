@@ -5,6 +5,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
+mod dispatcher;
+use dispatcher::WebDispatcher;
+
 use fret_app::{App, Effect};
 use fret_core::{AppWindowId, Event, Point, Px, Rect, Scene, Size};
 use fret_render::{RenderSceneParams, Renderer, SurfaceState, UploadedRgba8Image, WgpuContext};
@@ -43,6 +46,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     pub driver: D,
 
     event_loop_proxy: Option<EventLoopProxy>,
+    dispatcher: WebDispatcher,
 
     window: Option<Arc<dyn Window>>,
     window_id: Option<WindowId>,
@@ -145,14 +149,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             });
         let caps = Self::effective_platform_capabilities(&requested);
         if caps != requested {
-            app.set_global(caps);
+            app.set_global(caps.clone());
         }
+
+        let dispatcher = WebDispatcher::new(caps.exec);
+        app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
 
         Self {
             config,
             app,
             driver,
             event_loop_proxy: None,
+            dispatcher,
             window: None,
             window_id: None,
             app_window: AppWindowId::default(),
@@ -179,6 +187,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy) {
         let wake = proxy.clone();
         self.web_services.set_waker(move || wake.wake_up());
+        self.dispatcher.set_event_loop_proxy(proxy.clone());
         self.event_loop_proxy = Some(proxy);
     }
 
@@ -861,6 +870,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         gfx: &mut GfxState,
         state: &mut D::WindowState,
     ) -> bool {
+        let did_work = self.dispatcher.drain_turn();
         let effects = self.app.flush_effects();
         let effects = self.web_services.handle_effects(&mut self.app, effects);
         self.pending_events.extend(self.web_services.take_events());
@@ -953,7 +963,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     "streaming image updates queued/budgeted"
                 );
             }
-            return false;
+            return did_work;
         }
 
         for effect in effects {
